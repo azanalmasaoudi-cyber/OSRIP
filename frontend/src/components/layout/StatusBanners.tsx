@@ -2,6 +2,7 @@ import { FlaskConical, Info, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { apiBaseUrl, dataAdapter } from '@/api';
+import { useBackendStatus } from '@/api/backendStatus';
 import { cn } from '@/lib/utils';
 import { useDataMode } from '@/state/useDataMode';
 
@@ -9,6 +10,7 @@ import { useDataMode } from '@/state/useDataMode';
 export function StatusBanners() {
   const { t } = useTranslation();
   const [mode] = useDataMode();
+  const backend = useBackendStatus();
   const ModeIcon = mode === 'synthetic' ? FlaskConical : ShieldCheck;
 
   return (
@@ -18,7 +20,9 @@ export function StatusBanners() {
         className="flex items-center justify-center gap-2 border-b border-border bg-muted px-4 py-1.5 text-center text-xs text-muted-foreground"
       >
         <Info aria-hidden="true" className="size-3.5 shrink-0" />
-        {dataAdapter.kind === 'mock' ? t('prototype.mockAdapter') : t('prototype.httpAdapter', { baseUrl: apiBaseUrl })}
+        {dataAdapter.kind === 'mock' ? t('prototype.mockAdapter')
+          : backend === 'offline' ? t('dashboard.apiUnavailable', { baseUrl: apiBaseUrl })
+            : t('prototype.httpAdapter', { baseUrl: apiBaseUrl })}
       </p>
       <p
         role="status"
