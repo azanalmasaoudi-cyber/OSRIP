@@ -55,7 +55,6 @@ export function seriesDataset(series: Series, fromYear: string | null, toYear: s
 }
 
 interface ComparisonRow { area: string; name: { en: string; ar: string }; value: string | null; status: string }
-export type ComparisonInput = Comparison;
 interface Comparison {
   status: string;
   indicator_name?: { en: string; ar: string } | null;
