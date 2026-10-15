@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" role="img" aria-labelledby="t d">
+  <title id="t">Illustration: food security — a date palm with fruit, wheat and a woven basket</title>
+  <desc id="d">Original illustration created for the OSRIP academic prototype. Not a photograph and not a specific site.</desc>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0B6B66"/><stop offset="1" stop-color="#0F2340"/></linearGradient>
+    <pattern id="l" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M12 2 L14 10 L22 12 L14 14 L12 22 L10 14 L2 12 L10 10 Z" fill="none" stroke="#FFF" stroke-opacity="0.08"/></pattern>
+    <clipPath id="c"><path d="M26 240 V114 C26 70 62 45 106 34 C134 27 151 20 160 10 C169 20 186 27 214 34 C258 45 294 70 294 114 V240 Z"/></clipPath>
+  </defs>
+  <path d="M16 240 V112 C16 64 56 36 104 24 C132 17 150 10 160 0 C170 10 188 17 216 24 C264 36 304 64 304 112 V240 Z" fill="#C9A96E"/>
+  <g clip-path="url(#c)">
+    <rect width="320" height="240" fill="url(#g)"/><rect width="320" height="240" fill="url(#l)"/>
+    <path d="M26 200 C90 188 230 188 294 200 V240 H26 Z" fill="#1D3A63"/>
+    <path d="M160 236 C156 190 158 140 164 96" fill="none" stroke="#8F6E3F" stroke-width="9" stroke-linecap="round"/>
+    <g stroke="#6F5432" stroke-width="2"><path d="M154 216 L166 212 M154 196 L166 192 M155 176 L167 172 M156 156 L168 152 M158 136 L169 132 M160 116 L170 112"/></g>
+    <g fill="#2FA59A">
+      <path d="M164 96 C136 78 104 82 86 100 C112 90 136 92 162 100 Z"/><path d="M164 96 C150 68 156 48 172 38 C166 58 168 76 166 96 Z"/>
+      <path d="M164 96 C184 70 212 64 232 74 C208 76 188 84 166 100 Z"/><path d="M164 96 C194 90 222 100 236 118 C214 106 190 102 166 100 Z"/>
+      <path d="M164 96 C136 98 112 112 100 132 C122 118 142 110 164 102 Z"/><path d="M164 96 C176 76 196 66 212 64" fill="none"/>
+    </g>
+    <g fill="#C07A45"><circle cx="150" cy="112" r="5"/><circle cx="158" cy="118" r="5"/><circle cx="146" cy="122" r="5"/><circle cx="154" cy="128" r="5"/><circle cx="176" cy="112" r="5"/><circle cx="184" cy="118" r="5"/><circle cx="178" cy="124" r="5"/></g>
+    <g stroke="#EFE4CE" stroke-width="2" stroke-linecap="round" fill="#EFE4CE">
+      <path d="M62 236 C62 200 66 170 74 146" fill="none"/><path d="M82 236 C80 204 84 176 92 156" fill="none"/>
+      <ellipse cx="74" cy="146" rx="3" ry="6"/><ellipse cx="69" cy="158" rx="3" ry="6" transform="rotate(-25 69 158)"/><ellipse cx="79" cy="160" rx="3" ry="6" transform="rotate(25 79 160)"/>
+      <ellipse cx="92" cy="156" rx="3" ry="6"/><ellipse cx="87" cy="168" rx="3" ry="6" transform="rotate(-25 87 168)"/><ellipse cx="97" cy="170" rx="3" ry="6" transform="rotate(25 97 170)"/>
+    </g>
+    <path d="M214 200 H276 L268 232 H222 Z" fill="#C9A96E"/>
+    <ellipse cx="245" cy="200" rx="31" ry="7" fill="#B08D57"/>
+    <g stroke="#8F6E3F" stroke-width="1.5" fill="none"><path d="M217 210 H273 M219 220 H271"/><path d="M230 202 L234 232 M245 207 V232 M260 202 L256 232"/></g>
+    <g fill="#C07A45"><circle cx="236" cy="196" r="4.5"/><circle cx="246" cy="194" r="4.5"/><circle cx="255" cy="197" r="4.5"/></g>
+  </g>
+</svg>

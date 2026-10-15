@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" role="img" aria-labelledby="t d">
+  <title id="t">Illustration: electricity — a transmission tower and solar panels below the Hajar mountains</title>
+  <desc id="d">Original illustration created for the OSRIP academic prototype. Not a photograph and not a specific site.</desc>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0B6B66"/><stop offset="1" stop-color="#0F2340"/></linearGradient>
+    <pattern id="l" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M12 2 L14 10 L22 12 L14 14 L12 22 L10 14 L2 12 L10 10 Z" fill="none" stroke="#FFF" stroke-opacity="0.08"/></pattern>
+    <clipPath id="c"><path d="M26 240 V114 C26 70 62 45 106 34 C134 27 151 20 160 10 C169 20 186 27 214 34 C258 45 294 70 294 114 V240 Z"/></clipPath>
+  </defs>
+  <path d="M16 240 V112 C16 64 56 36 104 24 C132 17 150 10 160 0 C170 10 188 17 216 24 C264 36 304 64 304 112 V240 Z" fill="#C9A96E"/>
+  <g clip-path="url(#c)">
+    <rect width="320" height="240" fill="url(#g)"/><rect width="320" height="240" fill="url(#l)"/>
+    <circle cx="222" cy="78" r="20" fill="#C07A45"/>
+    <circle cx="222" cy="78" r="30" fill="none" stroke="#C07A45" stroke-opacity="0.35" stroke-width="3"/>
+    <path d="M26 176 L70 132 L96 150 L132 112 L170 146 L206 120 L250 158 L294 128 V240 H26 Z" fill="#1D3A63"/>
+    <path d="M26 196 L84 168 L140 184 L196 160 L250 180 L294 166 V240 H26 Z" fill="#13294A"/>
+    <g stroke="#EFE4CE" stroke-width="2.5" stroke-linecap="round" fill="none">
+      <path d="M112 226 L128 78 L144 226"/>
+      <path d="M118 170 L138 170 M121 140 L135 140 M124 112 L132 112"/>
+      <path d="M116 200 L141 170 M140 200 L115 170 M119 170 L136 140 M137 170 L120 140"/>
+      <path d="M104 96 L152 96 M100 118 L156 118"/>
+    </g>
+    <g stroke="#EFE4CE" stroke-opacity="0.7" stroke-width="1.5" fill="none">
+      <path d="M152 96 C200 112 250 108 300 96"/><path d="M156 118 C204 134 254 130 300 120"/>
+      <path d="M104 96 C80 104 50 104 20 98"/>
+    </g>
+    <g fill="#14857D" stroke="#EFE4CE" stroke-width="1.5">
+      <path d="M170 220 L196 196 L240 196 L214 220 Z"/><path d="M222 226 L248 202 L292 202 L266 226 Z"/>
+      <path d="M40 228 L62 206 L100 206 L78 228 Z"/>
+    </g>
+    <g stroke="#EFE4CE" stroke-opacity="0.45" stroke-width="1"><path d="M183 208 L227 208 M235 214 L279 214 M51 217 L89 217"/></g>
+  </g>
+</svg>

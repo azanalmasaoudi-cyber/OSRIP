@@ -1,0 +1,38 @@
+{
+    // VS Code only. Visual Studio uses OSRIP.sln (tools\OSRIP.Launcher.pyproj) instead;
+    // see docs/WINDOWS_STARTUP.md.
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "OSRIP: start everything",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/start_osrip.py",
+            "cwd": "${workspaceFolder}",
+            "python": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
+            "console": "integratedTerminal",
+            "subProcess": false,
+            "justMyCode": true
+        },
+        {
+            "name": "OSRIP: debug the API only (dev database must be running)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/backend/scripts/serve_dev.py",
+            "cwd": "${workspaceFolder}/backend",
+            "python": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            // Starts everything without opening a browser, waits until the launcher prints
+            // "OSRIP is ready", then opens Edge with the JavaScript debugger attached.
+            "name": "OSRIP: debug the interface in Edge",
+            "type": "msedge",
+            "request": "launch",
+            "url": "http://localhost:5173/",
+            "webRoot": "${workspaceFolder}/frontend",
+            "preLaunchTask": "OSRIP: start everything (no browser)"
+        }
+    ]
+}

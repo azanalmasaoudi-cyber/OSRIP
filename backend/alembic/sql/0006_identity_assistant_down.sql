@@ -1,0 +1,14 @@
+DROP TABLE IF EXISTS assistant_usage;
+DROP TABLE IF EXISTS assistant_message;
+DROP TABLE IF EXISTS assistant_conversation;
+DELETE FROM role_permission WHERE permission_code = 'assistant.use';
+DELETE FROM user_permission_grant WHERE permission_code = 'assistant.use';
+DELETE FROM permission WHERE code = 'assistant.use';
+DROP TABLE IF EXISTS email_outbox;
+DROP TABLE IF EXISTS oidc_request;
+DROP TABLE IF EXISTS external_identity;
+DROP TRIGGER IF EXISTS trg_auth_token_single_use ON auth_token;
+DROP FUNCTION IF EXISTS auth_token_single_use();
+DROP TABLE IF EXISTS auth_token;
+ALTER TABLE app_user DROP COLUMN IF EXISTS created_via;
+ALTER TABLE app_user DROP COLUMN IF EXISTS email_verified_at;

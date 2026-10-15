@@ -1,0 +1,4 @@
+indicator_code,area_code,period_start,period_end,frequency,unit_code,value
+ELEC_CONSUMPTION,OM,2011-01-01,2011-12-31,annual,GWh,31000
+ELEC_CONSUMPTION,OM,2012-01-01,2012-12-31,annual,GWh,32550
+ELEC_CONSUMPTION,OM,2013-01-01,2013-12-31,annual,MW,5

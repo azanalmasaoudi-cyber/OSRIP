@@ -1,0 +1,10 @@
+DROP INDEX IF EXISTS ix_recommendation_review_rec;
+DROP INDEX IF EXISTS ix_recommendation_run;
+DROP TRIGGER IF EXISTS trg_report_frozen ON report;
+DROP FUNCTION IF EXISTS report_frozen_after_generation();
+ALTER TABLE report DROP CONSTRAINT IF EXISTS ck_report_generated_has_content;
+ALTER TABLE report DROP COLUMN IF EXISTS content;
+ALTER TABLE report DROP COLUMN IF EXISTS assumptions;
+ALTER TABLE report DROP COLUMN IF EXISTS section;
+ALTER TABLE indicator DROP COLUMN IF EXISTS limitation_ar;
+ALTER TABLE indicator DROP COLUMN IF EXISTS limitation_en;

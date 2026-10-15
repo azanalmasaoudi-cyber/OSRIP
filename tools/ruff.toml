@@ -1,0 +1,9 @@
+# Same rules as the backend. The launcher starts local processes from fixed paths
+# (S603), queries a constant database name (S608), keeps its runtime version check for
+# people who start it with an older Python (UP036) and prints long explanations (E501).
+extend = "../backend/pyproject.toml"
+
+[lint.per-file-ignores]
+"start_osrip.py" = ["S603", "S608", "UP036", "E501"]
+# MSBuild XML templates for the Visual Studio projects keep their element lines whole.
+"make_vs_projects.py" = ["E501"]

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" role="img" aria-labelledby="t d">
+  <title id="t">Illustration: water — a falaj channel between date palms, with a water drop</title>
+  <desc id="d">Original illustration created for the OSRIP academic prototype. Not a photograph and not a specific site.</desc>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0B6B66"/><stop offset="1" stop-color="#0F2340"/></linearGradient>
+    <linearGradient id="w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9ED8D2"/><stop offset="1" stop-color="#4FA39B"/></linearGradient>
+    <pattern id="l" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M12 2 L14 10 L22 12 L14 14 L12 22 L10 14 L2 12 L10 10 Z" fill="none" stroke="#FFF" stroke-opacity="0.08"/></pattern>
+    <clipPath id="c"><path d="M26 240 V114 C26 70 62 45 106 34 C134 27 151 20 160 10 C169 20 186 27 214 34 C258 45 294 70 294 114 V240 Z"/></clipPath>
+  </defs>
+  <path d="M16 240 V112 C16 64 56 36 104 24 C132 17 150 10 160 0 C170 10 188 17 216 24 C264 36 304 64 304 112 V240 Z" fill="#C9A96E"/>
+  <g clip-path="url(#c)">
+    <rect width="320" height="240" fill="url(#g)"/><rect width="320" height="240" fill="url(#l)"/>
+    <path d="M160 36 C160 36 136 66 136 82 C136 96 147 106 160 106 C173 106 184 96 184 82 C184 66 160 36 160 36 Z" fill="url(#w)" stroke="#EFE4CE" stroke-width="2"/>
+    <path d="M150 84 C150 92 154 97 160 98" fill="none" stroke="#FFF" stroke-opacity="0.8" stroke-width="3" stroke-linecap="round"/>
+    <path d="M26 170 L294 170 V240 H26 Z" fill="#1D3A63"/>
+    <path d="M142 170 L178 170 L232 240 L88 240 Z" fill="#C9A96E"/>
+    <path d="M150 170 L170 170 L214 240 L106 240 Z" fill="url(#w)"/>
+    <g stroke="#FFF" stroke-opacity="0.55" stroke-width="2" stroke-linecap="round" fill="none">
+      <path d="M154 186 C158 184 162 188 166 186"/><path d="M146 206 C152 203 158 209 164 206 C168 204 172 208 176 206"/>
+      <path d="M136 226 C144 222 152 230 160 226 C168 222 176 230 184 226"/>
+    </g>
+    <g fill="none" stroke="#8F6E3F" stroke-width="5" stroke-linecap="round"><path d="M70 236 C68 206 72 176 78 150"/><path d="M252 236 C254 204 250 176 244 148"/></g>
+    <g fill="#14857D">
+      <path d="M78 150 C58 138 42 142 32 154 C50 146 64 148 78 152 Z"/><path d="M78 150 C66 128 70 112 82 104 C78 120 80 134 80 150 Z"/>
+      <path d="M78 150 C92 130 110 128 122 136 C104 136 92 142 80 152 Z"/><path d="M78 150 C98 148 112 158 116 170 C104 160 92 156 78 154 Z"/>
+      <path d="M244 148 C264 136 280 140 290 152 C272 144 258 146 244 150 Z"/><path d="M244 148 C256 126 252 110 240 102 C244 118 242 132 242 148 Z"/>
+      <path d="M244 148 C230 128 212 126 200 134 C218 134 230 140 242 150 Z"/><path d="M244 148 C224 146 210 156 206 168 C218 158 230 154 244 152 Z"/>
+    </g>
+    <g fill="#C07A45"><circle cx="84" cy="158" r="3"/><circle cx="90" cy="162" r="3"/><circle cx="238" cy="156" r="3"/><circle cx="232" cy="160" r="3"/></g>
+  </g>
+</svg>

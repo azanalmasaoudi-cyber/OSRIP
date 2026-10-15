@@ -1,0 +1,31 @@
+# OSRIP_DOMAIN: a real DNS name gets an automatic HTTPS certificate; "localhost"
+# gets a locally trusted one. HTTPS is required: session cookies are Secure.
+{$OSRIP_DOMAIN:localhost} {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		# Revalidate the app shell on every visit; hashed files under /assets may be cached.
+		@shell not path /assets/*
+		header @shell Cache-Control "no-cache"
+		file_server
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+		# Tiles, style and fonts for the basemap come from OpenFreeMap; nothing else is external.
+		# Search, speech and the language model are called by the API, never by the browser.
+		# media-src blob: plays the assistant's synthesised speech (fetched from /api).
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; img-src 'self' data: blob: https://tiles.openfreemap.org; media-src 'self' blob:; connect-src 'self' https://tiles.openfreemap.org; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-ancestors 'none'"
+		# The microphone only for this site (asked for when the user presses Speak); no camera or location.
+		Permissions-Policy "microphone=(self), camera=(), geolocation=()"
+	}
+}

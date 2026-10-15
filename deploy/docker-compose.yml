@@ -1,0 +1,93 @@
+# OSRIP on one host: PostgreSQL, a one-shot migration job, the API, the web server
+# and a nightly database backup.
+#   cp deploy/.env.example deploy/.env    # then fill in real secrets
+#   python deploy/predeploy_check.py      # must pass before going public
+#   docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build
+# NOT RUN YET: Docker was not available in the development environment. Creating a
+# server, domain or any paid resource needs the project team's decision first.
+name: osrip
+
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: osrip
+      POSTGRES_USER: osrip
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U osrip -d osrip"]
+      interval: 5s
+      retries: 20
+
+  migrate:
+    build: { context: .., dockerfile: deploy/Dockerfile.api }
+    env_file: .env
+    environment:
+      OSRIP_DATABASE_URL: postgresql+psycopg://osrip:${POSTGRES_PASSWORD}@db:5432/osrip
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      db: { condition: service_healthy }
+    restart: "no"
+
+  api:
+    build: { context: .., dockerfile: deploy/Dockerfile.api }
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      OSRIP_DATABASE_URL: postgresql+psycopg://osrip:${POSTGRES_PASSWORD}@db:5432/osrip
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      # Ready = database reachable and migrations at head (GET /api/v1/health/ready).
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/ready', timeout=5).status == 200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+      args:
+        VITE_MAP_STYLE_URL: ${VITE_MAP_STYLE_URL:-https://tiles.openfreemap.org/styles/positron}
+    restart: unless-stopped
+    environment:
+      OSRIP_DOMAIN: ${OSRIP_DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddydata:/data
+    depends_on:
+      api: { condition: service_healthy }
+
+  # Nightly compressed dump into the "backups" volume; old dumps are pruned after
+  # BACKUP_KEEP_DAYS (default 14). Copy the volume off the host too: a backup on
+  # the same disk is not recovery. Restore drill: docs/DEPLOYMENT.md.
+  backup:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+    volumes:
+      - backups:/backups
+    depends_on:
+      db: { condition: service_healthy }
+    entrypoint: ["sh", "/usr/local/bin/osrip-backup.sh"]
+    configs:
+      - source: backup_script
+        target: /usr/local/bin/osrip-backup.sh
+
+configs:
+  backup_script:
+    file: ./backup.sh
+
+volumes:
+  pgdata:
+  caddydata:
+  backups:

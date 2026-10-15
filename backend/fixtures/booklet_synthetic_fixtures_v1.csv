@@ -1,0 +1,13 @@
+indicator_code,area_code,period_start,period_end,frequency,unit_code,value,commodity_code,partner_code,flow,source_reference
+ELEC_GENERATION,OM,2001-01-01,2001-12-31,annual,GWh,48000,,,,SYNTHETIC booklet Table 4.1 electricity earlier
+ELEC_GENERATION,OM,2002-01-01,2002-12-31,annual,GWh,50100,,,,SYNTHETIC booklet Table 4.1 electricity later
+WATER_CONSUMPTION,OM,2001-01-01,2001-12-31,annual,million_m3,330,,,,SYNTHETIC booklet Table 4.1 water earlier
+WATER_CONSUMPTION,OM,2002-01-01,2002-12-31,annual,million_m3,343,,,,SYNTHETIC booklet Table 4.1 water later
+FOOD_PRODUCTION,OM,2002-01-01,2002-12-31,annual,tonne,100000,SYNTH_COMMODITY,,,SYNTHETIC booklet 4.3 production
+TRADE_QUANTITY,OM,2002-01-01,2002-12-31,annual,tonne,80000,SYNTH_COMMODITY,,import,SYNTHETIC booklet 4.3 imports total
+TRADE_QUANTITY,OM,2002-01-01,2002-12-31,annual,tonne,20000,SYNTH_COMMODITY,,domestic_export,SYNTHETIC booklet 4.3 exports total
+TRADE_QUANTITY,OM,2002-01-01,2002-12-31,annual,tonne,48000,SYNTH_COMMODITY,PARTNER_A,import,SYNTHETIC booklet 4.3 fictional Partner A
+TRADE_QUANTITY,OM,2002-01-01,2002-12-31,annual,tonne,20000,SYNTH_COMMODITY,PARTNER_B,import,SYNTHETIC booklet 4.3 fictional Partner B
+TRADE_QUANTITY,OM,2002-01-01,2002-12-31,annual,tonne,12000,SYNTH_COMMODITY,PARTNER_C,import,SYNTHETIC booklet 4.3 fictional Partner C
+TRADE_VALUE,OM,2002-01-01,2002-12-31,annual,OMR,40000000,SYNTH_COMMODITY,,import,SYNTHETIC booklet 4.4 import value
+TRADE_VALUE,OM,2002-01-01,2002-12-31,annual,OMR,12000000,SYNTH_COMMODITY,,domestic_export,SYNTHETIC booklet 4.4 export value

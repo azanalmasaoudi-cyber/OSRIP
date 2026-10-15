@@ -1,0 +1,470 @@
+{
+  "generated_on": "2026-10-01",
+  "note": "Editorial illustrations are conceptual raster images, not photographs of named facilities, not interactive 3D models and not official material. The Omani professional is fictional. No image contains statistics; all figures are page text. 'native_4k' is true only when the master itself is at least 3840 x 2160 pixels.",
+  "assets": [
+    {
+      "id": "omani-professional",
+      "subject": "Fictional adult Omani professional in a white dishdasha and kumma",
+      "origin": "booklet_appendix_f",
+      "master": "omani-professional.png",
+      "sha256": "1bc0644d0d5feac841fd25ed1313b041a6c659d83ad27e10cf92918167a84090",
+      "generator": "Not recorded (supplied in the academic booklet, Appendix F, as 'generated for the project'); not verified as produced in Canva",
+      "created": "on or before 2026-09-28 (date of the Word file entry)",
+      "prompt": null,
+      "transformations": "Master extracted unchanged from the booklet. Derivatives are downscaled only; JPEG versions are flattened onto ivory.",
+      "status": "in_use",
+      "usage": "Home page hero portrait",
+      "source_width": 1024,
+      "source_height": 1536,
+      "derivatives": [
+        {
+          "file": "/images/editorial/omani-professional-360.avif",
+          "format": "avif",
+          "width": 360,
+          "height": 540,
+          "bytes": 5112
+        },
+        {
+          "file": "/images/editorial/omani-professional-360.webp",
+          "format": "webp",
+          "width": 360,
+          "height": 540,
+          "bytes": 6506
+        },
+        {
+          "file": "/images/editorial/omani-professional-360.jpg",
+          "format": "jpg",
+          "width": 360,
+          "height": 540,
+          "bytes": 12765
+        },
+        {
+          "file": "/images/editorial/omani-professional-640.avif",
+          "format": "avif",
+          "width": 640,
+          "height": 960,
+          "bytes": 10792
+        },
+        {
+          "file": "/images/editorial/omani-professional-640.webp",
+          "format": "webp",
+          "width": 640,
+          "height": 960,
+          "bytes": 15446
+        },
+        {
+          "file": "/images/editorial/omani-professional-640.jpg",
+          "format": "jpg",
+          "width": 640,
+          "height": 960,
+          "bytes": 30383
+        },
+        {
+          "file": "/images/editorial/omani-professional-1024.avif",
+          "format": "avif",
+          "width": 1024,
+          "height": 1536,
+          "bytes": 20500
+        },
+        {
+          "file": "/images/editorial/omani-professional-1024.webp",
+          "format": "webp",
+          "width": 1024,
+          "height": 1536,
+          "bytes": 30168
+        },
+        {
+          "file": "/images/editorial/omani-professional-1024.jpg",
+          "format": "jpg",
+          "width": 1024,
+          "height": 1536,
+          "bytes": 62090
+        }
+      ],
+      "native_4k": false
+    },
+    {
+      "id": "electricity",
+      "subject": "Conceptual solar and electricity infrastructure (not a real facility)",
+      "origin": "booklet_appendix_f",
+      "master": "electricity.png",
+      "sha256": "106792da2ad2a1b9a8ca6855ec30ea93851b71aedbd1e2b6942f2982adf8857f",
+      "generator": "Not recorded (booklet Appendix F); not verified as produced in Canva",
+      "created": "on or before 2026-09-28",
+      "prompt": null,
+      "transformations": "Master extracted unchanged. Downscaled derivatives only.",
+      "status": "in_use",
+      "usage": "Energy and Essential Services header (Electricity)",
+      "source_width": 1536,
+      "source_height": 1024,
+      "derivatives": [
+        {
+          "file": "/images/editorial/electricity-480.avif",
+          "format": "avif",
+          "width": 480,
+          "height": 320,
+          "bytes": 15241
+        },
+        {
+          "file": "/images/editorial/electricity-480.webp",
+          "format": "webp",
+          "width": 480,
+          "height": 320,
+          "bytes": 24902
+        },
+        {
+          "file": "/images/editorial/electricity-480.jpg",
+          "format": "jpg",
+          "width": 480,
+          "height": 320,
+          "bytes": 32061
+        },
+        {
+          "file": "/images/editorial/electricity-800.avif",
+          "format": "avif",
+          "width": 800,
+          "height": 533,
+          "bytes": 37605
+        },
+        {
+          "file": "/images/editorial/electricity-800.webp",
+          "format": "webp",
+          "width": 800,
+          "height": 533,
+          "bytes": 63356
+        },
+        {
+          "file": "/images/editorial/electricity-800.jpg",
+          "format": "jpg",
+          "width": 800,
+          "height": 533,
+          "bytes": 81520
+        },
+        {
+          "file": "/images/editorial/electricity-1200.avif",
+          "format": "avif",
+          "width": 1200,
+          "height": 800,
+          "bytes": 76038
+        },
+        {
+          "file": "/images/editorial/electricity-1200.webp",
+          "format": "webp",
+          "width": 1200,
+          "height": 800,
+          "bytes": 129104
+        },
+        {
+          "file": "/images/editorial/electricity-1200.jpg",
+          "format": "jpg",
+          "width": 1200,
+          "height": 800,
+          "bytes": 168987
+        },
+        {
+          "file": "/images/editorial/electricity-1536.avif",
+          "format": "avif",
+          "width": 1536,
+          "height": 1024,
+          "bytes": 111978
+        },
+        {
+          "file": "/images/editorial/electricity-1536.webp",
+          "format": "webp",
+          "width": 1536,
+          "height": 1024,
+          "bytes": 190232
+        },
+        {
+          "file": "/images/editorial/electricity-1536.jpg",
+          "format": "jpg",
+          "width": 1536,
+          "height": 1024,
+          "bytes": 258711
+        }
+      ],
+      "native_4k": false
+    },
+    {
+      "id": "water",
+      "subject": "Conceptual reservoir, water infrastructure and falaj-inspired channel (not a real facility)",
+      "origin": "booklet_appendix_f",
+      "master": "water.png",
+      "sha256": "683f38bd9cb8b5a2ed97af60002b64ed72434d2ba205c3b659cc8342f109c67e",
+      "generator": "Not recorded (booklet Appendix F); not verified as produced in Canva",
+      "created": "on or before 2026-09-28",
+      "prompt": null,
+      "transformations": "Master extracted unchanged. Downscaled derivatives only.",
+      "status": "in_use",
+      "usage": "Energy and Essential Services header (Water)",
+      "source_width": 1536,
+      "source_height": 1024,
+      "derivatives": [
+        {
+          "file": "/images/editorial/water-480.avif",
+          "format": "avif",
+          "width": 480,
+          "height": 320,
+          "bytes": 16258
+        },
+        {
+          "file": "/images/editorial/water-480.webp",
+          "format": "webp",
+          "width": 480,
+          "height": 320,
+          "bytes": 27568
+        },
+        {
+          "file": "/images/editorial/water-480.jpg",
+          "format": "jpg",
+          "width": 480,
+          "height": 320,
+          "bytes": 35441
+        },
+        {
+          "file": "/images/editorial/water-800.avif",
+          "format": "avif",
+          "width": 800,
+          "height": 533,
+          "bytes": 39037
+        },
+        {
+          "file": "/images/editorial/water-800.webp",
+          "format": "webp",
+          "width": 800,
+          "height": 533,
+          "bytes": 67690
+        },
+        {
+          "file": "/images/editorial/water-800.jpg",
+          "format": "jpg",
+          "width": 800,
+          "height": 533,
+          "bytes": 89039
+        },
+        {
+          "file": "/images/editorial/water-1200.avif",
+          "format": "avif",
+          "width": 1200,
+          "height": 800,
+          "bytes": 77451
+        },
+        {
+          "file": "/images/editorial/water-1200.webp",
+          "format": "webp",
+          "width": 1200,
+          "height": 800,
+          "bytes": 134570
+        },
+        {
+          "file": "/images/editorial/water-1200.jpg",
+          "format": "jpg",
+          "width": 1200,
+          "height": 800,
+          "bytes": 179805
+        },
+        {
+          "file": "/images/editorial/water-1536.avif",
+          "format": "avif",
+          "width": 1536,
+          "height": 1024,
+          "bytes": 112168
+        },
+        {
+          "file": "/images/editorial/water-1536.webp",
+          "format": "webp",
+          "width": 1536,
+          "height": 1024,
+          "bytes": 192008
+        },
+        {
+          "file": "/images/editorial/water-1536.jpg",
+          "format": "jpg",
+          "width": 1536,
+          "height": 1024,
+          "bytes": 269821
+        }
+      ],
+      "native_4k": false
+    },
+    {
+      "id": "trade",
+      "subject": "Conceptual cargo port and container ship (not an identified port)",
+      "origin": "booklet_appendix_f",
+      "master": "trade.png",
+      "sha256": "7962723a2e45eec9b5afbed7f2a9acd9d8391d252f5d4b6003f6ad0742f8a3c4",
+      "generator": "Not recorded (booklet Appendix F); not verified as produced in Canva",
+      "created": "on or before 2026-09-28",
+      "prompt": null,
+      "transformations": "Master extracted unchanged. Downscaled derivatives only.",
+      "status": "in_use",
+      "usage": "Trade page header",
+      "source_width": 1536,
+      "source_height": 1024,
+      "derivatives": [
+        {
+          "file": "/images/editorial/trade-480.avif",
+          "format": "avif",
+          "width": 480,
+          "height": 320,
+          "bytes": 15977
+        },
+        {
+          "file": "/images/editorial/trade-480.webp",
+          "format": "webp",
+          "width": 480,
+          "height": 320,
+          "bytes": 25466
+        },
+        {
+          "file": "/images/editorial/trade-480.jpg",
+          "format": "jpg",
+          "width": 480,
+          "height": 320,
+          "bytes": 34033
+        },
+        {
+          "file": "/images/editorial/trade-800.avif",
+          "format": "avif",
+          "width": 800,
+          "height": 533,
+          "bytes": 36941
+        },
+        {
+          "file": "/images/editorial/trade-800.webp",
+          "format": "webp",
+          "width": 800,
+          "height": 533,
+          "bytes": 60352
+        },
+        {
+          "file": "/images/editorial/trade-800.jpg",
+          "format": "jpg",
+          "width": 800,
+          "height": 533,
+          "bytes": 82103
+        },
+        {
+          "file": "/images/editorial/trade-1200.avif",
+          "format": "avif",
+          "width": 1200,
+          "height": 800,
+          "bytes": 72508
+        },
+        {
+          "file": "/images/editorial/trade-1200.webp",
+          "format": "webp",
+          "width": 1200,
+          "height": 800,
+          "bytes": 115382
+        },
+        {
+          "file": "/images/editorial/trade-1200.jpg",
+          "format": "jpg",
+          "width": 1200,
+          "height": 800,
+          "bytes": 163212
+        },
+        {
+          "file": "/images/editorial/trade-1536.avif",
+          "format": "avif",
+          "width": 1536,
+          "height": 1024,
+          "bytes": 105180
+        },
+        {
+          "file": "/images/editorial/trade-1536.webp",
+          "format": "webp",
+          "width": 1536,
+          "height": 1024,
+          "bytes": 166830
+        },
+        {
+          "file": "/images/editorial/trade-1536.jpg",
+          "format": "jpg",
+          "width": 1536,
+          "height": 1024,
+          "bytes": 244925
+        }
+      ],
+      "native_4k": false
+    },
+    {
+      "id": "canva-omani-professional",
+      "subject": "Fictional adult Omani professional in dishdasha and kumma, office with Omani architectural details",
+      "origin": "canva_generate_image",
+      "canva_media_id": "MAHWw5aV9sw",
+      "generator": "Canva generate-image (connected Canva integration), aspect LANDSCAPE_16_9",
+      "created": "2026-10-01",
+      "source_width": 1680,
+      "source_height": 944,
+      "native_4k": false,
+      "prompt": "Premium three-dimensional illustration for a website hero. A fictional adult Omani professional man wearing an authentic white dishdasha with a short tassel (farrukha) and an embroidered Omani kumma cap, standing calmly in a bright modern office with Omani architectural details: sandstone walls, a pointed arched window, a carved wooden door pattern. He holds a tablet and looks friendly and composed. He stands in the right third of the frame; the left half is calm, softly lit sandstone and ivory wall with generous empty space for website headings. Soft warm studio lighting from the upper left, realistic proportions, refined matte materials. Colour palette: sandstone, ivory, emerald green, turquoise, restrained copper accents. No text, no letters, no numbers, no logos, no flags, no emblems, no government insignia. Not a real or identifiable person.",
+      "transformations": "None yet. A 3840 x 2160 export would be a 2.29x upscale of the 1680 x 944 source and must be labelled as upscaled.",
+      "status": "generated_in_canva_not_exported",
+      "usage": "Pending: exporting requires saving a Canva design (owner approval)",
+      "derivatives": []
+    },
+    {
+      "id": "canva-electricity",
+      "subject": "Conceptual solar, wind, storage and substation landscape",
+      "origin": "canva_generate_image",
+      "canva_media_id": "MAHWw39gpLA",
+      "generator": "Canva generate-image, aspect LANDSCAPE_16_9",
+      "created": "2026-10-01",
+      "source_width": 1680,
+      "source_height": 944,
+      "native_4k": false,
+      "prompt": "Premium three-dimensional illustration for a website hero. A conceptual electricity and renewable energy landscape in an Omani setting: rows of solar photovoltaic panels and a few slender wind turbines on warm sandstone desert terrain, rocky mountains in the soft distance, a small conceptual substation, battery storage units and a slim transmission line. The infrastructure occupies the right two thirds; the left third is open sky and smooth sand with generous empty space for website headings. Soft warm studio lighting from the upper left, realistic proportions, clean refined materials. Colour palette: sandstone, ivory, emerald green, turquoise, restrained copper accents. Clearly conceptual, not a real identified facility. No text, no letters, no numbers, no logos, no flags, no emblems.",
+      "transformations": "None yet (see canva-omani-professional).",
+      "status": "generated_in_canva_not_exported",
+      "usage": "Pending export",
+      "derivatives": []
+    },
+    {
+      "id": "canva-water",
+      "subject": "Conceptual falaj channel leading to a water treatment and desalination facility",
+      "origin": "canva_generate_image",
+      "canva_media_id": "MAHWw37y4X0",
+      "generator": "Canva generate-image, aspect LANDSCAPE_16_9",
+      "created": "2026-10-01",
+      "source_width": 1680,
+      "source_height": 944,
+      "native_4k": false,
+      "prompt": "Premium three-dimensional illustration for a website hero. Conceptual water infrastructure in an Omani setting: a traditional stone falaj irrigation channel with clear turquoise water flowing between date palms, leading towards a modern conceptual water treatment and desalination facility with clean pipes and a calm reservoir, sandstone mountains in the background. The scene sits in the right two thirds; the left third is a calm sandstone and ivory area with generous empty space for website headings. Soft warm studio lighting from the upper left, realistic proportions, refined materials. Colour palette: sandstone, ivory, emerald green, turquoise, restrained copper accents. Clearly conceptual, not a real identified facility. No text, no letters, no numbers, no logos, no flags, no emblems.",
+      "transformations": "None yet.",
+      "status": "generated_in_canva_not_exported",
+      "usage": "Pending export",
+      "derivatives": []
+    },
+    {
+      "id": "canva-food-security",
+      "subject": "Conceptual date palms, irrigated fields, falaj and fishing boats on a quay",
+      "origin": "canva_generate_image",
+      "canva_media_id": "MAHWwykGUko",
+      "generator": "Canva generate-image, aspect LANDSCAPE_16_9",
+      "created": "2026-10-01",
+      "source_width": 1680,
+      "source_height": 944,
+      "native_4k": false,
+      "prompt": "Premium three-dimensional illustration for a website hero. Conceptual Omani food security scene combining agriculture and fisheries: terraced date palm groves and green vegetable fields with drip irrigation fed by a small falaj, and along the coast a few traditional wooden fishing boats and a modern fishing vessel with crates of fish on a clean quay. The scene occupies the right two thirds; the left third is soft sandstone and ivory sky and land with generous empty space for website headings. Soft warm studio lighting from the upper left, realistic proportions, refined materials. Colour palette: sandstone, ivory, emerald green, turquoise, restrained copper accents. Clearly conceptual, not a real identified place. No text, no letters, no numbers, no logos, no flags, no emblems.",
+      "transformations": "None yet.",
+      "status": "generated_in_canva_not_exported",
+      "usage": "Pending export; the site keeps its SVG food illustration until then",
+      "derivatives": []
+    },
+    {
+      "id": "canva-trade",
+      "subject": "Conceptual container port and logistics",
+      "origin": "canva_generate_image",
+      "generator": "Canva generate-image",
+      "created": "2026-10-01",
+      "prompt": "Premium three-dimensional illustration for a website hero. A conceptual container port and logistics scene on a rocky Omani coastline: ship-to-shore gantry cranes, neatly stacked shipping containers in emerald, turquoise, ivory and copper tones, a large container ship at the quay, trucks and a modern logistics warehouse, sandstone mountains behind. The port occupies the right two thirds; the left third is calm turquoise sea and ivory sky with generous empty space for website headings. Soft warm studio lighting from the upper left, realistic proportions, refined materials. Colour palette: sandstone, ivory, emerald green, turquoise, restrained copper accents. Clearly conceptual, not a real identified port. No text, no letters, no numbers, no logos, no flags, no emblems on containers or ships.",
+      "transformations": "None.",
+      "status": "generation_failed",
+      "failure": "Canva returned quota_exceeded: 'You have exceeded your credit quota.' No image was produced.",
+      "usage": "The booklet trade illustration stays in use",
+      "derivatives": []
+    }
+  ]
+}

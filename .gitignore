@@ -1,0 +1,91 @@
+# What stays out of the OSRIP repository: secrets, personal data, dependencies, generated
+# output and machine-local state. Local copies stay on disk; Git just never picks them up.
+# Kept on purpose: every .env.example (placeholders only), frontend/package-lock.json,
+# backend/requirements.lock, backend/alembic (migration sources) and docs/evidence.
+
+# --- Secrets and real environment configuration -------------------------------------------
+.env
+.env.*
+*.env
+!.env.example
+# API keys, private keys, certificates and credential files
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.ppk
+id_rsa*
+id_ed25519*
+credentials*.json
+client_secret*.json
+service-account*.json
+*password*.txt
+.npmrc
+.pypirc
+.netrc
+
+# --- Database dumps and files that can hold user data -------------------------------------
+*.dump
+*.backup
+*.bak
+*.sql.gz
+*.sqlite
+*.sqlite3
+*.db
+pgdata/
+# Recordings made by backend/scripts/voice_acceptance.py (for the listening review)
+voice-acceptance/
+
+# --- Dependencies and virtual environments (npm ci; pip install -r requirements.lock) ----
+node_modules/
+.venv/
+.venv-*/
+venv/
+
+# --- Logs ----------------------------------------------------------------------------------
+*.log
+*.log.*
+logs/
+npm-debug.log*
+
+# --- Generated build and test output -------------------------------------------------------
+dist/
+*.tsbuildinfo
+.vite/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+coverage/
+playwright-report/
+test-results/
+blob-report/
+
+# --- Editors and machine-local state -------------------------------------------------------
+# Visual Studio's local state and MSBuild's intermediate output
+.vs/
+obj/
+bin/
+*.suo
+*.user
+.idea/
+# The shared VS Code tasks and launch configurations in /.vscode are kept; this copy is not.
+docs/.vscode/
+# Claude Code's local settings (paths on this computer) and tools
+/.claude/
+# Office lock files and Windows folder settings
+~$*
+desktop.ini
+
+# --- Not part of OSRIP (kept on this computer, never uploaded) ------------------------------
+# A copy of a personal Downloads folder (coursework, installers, images, a student list)
+/docs/Downloads/
+# The old project copy and its web.config (unused; see docs/implementation-status.md)
+/OSRIP/
+/Web.config

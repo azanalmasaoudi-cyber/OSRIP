@@ -1,0 +1,200 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.0.11205.157
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "OSRIP.Launcher", "tools\OSRIP.Launcher.pyproj", "{4F2B7C1E-8D3A-4B6E-9C21-5A7D0E3F9B12}"
+EndProject
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "OSRIP.Backend", "backend\OSRIP.Backend.pyproj", "{6D3E9A41-2B7C-4F58-A1D0-9C4E7B2F3A15}"
+EndProject
+Project("{9092AA53-FB77-4645-B42D-1CCCA6BD08BD}") = "OSRIP.Frontend", "frontend\OSRIP.Frontend.njsproj", "{B82F4C17-5E9A-4D63-8C21-0F7A3E6D9B48}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{9B6E1D42-3C7A-4E58-8F11-2D6A0C5B7E90}"
+	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
+		start-osrip.cmd = start-osrip.cmd
+		.editorconfig = .editorconfig
+		.vsconfig = .vsconfig
+		.env.example = .env.example
+		.gitignore = .gitignore
+		.gitattributes = .gitattributes
+		.dockerignore = .dockerignore
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".vscode", ".vscode", "{7D315A32-34E1-5268-88A4-20E8F4676390}"
+	ProjectSection(SolutionItems) = preProject
+		.vscode\launch.json = .vscode\launch.json
+		.vscode\tasks.json = .vscode\tasks.json
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "deploy", "deploy", "{F7BD476C-CA96-5347-A17D-3DCC357245BB}"
+	ProjectSection(SolutionItems) = preProject
+		deploy\.env.example = deploy\.env.example
+		deploy\backup.sh = deploy\backup.sh
+		deploy\bootstrap_server.sh = deploy\bootstrap_server.sh
+		deploy\Caddyfile = deploy\Caddyfile
+		deploy\deploy_to_server.ps1 = deploy\deploy_to_server.ps1
+		deploy\docker-compose.yml = deploy\docker-compose.yml
+		deploy\Dockerfile.api = deploy\Dockerfile.api
+		deploy\Dockerfile.web = deploy\Dockerfile.web
+		deploy\laptop_server.ps1 = deploy\laptop_server.ps1
+		deploy\predeploy_check.py = deploy\predeploy_check.py
+		deploy\remote_up.sh = deploy\remote_up.sh
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{951A985D-DAE0-5C48-A88E-B424B9B76D23}"
+	ProjectSection(SolutionItems) = preProject
+		docs\4caae3f6-c359-4130-a10a-722242bacdcf.png = docs\4caae3f6-c359-4130-a10a-722242bacdcf.png
+		docs\AI_PROVIDERS.md = docs\AI_PROVIDERS.md
+		docs\API.md = docs\API.md
+		docs\ARCHITECTURE.md = docs\ARCHITECTURE.md
+		docs\assets.md = docs\assets.md
+		docs\assistant-personas.md = docs\assistant-personas.md
+		docs\avatar-providers.md = docs\avatar-providers.md
+		docs\DEMO_SCRIPT.md = docs\DEMO_SCRIPT.md
+		docs\DEPLOYMENT.md = docs\DEPLOYMENT.md
+		docs\DESIGN_SYSTEM.md = docs\DESIGN_SYSTEM.md
+		docs\ENTRANCE.md = docs\ENTRANCE.md
+		docs\implementation-notes.md = docs\implementation-notes.md
+		docs\implementation-status.md = docs\implementation-status.md
+		docs\INTEGRATIONS.md = docs\INTEGRATIONS.md
+		docs\Oman_Statistics_References_and_Images_English.docx = docs\Oman_Statistics_References_and_Images_English.docx
+		docs\OSRIP_Academic_Booklet_English_60_Pages-2.docx = docs\OSRIP_Academic_Booklet_English_60_Pages-2.docx
+		docs\OSRIP_Academic_Booklet_English_60_Pages.docx = docs\OSRIP_Academic_Booklet_English_60_Pages.docx
+		docs\progress.md = docs\progress.md
+		docs\requirements.md = docs\requirements.md
+		docs\SPEC_CONFLICTS.md = docs\SPEC_CONFLICTS.md
+		docs\TECHNICAL_REPORT.md = docs\TECHNICAL_REPORT.md
+		docs\TEST_RESULTS.md = docs\TEST_RESULTS.md
+		docs\TRACEABILITY.md = docs\TRACEABILITY.md
+		docs\VERIFICATION.md = docs\VERIFICATION.md
+		docs\VERIFICATION_REPORT.md = docs\VERIFICATION_REPORT.md
+		docs\WINDOWS_STARTUP.md = docs\WINDOWS_STARTUP.md
+		docs\WORKSPACE.md = docs\WORKSPACE.md
+		docs\دليل_البدء.md = docs\دليل_البدء.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "api", "api", "{61FB2FA9-CA59-59B7-B336-3C9A25DE134C}"
+	ProjectSection(SolutionItems) = preProject
+		docs\api\openapi.json = docs\api\openapi.json
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "backup", "backup", "{EEDDB7A6-C2B2-5952-86EC-8463417DCABF}"
+	ProjectSection(SolutionItems) = preProject
+		docs\backup\backup-drill-20260925.json = docs\backup\backup-drill-20260925.json
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "demo", "demo", "{5F4E4F17-9349-5ECE-AD7A-EB60F6948C39}"
+	ProjectSection(SolutionItems) = preProject
+		docs\demo\demo-upload.csv = docs\demo\demo-upload.csv
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "evidence", "evidence", "{0B712951-2047-5BE0-A42C-68C45DAA3B66}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ai-providers", "ai-providers", "{D32045D4-499E-52DC-B174-22CB7E6DE501}"
+	ProjectSection(SolutionItems) = preProject
+		docs\evidence\ai-providers\grounded-panel-ar-phone.png = docs\evidence\ai-providers\grounded-panel-ar-phone.png
+		docs\evidence\ai-providers\grounded-panel-en.png = docs\evidence\ai-providers\grounded-panel-en.png
+		docs\evidence\ai-providers\method-summary-en.png = docs\evidence\ai-providers\method-summary-en.png
+		docs\evidence\ai-providers\provider-readiness-en.png = docs\evidence\ai-providers\provider-readiness-en.png
+		docs\evidence\ai-providers\search-log-en.png = docs\evidence\ai-providers\search-log-en.png
+		docs\evidence\ai-providers\web-source-en.png = docs\evidence\ai-providers\web-source-en.png
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "entrance", "entrance", "{792931BC-B131-5863-A4F2-D392362DE4F8}"
+	ProjectSection(SolutionItems) = preProject
+		docs\evidence\entrance\entrance-desktop-ar.webp = docs\evidence\entrance\entrance-desktop-ar.webp
+		docs\evidence\entrance\entrance-desktop-en.webp = docs\evidence\entrance\entrance-desktop-en.webp
+		docs\evidence\entrance\entrance-phone-en.webp = docs\evidence\entrance\entrance-phone-en.webp
+		docs\evidence\entrance\frames-desktop-ar.png = docs\evidence\entrance\frames-desktop-ar.png
+		docs\evidence\entrance\frames-desktop-en.png = docs\evidence\entrance\frames-desktop-en.png
+		docs\evidence\entrance\frames-phone-en.png = docs\evidence\entrance\frames-phone-en.png
+		docs\evidence\entrance\reduced-motion-final-frame.png = docs\evidence\entrance\reduced-motion-final-frame.png
+		docs\evidence\entrance\scene-failed-to-load.png = docs\evidence\entrance\scene-failed-to-load.png
+		docs\evidence\entrance\settings-replay-introduction.png = docs\evidence\entrance\settings-replay-introduction.png
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "integrated", "integrated", "{BE95394C-9AA0-5C1C-BD9C-66405DE6D1A4}"
+	ProjectSection(SolutionItems) = preProject
+		docs\evidence\integrated\01-entrance-carrying.png = docs\evidence\integrated\01-entrance-carrying.png
+		docs\evidence\integrated\02-entrance-placing.png = docs\evidence\integrated\02-entrance-placing.png
+		docs\evidence\integrated\03-entrance-placed-in-centre.png = docs\evidence\integrated\03-entrance-placed-in-centre.png
+		docs\evidence\integrated\04-entrance-bilingual-goals.png = docs\evidence\integrated\04-entrance-bilingual-goals.png
+		docs\evidence\integrated\05-entrance-replayed.png = docs\evidence\integrated\05-entrance-replayed.png
+		docs\evidence\integrated\06-persona-ilham-selected.png = docs\evidence\integrated\06-persona-ilham-selected.png
+		docs\evidence\integrated\07-talk-ilham-female-voice.png = docs\evidence\integrated\07-talk-ilham-female-voice.png
+		docs\evidence\integrated\08-talk-mulhim-male-voice.png = docs\evidence\integrated\08-talk-mulhim-male-voice.png
+		docs\evidence\integrated\09-workspace-verified-data.png = docs\evidence\integrated\09-workspace-verified-data.png
+		docs\evidence\integrated\09b-workspace-governorates.png = docs\evidence\integrated\09b-workspace-governorates.png
+		docs\evidence\integrated\10-narration-sentence-1-highlights-row.png = docs\evidence\integrated\10-narration-sentence-1-highlights-row.png
+		docs\evidence\integrated\11-narration-sentence-2-highlights-row.png = docs\evidence\integrated\11-narration-sentence-2-highlights-row.png
+		docs\evidence\integrated\12-research-sources-labelled.png = docs\evidence\integrated\12-research-sources-labelled.png
+		docs\evidence\integrated\13-provider-unavailable-not-charged.png = docs\evidence\integrated\13-provider-unavailable-not-charged.png
+		docs\evidence\integrated\14-microphone-denied-typing-works.png = docs\evidence\integrated\14-microphone-denied-typing-works.png
+		docs\evidence\integrated\15-guest-limit-after-switching-persona.png = docs\evidence\integrated\15-guest-limit-after-switching-persona.png
+		docs\evidence\integrated\16-phone-study-tab.png = docs\evidence\integrated\16-phone-study-tab.png
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "personas", "personas", "{F1F24A2A-5BFF-5F61-BE8C-250723697D85}"
+	ProjectSection(SolutionItems) = preProject
+		docs\evidence\personas\panel-ilham-en.png = docs\evidence\personas\panel-ilham-en.png
+		docs\evidence\personas\settings-persona.png = docs\evidence\personas\settings-persona.png
+		docs\evidence\personas\talk-ilham-en.png = docs\evidence\personas\talk-ilham-en.png
+		docs\evidence\personas\talk-ilham-phone-ar.png = docs\evidence\personas\talk-ilham-phone-ar.png
+		docs\evidence\personas\talk-mulhim-ar.png = docs\evidence\personas\talk-mulhim-ar.png
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workspace", "workspace", "{B34D6E13-8B80-59FA-9AED-693C622716DD}"
+	ProjectSection(SolutionItems) = preProject
+		docs\evidence\workspace\desktop-data.png = docs\evidence\workspace\desktop-data.png
+		docs\evidence\workspace\desktop-study-ar.png = docs\evidence\workspace\desktop-study-ar.png
+		docs\evidence\workspace\desktop-study-dark.png = docs\evidence\workspace\desktop-study-dark.png
+		docs\evidence\workspace\desktop-study.png = docs\evidence\workspace\desktop-study.png
+		docs\evidence\workspace\phone-data.png = docs\evidence\workspace\phone-data.png
+		docs\evidence\workspace\phone-study.png = docs\evidence\workspace\phone-study.png
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "perf", "perf", "{905C8A1C-3512-58AB-9365-318FFA4AF538}"
+	ProjectSection(SolutionItems) = preProject
+		docs\perf\Electricity · OSRIP-screenshot.png = docs\perf\Electricity · OSRIP-screenshot.png
+		docs\perf\perf-2026-09-25.json = docs\perf\perf-2026-09-25.json
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4F2B7C1E-8D3A-4B6E-9C21-5A7D0E3F9B12}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4F2B7C1E-8D3A-4B6E-9C21-5A7D0E3F9B12}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4F2B7C1E-8D3A-4B6E-9C21-5A7D0E3F9B12}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4F2B7C1E-8D3A-4B6E-9C21-5A7D0E3F9B12}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6D3E9A41-2B7C-4F58-A1D0-9C4E7B2F3A15}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D3E9A41-2B7C-4F58-A1D0-9C4E7B2F3A15}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D3E9A41-2B7C-4F58-A1D0-9C4E7B2F3A15}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D3E9A41-2B7C-4F58-A1D0-9C4E7B2F3A15}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B82F4C17-5E9A-4D63-8C21-0F7A3E6D9B48}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B82F4C17-5E9A-4D63-8C21-0F7A3E6D9B48}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B82F4C17-5E9A-4D63-8C21-0F7A3E6D9B48}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B82F4C17-5E9A-4D63-8C21-0F7A3E6D9B48}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{61FB2FA9-CA59-59B7-B336-3C9A25DE134C} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
+		{EEDDB7A6-C2B2-5952-86EC-8463417DCABF} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
+		{5F4E4F17-9349-5ECE-AD7A-EB60F6948C39} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
+		{0B712951-2047-5BE0-A42C-68C45DAA3B66} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
+		{D32045D4-499E-52DC-B174-22CB7E6DE501} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
+		{792931BC-B131-5863-A4F2-D392362DE4F8} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
+		{BE95394C-9AA0-5C1C-BD9C-66405DE6D1A4} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
+		{F1F24A2A-5BFF-5F61-BE8C-250723697D85} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
+		{B34D6E13-8B80-59FA-9AED-693C622716DD} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
+		{905C8A1C-3512-58AB-9365-318FFA4AF538} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C3A1F7B2-6E4D-4A09-B8C5-71D2E9F04A36}
+	EndGlobalSection
+EndGlobal

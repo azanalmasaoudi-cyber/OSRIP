@@ -1,0 +1,17 @@
+# Keep secrets, local environments and build output out of every image build context.
+**/.env
+**/.env.*
+!**/.env.example
+**/node_modules
+**/.venv
+**/dist
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/test-results
+**/playwright-report
+.claude
+.vs
+.vscode
+docs
+OSRIP

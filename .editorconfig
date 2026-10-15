@@ -1,0 +1,50 @@
+# Editor settings for Visual Studio, VS Code and other editors (https://editorconfig.org).
+# They describe the style the files already have (and ruff and ESLint expect), so that
+# Visual Studio's new lines, Format Document and saving keep every file as it is:
+# UTF-8 without a byte-order mark, Unix line endings, spaces, a final newline.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Python (ruff), SQL migrations and TOML: four spaces.
+[*.{py,sql,toml}]
+indent_size = 4
+
+# The curated reference pack is written with one-space indentation (reference_pack.py).
+[backend/fixtures/reference/*.json]
+indent_size = 1
+
+# Two trailing spaces can be a deliberate line break in Markdown.
+[*.md]
+trim_trailing_whitespace = false
+
+# Windows command scripts need Windows line endings.
+[*.{cmd,bat}]
+end_of_line = crlf
+
+# Windows PowerShell 5.1 reads a script with non-ASCII text correctly only with a BOM.
+[*.ps1]
+charset = utf-8-bom
+
+# Visual Studio's own formats (OSRIP.sln and the projects are written by tools/make_vs_projects.py).
+[*.sln]
+charset = utf-8-bom
+end_of_line = crlf
+indent_style = tab
+
+[*.{pyproj,njsproj}]
+end_of_line = crlf
+
+# Caddy's configuration is tab-indented.
+[Caddyfile]
+indent_style = tab
+
+# Shell scripts run on Linux servers.
+[*.sh]
+end_of_line = lf

@@ -1,0 +1,91 @@
+{
+    // VS Code tasks (Terminal > Run Task). Visual Studio uses OSRIP.sln instead.
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "OSRIP: start everything",
+            "detail": "Database, API and frontend; opens the browser when all are ready. Ctrl+C stops them.",
+            "type": "process",
+            "command": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
+            "args": ["${workspaceFolder}/tools/start_osrip.py"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "osrip",
+                "pattern": { "regexp": "^__never_matches__$" },
+                "background": {
+                    "activesBegin": "OSRIP launcher",
+                    "beginsPattern": "OSRIP launcher",
+                    "endsPattern": "OSRIP is ready|Startup stopped|Missing prerequisites"
+                }
+            },
+            "presentation": { "reveal": "always", "panel": "dedicated" },
+            "group": { "kind": "build", "isDefault": true }
+        },
+        {
+            "label": "OSRIP: start everything (no browser)",
+            "detail": "Used by the 'debug the interface in Edge' launch configuration.",
+            "type": "process",
+            "command": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
+            "args": ["${workspaceFolder}/tools/start_osrip.py", "--no-browser"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "osrip",
+                "pattern": { "regexp": "^__never_matches__$" },
+                "background": {
+                    "activesBegin": "OSRIP launcher",
+                    "beginsPattern": "OSRIP launcher",
+                    "endsPattern": "OSRIP is ready|Startup stopped|Missing prerequisites|already running from another launcher"
+                }
+            },
+            "presentation": { "reveal": "always", "panel": "dedicated" }
+        },
+        {
+            "label": "OSRIP: create a username account (password prompted)",
+            "detail": "Idempotent; the password is typed in the terminal, never stored in a file.",
+            "type": "process",
+            "command": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
+            "args": ["-m", "app.cli", "ensure-user", "--username", "${input:username}"],
+            "options": { "cwd": "${workspaceFolder}/backend" },
+            "presentation": { "reveal": "always", "focus": true, "panel": "dedicated" },
+            "problemMatcher": []
+        },
+        {
+            "label": "OSRIP: first-time setup (load demo data and reference pack)",
+            "type": "process",
+            "command": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
+            "args": ["${workspaceFolder}/tools/start_osrip.py", "--setup"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": []
+        },
+        {
+            "label": "OSRIP: check prerequisites",
+            "type": "process",
+            "command": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
+            "args": ["${workspaceFolder}/tools/start_osrip.py", "--check"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": []
+        },
+        {
+            "label": "OSRIP: backend unit tests",
+            "type": "process",
+            "command": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
+            "args": ["-m", "pytest", "-q"],
+            "options": { "cwd": "${workspaceFolder}/backend" },
+            "problemMatcher": [],
+            "group": "test"
+        },
+        {
+            "label": "OSRIP: frontend type-check and lint",
+            "type": "shell",
+            "command": "npx tsc -b; if ($?) { npm run lint }",
+            "options": { "cwd": "${workspaceFolder}/frontend", "shell": { "executable": "powershell.exe", "args": ["-NoProfile", "-Command"] } },
+            "problemMatcher": ["$tsc"],
+            "group": "test"
+        }
+    ],
+    "inputs": [
+        { "id": "username", "type": "promptString", "description": "Username (3-32 letters, digits, . _ -)" }
+    ]
+}

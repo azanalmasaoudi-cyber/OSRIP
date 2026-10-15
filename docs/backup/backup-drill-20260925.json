@@ -1,0 +1,32 @@
+{
+  "performed_at": "2026-09-25T11:07:51+00:00",
+  "source_database": "osrip_dev",
+  "restored_into": "osrip_restore_drill (created for the exercise, dropped afterwards)",
+  "backup_file": "C:\\Users\\Dell\\AppData\\Local\\OSRIP-dev\\backups\\osrip_dev-20260925T110749Z.dump",
+  "backup_bytes": 108669,
+  "backup_sha256": "06f0f2affd78935e3626263de08f6ae956fa2baaf97c8c1983eb5e2cf7b34390",
+  "backup_seconds": 0.36,
+  "restore_seconds": 0.66,
+  "alembic_revision": "0005_geography_forecasts",
+  "tables": 30,
+  "rows_total": 351,
+  "published_versions": 1,
+  "checks": {
+    "fingerprints_identical": true,
+    "differences": [],
+    "fixture_values_read_by_app": [
+      [
+        "48000",
+        "50100"
+      ]
+    ],
+    "fixture_values_expected": [
+      [
+        "48000",
+        "50100"
+      ]
+    ],
+    "immutability_trigger_active": true
+  },
+  "result": "PASS"
+}

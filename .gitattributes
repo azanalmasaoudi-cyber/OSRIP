@@ -1,0 +1,24 @@
+# Line endings: LF in the repository and in every checkout, as .editorconfig expects.
+# Without this, Git for Windows (core.autocrlf=true) checks files out with CRLF, and Visual
+# Studio then finds files with mixed line endings. Windows-only formats keep CRLF.
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.sln text eol=crlf
+*.pyproj text eol=crlf
+*.njsproj text eol=crlf
+
+# Binary files: stored as they are, never converted or merged as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.docx binary
+*.xlsx binary
+*.pdf binary
+*.zip binary
