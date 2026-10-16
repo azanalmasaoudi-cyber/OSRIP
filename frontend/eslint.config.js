@@ -22,7 +22,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['e2e/**/*.ts', 'e2e-api/**/*.ts', 'e2e-demo/**/*.ts', '*.config.ts', 'scripts/**/*.{js,mjs}', 'eslint.config.js'],
+    files: ['e2e/**/*.ts', 'e2e-api/**/*.ts', 'e2e-demo/**/*.ts', '*.config.ts', 'scripts/**/*.{js,mjs}', 'tests/**/*.mjs', 'eslint.config.js'],
     ...tseslint.configs.disableTypeChecked,
     languageOptions: { globals: globals.node },
   },

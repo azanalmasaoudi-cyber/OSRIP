@@ -73,6 +73,7 @@
     <Folder Include="src\lib\" />
     <Folder Include="src\pages\" />
     <Folder Include="src\state\" />
+    <Folder Include="tests\" />
   </ItemGroup>
   <ItemGroup>
     <TypeScriptCompile Include="e2e-api\accounts.spec.ts" />
@@ -86,6 +87,7 @@
     <TypeScriptCompile Include="e2e-api\personas.spec.ts" />
     <TypeScriptCompile Include="e2e-api\phone.spec.ts" />
     <TypeScriptCompile Include="e2e-api\quality.spec.ts" />
+    <TypeScriptCompile Include="e2e-api\research-brief.spec.ts" />
     <TypeScriptCompile Include="e2e-api\research.spec.ts" />
     <TypeScriptCompile Include="e2e-api\studies.spec.ts" />
     <TypeScriptCompile Include="e2e-api\talk.spec.ts" />
@@ -98,6 +100,7 @@
     <TypeScriptCompile Include="e2e-api\zzz-forecast-run.spec.ts" />
     <TypeScriptCompile Include="e2e-demo\integrated.demo.spec.ts" />
     <TypeScriptCompile Include="e2e\entrance.spec.ts" />
+    <TypeScriptCompile Include="e2e\review-upgrade.spec.ts" />
     <TypeScriptCompile Include="e2e\shell.spec.ts" />
     <TypeScriptCompile Include="playwright.api.config.ts" />
     <TypeScriptCompile Include="playwright.config.ts" />
@@ -133,6 +136,8 @@
     <TypeScriptCompile Include="src\components\assistant\AssistantPanel.tsx" />
     <TypeScriptCompile Include="src\components\assistant\MulhimPanels.tsx" />
     <TypeScriptCompile Include="src\components\assistant\persona.tsx" />
+    <TypeScriptCompile Include="src\components\assistant\PersonaImage.tsx" />
+    <TypeScriptCompile Include="src\components\assistant\ResearchBriefBuilder.tsx" />
     <TypeScriptCompile Include="src\components\assistant\ResearchProgress.tsx" />
     <TypeScriptCompile Include="src\components\assistant\StructuredReply.tsx" />
     <TypeScriptCompile Include="src\components\auth\PhoneVerification.tsx" />
@@ -194,6 +199,7 @@
     <TypeScriptCompile Include="src\components\workspace\StudyParts.tsx" />
     <TypeScriptCompile Include="src\components\workspace\Tabs.tsx" />
     <TypeScriptCompile Include="src\components\workspace\useNarration.ts" />
+    <TypeScriptCompile Include="src\components\workspace\WorkspaceLaunchpad.tsx" />
     <TypeScriptCompile Include="src\content\editorial.generated.ts" />
     <TypeScriptCompile Include="src\content\photos.ts" />
     <TypeScriptCompile Include="src\domain\filters.ts" />
@@ -208,6 +214,7 @@
     <TypeScriptCompile Include="src\lib\format.ts" />
     <TypeScriptCompile Include="src\lib\provenance.ts" />
     <TypeScriptCompile Include="src\lib\recorder.ts" />
+    <TypeScriptCompile Include="src\lib\researchBrief.ts" />
     <TypeScriptCompile Include="src\lib\speech.ts" />
     <TypeScriptCompile Include="src\lib\useAppLanguage.ts" />
     <TypeScriptCompile Include="src\lib\useDocumentTitle.ts" />
@@ -320,6 +327,7 @@
     <Content Include="public\images\photos\wahiba-sands.jpg" />
     <Content Include="scripts\check-contrast.mjs" />
     <Content Include="src\index.css" />
+    <Content Include="tests\research-brief.test.mjs" />
     <Content Include="tsconfig.app.json" />
     <Content Include="tsconfig.json" />
     <Content Include="tsconfig.node.json" />

@@ -179,6 +179,7 @@ def frontend_project() -> str:
         ts += files(FRONTEND, folder, ("*.ts", "*.tsx"))
         content += files(FRONTEND, folder, ("*.css", "*.json", "*.svg", "*.md"))
     content += files(FRONTEND, "scripts", ("*.mjs", "*.js"))
+    content += files(FRONTEND, "tests", ("*.mjs",))
     content += files(FRONTEND, "public", ("*",))
     content += files(FRONTEND, "assets", ("*",))
     roots = [p.name for p in sorted(FRONTEND.iterdir(), key=lambda p: p.name.lower())

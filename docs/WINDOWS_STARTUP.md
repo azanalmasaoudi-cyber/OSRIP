@@ -192,6 +192,29 @@ launcher neither starts nor migrates it.
 
 ## What was verified, and what was not
 
+Verified on 2026-10-16, on branch `review/codex-upgrade-2026-10-15` (first source upgrade):
+
+- `tools\start_osrip.py --check` passed. Then
+  `backend\.venv\Scripts\python.exe tools\start_osrip.py --no-browser --keep-db`, from the
+  repository root (the VS Code task's command, plus `--keep-db`):
+  - PostgreSQL started; the dev data folder was found; migrations were at head (0019).
+  - The API was ready, and the services not configured were listed: voice, Google and
+    Microsoft sign-in.
+  - It reported **OSRIP is ready: http://localhost:5173/** 26 seconds after the start.
+  - `/` and `/api/v1/health` answered 200 through the frontend.
+  - Stopping the launcher ended the API (8010) and the frontend (5173). PostgreSQL kept
+    running, as `--keep-db` asks, and was then stopped with `backend\scripts\devdb.py stop`.
+- `MSBuild OSRIP.sln /t:Build` (Visual Studio 18 Community MSBuild): exit 0.
+- **F5 inside Visual Studio was not operated.** Visual Studio was open on the owner's desktop
+  with this solution, so it was left alone. F5 runs the same launcher with the working directory
+  set to the repository root, under the Python environment selected in Visual Studio.
+- AI answers and web search are configured but rejected by the providers (Anthropic HTTP 401,
+  Brave `SUBSCRIPTION_TOKEN_INVALID`). The site starts and works without them; see
+  `CODEX_REVIEW_2026-10-15.md`.
+- During this session the laptop went into Modern Standby several times. Each time, browser
+  tests stalled and provider calls failed with `network`. For long test runs, keep it plugged in
+  and awake.
+
 Verified on 2026-10-14, after the project moved out of OneDrive.
 
 **What happened:**

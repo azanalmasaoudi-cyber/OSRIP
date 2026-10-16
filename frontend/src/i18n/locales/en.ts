@@ -688,6 +688,14 @@ export const en = {
       scenario: 'What-if arithmetic on assumptions you state, kept apart from validated forecasts.',
     },
     researchNeedsSearch: 'Research mode needs web search, which is not configured on this server. Answers will use OSRIP data only and say so.',
+    brief: {
+      open: 'Build a research brief',
+      domain: 'Domain',
+      goal: 'Study goal',
+      note: 'The draft goes into the message box, in the answer language, for you to review and edit. Nothing is sent until you press Send. Live research needs a configured search service.',
+      tooLong: 'The current message limit is too short for this brief. Write a shorter request.',
+      use: 'Use this draft',
+    },
     recommendations: 'Recommendations',
     recommendationNote: 'Options to examine, not decisions. No saving or improvement is claimed unless a cited source states it.',
     card: {
@@ -1518,6 +1526,16 @@ export const en = {
   workspace: {
     title: 'Overview: analytical workspace',
     intro: 'Choose a domain, indicator, period, area and data mode. Cards, charts and tables come from the same published data; ask the assistant and follow its study as it researches.',
+    launchpad: {
+      label: 'Analysis workspace tools',
+      eyebrow: 'From data to understanding',
+      title: 'Choose your next step',
+      intro: 'Analyse resources, discuss findings and review evidence before deciding.',
+      talk: { title: 'Talk to your assistant', note: 'Arabic & English · voice availability depends on your setup' },
+      studies: { title: 'Evidence-led studies', note: 'Methods, findings and limitations' },
+      scenarios: { title: 'Explore scenarios', note: 'Assumptions and uncertainty' },
+      sources: { title: 'Verify the sources', note: 'Trace every statistic to its evidence' },
+    },
     tabs: { label: 'Workspace views', data: 'Data', study: 'Study', assistant: 'Assistant' },
     filters: {
       section: 'Section', firstSection: 'First available', firstIndicator: 'First available',

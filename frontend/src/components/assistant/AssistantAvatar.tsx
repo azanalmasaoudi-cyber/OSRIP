@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 
 import type { OrbState } from './AssistantContext';
 import { usePersona, type PersonaView } from './persona';
+import { PersonaImage } from './PersonaImage';
 import { useAppLanguage } from '@/lib/useAppLanguage';
 import { cn } from '@/lib/utils';
 
@@ -53,7 +54,7 @@ export function AssistantAvatar({
       style={{ '--avatar-size': size } as CSSProperties}
       aria-hidden={decorative ? 'true' : undefined}
     >
-      <img src={src} alt={decorative ? '' : persona.avatar.alt[language]} width={figure ? 600 : 432} height={figure ? 800 : 432}
+      <PersonaImage src={src} alt={decorative ? '' : persona.avatar.alt[language]} width={figure ? 600 : 432} height={figure ? 800 : 432}
         draggable={false} />
       <span className="assistant-avatar-bars" aria-hidden="true">
         <span /><span /><span />

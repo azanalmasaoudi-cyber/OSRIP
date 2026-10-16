@@ -23,6 +23,7 @@ import { DatasetView } from '@/components/workspace/DatasetView';
 import { LiveStudyPanel } from '@/components/workspace/LiveStudyPanel';
 import { SelectionStudy } from '@/components/workspace/SelectionStudy';
 import { Tabs, tabPanelProps } from '@/components/workspace/Tabs';
+import { WorkspaceLaunchpad } from '@/components/workspace/WorkspaceLaunchpad';
 import { ALL, seriesKey } from '@/domain/filters';
 import { DOMAINS, SECTION_PATHS } from '@/domain/sections';
 import { DATA_MODES, type DomainCode, type SectionCode, type Series } from '@/domain/types';
@@ -120,6 +121,8 @@ export function OverviewPage() {
   return (
     <div data-testid="workspace">
       <PageHeader title={t('workspace.title')} intro={t('workspace.intro')} />
+
+      <WorkspaceLaunchpad />
 
       <FilterBar onReset={reset} canReset={active} activeCount={count}>
         <SelectField label={t('filters.domain')} value={domain}

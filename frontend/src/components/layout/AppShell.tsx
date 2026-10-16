@@ -58,7 +58,9 @@ export function AppShell() {
   const to = usePreservedSearch();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [entranceOpen, setEntranceOpen] = useState(() => !entranceSeen());
+  // The first-visit entrance plays on the home page only: a direct link (a study, the
+  // workspace, the account) opens straight away. It stays unseen until shown, and replayable.
+  const [entranceOpen, setEntranceOpen] = useState(() => pathname === '/' && !entranceSeen());
   const replayEntrance = useCallback(() => setEntranceOpen(true), []);
   const mainRef = useRef<HTMLElement>(null);
   const handledLocation = useRef<string | null>(null);

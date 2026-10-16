@@ -51,6 +51,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{951A985D-D
 		docs\assets.md = docs\assets.md
 		docs\assistant-personas.md = docs\assistant-personas.md
 		docs\avatar-providers.md = docs\avatar-providers.md
+		docs\CODEX_REVIEW_2026-10-15.md = docs\CODEX_REVIEW_2026-10-15.md
 		docs\DEMO_SCRIPT.md = docs\DEMO_SCRIPT.md
 		docs\DEPLOYMENT.md = docs\DEPLOYMENT.md
 		docs\DESIGN_SYSTEM.md = docs\DESIGN_SYSTEM.md

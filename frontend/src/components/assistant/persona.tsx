@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useId, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { PersonaImage } from './PersonaImage';
 import { useAssistantProfile, usePersonaChoice, useSavePersonaChoice, type Persona } from '@/api/assistant';
 import { useMe } from '@/api/auth';
 import { adapterKind } from '@/api/config';
@@ -133,7 +134,7 @@ export function PersonaPicker({ className, compact = false }: { className?: stri
                 checked ? 'border-primary bg-primary/10 font-semibold' : 'border-border-strong/50 hover:bg-muted',
               )}>
               <input type="radio" name={name} value={p.code} checked={checked} onChange={() => choose(p.code)} className="sr-only" />
-              <img src={p.avatar.portrait} alt="" width={36} height={36} className="size-9 rounded-full object-cover object-top" draggable={false} />
+              <PersonaImage src={p.avatar.portrait} alt="" width={36} height={36} className="size-9 rounded-full object-cover object-top" draggable={false} />
               <span className="flex flex-col text-sm leading-tight" lang={language}>
                 {p.name[language]}
                 <span className="text-xs font-normal text-muted-foreground" lang={other}>{p.name[other]}</span>

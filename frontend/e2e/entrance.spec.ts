@@ -2,9 +2,10 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 
 // The first-visit entrance: the scene (an illustrated Omani man carries the OSRIP sign in,
 // sets it down in the centre, lets go and steps aside), then both names, the three goals,
-// Explore and Skip. Remembered in this browser only, replayable from Settings and the footer,
-// keyboard-operable, and with still-frame fallbacks for reduced motion, low-power devices
-// and a scene that cannot load. Each test starts from a clean browser (no "seen" flag).
+// Explore and Skip. Shown on the home page only (a direct link opens its page at once),
+// remembered in this browser only, replayable from Settings and the footer, keyboard-operable,
+// and with still-frame fallbacks for reduced motion, low-power devices and a scene that cannot
+// load. Each test starts from a clean browser (no "seen" flag).
 //
 // Timing tests run on Playwright's fake clock (it drives requestAnimationFrame), so each
 // moment of the scene is checked deterministically.
@@ -139,20 +140,31 @@ test('first visit: he carries the sign in, sets it down in the centre, lets go a
 test('the page behind loads its data while the entrance plays', async ({ page }) => {
   await ordinaryDevice(page);
   await freezeTime(page);
-  await openWithScene(page, '/overview?mode=synthetic');
+  await openWithScene(page, '/?mode=synthetic');
   await page.clock.runFor(300);
   await expect(page.getByTestId('entrance-scene')).toHaveAttribute('data-phase', 'enter');
-  await expect(page.getByTestId('indicator-card').first()).toBeAttached();
+  // The latest figures have finished loading (with mock data, the headline figures are unavailable).
+  await expect(page.getByTestId('latest-card').first().locator('.tabular-nums, [data-state="data-unavailable"]')).toBeAttached();
 });
 
-test('Skip works at once, a direct link keeps its address, Escape closes, and the footer replays it', async ({ page }) => {
-  await page.goto('/trade?mode=synthetic');
+test('Skip works at once on the home page, stays there and is remembered', async ({ page }) => {
+  await page.goto('/?mode=synthetic');
   await page.getByTestId('entrance-skip').click(); // no waiting for the scene
   await expect(page.getByTestId('entrance')).toBeHidden();
-  await expect(page).toHaveURL(/\/trade\?mode=synthetic$/);
+  await expect(page).toHaveURL(/\/\?mode=synthetic$/);
   await expect(page.locator('#main')).toBeFocused();
   await page.reload();
+  await expect(page.getByTestId('home-page')).toBeVisible();
   await expect(page.getByTestId('entrance')).toBeHidden();
+});
+
+test('a direct link opens its page without the entrance and keeps its address; Escape closes the replay', async ({ page }) => {
+  await page.goto('/trade?mode=synthetic');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.getByTestId('entrance')).toBeHidden();
+  await expect(page).toHaveURL(/\/trade\?mode=synthetic$/);
+  // Not shown is not seen: the home page still introduces OSRIP later.
+  expect(await page.evaluate(() => window.localStorage.getItem('osrip.entrance'))).toBeNull();
 
   const replay = page.getByTestId('replay-entrance');
   await expect(replay).toHaveText('Replay introduction');
@@ -164,18 +176,19 @@ test('Skip works at once, a direct link keeps its address, Escape closes, and th
   await expect(replay).toBeFocused();
 });
 
-test('Explore on a direct link stays on that page and moves focus to its content', async ({ page }) => {
+test('Explore in a replay away from the home page stays on that page', async ({ page }) => {
   await page.goto('/energy/water?mode=synthetic');
+  await expect(page.getByTestId('entrance')).toBeHidden();
+  await page.getByTestId('replay-entrance').click();
   await page.getByTestId('entrance-explore').click();
   await expect(page.getByTestId('entrance')).toBeHidden();
   await expect(page).toHaveURL(/\/energy\/water\?mode=synthetic$/);
-  await expect(page.locator('#main')).toBeFocused();
 });
 
 test('Settings has Replay introduction: the scene plays again from the start and focus returns', async ({ page }) => {
   await ordinaryDevice(page);
   await page.goto('/account');
-  await page.getByTestId('entrance-skip').click();
+  await expect(page.getByTestId('entrance')).toBeHidden(); // a direct link: no entrance
   const settings = page.getByTestId('settings');
   await expect(settings).toContainText('Introduction');
   const replay = settings.getByTestId('settings-replay-entrance');
@@ -216,7 +229,6 @@ test.describe('Arabic', () => {
 
   test('Settings in Arabic offers إعادة عرض المقدمة', async ({ page }) => {
     await page.goto('/account');
-    await page.getByTestId('entrance-skip').click();
     await expect(page.getByTestId('settings-replay-entrance')).toHaveText('إعادة عرض المقدمة');
   });
 });

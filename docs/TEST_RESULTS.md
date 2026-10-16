@@ -1,5 +1,23 @@
 # Test results
 
+## 2026-10-16: first source upgrade (branch `review/codex-upgrade-2026-10-15`)
+
+The research brief builder, workspace launchpad, missing-portrait fallback, home-only entrance
+and the browser voice correction from the 15 October review archive. Details:
+`CODEX_REVIEW_2026-10-15.md`, "Integration into the project". Browsers: installed Edge
+(`PW_CHANNEL=msedge`); no Playwright Chromium is downloaded on this laptop.
+
+| Check | Result |
+|---|---|
+| `npm run build` (`tsc -b`, Vite) | Pass; the existing bundle-size warning remains |
+| `MSBuild OSRIP.sln /t:Build` | Pass (exit 0) |
+| `npm run lint` | Pass |
+| `node --experimental-strip-types --test tests/research-brief.test.mjs` | **5 passed** (32 templates, answer modes, voice gender and selection) |
+| Mock browser suite, desktop and Pixel 7 | Final run: **35 passed**. Earlier: 31 passed, 2 failed (two test problems, fixed); and one run with 4 entrance timing failures while the laptop was in Modern Standby (10:25–10:28), passed on the immediate re-run |
+| Full-stack suite (`playwright.api.config.ts`), desktop and Pixel 7, including the new `research-brief.spec.ts` | **122 passed**, 1 skipped, 1 failed: `quality.spec.ts:76` stalled for 10 minutes while the laptop was in Modern Standby (Windows power log); re-run alone 3 times: 3 passed |
+| Brief builder against the real settings (launcher stack) | Draft and mode set, no request sent, guest allowance unchanged; on Send one request, reply "unavailable" (Anthropic `http_401`), not charged; the test conversation was then deleted |
+| Launcher (`start_osrip.py --no-browser --keep-db`) | Ready; PostgreSQL started, migrations at head (0019) |
+
 ## 2026-10-14: project at its new location (`C:\Users\Dell\Desktop\OSRIP`)
 
 The project moved out of OneDrive with the Windows Desktop. Before re-testing:

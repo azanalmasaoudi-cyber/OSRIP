@@ -26,6 +26,8 @@ import { useAssistantUi } from './AssistantContext';
 import { AssistantAvatar, ORB_STATE_KEY } from './AssistantAvatar';
 import { AboutMulhim, MemoryPanel } from './MulhimPanels';
 import { PersonaPicker, usePersona } from './persona';
+import { PersonaImage } from './PersonaImage';
+import { ResearchBriefBuilder } from './ResearchBriefBuilder';
 import { ResearchProgress } from './ResearchProgress';
 import { CitedText, evidenceAnchor, ModeSelector, StructuredParts } from './StructuredReply';
 import {
@@ -447,7 +449,7 @@ function MessageView({ message, onAsk, onRetry, onSpeak, canSave, onOpenStudy, a
       data-testid="assistant-message" data-status={message.status ?? ''} data-persona={author.code}>
       <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1 font-semibold text-foreground" data-testid="message-persona">
-          <img src={author.avatar.portrait} alt="" width={20} height={20} className="size-5 rounded-full object-cover object-top" draggable={false} />
+          <PersonaImage src={author.avatar.portrait} alt="" width={20} height={20} className="size-5 rounded-full object-cover object-top" draggable={false} />
           {author.name[language]}
         </span>
         {message.ai_generated ? (
@@ -1151,6 +1153,14 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
 
       {canAsk ? (
         <form onSubmit={submit} className="flex flex-col gap-2 border-t border-border bg-card px-4 py-3 max-sm:sticky max-sm:bottom-0 max-sm:z-10">
+          {/* A study request to review and edit: it fills the box and the mode, and sends nothing. */}
+          <ResearchBriefBuilder language={chatLanguage} disabled={pending || needsAccount} maxLength={max}
+            onDraft={(text, briefMode) => {
+              setDraft(text);
+              setAnswerMode(briefMode);
+              setViaVoice(false);
+              document.getElementById(inputId)?.focus();
+            }} />
           <label htmlFor={inputId} className="sr-only">{t('assistant.question')}</label>
           <textarea id={inputId} value={draft} onChange={(e) => { setDraft(e.target.value.slice(0, max)); setViaVoice(false); }} onKeyDown={onKeyDown}
             rows={2} dir="auto" placeholder={needsAccount ? t('guest.inputLocked') : t('assistant.placeholder')} disabled={needsAccount}

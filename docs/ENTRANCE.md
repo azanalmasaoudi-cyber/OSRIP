@@ -65,9 +65,10 @@ The scene structure would stay the same either way: phases, Skip, still-frame fa
 | Requirement | How |
 |---|---|
 | First visit only, remembered locally | `localStorage` `osrip.entrance = seen-1`, set by Explore, Skip or Escape. Nothing is sent to the server. If storage is blocked, the entrance is not shown, so nobody is trapped. |
+| Home page only (since 16 October 2026) | The first-visit entrance opens on `/` only. A direct link (a study, the workspace, the account, `/trade?mode=synthetic`) opens its page at once; the entrance stays unseen, so a later visit to the home page still shows it. Replay works on every page. |
 | Replay introduction in settings | **Account and settings** page → *Settings* → *Replay introduction*. It is there signed in or out, and in mock mode. Also in the footer. A replay starts the scene from the beginning. |
 | Immediate skip | Both buttons are rendered and focusable from the first frame. Focus starts on Explore; Escape skips. |
-| Direct links preserved | Explore from the home page opens the overview. From any other address (for example `/trade?mode=synthetic`) it closes and stays there. Skip never navigates. |
+| Direct links preserved | Explore from the home page opens the overview. In a replay on any other address (for example `/energy/water?mode=synthetic`) it closes and stays there. Skip never navigates. |
 | Keyboard focus restored | Back to the element that opened it (for example the Settings button). On a first visit, to the page's main content. |
 | Reduced motion | The scene's final frame, with all text shown at once and nothing moving (`data-fallback="reduced-motion"`). |
 | Low power | Data saver, at most 2 CPU cores or at most 2 GB device memory gives the final frame from the start (`low-power`). While playing, a watchdog switches to the final frame if frames 3–32 average more than 45 ms. |
@@ -130,19 +131,20 @@ All in `docs/evidence/entrance/`:
 
 ## Tests
 
-`frontend/e2e/entrance.spec.ts`, 11 tests on desktop and 1 on Pixel 7. The scene tests run on Playwright's fake clock, so each moment is checked deterministically.
+`frontend/e2e/entrance.spec.ts`, 12 tests on desktop and 1 on Pixel 7. The scene tests run on Playwright's fake clock, so each moment is checked deterministically. `frontend/e2e/review-upgrade.spec.ts` also checks, on desktop and phone, that `/overview` opens without the entrance.
 
 1. **The full sequence.** Phases arrive in order (enter → lower → release → rise → aside → turn → present → settled) within 4–6.2 s. While carrying, the fingers are round both edges and the near hand is on the sign. When placed, the sign is lower than while carried and centred to within 3 px. After release, the fingers are gone and the hands are off the sign. He stands clear of it. The lettering reads "OSRIP". Then the names and goals are revealed. No audio is created. Explore goes to the overview, and the entrance is remembered after a reload.
-2. The overview's data card is in the page while the scene plays.
-3. Immediate Skip on a direct link keeps `/trade?mode=synthetic` and focuses the content; Escape and the footer replay return focus.
-4. Explore on `/energy/water?mode=synthetic` stays there.
-5. Settings → Replay introduction plays again; focus returns to the button.
-6. Arabic: right to left, he enters from the right and ends to the left of the centred sign; the lettering has a positive on-screen scale (not mirrored); ابدأ / تخطي; Arabic name first.
-7. Arabic Settings label «إعادة عرض المقدمة».
-8. Reduced motion: the final frame at once, the text visible, no fingers on the sign.
-9. Low-power device (2 cores): the final frame.
-10. Loading failure (the scene module blocked): a plain sign, the text revealed, Explore works.
-11. Phone (Pixel 7): the sign, the man and the stage within the screen; no sideways scrolling.
+2. The home page's latest figures finish loading while the scene plays.
+3. Immediate Skip on the home page stays there, focuses the content and is remembered.
+4. A direct link (`/trade?mode=synthetic`) opens without the entrance, keeps its address and leaves it unseen; Escape and the footer replay return focus.
+5. Explore in a replay on `/energy/water?mode=synthetic` stays there.
+6. Settings → Replay introduction plays again; focus returns to the button.
+7. Arabic: right to left, he enters from the right and ends to the left of the centred sign; the lettering has a positive on-screen scale (not mirrored); ابدأ / تخطي; Arabic name first.
+8. Arabic Settings label «إعادة عرض المقدمة».
+9. Reduced motion: the final frame at once, the text visible, no fingers on the sign.
+10. Low-power device (2 cores): the final frame.
+11. Loading failure (the scene module blocked): a plain sign, the text revealed, Explore works.
+12. Phone (Pixel 7): the sign, the man and the stage within the screen; no sideways scrolling.
 
 ## Files
 
@@ -151,5 +153,5 @@ All in `docs/evidence/entrance/`:
 - `frontend/src/components/layout/Entrance.tsx`: the dialog, text, buttons, fallbacks and storage.
 - `frontend/src/components/layout/entranceControl.ts`: the replay context.
 - `frontend/src/components/settings/SettingsSection.tsx`: Settings → Replay introduction.
-- `frontend/src/components/layout/AppShell.tsx`: direct-link-safe Explore and the replay provider.
+- `frontend/src/components/layout/AppShell.tsx`: home-page-only first visit, direct-link-safe Explore and the replay provider.
 - i18n: `settings.*`, `entrance.replay` ("Replay introduction"), `nav.account` ("Account and settings" / «الحساب والإعدادات»).

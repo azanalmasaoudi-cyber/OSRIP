@@ -83,7 +83,8 @@ export function voiceGender(name: string): VoiceGender {
   const lower = name.toLowerCase();
   if (/\bfemale\b/.test(lower)) return 'female';
   if (/\bmale\b/.test(lower)) return 'male'; // "Google UK English Male"
-  if (lower.startsWith('google') && !/\bmale\b/.test(lower)) return 'female'; // Google's default voices
+  // Unnamed voices ("Google العربية", "Google US English") stay unknown: their gender is not
+  // stated, so they are never used for either persona.
   const words = lower.split(/[^a-z]+/).filter(Boolean);
   if (words.some((w) => FEMALE_NAMES.has(w))) return 'female';
   if (words.some((w) => MALE_NAMES.has(w))) return 'male';
