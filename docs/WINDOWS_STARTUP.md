@@ -205,9 +205,17 @@ Verified on 2026-10-16, on branch `review/codex-upgrade-2026-10-15` (first sourc
   - Stopping the launcher ended the API (8010) and the frontend (5173). PostgreSQL kept
     running, as `--keep-db` asks, and was then stopped with `backend\scripts\devdb.py stop`.
 - `MSBuild OSRIP.sln /t:Build` (Visual Studio 18 Community MSBuild): exit 0.
-- **F5 inside Visual Studio was not operated.** Visual Studio was open on the owner's desktop
-  with this solution, so it was left alone. F5 runs the same launcher with the working directory
-  set to the repository root, under the Python environment selected in Visual Studio.
+- **Visual Studio's Start Debugging (F5) verified at 11:24.** The test started Visual Studio
+  Community 2026 (18.10) with `devenv.exe OSRIP.sln /Run`, which is F5 from the command line.
+  - The title showed "OSRIP (Running) - start_osrip.py".
+  - The launcher ran under Visual Studio's Python 3.14.7 and found the dev data folder. It
+    started PostgreSQL, found migrations at head and started the API and frontend.
+  - It reported **OSRIP is ready** 12 seconds after the start.
+  - `/`, `/overview`, `/assistant`, `/api/v1/health/ready` and `/api/v1/assistant/status`
+    answered 200.
+  - Before that, Visual Studio refused to start with "Cannot run when setup is in progress",
+    while the Visual Studio Installer removed Visual Studio Community 2022. Wait for the
+    Installer to finish.
 - AI answers and web search are configured but rejected by the providers (Anthropic HTTP 401,
   Brave `SUBSCRIPTION_TOKEN_INVALID`). The site starts and works without them; see
   `CODEX_REVIEW_2026-10-15.md`.
