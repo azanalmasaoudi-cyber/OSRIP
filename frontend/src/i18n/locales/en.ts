@@ -942,6 +942,10 @@ export const en = {
     unsupported: 'Voice input is not available in this browser. Typing works normally.',
     noMaleVoice: '{{name}} reads answers aloud only with a man’s voice, and this browser has none for this language, so answers are not read aloud. Install a male voice (for example Microsoft Abdullah for Arabic or Ryan for English) or use the server speech service.',
     noFemaleVoice: '{{name}} reads answers aloud only with a woman’s voice, and this browser has none for this language, so answers are not read aloud. Install a female voice (for example Microsoft Aysha for Arabic or Sonia for English) or use the server speech service.',
+    noLanguageVoice: {
+      ar: 'This browser has no Arabic voice installed, so Arabic answers are shown as text and not read aloud. Install an Arabic voice (for example Microsoft Abdullah or Aysha) or use the server speech service.',
+      en: 'This browser has no English voice installed, so English answers are shown as text and not read aloud. Install an English voice (for example Microsoft Ryan or Sonia) or use the server speech service.',
+    },
     recording: 'Recording… press Stop when you have finished (up to {{seconds}} seconds).',
     transcribing: 'Turning your speech into text…',
     review: 'Check the text below, correct it if needed, then press Send.',

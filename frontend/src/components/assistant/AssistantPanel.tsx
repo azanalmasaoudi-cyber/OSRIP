@@ -64,6 +64,7 @@ import { formatDecimal, formatPeriod, type AppLanguage } from '@/lib/format';
 import { recordingSupported, startRecording, type Recording, type RecorderError } from '@/lib/recorder';
 import {
   createRecognizer,
+  noVoiceForLanguage,
   noVoiceOfGender,
   onVoicesChanged,
   PERMISSION_ERRORS,
@@ -574,6 +575,7 @@ function useVoice(
   // for it in the profile; the browser fallback picks by gender (see lib/speech.ts).
   const canSpeak = server || (voices >= 0 && voiceFor(language, gender) !== null);
   const noVoice = !server && voices >= 0 && noVoiceOfGender(language, gender);
+  const noLanguageVoice = !server && voices >= 0 && noVoiceForLanguage(language);
 
   // Only the stable callbacks: the ui object changes with every state change, and a
   // cleanup keyed on it would cancel the recording or request it is reporting on.
@@ -742,7 +744,7 @@ function useVoice(
     stopPlayback();
   }, [stopPlayback]);
   return {
-    canListen, canSpeak, noVoice, serverMode, listening, transcribing, preparing, speaking: speaking || preparing, notice, muted,
+    canListen, canSpeak, noVoice, noLanguageVoice, serverMode, listening, transcribing, preparing, speaking: speaking || preparing, notice, muted,
     start, stop, cancel, cancelAll, say, stopPlayback, setMuted,
   };
 }
@@ -1206,6 +1208,11 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
           <p className="text-xs text-muted-foreground" data-testid="voice-support">
             {voice.serverMode ? t('voice.serverDisclosure') : voice.canListen ? t('voice.disclosure') : t('voice.unsupported')}
           </p>
+          {voice.noLanguageVoice ? (
+            <p className="text-xs text-muted-foreground" data-testid="voice-no-language" data-language={chatLanguage}>
+              {t(`voice.noLanguageVoice.${chatLanguage}`)}
+            </p>
+          ) : null}
           {voice.noVoice ? (
             <p className="text-xs text-muted-foreground" data-testid={persona.gender === 'female' ? 'voice-no-female' : 'voice-no-male'}>
               {t(persona.gender === 'female' ? 'voice.noFemaleVoice' : 'voice.noMaleVoice', { name: persona.name[appLanguage] })}

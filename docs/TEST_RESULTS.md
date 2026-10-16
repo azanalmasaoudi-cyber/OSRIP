@@ -17,6 +17,7 @@ and the browser voice correction from the 15 October review archive. Details:
 | Full-stack suite (`playwright.api.config.ts`), desktop and Pixel 7, including the new `research-brief.spec.ts` | **122 passed**, 1 skipped, 1 failed: `quality.spec.ts:76` stalled for 10 minutes while the laptop was in Modern Standby (Windows power log); re-run alone 3 times: 3 passed |
 | Brief builder against the real settings (launcher stack) | Draft and mode set, no request sent, guest allowance unchanged; on Send one request, reply "unavailable" (Anthropic `http_401`), not charged; the test conversation was then deleted |
 | Launcher (`start_osrip.py --no-browser --keep-db`) | Ready; PostgreSQL started, migrations at head (0019) |
+| Follow-up: missing-language voice notice | Build and lint pass. `voice-gender.spec.ts`: **7 passed** (4 existing, 3 new). `assistant`, `talk` and `personas` specs: 17 passed on desktop; `assistant` 7 passed on the phone |
 
 ## 2026-10-14: project at its new location (`C:\Users\Dell\Desktop\OSRIP`)
 

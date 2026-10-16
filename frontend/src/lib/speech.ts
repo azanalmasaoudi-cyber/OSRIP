@@ -119,6 +119,16 @@ export function noVoiceOfGender(language: SpeechLanguage, gender: PersonaGender)
   return forLanguage.length > 0 && pickVoice(forLanguage, language, gender) === null;
 }
 
+/** True when the browser lists voices but none for the language (for example no Arabic voice
+ * installed), so neither persona can read aloud in it. An empty list is not reported: some
+ * browsers load their voices later. */
+export function noVoiceForLanguage(language: SpeechLanguage): boolean {
+  if (!synthesisSupported()) return false;
+  const prefix = language === 'ar' ? 'ar' : 'en';
+  const all = window.speechSynthesis.getVoices();
+  return all.length > 0 && !all.some((v) => v.lang.toLowerCase().startsWith(prefix));
+}
+
 /** Calls back whenever the browser's voice list changes (Chrome loads it lazily). */
 export function onVoicesChanged(callback: () => void): () => void {
   if (!synthesisSupported()) return () => undefined;

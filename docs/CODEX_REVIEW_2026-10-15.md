@@ -125,7 +125,15 @@ The test results are in `TEST_RESULTS.md` (2026-10-16). The provider findings ar
 | Azure AI Speech (server voice) | no: `OSRIP_SPEECH_KEY`, `OSRIP_SPEECH_REGION` | not called |
 | LiveKit real-time voice, avatar video | no (realtime disabled, no avatar provider) | not called. Talk is push-to-talk with a still portrait. |
 | Google and Microsoft sign-in | no | not called |
-| Browser voices (Edge on this laptop) | Windows has only Microsoft David and Mark (US English, male) and Zira (US English, female) | English: Al Mulhim uses David and Ilham uses Zira (US, not British). **Arabic: no voice for either persona**, so nothing is read aloud, and the panel does not say why (it only hides Read aloud). Edge's online "Natural" voices did not appear in the automated browser; whether they appear in the owner's own Edge was not checked. |
+| Browser voices (Edge on this laptop) | Windows has only Microsoft David and Mark (US English, male) and Zira (US English, female) | English: Al Mulhim uses David and Ilham uses Zira (US, not British). **Arabic: no voice for either persona**, so nothing is read aloud. At first the panel only hid Read aloud. Since the follow-up below it says why (`voice-no-language`). Edge's online "Natural" voices did not appear in the automated browser; whether they appear in the owner's own Edge was not checked. |
+
+**Follow-up: missing-language notice.** When browser speech is used and the browser lists voices
+but none for the answer language, the composer now says so in both interface languages. For
+example: "This browser has no Arabic voice installed, so Arabic answers are shown as text and
+not read aloud". It names an Arabic voice to install, or the server speech service. The
+existing rules are unchanged: never a voice of the other gender or another language. An empty
+voice list (still loading) shows nothing. Tests: three new cases in
+`e2e-api/voice-gender.spec.ts`.
 
 So the assistant and web research are configured but not working. Questions get the labelled
 "not available" reply and are not charged (checked in the real assistant). Nothing here is a

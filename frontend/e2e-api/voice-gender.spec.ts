@@ -101,6 +101,45 @@ test('Ilham with only male voices installed reads nothing aloud and says why', a
   await expect(page.getByTestId('voice-no-male')).toHaveCount(0);
 });
 
+test('with no Arabic voice installed, Arabic answers are shown as text and the panel says why, for both personas', async ({ page }) => {
+  // As on a Windows laptop with only English voices (David, Mark, Zira).
+  await setUp(page, MIXED.filter((v) => v.lang.startsWith('en')));
+  await page.goto('/assistant?mode=synthetic');
+  await page.getByTestId('assistant-language').getByRole('radio', { name: 'العربية' }).click();
+  const notice = page.getByTestId('voice-no-language');
+  await expect(notice).toHaveAttribute('data-language', 'ar');
+  await expect(notice).toContainText('This browser has no Arabic voice installed');
+  await expect(page.getByTestId('voice-no-male')).toHaveCount(0); // not a gender problem
+  await page.getByTestId('assistant-input').fill('ما نمو توليد الكهرباء؟');
+  await page.getByTestId('assistant-send').click();
+  await expect(page.getByTestId('assistant-message').last()).toHaveAttribute('data-status', /answered|no_evidence/);
+  await expect(page.getByTestId('read-aloud')).toHaveCount(0);
+  expect(await page.evaluate(() => (window as unknown as { __spoken: string[] }).__spoken.length)).toBe(0);
+  // Ilham has no Arabic voice either; in English both can speak, and the notice goes.
+  await page.getByTestId('persona-picker').first().getByTestId('persona-option-ilham').click();
+  await expect(notice).toBeVisible();
+  await expect(page.getByTestId('voice-no-female')).toHaveCount(0);
+  await page.getByTestId('assistant-language').getByRole('radio', { name: 'English' }).click();
+  await expect(notice).toHaveCount(0);
+  await expect(page.getByTestId('voice-mute')).toBeVisible();
+});
+
+test('the missing-voice notice is in Arabic in the Arabic interface', async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.setItem('osrip.language', 'ar'));
+  await setUp(page, MIXED.filter((v) => v.lang.startsWith('en')));
+  await page.goto('/assistant?mode=synthetic');
+  await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+  await expect(page.getByTestId('voice-no-language')).toContainText('لا يوجد في هذا المتصفح صوت عربي مثبّت');
+});
+
+test('with no voices listed yet, no missing-voice notice is shown', async ({ page }) => {
+  await setUp(page, []); // some browsers load their voices later
+  await page.goto('/assistant?mode=synthetic');
+  await page.getByTestId('assistant-language').getByRole('radio', { name: 'العربية' }).click();
+  await expect(page.getByTestId('voice-support')).toBeVisible();
+  await expect(page.getByTestId('voice-no-language')).toHaveCount(0);
+});
+
 test('with only female voices installed, nothing is read aloud and the panel says why', async ({ page }) => {
   await setUp(page, FEMALE_ONLY);
   await page.goto('/assistant?mode=synthetic');
