@@ -1,5 +1,27 @@
 # Test results
 
+## 2026-10-16: dashboard redesign (branch `redesign/dark-dashboard`)
+
+The redesign covers:
+- dark and light themes, with the Light / Dark / System choice;
+- the compact sidebar and the top bar with search;
+- the Overview as a dashboard: resource cards, the chart beside its findings, and comparison, studies and sources;
+- the compact assistant panel;
+- the owner's introduction, with the matching portrait of Al Mulhim.
+
+Browsers: installed Edge (`PW_CHANNEL=msedge`).
+
+| Check | Result |
+|---|---|
+| `tsc -b` and `npm run build` | Pass (the existing bundle-size warning remains) |
+| `MSBuild OSRIP.sln /t:Build` | Pass (exit 0) |
+| `npm run lint` | Pass |
+| `npm run check:contrast` | **84 pairs pass** (42 per theme, including the sidebar) |
+| Research-brief unit tests | 5 passed |
+| Mock browser suite, desktop and Pixel 7 | **38 passed**, 3 skipped (device-specific). New tests: theme choice and System following the device; search in both languages and the drafted question; the phone menu and search dialog; the four resource cards; and 12 introduction tests |
+| Full-stack suite, desktop and Pixel 7 | **126 passed**, 1 skipped, 1 failed. The failure was a 12 px sideways overflow at 360 px in Arabic: the sign-in label was too wide. It was fixed (icon-only sign-in link on phones) and the responsive matrix re-run passed: 6 widths × 2 languages × 7 routes. New: a dashboard test (published values, chart beside its findings, Analyse, lower row, verified-mode empty states) and recent studies listing a session's studies |
+| Screenshots | Dark, light, Arabic right-to-left and phone views, taken from the real stack (scripted test providers); not stored in the repository |
+
 ## 2026-10-16: first source upgrade (branch `review/codex-upgrade-2026-10-15`)
 
 The research brief builder, workspace launchpad, missing-portrait fallback, home-only entrance

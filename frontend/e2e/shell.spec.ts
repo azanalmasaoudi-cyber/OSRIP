@@ -85,13 +85,74 @@ test('opening the energy domain keeps the data mode through the redirect', async
   await expect(page).toHaveURL(/\/energy\/electricity\?mode=synthetic$/);
 });
 
-test('overview shows indicator cards with provenance in synthetic mode', async ({ page }) => {
+test('overview shows the four resources and indicator cards with provenance in synthetic mode', async ({ page }) => {
   await page.goto('/overview?mode=synthetic');
+  const resources = page.getByTestId('resource-kpi');
+  await expect(resources).toHaveCount(4);
+  await expect(resources.nth(0)).toHaveAttribute('data-section', 'electricity');
+  await expect(resources.nth(3)).toHaveAttribute('data-section', 'trade');
   await expect(page.getByTestId('indicator-card').first()).toBeVisible();
   await page.getByTestId('filter-domain').selectOption('trade');
   await expect(page).toHaveURL(/domain=trade/);
-  await expect(page.getByTestId('domain-card-trade')).toBeVisible();
-  await expect(page.getByTestId('domain-card-food_security')).toHaveCount(0);
+  await expect(page.getByTestId('indicator-card').first()).toHaveAttribute('data-indicator', /^TRADE_/);
+  await expect(resources.nth(3).getByRole('button', { name: /Analyse/ })).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('theme: Dark by default, Light and System from the top bar, remembered after a reload', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'the phone menu holds the theme choice');
+  await page.goto('/overview?mode=synthetic');
+  const html = page.locator('html');
+  await expect(html).toHaveAttribute('data-theme', 'dark');
+  const theme = page.getByTestId('theme-selector');
+  await theme.getByRole('radio', { name: 'Light' }).click();
+  await expect(html).toHaveAttribute('data-theme', 'light');
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(245, 245, 246)');
+  await page.reload();
+  await expect(html).toHaveAttribute('data-theme', 'light');
+  // System follows the device: arrows move the choice.
+  await theme.getByRole('radio', { name: 'Light' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await expect(theme.getByRole('radio', { name: 'System' })).toHaveAttribute('aria-checked', 'true');
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(html).toHaveAttribute('data-theme', 'dark');
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect(html).toHaveAttribute('data-theme', 'light');
+});
+
+test('search finds pages in either language and drafts a question for the assistant without sending it', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'the phone search opens in a dialog (see the @mobile test)');
+  await page.goto('/overview?mode=synthetic');
+  const input = page.getByRole('combobox', { name: 'Search OSRIP' });
+  await page.keyboard.press('Control+k');
+  await expect(input).toBeFocused();
+  await input.fill('المياه'); // the Arabic name finds Water in the English interface
+  await expect(page.getByTestId('search-result-page')).toHaveText(['Water']);
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/energy\/water\?mode=synthetic$/);
+  await input.fill('electricity growth since 2022');
+  await expect(page.getByTestId('search-result-page')).toHaveCount(0); // no page has that name
+  await page.keyboard.press('ArrowDown'); // the one option: ask the assistant
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/assistant\?mode=synthetic&q=electricity\+growth\+since\+2022$/);
+});
+
+test('@mobile the phone menu holds the theme and data mode; search opens in a dialog', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'mobile only');
+  await page.goto('/overview?mode=synthetic');
+  await page.getByTestId('open-menu').click();
+  const menu = page.getByRole('dialog', { name: 'Menu' });
+  await menu.getByTestId('theme-options').getByRole('radio', { name: 'Light' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(menu.getByTestId('data-mode-select')).toHaveValue('synthetic');
+  await page.keyboard.press('Escape');
+  await page.getByTestId('open-search').click();
+  const search = page.getByRole('dialog', { name: 'Search OSRIP' });
+  await search.getByRole('combobox').fill('trade');
+  await search.getByTestId('search-result-page').first().click();
+  await expect(page).toHaveURL(/\/trade\?mode=synthetic$/);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
 });
 
 test('source details dialog opens, traps focus and closes with Escape', async ({ page }) => {

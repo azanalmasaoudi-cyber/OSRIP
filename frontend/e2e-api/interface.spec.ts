@@ -26,9 +26,9 @@ test('navigation lists the required sections and every link opens its page', asy
     ['Studies', /\/studies/, 'Studies'],
     ['Scenarios', /\/forecasts/, 'Forecasts and Scenarios'],
     ['Sources', /\/sources/, 'Sources and Methodology'],
-    ['Assistant', /\/assistant/, 'Al Mulhim'], // the page is titled with the chosen persona
+    ['AI Assistant', /\/assistant/, 'Al Mulhim'], // the page is titled with the chosen persona
     ['Reports', /\/reports/, 'Reports'],
-    ['Account and settings', /\/(account|sign-in)/, ''],
+    ['Account', /\/(account|sign-in)/, ''],
   ];
   for (const [name, url, heading] of expected) {
     await nav.getByRole('link', { name, exact: true }).click();

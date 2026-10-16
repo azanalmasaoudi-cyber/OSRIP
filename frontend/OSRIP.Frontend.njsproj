@@ -174,11 +174,11 @@
     <TypeScriptCompile Include="src\components\layout\DataModeSelector.tsx" />
     <TypeScriptCompile Include="src\components\layout\Entrance.tsx" />
     <TypeScriptCompile Include="src\components\layout\entranceControl.ts" />
-    <TypeScriptCompile Include="src\components\layout\entranceRig.ts" />
-    <TypeScriptCompile Include="src\components\layout\EntranceScene.tsx" />
+    <TypeScriptCompile Include="src\components\layout\GlobalSearch.tsx" />
     <TypeScriptCompile Include="src\components\layout\LanguageSwitcher.tsx" />
     <TypeScriptCompile Include="src\components\layout\SidebarNav.tsx" />
     <TypeScriptCompile Include="src\components\layout\StatusBanners.tsx" />
+    <TypeScriptCompile Include="src\components\layout\ThemeSelector.tsx" />
     <TypeScriptCompile Include="src\components\research\ResearchQueue.tsx" />
     <TypeScriptCompile Include="src\components\settings\SettingsSection.tsx" />
     <TypeScriptCompile Include="src\components\studies\StudyCharts.tsx" />
@@ -192,9 +192,11 @@
     <TypeScriptCompile Include="src\components\ui\select.tsx" />
     <TypeScriptCompile Include="src\components\ui\skeleton.tsx" />
     <TypeScriptCompile Include="src\components\workspace\AssistantColumn.tsx" />
+    <TypeScriptCompile Include="src\components\workspace\DashboardPanels.tsx" />
     <TypeScriptCompile Include="src\components\workspace\datasets.ts" />
     <TypeScriptCompile Include="src\components\workspace\DatasetView.tsx" />
     <TypeScriptCompile Include="src\components\workspace\LiveStudyPanel.tsx" />
+    <TypeScriptCompile Include="src\components\workspace\ResourceKpis.tsx" />
     <TypeScriptCompile Include="src\components\workspace\SelectionStudy.tsx" />
     <TypeScriptCompile Include="src\components\workspace\StudyParts.tsx" />
     <TypeScriptCompile Include="src\components\workspace\Tabs.tsx" />
@@ -203,6 +205,7 @@
     <TypeScriptCompile Include="src\content\editorial.generated.ts" />
     <TypeScriptCompile Include="src\content\photos.ts" />
     <TypeScriptCompile Include="src\domain\filters.ts" />
+    <TypeScriptCompile Include="src\domain\headline.ts" />
     <TypeScriptCompile Include="src\domain\sections.ts" />
     <TypeScriptCompile Include="src\domain\types.ts" />
     <TypeScriptCompile Include="src\i18n\i18next.d.ts" />
@@ -216,6 +219,7 @@
     <TypeScriptCompile Include="src\lib\recorder.ts" />
     <TypeScriptCompile Include="src\lib\researchBrief.ts" />
     <TypeScriptCompile Include="src\lib\speech.ts" />
+    <TypeScriptCompile Include="src\lib\theme.ts" />
     <TypeScriptCompile Include="src\lib\useAppLanguage.ts" />
     <TypeScriptCompile Include="src\lib\useDocumentTitle.ts" />
     <TypeScriptCompile Include="src\lib\useLabels.ts" />
@@ -252,6 +256,7 @@
     <Content Include=".env.example" />
     <Content Include="assets\editorial\canva-previews\ai-assistant-face-MAHW1qlLO9M-200.jpg" />
     <Content Include="assets\editorial\masters\electricity.png" />
+    <Content Include="assets\editorial\masters\omani-man-courtyard.png" />
     <Content Include="assets\editorial\masters\omani-professional.png" />
     <Content Include="assets\editorial\masters\omani-woman-professional.jpg" />
     <Content Include="assets\editorial\masters\trade.png" />
@@ -325,6 +330,7 @@
     <Content Include="public\images\photos\falaj-misfah.jpg" />
     <Content Include="public\images\photos\misfat-al-abriyeen-village.jpg" />
     <Content Include="public\images\photos\wahiba-sands.jpg" />
+    <Content Include="public\theme-init.js" />
     <Content Include="scripts\check-contrast.mjs" />
     <Content Include="src\index.css" />
     <Content Include="tests\research-brief.test.mjs" />

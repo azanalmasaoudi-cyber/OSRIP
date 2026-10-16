@@ -1,157 +1,87 @@
-# First-visit entrance (cinematic introduction)
+# First-visit introduction
 
-Status, 10 October 2026: **implemented and locally tested** (mock browser suite, Edge desktop
-and Pixel 7 emulation). Not deployed.
+Status, 16 October 2026: **implemented and locally tested** (mock browser suite, Edge desktop
+and Pixel 7 emulation), on branch `redesign/dark-dashboard`. Not deployed.
+
+## Source
+
+The project owner's own design, `docs/OSRIP_Intro_Single_File.html`: a standalone page with
+the two assistants' portraits, the OSRIP sign, the name, three resource images and three
+goals. It is rebuilt natively in React (`frontend/src/components/layout/Entrance.tsx`, styles
+`.intro*` in `src/index.css`), not embedded, so it shares the app's languages, focus handling,
+replay and tests. Its images are served from the project's own optimised assets:
+
+- **Portraits:** the assistants' 3:4 figures, `public/images/assistant/{mulhim,ilham}-figure-600.jpg`,
+  built by `tools/build_persona_portraits.py`:
+  - Al Mulhim's master is the courtyard portrait from the owner's file (`omani-man-courtyard.png`);
+  - Ilham's master is the same artwork as before;
+  - both are recorded in `frontend/assets/editorial/sources.json`.
+- **Resources:** the editorial electricity, water and trade images (AVIF/WebP/JPEG, 480–1536 px).
+  They are the same artworks as in the owner's file.
 
 ## What a first-time visitor sees
 
-A short scene of about **5.3 s on a wide screen and 4.6 s on a phone**:
+1. **Arrival.** Al Mulhim slides in from the left and Ilham from the right (1.8 s). Their portraits
+   are framed in arches with their names below (Arabic and English).
+2. **The sign.** The OSRIP sign ("Insight for a resilient Oman") is set down between them (2.2 s).
+3. **The rest appears** after about 1.4 to 2.3 s:
+   - the line "Resources we understand. Decisions built on knowledge.";
+   - the platform's name in both languages;
+   - the three resources: Electricity and energy, Water resources, Trade and logistics;
+   - the three goals:
+     - Understand Oman's resources / افهم موارد عُمان;
+     - Analyse reliable data / حلّل البيانات الموثوقة;
+     - Support informed decisions / ادعم القرار بالمعلومة.
 
-| Phase | What happens |
-|---|---|
-| enter | A fictional Omani man walks in from the edge of the stage. He wears a white dishdasha with the furakha (collar tassel), an embroidered kumma and leather sandals. He carries a wooden-framed OSRIP sign at his side: one hand round its rear edge, the other over the top edge. |
-| lower | He slows to a stop, bends and sets the sign down in the centre of the stage. |
-| release | He lets go and his hands come away from the edges. The sign rocks very slightly and settles; its shadow tightens on the floor. |
-| rise, aside | He straightens up, steps out from behind the sign to one side and stops. |
-| turn, present | He turns back and makes an open-hand gesture toward the sign. |
+**Explore** and **Skip** are labelled in both languages and work from the first moment. Its own
+deep-teal palette is used in both themes.
 
-Below the sign appear:
-
-- the names: "Oman Smart Resource Intelligence Platform" and «منصة عُمان الذكية لمعلومات الموارد»;
-- the three bilingual goals:
-  - Understand Oman’s resources / فهم موارد عُمان
-  - Analyse reliable data / تحليل البيانات الموثوقة
-  - Support informed decisions / دعم القرارات المبنية على البيانات
-
-**Explore** (ابدأ) and **Skip** (تخطي) are available from the first moment.
-
-In Arabic the scene is mirrored: he enters from the right and steps aside to the left. The OSRIP lettering is never mirrored.
-
-**Arabic name.** The new prompt again wrote «منصة عُمان الذكية لذكاء الموارد». The project owner already chose «…لمعلومات الموارد» on 8 October 2026 (SPEC_CONFLICTS C58), so that name is kept. Changing it is a one-line edit in `Entrance.tsx` (`NAME.ar`).
-
-## How it is built, and what is not available
-
-**Assets found in the repository** (checked before choosing an approach):
-
-- `public/images/illustrations/omani-man-dishdasha-kumma.svg`, a static head-and-shoulders portrait;
-- `assets/editorial/masters/omani-professional.png`, a static illustration (1.4 MB);
-- the brand mark and patterns.
-
-None of these is a character that can move. There is **no 3D model, rig or animation clip**, no produced video, and no 3D library: three.js was not approved, and no frontend package was added.
-
-**What was built instead: a code-driven 2D vector rig** (`entranceRig.ts` + `EntranceScene.tsx`). It is a real animation, not a static illustration:
-
-- **Body parts.** Every body part is a separate SVG shape posed 60 times a second: head, torso, skirt, upper arms, forearms, hands, thighs, shins and feet.
-- **Feet.** They are planted on the floor while bearing weight. The gait is driven by the distance walked, with opening and closing steps, so the feet never skate.
-- **Joints.** Knees and elbows are solved with two-bone inverse kinematics.
-- **Hands and sign.** The hands are attached to the sign's grip points while carrying. Fingers are drawn round the edges in front of the sign until he lets go.
-- **The sign.** A separate object: wooden frame, painted panel, stand and shadow. Its lettering is real SVG text in IBM Plex Sans (the platform's font), so "OSRIP" is always exact.
-
-**The exact missing asset for a "produced" version.** To replace the vector rig with a 3D or filmed character, the project would need one of:
-
-1. **A rigged 3D character** (`.glb`, ideally under 1.5 MB with Draco/meshopt compression). It would need:
-   - a skeleton;
-   - clips `walk_carry`, `lower_place`, `release`, `step_aside`, `turn`, `present_idle`;
-   - a hand bone or attachment socket for the sign;
-   - the outfit modelled as dishdasha, kumma and sandals.
-
-   It also needs approval to add `three` (and a loader) to the frontend.
-2. **A produced 4–6 s video with transparency.** WebM VP9 with alpha plus HEVC with alpha (for Safari), with a poster frame. The man carries a *blank* sign, so the OSRIP lettering stays an HTML layer tracked to it; or the lettering is composited in post-production and checked frame by frame.
-
-The scene structure would stay the same either way: phases, Skip, still-frame fallbacks, the reveal and the tests.
+**Arabic name.** The owner's file writes «منصة عُمان الذكية لذكاء الموارد». The project owner
+chose «…لمعلومات الموارد» on 8 October 2026 (SPEC_CONFLICTS C58), and the whole app uses that
+name, so the introduction does too. Changing it is a one-line edit in `Entrance.tsx`
+(`NAME.ar`).
 
 ## Behaviour
 
 | Requirement | How |
 |---|---|
 | First visit only, remembered locally | `localStorage` `osrip.entrance = seen-1`, set by Explore, Skip or Escape. Nothing is sent to the server. If storage is blocked, the entrance is not shown, so nobody is trapped. |
-| Home page only (since 16 October 2026) | The first-visit entrance opens on `/` only. A direct link (a study, the workspace, the account, `/trade?mode=synthetic`) opens its page at once; the entrance stays unseen, so a later visit to the home page still shows it. Replay works on every page. |
-| Replay introduction in settings | **Account and settings** page → *Settings* → *Replay introduction*. It is there signed in or out, and in mock mode. Also in the footer. A replay starts the scene from the beginning. |
-| Immediate skip | Both buttons are rendered and focusable from the first frame. Focus starts on Explore; Escape skips. |
-| Direct links preserved | Explore from the home page opens the overview. In a replay on any other address (for example `/energy/water?mode=synthetic`) it closes and stays there. Skip never navigates. |
-| Keyboard focus restored | Back to the element that opened it (for example the Settings button). On a first visit, to the page's main content. |
-| Reduced motion | The scene's final frame, with all text shown at once and nothing moving (`data-fallback="reduced-motion"`). |
-| Low power | Data saver, at most 2 CPU cores or at most 2 GB device memory gives the final frame from the start (`low-power`). While playing, a watchdog switches to the final frame if frames 3–32 average more than 45 ms. |
-| Loading failure | The scene is a separate chunk loaded on demand. If it fails, an error boundary shows a plain OSRIP sign and reveals the text; Explore and Skip work. If it is slower than 1.2 s, the text is revealed anyway and the scene arrives as its final frame. |
-| No sound | No audio or video elements; no audio API is used (tested). |
-| Application data not delayed | The page behind renders and loads its data while the entrance is open (`showModal` makes it inert, not unmounted). The scene's code is not in the main bundle. |
-| Background tab | Frame gaps over 50 ms are clamped, so the scene pauses rather than skipping ahead. |
-
-## Sizes (production build, 10 October 2026)
-
-| Item | Size |
-|---|---|
-| `EntranceScene-*.js` (scene + rig, loaded only when the entrance shows) | **19.00 kB** (6.35 kB gzip) |
-| Images, video, 3D files | **none** (vector shapes and text only; the fonts are the app's own) |
-| Shell in the main bundle (`Entrance.tsx`: dialog, text, buttons, fallbacks) | 9.9 kB of source; its minified share of the main bundle was not measured separately (the main-bundle size warning existed before) |
-
-## Performance (measured)
-
-Measured on 10 October 2026 with a production build (mock data) served by `vite preview` and driven by Edge (headless) on this Windows 11 machine. The method:
-
-- frame times from `requestAnimationFrame`;
-- long tasks and layout shift from `PerformanceObserver`;
-- slower devices simulated with CDP CPU throttling.
-
-| Run | Sequence | Average fps | p95 frame | Frames over 34 ms | Long tasks | Layout shift |
-|---|---|---|---|---|---|---|
-| Desktop 1366×768, 3 runs | 5.29–5.39 s | 58.3 / 60 / 60 | 16.8 ms | 2 (first, cold run) / 0 / 0 | 0 | 0.0001 |
-| Desktop, CPU 4× slower | 5.28 s | 59.8 | 16.8 ms | 0 | 0 | 0.0001 |
-| Phone 412×915, CPU 4× slower | 4.59 s | 60 | 16.8 ms | 0 | 0 | 0 |
-| Phone, CPU 6× slower | 4.59 s | 59.6 | 16.8 ms | 0 | 0 | 0 |
-| Phone, CPU 20× slower | watchdog → **final frame** after 1.8 s | 18.4 | 66.7 ms | (before the switch) | — | 0 |
-
-**Data loading.** Time to the first overview data card, 5 runs each:
-
-- entrance open: 486 / 428 / 439 / 415 / 445 ms, median **439 ms**;
-- entrance already seen: 455 / 435 / 422 / 431 / 441 ms, median **435 ms**.
-
-The difference is within run-to-run noise.
-
-JavaScript heap with the page and scene: 8.4–9.7 MB.
-
-## Evidence
-
-All in `docs/evidence/entrance/`:
-
-- **Real-time recordings** (browser screencast, about 52 fps, assembled at 25 fps; the first frames show the page loading):
-  - `entrance-desktop-en.webp` (541 kB)
-  - `entrance-desktop-ar.webp` (488 kB)
-  - `entrance-phone-en.webp` (489 kB)
-
-  They play in Edge or Chrome. No ffmpeg is installed, so they are animated WebP rather than MP4.
-- **Frame sheets** (exact times, from the fake clock):
-  - `frames-desktop-en.png`
-  - `frames-desktop-ar.png`
-  - `frames-phone-en.png`
-- **Fallbacks and Settings:**
-  - `reduced-motion-final-frame.png`
-  - `scene-failed-to-load.png`
-  - `settings-replay-introduction.png`
+| Home page only | The first-visit introduction opens on `/` only. A direct link opens its page at once and leaves the introduction unseen, so a later visit to the home page still shows it. |
+| Replay | Footer → *Replay introduction*, and Account → Settings → *Replay introduction*, on every page. A replay starts the animation from the beginning. |
+| Explore | From the home page it opens the overview. In a replay on any other page it closes and stays there. Skip never navigates. |
+| Keyboard and focus | A native modal `<dialog>`. Focus starts on Explore without scrolling, so a phone starts at the top. Escape skips. Focus returns to the element that opened it, or on a first visit to the page's main content. |
+| Reduced motion | The final frame at once, with no movement (`data-mode="static"`, `data-fallback="reduced-motion"`). |
+| Low power | Data saver, at most 2 CPU cores or at most 2 GB device memory: the final frame (`low-power`). |
+| Missing images | A portrait that cannot load becomes the neutral "AI" badge (`PersonaImage`). A resource image keeps its caption. Everything else works. |
+| No sound | No audio or video elements and no audio API (tested). |
+| Application data not delayed | The page behind renders and loads its data while the introduction is open (`showModal` makes it inert, not unmounted). |
+| Right to left | Texts and buttons follow the language. The stage keeps the owner's order (Al Mulhim left, Ilham right) and the OSRIP lettering is never mirrored. |
 
 ## Tests
 
-`frontend/e2e/entrance.spec.ts`, 12 tests on desktop and 1 on Pixel 7. The scene tests run on Playwright's fake clock, so each moment is checked deterministically. `frontend/e2e/review-upgrade.spec.ts` also checks, on desktop and phone, that `/overview` opens without the entrance.
+`frontend/e2e/entrance.spec.ts`: 12 tests on desktop and 1 on Pixel 7.
 
-1. **The full sequence.** Phases arrive in order (enter → lower → release → rise → aside → turn → present → settled) within 4–6.2 s. While carrying, the fingers are round both edges and the near hand is on the sign. When placed, the sign is lower than while carried and centred to within 3 px. After release, the fingers are gone and the hands are off the sign. He stands clear of it. The lettering reads "OSRIP". Then the names and goals are revealed. No audio is created. Explore goes to the overview, and the entrance is remembered after a reload.
-2. The home page's latest figures finish loading while the scene plays.
-3. Immediate Skip on the home page stays there, focuses the content and is remembered.
-4. A direct link (`/trade?mode=synthetic`) opens without the entrance, keeps its address and leaves it unseen; Escape and the footer replay return focus.
+1. **First visit:**
+   - both portraits load, with the sign centred between them;
+   - both names, three resource images and the six goal texts are shown;
+   - no audio is used;
+   - Explore opens the overview, and the introduction is remembered after a reload.
+2. The home page's latest figures load while the introduction is open.
+3. Skip at once on the home page: stays there, focuses the content, is remembered.
+4. A direct link (`/trade?mode=synthetic`) opens without the introduction and leaves it unseen. The footer replay closes with Escape and returns focus.
 5. Explore in a replay on `/energy/water?mode=synthetic` stays there.
 6. Settings → Replay introduction plays again; focus returns to the button.
-7. Arabic: right to left, he enters from the right and ends to the left of the centred sign; the lettering has a positive on-screen scale (not mirrored); ابدأ / تخطي; Arabic name first.
+7. Arabic: right to left, Arabic first, bilingual buttons, the stage order kept, the lettering left-to-right.
 8. Arabic Settings label «إعادة عرض المقدمة».
-9. Reduced motion: the final frame at once, the text visible, no fingers on the sign.
+9. Reduced motion: the final frame, no animation.
 10. Low-power device (2 cores): the final frame.
-11. Loading failure (the scene module blocked): a plain sign, the text revealed, Explore works.
-12. Phone (Pixel 7): the sign, the man and the stage within the screen; no sideways scrolling.
+11. Images blocked: AI badges for the portraits, captions kept, Explore works.
+12. Phone (Pixel 7): portraits, sign and Skip within the screen, starting at the top, no sideways scrolling.
 
-## Files
+## History
 
-- `frontend/src/components/layout/entranceRig.ts`: choreography, gait and IK. Pure functions.
-- `frontend/src/components/layout/EntranceScene.tsx`: the SVG character, the sign and the frame loop. Lazily loaded.
-- `frontend/src/components/layout/Entrance.tsx`: the dialog, text, buttons, fallbacks and storage.
-- `frontend/src/components/layout/entranceControl.ts`: the replay context.
-- `frontend/src/components/settings/SettingsSection.tsx`: Settings → Replay introduction.
-- `frontend/src/components/layout/AppShell.tsx`: home-page-only first visit, direct-link-safe Explore and the replay provider.
-- i18n: `settings.*`, `entrance.replay` ("Replay introduction"), `nav.account` ("Account and settings" / «الحساب والإعدادات»).
+Until 15 October 2026 the introduction was a code-driven 2D vector scene: an illustrated Omani
+man carried the OSRIP sign in and set it down (`EntranceScene.tsx`, `entranceRig.ts`). The
+owner's design replaced it on 16 October. The old files are in git history (commit `24c0cca`),
+and so are their evidence images in `docs/evidence/entrance/` and the measurements in
+`docs/TEST_RESULTS.md`.

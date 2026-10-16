@@ -1,6 +1,6 @@
 // WCAG 2.x contrast for the OSRIP colour tokens. Text needs 4.5 (3 for large), UI/focus needs 3.
 // Run: npm run check:contrast. The tokens are read from src/index.css (the light :root block and
-// the :root block inside the prefers-color-scheme: dark media query), so they cannot drift.
+// the :root[data-theme="dark"] block), so they cannot drift.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -26,8 +26,7 @@ function tokens(body) {
 }
 
 const light = tokens(block(css, css.indexOf(':root')));
-const darkMedia = css.indexOf('@media (prefers-color-scheme: dark)');
-const dark = { ...light, ...tokens(block(css, css.indexOf(':root', darkMedia))) };
+const dark = { ...light, ...tokens(block(css, css.indexOf(':root[data-theme="dark"]'))) };
 
 const lum = (hex) => {
   const c = hex.replace('#', '').match(/../g).map((h) => parseInt(h, 16) / 255);
@@ -51,11 +50,18 @@ const checks = [
   ['primary', 'muted', 4.5, 'link on muted'],
   ['primary-foreground', 'primary', 4.5, 'primary button label'],
   ['primary-foreground', 'primary-hover', 4.5, 'primary button hover'],
-  ['nav-foreground', 'nav', 4.5, 'sidebar text'],
-  ['nav-muted', 'nav', 4.5, 'sidebar secondary'],
-  ['nav-foreground', 'nav-active', 4.5, 'sidebar active item'],
-  ['nav-ring', 'nav', 3, 'sidebar focus ring'],
-  ['nav-ring', 'nav-active', 3, 'sidebar focus on active'],
+  ['sidebar-foreground', 'sidebar', 4.5, 'sidebar text'],
+  ['sidebar-muted', 'sidebar', 4.5, 'sidebar secondary'],
+  ['sidebar-foreground', 'sidebar-active', 4.5, 'sidebar active item'],
+  ['sidebar-accent', 'sidebar', 3, 'sidebar active mark'],
+  ['sidebar-accent', 'sidebar-active', 3, 'sidebar mark on active item'],
+  ['ring', 'sidebar', 3, 'focus ring on sidebar'],
+  ['ring', 'sidebar-active', 3, 'focus ring on active item'],
+  ['nav-foreground', 'nav', 4.5, 'introduction text'],
+  ['nav-muted', 'nav', 4.5, 'introduction secondary'],
+  ['nav-foreground', 'nav-active', 4.5, 'introduction card text'],
+  ['nav-ring', 'nav', 3, 'introduction focus ring'],
+  ['nav-ring', 'nav-active', 3, 'introduction focus on card'],
   ['accent', 'background', 4.5, 'copper accent text'],
   ['accent', 'card', 4.5, 'copper accent on card'],
   ['accent', 'muted', 4.5, 'copper accent on muted'],

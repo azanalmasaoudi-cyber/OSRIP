@@ -1,10 +1,28 @@
 # OSRIP design system
 
-A **proposed** visual identity for an academic prototype (release 0.8, 2026-10-02):
-deep navy for structure and navigation, teal for primary actions, warm ivory page
-backgrounds, restrained copper accents, sand details and subtle geometric patterns
-inspired by Omani architecture. It is not official government branding. Asset sources
-and licences are in [`assets.md`](assets.md).
+A **proposed** visual identity for an academic prototype (release 1.0, 2026-10-16, branch
+`redesign/dark-dashboard`). It is a dashboard design in two themes:
+
+- **Dark (the default):** a near-black page with slightly raised charcoal cards.
+- **Light:** a near-white page with white cards.
+
+Both have thin borders, rounded corners, white or ink text with muted secondary text, and
+emerald as the one action and chart colour. Copper and sand are small accents. It is not
+official government branding. Asset sources and licences are in [`assets.md`](assets.md).
+
+**Theme choice:** Light, Dark or System. It is set in the top bar (Settings on the Account
+page; the menu on phones) and remembered in this browser only (`osrip.theme`). The resolved
+theme is written to `<html data-theme>` before the first paint by `public/theme-init.js`, an
+external file because the Content-Security-Policy forbids inline scripts. `src/lib/theme.ts`
+keeps it up to date, including device changes while System is chosen.
+
+**Layout:**
+- **Sidebar** (15 rem): Overview; the four resources; Map, Studies, Scenarios, Sources and
+  AI Assistant; Reports and the Research library; Account; administration. Its footer holds
+  the data mode.
+- **Top bar** (56 px): page title, search (Ctrl+K), English/Arabic, theme and the account menu.
+- **Phones:** the sidebar becomes a menu drawer that also holds the theme and data mode, and
+  search opens in a dialog.
 
 The live catalogue is at **`/design-reference`** (linked in the footer). It
 renders every token, control, badge, the indicator card and every data state.
@@ -14,28 +32,29 @@ Everything on that page is labelled demonstration content.
 
 | Role | Token | Light | Dark |
 |---|---|---|---|
-| Page | `--background` | `#f8f5ee` warm ivory | `#0c1525` |
-| Card | `--card` | `#fffdf8` | `#132038` |
-| Sunken | `--muted` | `#f0ebe0` | `#1a2944` |
-| Ink / secondary ink | `--foreground` / `--muted-foreground` | `#14213a` navy ink / `#4d5869` | `#ede7da` / `#aab4c5` |
-| Primary actions, links | `--primary`, `--primary-hover` | `#0b6b66` teal, `#08544f` | `#5ccdc1`, `#80dbd1` |
-| Navigation and structure | `--nav`, `--nav-active` | `#0f2340` deep navy, `#1d3a63` | `#08111f`, `#1a2d4e` |
-| Marks on navy | `--nav-accent` | `#4fc3b6` (active-page rule and icon) | `#5ccdc1` |
+| Page | `--background` | `#f5f5f6` | `#09090b` near-black |
+| Card | `--card` | `#ffffff` | `#141416` charcoal |
+| Sunken, hover | `--muted` | `#eeeef0` | `#1c1c1f` |
+| Ink / secondary ink | `--foreground` / `--muted-foreground` | `#0a0a0b` / `#55555d` | `#f4f4f5` / `#a1a1aa` |
+| Borders / form controls | `--border` / `--border-strong` | `#e2e2e6` / `#85858f` | `#26262a` / `#6e6e78` |
+| Primary actions, links | `--primary`, `--primary-hover` | `#047857` emerald, `#065f46` | `#34d399`, `#6ee7b7` |
+| Sidebar and top bar | `--sidebar`, `--sidebar-active`, `--sidebar-accent` | `#fbfbfc`, `#ececef`, `#047857` | `#0c0c0e`, `#1c1c20`, `#34d399` |
+| Introduction stage, brand mark | `--nav`, `--nav-active`, `--nav-ring` | `#0c3326` deep emerald, `#165040`, `#e8c48e` | `#06120d`, `#153a2c`, `#e8c48e` |
 | Accent | `--accent`, `--copper` | `#a0502a` copper text, `#b86b3a` rules | `#e6a679`, `#d38a56` |
-| Details | `--sand`, `--sand-subtle` | `#b08d57`, `#efe4ce` | `#c9a96e`, `#2e2a20` |
-| Focus | `--ring` (page), `--nav-ring` (navy surfaces) | `#a0502a` copper, `#e8c48e` | `#e6a679`, `#e8c48e` |
-| Error | `--destructive` | `#a8321f` | `#f0907c` |
-| Data modes | `--synthetic*`, `--verified*` | amber / teal tints | |
-| Charts | `--chart-1`, `--chart-2`, `--chart-grid` | `#0b6b66` teal, `#1d3a63` navy, `#e3dccd` | `#5ccdc1`, `#9fb6dd`, `#2a3b5b` |
+| Details | `--sand`, `--sand-subtle` | `#b08d57`, `#f1ead9` | `#c9a96e`, `#2a261d` |
+| Focus | `--ring` | `#3f3f46` (neutral, distinct from the emerald selection) | `#d4d4d8` |
+| Error | `--destructive` | `#b42318` | `#f87171` |
+| Data modes | `--synthetic*`, `--verified*` | amber / emerald tints | darker tints |
+| Charts | `--chart-1`, `--chart-2`, `--chart-grid` | `#059669` emerald, `#2563eb` blue, `#e7e7ea` | `#10b981`, `#60a5fa`, `#232327` |
 
-Copper is used sparingly: the page-header rule, the "what it does not do" callout, the
-avatar ring at rest and the focus ring. It is never used to encode data. Teal marks the
-one primary action per view.
+Copper is used sparingly (the "what it does not do" callout, the avatar ring at rest). It is
+never used to encode data. Emerald marks the one primary action per view and single-series
+chart marks; blue is the comparison series.
 
-**Contrast.** `npm run check:contrast` reads the tokens directly from `index.css` (light
-`:root` and the dark media-query block) and checks 35 text, control, focus and chart pairs
-per theme against WCAG 2.x (4.5:1 for text, 3:1 for control borders, focus rings and chart
-marks). All 70 pass (2026-10-02).
+**Contrast.** `npm run check:contrast` reads the tokens directly from `index.css` (the light
+`:root` block and the `:root[data-theme="dark"]` block) and checks 42 text, control, focus,
+sidebar and chart pairs per theme against WCAG 2.x (4.5:1 for text, 3:1 for control borders,
+focus rings and chart marks). All 84 pass (2026-10-16).
 
 **AI Assistant avatar.** `AssistantAvatar` (`.assistant-avatar` in `index.css`): a fictional,
 AI-generated face in a circle, always next to the visible label "AI Assistant" /

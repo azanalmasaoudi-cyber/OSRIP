@@ -1,4 +1,4 @@
-import { Menu } from 'lucide-react';
+import { Menu, Search } from 'lucide-react';
 import { MotionConfig, motion } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router';
@@ -14,10 +14,12 @@ import { AccountControl } from './AccountControl';
 import { DataModeSelector } from './DataModeSelector';
 import { Entrance, entranceSeen } from './Entrance';
 import { EntranceReplayContext } from './entranceControl';
+import { GlobalSearch } from './GlobalSearch';
 import { LanguageSwitcher } from './LanguageSwitcher';
-import { SidebarNav } from './SidebarNav';
+import { NAV_ITEMS, SidebarNav } from './SidebarNav';
 import { StatusBanners } from './StatusBanners';
-import { BrandMark, CrenellationDivider, LatticeBackdrop } from '@/components/brand/BrandMark';
+import { ThemeSelector } from './ThemeSelector';
+import { BrandMark } from '@/components/brand/BrandMark';
 import { Dialog } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { usePreservedSearch } from '@/state/usePreservedSearch';
@@ -26,14 +28,28 @@ function Brand({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation();
   const to = usePreservedSearch();
   return (
-    <Link to={to('/')} onClick={onNavigate} className="flex min-w-0 items-center gap-3 rounded-md">
-      <BrandMark />
+    <Link to={to('/')} onClick={onNavigate} className="flex min-w-0 items-center gap-2.5 rounded-md">
+      <BrandMark className="size-8" />
       <span className="min-w-0">
-        <span className="block text-lg leading-tight font-semibold">{t('app.shortName')}</span>
-        <span className="block text-xs leading-snug text-nav-muted">{t('app.fullName')}</span>
+        <span className="block text-sm leading-tight font-semibold">{t('app.shortName')}</span>
+        <span className="block text-[0.6875rem] leading-snug text-sidebar-muted">{t('app.fullName')}</span>
       </span>
     </Link>
   );
+}
+
+/** The current page's name for the top bar: its navigation label, or the nearest fitting one. */
+function usePageTitle(pathname: string): string {
+  const { t } = useTranslation();
+  if (pathname === '/') return t('nav.home');
+  if (pathname === '/talk') return t('nav.aiAssistant');
+  if (pathname === '/energy') return t('nav.electricity');
+  if (['/sign-in', '/register', '/forgot-password', '/reset-password', '/magic-link', '/verify-email', '/link-email'].includes(pathname)) {
+    return t('nav.accountShort');
+  }
+  const match = [...NAV_ITEMS].sort((a, b) => b.path.length - a.path.length)
+    .find((item) => pathname === item.path || pathname.startsWith(`${item.path}/`));
+  return match ? t(match.key) : t('app.shortName');
 }
 
 /** Shown while the signed-in account still has a temporary password (enforced by the server). */
@@ -44,7 +60,7 @@ function PasswordChangeBanner() {
   const { pathname } = useLocation();
   if (!me.data?.password_change_required || pathname === '/account') return null;
   return (
-    <p role="status" className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-copper/40 bg-copper-subtle px-4 py-2 text-sm text-copper-foreground sm:px-6 lg:px-10"
+    <p role="status" className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-copper/40 bg-copper-subtle px-4 py-2 text-sm text-copper-foreground sm:px-6 lg:px-8"
       data-testid="password-change-banner">
       <span className="font-medium">{t('account.changeRequiredTitle')}</span>
       <Link to={to('/account')} className="underline underline-offset-2">{t('account.changePassword')}</Link>
@@ -58,6 +74,7 @@ export function AppShell() {
   const to = usePreservedSearch();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   // The first-visit entrance plays on the home page only: a direct link (a study, the
   // workspace, the account) opens straight away. It stays unseen until shown, and replayable.
   const [entranceOpen, setEntranceOpen] = useState(() => pathname === '/' && !entranceSeen());
@@ -65,6 +82,7 @@ export function AppShell() {
   const mainRef = useRef<HTMLElement>(null);
   const handledLocation = useRef<string | null>(null);
   const isHome = pathname === '/';
+  const title = usePageTitle(pathname);
 
   // After client-side navigation, move focus to the new page and scroll to the
   // top, as a full page load would; a #hash target gets scrolled to and focused
@@ -101,65 +119,81 @@ export function AppShell() {
       </a>
 
       {/* Desktop sidebar */}
-      <aside className="on-nav relative hidden bg-nav text-nav-foreground lg:block print:hidden">
-        <div className="sticky top-0 flex h-dvh flex-col overflow-y-auto">
-          <LatticeBackdrop className="bg-nav-foreground/[0.06]" />
-          <div className="relative px-5 pt-6 pb-5">
+      <aside className="hidden border-e border-sidebar-border bg-sidebar text-sidebar-foreground lg:block print:hidden">
+        <div className="sticky top-0 flex h-dvh flex-col">
+          <div className="flex h-14 shrink-0 items-center border-b border-sidebar-border px-4">
             <Brand />
           </div>
-          <CrenellationDivider className="relative bg-nav-ring/50" />
-          <div className="relative flex-1 px-3 py-6">
+          <div className="min-h-0 flex-1 overflow-y-auto px-2.5 py-4">
             <SidebarNav />
           </div>
-          <p className="relative px-5 pb-5 text-xs leading-relaxed text-nav-muted">{t('app.identityNote')}</p>
+          <div className="flex shrink-0 flex-col gap-3 border-t border-sidebar-border px-3 py-3">
+            <DataModeSelector />
+            <p className="text-[0.6875rem] leading-relaxed text-sidebar-muted">{t('app.identityNote')}</p>
+          </div>
         </div>
       </aside>
 
       <div className="flex min-h-dvh min-w-0 flex-col">
-        {/* Mobile top bar */}
-        <header className="on-nav sticky top-0 z-30 flex items-center gap-2 bg-nav px-3 py-2 text-nav-foreground lg:hidden print:hidden">
-          <button
-            type="button"
-            onClick={() => setMenuOpen(true)}
-            aria-haspopup="dialog"
-            aria-expanded={menuOpen}
-            className="inline-flex size-11 shrink-0 items-center justify-center rounded-md hover:bg-nav-active"
-            data-testid="open-menu"
-          >
-            <Menu aria-hidden="true" className="size-6" />
-            <span className="sr-only">{t('nav.openMenu')}</span>
-          </button>
-          <Link to={to('/')} className="flex min-w-0 flex-1 items-center gap-2 rounded-md">
-            <BrandMark className="size-8" />
-            <span className="truncate font-semibold">{t('app.shortName')}</span>
-          </Link>
-          <LanguageSwitcher tone="nav" />
+        {/* Top bar: page title, search, language, theme and account */}
+        <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur-md print:hidden" data-testid="top-bar">
+          <div className="flex h-14 items-center gap-1.5 px-3 sm:gap-2 sm:px-4 lg:px-6">
+            <button
+              type="button"
+              onClick={() => setMenuOpen(true)}
+              aria-haspopup="dialog"
+              aria-expanded={menuOpen}
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden"
+              data-testid="open-menu"
+            >
+              <Menu aria-hidden="true" className="size-5" />
+              <span className="sr-only">{t('nav.openMenu')}</span>
+            </button>
+            <Link to={to('/')} className="shrink-0 rounded-md lg:hidden" aria-label={t('app.shortName')}>
+              <BrandMark className="size-7" />
+            </Link>
+            <p className="flex min-w-0 flex-1 items-center gap-1.5 text-sm" data-testid="page-title">
+              <span className="hidden text-muted-foreground sm:inline">{t('app.shortName')}</span>
+              <span aria-hidden="true" className="hidden text-muted-foreground/60 sm:inline">/</span>
+              <span className="truncate font-medium">{title}</span>
+            </p>
+            <GlobalSearch shortcut className="hidden w-56 md:block xl:w-72" />
+            <button type="button" onClick={() => setSearchOpen(true)} aria-haspopup="dialog"
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground md:hidden"
+              data-testid="open-search">
+              <Search aria-hidden="true" className="size-4" />
+              <span className="sr-only">{t('search.label')}</span>
+            </button>
+            <LanguageSwitcher />
+            <ThemeSelector compact className="max-sm:hidden" />
+            <AccountControl />
+          </div>
         </header>
 
         <Dialog open={menuOpen} onClose={() => setMenuOpen(false)} title={t('nav.menuTitle')} placement="start">
-          <div className="flex flex-col gap-6" data-testid="mobile-menu">
+          <div className="flex flex-col gap-5" data-testid="mobile-menu">
             <Brand onNavigate={() => setMenuOpen(false)} />
+            <div className="flex flex-col gap-3">
+              <ThemeSelector />
+              <DataModeSelector />
+            </div>
             <SidebarNav onNavigate={() => setMenuOpen(false)} />
-            <p className="text-xs leading-relaxed text-nav-muted">{t('app.identityNote')}</p>
+            <p className="text-xs leading-relaxed text-sidebar-muted">{t('app.identityNote')}</p>
           </div>
         </Dialog>
 
-        <div className="print:hidden"><StatusBanners /><PasswordChangeBanner /></div>
+        <Dialog open={searchOpen} onClose={() => setSearchOpen(false)} title={t('search.label')}>
+          {searchOpen ? <GlobalSearch focusOnOpen inline onDone={() => setSearchOpen(false)} /> : null}
+        </Dialog>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-6 lg:px-10 print:hidden">
-          <DataModeSelector />
-          <div className="flex flex-wrap items-center gap-3">
-            <AccountControl />
-            <LanguageSwitcher className="hidden lg:inline-flex" />
-          </div>
-        </div>
+        <div className="print:hidden"><StatusBanners /><PasswordChangeBanner /></div>
 
         <main
           id="main"
           ref={mainRef}
           tabIndex={-1}
           // Bottom padding keeps the floating assistant orb clear of the last content.
-          className={cn('flex-1 pb-24 outline-none', !isHome && 'px-4 pt-8 sm:px-6 lg:px-10 lg:pt-10')}
+          className={cn('flex-1 pb-24 outline-none', !isHome && 'px-4 pt-6 sm:px-6 lg:px-8')}
         >
           {/* Keyed by route: a short entrance on page change, never an exit animation, so
               back/forward and the focus move above stay immediate. Under reduced motion
@@ -169,7 +203,7 @@ export function AppShell() {
             initial={{ opacity: 0.01, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-            className={cn(!isHome && 'mx-auto w-full max-w-6xl')}
+            className={cn(!isHome && 'mx-auto w-full max-w-[96rem]')}
             data-testid="route-transition"
           >
             <ErrorBoundary resetKey={pathname} fallback={(reset) => (
@@ -180,25 +214,24 @@ export function AppShell() {
           </motion.div>
         </main>
 
-        <footer className="mt-12 bg-card print:hidden">
-          <CrenellationDivider className="bg-sand/40" />
-          <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 pt-6 pb-24 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:pe-28 sm:pb-6 lg:px-10 lg:pe-28">
-            <p className="max-w-2xl">
+        <footer className="border-t border-border print:hidden">
+          <div className="mx-auto flex max-w-[96rem] flex-col gap-3 px-4 pt-5 pb-24 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:pe-28 sm:pb-5 lg:px-8 lg:pe-28">
+            <p className="max-w-3xl">
               {t('footer.disclaimer')} {t('app.identityNote')}
             </p>
             <ul className="flex flex-wrap gap-x-4 gap-y-1">
               <li>
-                <Link to={{ ...to('/sources'), hash: '#image-credits' }} className="underline underline-offset-2 hover:no-underline">
+                <Link to={{ ...to('/sources'), hash: '#image-credits' }} className="underline-offset-2 hover:text-foreground hover:underline">
                   {t('footer.credits')}
                 </Link>
               </li>
               <li>
-                <Link to={to('/design-reference')} className="underline underline-offset-2 hover:no-underline">
+                <Link to={to('/design-reference')} className="underline-offset-2 hover:text-foreground hover:underline">
                   {t('footer.designReference')}
                 </Link>
               </li>
               <li>
-                <button type="button" onClick={replayEntrance} className="underline underline-offset-2 hover:no-underline"
+                <button type="button" onClick={replayEntrance} className="underline-offset-2 hover:text-foreground hover:underline"
                   data-testid="replay-entrance">
                   {t('entrance.replay')}
                 </button>

@@ -12,6 +12,7 @@ interface FilterBarProps {
   canReset?: boolean;
   /** Number of filters away from their default, shown on the collapsed mobile toggle. */
   activeCount?: number;
+  className?: string;
 }
 
 /**
@@ -19,13 +20,13 @@ interface FilterBarProps {
  * URL (see useUrlFilter), so they are unchanged by a language switch.
  * On small screens the controls collapse behind a disclosure button.
  */
-export function FilterBar({ children, onReset, canReset = false, activeCount = 0 }: FilterBarProps) {
+export function FilterBar({ children, onReset, canReset = false, activeCount = 0, className }: FilterBarProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const panelId = useId();
 
   return (
-    <section aria-label={t('filters.heading')} data-testid="filter-bar" className="mb-6 rounded-lg border border-border bg-card p-4 sm:p-5">
+    <section aria-label={t('filters.heading')} data-testid="filter-bar" className={cn('mb-6 rounded-lg border border-border bg-card p-4', className)}>
       <div className="flex items-center justify-between gap-3 sm:mb-3">
         {/* Mobile: disclosure button. */}
         <button
@@ -36,14 +37,14 @@ export function FilterBar({ children, onReset, canReset = false, activeCount = 0
           className="-m-2 flex min-h-11 flex-1 items-center gap-2 rounded-md p-2 text-sm font-semibold sm:hidden"
           data-testid="filters-toggle"
         >
-          <SlidersHorizontal aria-hidden="true" className="size-4 text-sand-foreground" />
+          <SlidersHorizontal aria-hidden="true" className="size-4 text-primary" />
           {t('filters.heading')}
           {activeCount > 0 ? <Badge variant="sand">{activeCount}</Badge> : null}
           <ChevronDown aria-hidden="true" className={cn('ms-auto size-4 transition-transform', open && 'rotate-180')} />
         </button>
         {/* Larger screens: static heading. */}
         <h2 className="hidden items-center gap-2 text-sm font-semibold sm:flex">
-          <SlidersHorizontal aria-hidden="true" className="size-4 text-sand-foreground" />
+          <SlidersHorizontal aria-hidden="true" className="size-4 text-primary" />
           {t('filters.heading')}
         </h2>
         {onReset ? (

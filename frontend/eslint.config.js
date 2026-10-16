@@ -26,4 +26,9 @@ export default tseslint.config(
     ...tseslint.configs.disableTypeChecked,
     languageOptions: { globals: globals.node },
   },
+  {
+    files: ['public/**/*.js'],
+    ...tseslint.configs.disableTypeChecked,
+    languageOptions: { globals: globals.browser },
+  },
 );

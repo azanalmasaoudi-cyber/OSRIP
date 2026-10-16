@@ -5,34 +5,32 @@ import { apiBaseUrl, dataAdapter } from '@/api';
 import { cn } from '@/lib/utils';
 import { useDataMode } from '@/state/useDataMode';
 
-/** Persistent statements of what the user is looking at: data mode and backend status. */
+/** Persistent statements of what the user is looking at, in one slim strip: the data mode
+ * (with what it means) and the backend the page is connected to. */
 export function StatusBanners() {
   const { t } = useTranslation();
   const [mode] = useDataMode();
   const ModeIcon = mode === 'synthetic' ? FlaskConical : ShieldCheck;
 
   return (
-    <div className="flex flex-col">
-      <p
-        data-testid="prototype-notice"
-        className="flex items-center justify-center gap-2 border-b border-border bg-muted px-4 py-1.5 text-center text-xs text-muted-foreground"
-      >
-        <Info aria-hidden="true" className="size-3.5 shrink-0" />
-        {dataAdapter.kind === 'mock' ? t('prototype.mockAdapter') : t('prototype.httpAdapter', { baseUrl: apiBaseUrl })}
-      </p>
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-border px-4 py-2 text-xs sm:px-6 lg:px-8">
       <p
         role="status"
         data-testid="data-mode-banner"
         data-mode={mode}
         className={cn(
-          'flex items-center justify-center gap-2 border-b px-4 py-2 text-center text-sm font-medium',
+          'inline-flex min-w-0 items-start gap-1.5 rounded-md border px-2 py-1 font-medium',
           mode === 'synthetic'
-            ? 'border-synthetic-border bg-synthetic text-synthetic-foreground'
-            : 'border-verified-border bg-verified text-verified-foreground',
+            ? 'border-synthetic-border/70 bg-synthetic text-synthetic-foreground'
+            : 'border-verified-border/70 bg-verified text-verified-foreground',
         )}
       >
-        <ModeIcon aria-hidden="true" className="size-4 shrink-0" />
+        <ModeIcon aria-hidden="true" className="mt-px size-3.5 shrink-0" />
         {mode === 'synthetic' ? t('dataMode.syntheticBanner') : t('dataMode.verifiedBanner')}
+      </p>
+      <p data-testid="prototype-notice" className="inline-flex min-w-0 items-start gap-1.5 text-muted-foreground">
+        <Info aria-hidden="true" className="mt-px size-3.5 shrink-0" />
+        {dataAdapter.kind === 'mock' ? t('prototype.mockAdapter') : t('prototype.httpAdapter', { baseUrl: apiBaseUrl })}
       </p>
     </div>
   );

@@ -147,40 +147,40 @@
     },
     {
       "id": "persona-mulhim",
-      "subject": "Al Mulhim's portrait: fictional, generated image of an adult Omani man in a white dishdasha with furakha and an embroidered kumma",
-      "origin": "owner_supplied_document",
-      "document": "docs/Oman_Statistics_References_and_Images_English.docx",
-      "master": "omani-professional.png",
-      "sha256": "1bc0644d0d5feac841fd25ed1313b041a6c659d83ad27e10cf92918167a84090",
-      "source_width": 1024,
-      "source_height": 1536,
+      "subject": "Al Mulhim's portrait: fictional, generated image of an adult Omani man in a white dishdasha with furakha and an embroidered kumma, in a courtyard",
+      "origin": "owner_supplied_introduction",
+      "document": "docs/OSRIP_Intro_Single_File.html",
+      "master": "omani-man-courtyard.png",
+      "sha256": "3e02f5aa9f48a19fa1ab4994f99e07a1483e02387081e8845924c2022c9ff6f0",
+      "source_width": 1145,
+      "source_height": 1374,
       "generator": "Not recorded; the document describes its illustrations as generated artwork of a fictional Omani professional with no real-person identity implied",
-      "chosen": "2026-10-10, by the project owner, for the assistant personas",
+      "chosen": "2026-10-16, by the project owner, matching Ilham's portrait",
       "transformations": "Cropped and downscaled only (no retouching or upscaling); JPEG quality 84.",
       "derivatives": [
         {
           "file": "frontend/public/images/assistant/mulhim-portrait-432.jpg",
           "crop": [
-            282,
-            12,
-            718,
-            448
+            330,
+            50,
+            810,
+            530
           ],
           "width": 432,
           "height": 432,
-          "bytes": 21983
+          "bytes": 30447
         },
         {
           "file": "frontend/public/images/assistant/mulhim-figure-600.jpg",
           "crop": [
-            152,
-            0,
-            872,
-            960
+            150,
+            40,
+            990,
+            1160
           ],
           "width": 600,
           "height": 800,
-          "bytes": 38159
+          "bytes": 61579
         }
       ],
       "status": "in_use",

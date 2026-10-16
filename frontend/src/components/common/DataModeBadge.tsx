@@ -4,12 +4,14 @@ import { Badge } from '@/components/ui/badge';
 import type { DataMode } from '@/domain/types';
 import { DATA_MODE_KEY } from '@/i18n/keys';
 
-/** Mode label shown on every table, chart and card (booklet 3.4). Text, not colour alone. */
-export function DataModeBadge({ mode }: { mode: DataMode }) {
+/** Mode label shown on every table, chart and card (booklet 3.4). Text, not colour alone.
+ * `compact` shows the short label ("Synthetic", "Verified") with the full one as its title. */
+export function DataModeBadge({ mode, compact = false }: { mode: DataMode; compact?: boolean }) {
   const { t } = useTranslation();
   return (
-    <Badge variant={mode === 'synthetic' ? 'synthetic' : 'verified'} data-testid="data-mode-badge">
-      {t(DATA_MODE_KEY[mode])}
+    <Badge variant={mode === 'synthetic' ? 'synthetic' : 'verified'} data-testid="data-mode-badge"
+      title={compact ? t(DATA_MODE_KEY[mode]) : undefined}>
+      {compact ? t(`workspace.filters.mode.${mode}`) : t(DATA_MODE_KEY[mode])}
     </Badge>
   );
 }

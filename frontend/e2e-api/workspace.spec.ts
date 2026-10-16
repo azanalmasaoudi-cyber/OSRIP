@@ -57,12 +57,45 @@ test('filters, cards, one dataset as chart and table, and honest empty states', 
   await expect(ws.getByTestId('workspace-geography').getByTestId('dataset')).toHaveCount(0);
   // Domain filter, and the data mode: verified data are absent here and are said to be.
   await ws.getByTestId('filter-domain').selectOption('trade');
-  await expect(ws.getByTestId('domain-card-food_security')).toHaveCount(0);
+  await expect(ws.getByTestId('indicator-card').first()).toHaveAttribute('data-indicator', /^TRADE_/);
   const verified = ws.getByTestId('workspace-data-mode').getByRole('radio', { name: 'Verified' });
   await verified.click();
   await expect(verified).toBeChecked();
   await expect(page).not.toHaveURL(/mode=synthetic/); // the default mode is left out of the address
   await expect(ws.locator('[data-state="no_verified_data"]').first()).toBeVisible();
+});
+
+test('the dashboard: four resources with their latest published values, the chart beside its findings, and comparison, studies and sources below', async ({ page }) => {
+  await page.goto('/overview?mode=synthetic');
+  const kpi = (section: string) => page.locator(`[data-testid="resource-kpi"][data-section="${section}"]`);
+  await expect(page.getByTestId('resource-kpi')).toHaveCount(4);
+  const electricity = kpi('electricity');
+  await expect(electricity).toHaveAttribute('data-state', 'ok');
+  await expect(electricity.getByTestId('kpi-value')).toHaveText('50,100');
+  await expect(electricity).toContainText('gigawatt-hour');
+  await expect(electricity.getByTestId('kpi-period')).toHaveText('2002');
+  await expect(electricity).toContainText('Previous: 48,000 (2001)');
+  await expect(electricity).toContainText('Source:');
+  await expect(electricity.getByTestId('data-mode-badge')).toHaveText('Synthetic');
+  // The large chart sits beside the findings for the same selection.
+  const chart = await page.locator('section[aria-labelledby="ws-trend"]').boundingBox();
+  const findings = await page.getByTestId('workspace-findings').boundingBox();
+  expect(findings?.x ?? 0).toBeGreaterThan((chart?.x ?? 0) + (chart?.width ?? 0) - 1);
+  await expect(page.getByTestId('workspace-findings').getByTestId('selection-study')).toBeVisible();
+  // "Analyse" on a resource analyses its headline indicator below.
+  await kpi('water').getByRole('button', { name: /Analyse/ }).click();
+  await expect(page).toHaveURL(/section=water/);
+  await expect(kpi('water').getByRole('button', { name: /Analyse/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('workspace-data').getByTestId('indicator-card').first()).toHaveAttribute('data-indicator', /^WATER_/);
+  // Below: the comparison (honestly empty here), recent studies (none yet) and the sources shown.
+  await expect(page.getByTestId('workspace-geography-none')).toBeVisible();
+  await expect(page.getByTestId('recent-studies-empty')).toBeVisible();
+  await expect(page.getByTestId('workspace-sources').getByTestId('workspace-source').first()).toContainText('No publisher (synthetic data)');
+  // Verified mode: no verified trade data is published, and the card says so instead of a number.
+  await page.getByTestId('workspace-data-mode').getByRole('radio', { name: 'Verified' }).click();
+  await expect(kpi('trade')).toHaveAttribute('data-state', 'empty');
+  await expect(kpi('trade')).toContainText('No published data for this resource in the chosen data mode.');
+  await expect(kpi('trade').getByTestId('kpi-value')).toHaveCount(0);
 });
 
 test('a live study streams steps, sources and a validated table; narration highlights its row', async ({ page }) => {
@@ -145,6 +178,8 @@ test('the person returns to an earlier study, and switching language keeps the v
   await expect(study).toHaveAttribute('data-status', 'completed');
   await expect(study.getByTestId('study-finding').first()).toContainText('50100');
   await expect(page.getByTestId('workspace-assistant').getByTestId('open-study').first()).toHaveAttribute('aria-pressed', 'true');
+  // Both studies of this session are listed under Recent studies.
+  await expect(page.getByTestId('recent-studies').getByTestId('recent-study-open')).toHaveCount(2);
   // Arabic: labels change, the table's values do not.
   const values = await study.getByTestId('study-datasets').getByTestId('study-row').allTextContents();
   await page.getByRole('button', { name: 'العربية' }).first().click();

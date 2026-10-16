@@ -1,5 +1,5 @@
-import { ArrowRight, BarChart3, Clock, MapPinned } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { ArrowRight, BarChart3, Clock, MapPinned, Sparkles } from 'lucide-react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
@@ -14,13 +14,14 @@ import { IndicatorCard } from '@/components/common/IndicatorCard';
 import { FREQUENCIES, mixedFrequencies, MixedFrequencyNotice } from '@/components/common/MixedFrequency';
 import { PageHeader } from '@/components/common/PageHeader';
 import { StatePanel } from '@/components/common/StatePanel';
-import { Card } from '@/components/ui/card';
 import { Segmented } from '@/components/ui/segmented';
 import { SelectField } from '@/components/ui/select';
 import { AssistantColumn } from '@/components/workspace/AssistantColumn';
+import { DashboardCard, RecentStudies, SourcesPanel } from '@/components/workspace/DashboardPanels';
 import { comparisonDataset, isStale, seriesDataset } from '@/components/workspace/datasets';
 import { DatasetView } from '@/components/workspace/DatasetView';
 import { LiveStudyPanel } from '@/components/workspace/LiveStudyPanel';
+import { ResourceKpis } from '@/components/workspace/ResourceKpis';
 import { SelectionStudy } from '@/components/workspace/SelectionStudy';
 import { Tabs, tabPanelProps } from '@/components/workspace/Tabs';
 import { WorkspaceLaunchpad } from '@/components/workspace/WorkspaceLaunchpad';
@@ -32,6 +33,7 @@ import { useAppLanguage } from '@/lib/useAppLanguage';
 import { useMediaQuery } from '@/lib/useMediaQuery';
 import { useDataMode } from '@/state/useDataMode';
 import { usePreservedSearch } from '@/state/usePreservedSearch';
+import { useUpdateSearch } from '@/state/useUpdateSearch';
 import { useResetFilters, useUrlFilter } from '@/state/useUrlFilter';
 
 const DOMAIN_TEXT = {
@@ -58,13 +60,34 @@ function useSectionSeries(section: SectionCode, frequency?: string) {
   return useSeries(section, mode, frequency);
 }
 
+/** A card with a heading row, used for the workspace's main panels. */
+function Panel({ id, title, icon, action, children, testId }: {
+  id: string;
+  title: ReactNode;
+  icon?: ReactNode;
+  action?: ReactNode;
+  children: ReactNode;
+  testId?: string;
+}) {
+  return (
+    <section aria-labelledby={id} className="flex min-w-0 flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:p-5" data-testid={testId}>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <h2 id={id} className="flex items-center gap-2 text-sm font-semibold">{icon}{title}</h2>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
 /**
- * The analytical workspace (the dashboard): filters for domain, section, indicator, period,
- * geography and data mode; indicator cards with units, dates, sources and a stale-data flag;
- * the chosen indicator's history as one validated dataset drawn as chart and table;
- * governorates side by side only where the coverage supports it; and the study panel, with
- * the assistant's live study and the study of the current selection. On wide screens the
- * assistant sits beside the analysis; on phones Data, Study and Assistant are tabs.
+ * The analytical workspace (the dashboard). Top: the four resources with their latest
+ * published values. Then the filters (domain, section, indicator, period, geography and data
+ * mode); the chosen indicator's history as one validated dataset drawn as chart and table,
+ * beside the server's findings for that selection; the section's indicator cards; and below,
+ * the governorate comparison, recent studies and the sources of what is shown. On wide screens
+ * the assistant sits beside the analysis (a question there brings its live study forward in
+ * the Study tab); on phones Data, Study and Assistant are tabs.
  */
 export function OverviewPage() {
   const { t } = useTranslation();
@@ -72,6 +95,7 @@ export function OverviewPage() {
   const [mode, setMode] = useDataMode();
   const ui = useAssistantUi();
   const wide = useMediaQuery('(min-width: 1024px)');
+  const update = useUpdateSearch();
   const [domain, setDomain] = useUrlFilter('domain', DOMAIN_OPTIONS, ALL);
   const visibleDomains = DOMAINS.filter((d) => domain === ALL || d.code === domain);
   const sectionOptions = visibleDomains.flatMap((d) => d.sections);
@@ -110,6 +134,22 @@ export function OverviewPage() {
     lastStudy.current = id;
   }, [ui.activeStudy?.id, setTab]);
 
+  // "Analyse" on a resource card: its domain, section and headline indicator, in one change.
+  const analyseResource = (code: SectionCode, indicatorCode: string | null) => {
+    const owner = DOMAINS.find((d) => d.sections.includes(code));
+    update((p) => {
+      if (owner) p.set('domain', owner.code);
+      p.set('section', code);
+      if (indicatorCode) p.set('indicator', indicatorCode);
+      else p.delete('indicator');
+      p.delete('tab');
+    }, { replace: true });
+  };
+  const openStudy = (id: string) => {
+    ui.openStudy(id, ui.studies.find((s) => s.id === id)?.guest ?? true);
+    setTab('study');
+  };
+
   const tabs = [
     { id: 'data' as const, label: t('workspace.tabs.data') },
     { id: 'study' as const, label: t('workspace.tabs.study'), badge: ui.activeStudy ? '1' : null },
@@ -118,13 +158,22 @@ export function OverviewPage() {
   const nameOf = (code: string) => inArea.find((s) => s.indicatorCode === code)?.name[language] ?? code;
   const yearOptions = [{ value: ALL, label: t('analysis.allYears') }, ...years.map((y) => ({ value: y, label: y }))];
 
+  const findings = (
+    <Panel id="ws-selection" title={t('workspace.findings.heading')} icon={<Sparkles aria-hidden="true" className="size-4 text-primary" />}
+      testId="workspace-findings">
+      <p className="text-xs text-muted-foreground">{t('workspace.findings.note')}</p>
+      <SelectionStudy indicator={focus?.indicatorCode ?? null} area={focus?.area?.code ?? 'OM'} periodKind={focus?.frequency ?? 'annual'}
+        mode={mode} section={focusSection} />
+    </Panel>
+  );
+
   return (
-    <div data-testid="workspace">
+    <div data-testid="workspace" className="flex flex-col gap-5">
       <PageHeader title={t('workspace.title')} intro={t('workspace.intro')} />
 
-      <WorkspaceLaunchpad />
+      <ResourceKpis focus={focusSection} onAnalyse={analyseResource} />
 
-      <FilterBar onReset={reset} canReset={active} activeCount={count}>
+      <FilterBar onReset={reset} canReset={active} activeCount={count} className="mb-0">
         <SelectField label={t('filters.domain')} value={domain}
           onValueChange={(v) => setDomain(DOMAIN_OPTIONS.find((o) => o === v) ?? ALL)}
           options={[{ value: ALL, label: t('filters.all') }, ...DOMAINS.map((d) => ({ value: d.code, label: t(DOMAIN_TEXT[d.code].title) }))]}
@@ -148,103 +197,64 @@ export function OverviewPage() {
           options={DATA_MODES.map((m) => ({ value: m, label: t(`workspace.filters.mode.${m}`) }))} testId="workspace-data-mode" />
       </FilterBar>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] lg:items-start">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(19rem,22rem)] lg:items-start">
         <div className="flex min-w-0 flex-col gap-4">
           <Tabs tabs={tabs} value={tab} onChange={setTab} idBase="workspace" label={t('workspace.tabs.label')} className="w-full sm:w-fit" />
 
-          <div {...tabPanelProps('workspace', 'data', tab === 'data')} className="flex flex-col gap-8 outline-none" data-testid="workspace-data">
-            <DomainTiles domains={visibleDomains} onPick={(code) => setDomain(code)} frequency={freq} />
-            <section aria-labelledby="ws-cards" className="flex flex-col gap-3">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h2 id="ws-cards" className="text-lg font-semibold">{t(SECTION_TITLE[focusSection])}</h2>
-                <Link to={to_(SECTION_PATHS[focusSection])} className="inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline">
-                  {t('pages.overview.open')}<span className="sr-only">: {t(SECTION_TITLE[focusSection])}</span>
-                  <ArrowRight aria-hidden="true" className="size-4 rtl:-scale-x-100" />
-                </Link>
-              </div>
-              <IndicatorCards query={series} shown={inArea} focus={focus}
-                onAnalyse={(code) => setIndicator(code)} onChooseFrequency={setFrequency} />
-            </section>
-            <section aria-labelledby="ws-trend" className="flex flex-col gap-3">
-              <h2 id="ws-trend" className="flex items-center gap-2 text-lg font-semibold"><BarChart3 aria-hidden="true" className="size-5 text-primary" />{t('workspace.trend.heading')}</h2>
-              <p className="max-w-3xl text-sm text-muted-foreground">{t('workspace.trend.note')}</p>
+          <div {...tabPanelProps('workspace', 'data', tab === 'data')} className="flex flex-col gap-5 outline-none" data-testid="workspace-data">
+            <Panel id="ws-trend" title={t('workspace.trend.heading')} icon={<BarChart3 aria-hidden="true" className="size-4 text-primary" />}
+              action={focus ? <span className="text-xs text-muted-foreground">{focus.name[language]} · {focus.unit.label[language]}</span> : null}>
+              <p className="max-w-3xl text-xs text-muted-foreground">{t('workspace.trend.note')}</p>
               {series.isPending ? <StatePanel kind="loading" skeleton="lines" />
                 : trend ? <DatasetView dataset={trend} state="reference" />
                   : focus ? <StatePanel kind="empty"><p className="text-sm text-muted-foreground">{t('workspace.trend.noneInPeriod')}</p></StatePanel>
-                    : null}
-            </section>
-            <GeographyView indicator={focus?.indicatorCode ?? null} frequency={focus?.frequency ?? 'annual'} />
+                    : <p className="rounded-md border border-dashed border-border-strong/40 p-3 text-xs text-muted-foreground">{t('workspace.selection.choose')}</p>}
+            </Panel>
+            {wide ? null : findings}
+            <Panel id="ws-cards" title={t(SECTION_TITLE[focusSection])}
+              action={<Link to={to_(SECTION_PATHS[focusSection])} className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline">
+                {t('pages.overview.open')}<span className="sr-only">: {t(SECTION_TITLE[focusSection])}</span>
+                <ArrowRight aria-hidden="true" className="size-3.5 rtl:-scale-x-100" />
+              </Link>}>
+              <IndicatorCards query={series} shown={inArea} focus={focus}
+                onAnalyse={(code) => setIndicator(code)} onChooseFrequency={setFrequency} />
+            </Panel>
           </div>
 
-          <div {...tabPanelProps('workspace', 'study', tab === 'study')} className="flex flex-col gap-6 outline-none" data-testid="workspace-study">
-            <section aria-labelledby="ws-live" className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:p-5">
-              <h2 id="ws-live" className="text-lg font-semibold">{t('workspace.study.liveHeading')}</h2>
+          <div {...tabPanelProps('workspace', 'study', tab === 'study')} className="flex flex-col gap-5 outline-none" data-testid="workspace-study">
+            <Panel id="ws-live" title={t('workspace.study.liveHeading')}>
               <LiveStudyPanel onAskFollowUp={wide ? undefined : () => setTab('assistant')} />
-            </section>
-            <section aria-labelledby="ws-selection" className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:p-5">
-              <h2 id="ws-selection" className="text-lg font-semibold">{t('workspace.selection.heading')}</h2>
-              <SelectionStudy indicator={focus?.indicatorCode ?? null} area={focus?.area?.code ?? 'OM'} periodKind={focus?.frequency ?? 'annual'}
-                mode={mode} section={focusSection} />
-            </section>
+            </Panel>
           </div>
 
           {!wide ? (
-            <div {...tabPanelProps('workspace', 'assistant', tab === 'assistant')} className="flex flex-col rounded-lg border border-border bg-card outline-none">
-              {tab === 'assistant' || ui.studies.length > 0 ? <AssistantColumn figure={false} /> : null}
+            <div {...tabPanelProps('workspace', 'assistant', tab === 'assistant')} className="flex flex-col overflow-hidden rounded-lg border border-border bg-card outline-none">
+              {tab === 'assistant' || ui.studies.length > 0 ? <AssistantColumn /> : null}
             </div>
           ) : null}
         </div>
 
         {wide ? (
-          <aside aria-label={t('workspace.assistant.label')}
-            className="sticky top-4 flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-lg border border-border bg-card shadow-card">
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-              <AssistantColumn />
-            </div>
-          </aside>
+          <div className="flex min-w-0 flex-col gap-5">
+            {findings}
+            <aside aria-label={t('workspace.assistant.label')}
+              className="sticky top-[4.5rem] flex max-h-[calc(100dvh-5.5rem)] flex-col overflow-hidden rounded-lg border border-border bg-card">
+              <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+                <AssistantColumn />
+              </div>
+            </aside>
+          </div>
         ) : null}
       </div>
+
+      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]">
+        <GeographyView indicator={focus?.indicatorCode ?? null} frequency={focus?.frequency ?? 'annual'} />
+        <RecentStudies onOpen={openStudy} />
+        <SourcesPanel series={inArea} />
+      </div>
+
+      <WorkspaceLaunchpad />
     </div>
-  );
-}
-
-function DomainTiles({ domains, onPick, frequency }: { domains: typeof DOMAINS; onPick: (code: DomainCode) => void; frequency?: string }) {
-  const { t } = useTranslation();
-  return (
-    <section aria-labelledby="ws-domains" className="flex flex-col gap-3">
-      <h2 id="ws-domains" className="sr-only">{t('pages.overview.domainsHeading')}</h2>
-      <ul className="grid gap-3 md:grid-cols-3">
-        {domains.map((d) => (
-          <li key={d.code}>
-            <Card data-testid={`domain-card-${d.code}`} className="flex h-full flex-col gap-2 p-4">
-              <p className="font-semibold">{t(DOMAIN_TEXT[d.code].title)}</p>
-              <ul className="flex flex-col gap-0.5 text-sm text-muted-foreground">
-                {d.sections.map((s) => <SectionCount key={s} section={s} frequency={frequency} />)}
-              </ul>
-              <button type="button" onClick={() => onPick(d.code)} className="mt-auto w-fit text-sm font-medium text-primary underline-offset-4 hover:underline"
-                data-testid={`domain-pick-${d.code}`}>
-                {t('workspace.domainFocus')}<span className="sr-only">: {t(DOMAIN_TEXT[d.code].title)}</span>
-              </button>
-            </Card>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-function SectionCount({ section, frequency }: { section: SectionCode; frequency?: string }) {
-  const { t } = useTranslation();
-  const query = useSectionSeries(section, frequency);
-  // A mixed-frequency section has series but needs a frequency choice before they are listed.
-  const label = query.isPending ? t('workspace.seriesShort', { n: '…' })
-    : query.isError ? (mixedFrequencies(query.error) ? t('workspace.mixedShort') : '—')
-      : t('workspace.seriesShort', { n: query.data.status !== 'ok' ? 0 : query.data.series.length });
-  return (
-    <li className="flex items-baseline justify-between gap-2">
-      <span className="min-w-0 truncate">{t(SECTION_TITLE[section])}</span>
-      <span className="shrink-0 whitespace-nowrap tabular-nums">{label}</span>
-    </li>
   );
 }
 
@@ -269,13 +279,13 @@ function IndicatorCards({ query, shown, focus, onAnalyse, onChooseFrequency }: {
   if (!shown.length) return <StatePanel kind="empty" />;
   const stale = shown.filter((s) => isStale(s));
   return (
-    <div className="flex flex-col gap-3">
+    <div className="@container flex flex-col gap-3">
       {stale.length ? (
-        <p className="flex items-start gap-2 rounded-md border border-sand/60 bg-sand-subtle/60 p-2 text-sm" role="status" data-testid="workspace-stale">
-          <Clock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('workspace.stale.banner', { count: stale.length })}
+        <p className="flex items-start gap-2 rounded-md border border-sand/60 bg-sand-subtle/60 p-2 text-xs" role="status" data-testid="workspace-stale">
+          <Clock aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />{t('workspace.stale.banner', { count: stale.length })}
         </p>
       ) : null}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 @xl:grid-cols-2 @4xl:grid-cols-3">
         {shown.map((s) => (
           <IndicatorCard key={seriesKey(s)} series={s} headingLevel={3} stale={isStale(s)}
             selected={focus !== null && seriesKey(focus) === seriesKey(s)} onAnalyse={() => onAnalyse(s.indicatorCode)} />
@@ -292,26 +302,27 @@ function GeographyView({ indicator, frequency }: { indicator: string | null; fre
   const comparison = useAreaComparison(mode, indicator, null, null, frequency);
   const dataset = comparisonDataset(comparison.data, mode);
   return (
-    <section aria-labelledby="ws-geo" className="flex flex-col gap-3" data-testid="workspace-geography">
-      <h2 id="ws-geo" className="flex items-center gap-2 text-lg font-semibold"><MapPinned aria-hidden="true" className="size-5 text-primary" />{t('workspace.geography.heading')}</h2>
+    <DashboardCard title={t('workspace.comparison.heading')} labelledBy="ws-geo" testId="workspace-geography"
+      icon={<MapPinned aria-hidden="true" className="size-4 text-primary" />}>
+      <p className="text-xs font-medium">{t('workspace.geography.heading')}</p>
       {adapterKind !== 'http' ? <StatePanel kind="not_implemented" />
         : !indicator ? null
           : comparison.isPending ? <StatePanel kind="loading" skeleton="lines" />
             : comparison.isError ? <StatePanel kind="error" detail={comparison.error.message} onRetry={() => void comparison.refetch()} />
               : dataset ? (
                 <>
-                  <p className="max-w-3xl text-sm text-muted-foreground">{t('workspace.geography.note')}</p>
+                  <p className="text-xs text-muted-foreground">{t('workspace.geography.note')}</p>
                   <DatasetView dataset={dataset} state="reference" />
                 </>
               ) : (
-                <div role="status" data-testid="workspace-geography-none" className="rounded-lg border border-dashed border-border-strong/50 p-4 text-sm">
+                <div role="status" data-testid="workspace-geography-none" className="rounded-md border border-dashed border-border-strong/40 p-3 text-xs">
                   <p className="font-medium">{t('workspace.geography.noneTitle')}</p>
                   <p className="text-muted-foreground">
                     {comparison.data?.status === 'not_comparable' ? t('workspace.geography.notComparable') : t('workspace.geography.none')}
                   </p>
-                  <p className="mt-2 text-xs text-muted-foreground">{t('workspace.geography.noBoundaries')}</p>
+                  <p className="mt-2 text-muted-foreground">{t('workspace.geography.noBoundaries')}</p>
                 </div>
               )}
-    </section>
+    </DashboardCard>
   );
 }

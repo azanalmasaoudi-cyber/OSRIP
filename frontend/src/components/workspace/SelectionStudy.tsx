@@ -32,7 +32,7 @@ export function SelectionStudy({ indicator, area, periodKind, mode, section }: {
   if (preview.isError) return <StatePanel kind="error" detail={preview.error.message} onRetry={() => void preview.refetch()} />;
   const study = preview.data.study;
   return (
-    <article className="flex flex-col gap-5" data-testid="selection-study" data-status={study.status}>
+    <article className="@container flex flex-col gap-5" data-testid="selection-study" data-status={study.status}>
       <header className="flex flex-col gap-1">
         <p className="flex flex-wrap items-center gap-2 text-xs">
           <Badge variant="outline">{t(`studies.kinds.${study.kind}`)}</Badge>
@@ -51,7 +51,7 @@ export function SelectionStudy({ indicator, area, periodKind, mode, section }: {
           ))}</ul>
         ) : <p className="text-sm text-muted-foreground">{t('workspace.study.noFindings')}</p>}
       </section>
-      <section className="grid gap-4 text-sm md:grid-cols-2">
+      <section className="grid gap-4 text-sm @lg:grid-cols-2">
         <div data-testid="selection-method">
           <h4 className="font-semibold">{t('workspace.study.method')}</h4>
           <p className="mt-1 text-muted-foreground">{study.method[language]}</p>

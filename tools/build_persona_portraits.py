@@ -4,14 +4,16 @@
 
 Run during development (never on a page request). Needs Pillow.
 
-Both images were chosen by the project owner on 10 October 2026 from
-docs/Oman_Statistics_References_and_Images_English.docx, which describes its illustrations as
-generated artwork of a fictional Omani professional ("no endorsement or real-person identity is
-implied"):
-- Al Mulhim: the man in a dishdasha and kumma, the existing master omani-professional.png (the
-  same file, by SHA-256, as the booklet's Appendix F illustration);
-- Ilham: the woman in a headscarf and an abaya with embroidered sleeves, stored unchanged as
-  omani-woman-professional.jpg.
+The masters, chosen by the project owner:
+- Al Mulhim (16 October 2026): the man in a dishdasha and kumma in a courtyard, from the
+  owner's introduction (docs/OSRIP_Intro_Single_File.html), stored unchanged as
+  omani-man-courtyard.png. It matches Ilham's setting; it replaces the earlier master
+  omani-professional.png (10 October, from the booklet), which stays for the editorial images.
+- Ilham (10 October 2026): the woman in a headscarf and an abaya with embroidered sleeves, from
+  docs/Oman_Statistics_References_and_Images_English.docx, stored unchanged as
+  omani-woman-professional.jpg (the same artwork appears in the introduction).
+Both are generated artwork of fictional people ("no endorsement or real-person identity is
+implied").
 
 Masters are checked by SHA-256 so a different file is never substituted. Two crops per persona,
 downscaled only: a square head-and-shoulders portrait (avatar) and a 3:4 half-length figure (the
@@ -38,12 +40,15 @@ PERSONAS = [
         "id": "persona-mulhim",
         "persona": "mulhim",
         "subject": "Al Mulhim's portrait: fictional, generated image of an adult Omani man in "
-        "a white dishdasha with furakha and an embroidered kumma",
-        "master": "omani-professional.png",
-        "sha256": "1bc0644d0d5feac841fd25ed1313b041a6c659d83ad27e10cf92918167a84090",
+        "a white dishdasha with furakha and an embroidered kumma, in a courtyard",
+        "master": "omani-man-courtyard.png",
+        "sha256": "3e02f5aa9f48a19fa1ab4994f99e07a1483e02387081e8845924c2022c9ff6f0",
+        "origin": "owner_supplied_introduction",
+        "document": "docs/OSRIP_Intro_Single_File.html",
+        "chosen": "2026-10-16, by the project owner, matching Ilham's portrait",
         # (left, top, right, bottom) in master pixels
-        "portrait": (282, 12, 718, 448),
-        "figure": (152, 0, 872, 960),
+        "portrait": (330, 50, 810, 530),
+        "figure": (150, 40, 990, 1160),
     },
     {
         "id": "persona-ilham",
@@ -52,6 +57,9 @@ PERSONAS = [
         "teal headscarf and an abaya with gold-embroidered sleeves, in a courtyard",
         "master": "omani-woman-professional.jpg",
         "sha256": "529d559d961841f45953899521ea52803259b5e50a1a5424733dcb82a82c31e0",
+        "origin": "owner_supplied_document",
+        "document": "docs/Oman_Statistics_References_and_Images_English.docx",
+        "chosen": "2026-10-10, by the project owner, for the assistant personas",
         "portrait": (300, 64, 820, 584),
         "figure": (152, 40, 992, 1160),
     },
@@ -103,15 +111,15 @@ def main() -> None:
             {
                 "id": entry["id"],
                 "subject": entry["subject"],
-                "origin": "owner_supplied_document",
-                "document": "docs/Oman_Statistics_References_and_Images_English.docx",
+                "origin": entry["origin"],
+                "document": entry["document"],
                 "master": entry["master"],
                 "sha256": entry["sha256"],
                 "source_width": width,
                 "source_height": height,
                 "generator": "Not recorded; the document describes its illustrations as generated "
                 "artwork of a fictional Omani professional with no real-person identity implied",
-                "chosen": "2026-10-10, by the project owner, for the assistant personas",
+                "chosen": entry["chosen"],
                 "transformations": "Cropped and downscaled only (no retouching or upscaling); "
                 "JPEG quality 84.",
                 "derivatives": build(entry),

@@ -16,60 +16,37 @@ async function ordinaryDevice(page: Page) {
   });
 }
 
-async function stepUntil(page: Page, phases: string[], limitSeconds = 10) {
-  const scene = page.getByTestId('entrance-scene');
-  for (let t = 0; t < limitSeconds * 10; t += 1) {
-    if (phases.includes((await scene.getAttribute('data-phase')) ?? '')) return;
-    await page.clock.runFor(100);
-  }
-  throw new Error(`the scene never reached ${phases.join('/')}`);
-}
-
 test.describe('1-2. Entrance', () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
-  test('the Omani character carries OSRIP in, places it in the centre; bilingual goals; skip and replay', async ({ page }) => {
+  test('Al Mulhim and Ilham arrive, the OSRIP sign is set between them; bilingual resources and goals; skip and replay', async ({ page }) => {
     await ordinaryDevice(page);
-    await page.clock.install({ time: new Date('2026-10-11T08:00:00Z') });
-    await page.clock.pauseAt(new Date('2026-10-11T08:00:01Z'));
-    const loaded = page.waitForResponse(/EntranceScene/);
     await page.goto('/');
-    await loaded;
-    const scene = page.getByTestId('entrance-scene');
-    for (let i = 0; i < 150 && (await scene.count()) === 0; i += 1) {
-      await page.clock.runFor(8);
-      await page.waitForTimeout(25);
-    }
-    await page.clock.runFor(1500);
-    await expect(scene).toHaveAttribute('data-phase', 'enter');
-    await expect(page.getByTestId('entrance-grip-near')).toBeVisible();
-    await shot(page, '01-entrance-carrying');
-    await stepUntil(page, ['lower', 'release']);
-    await shot(page, '02-entrance-placing');
-    await stepUntil(page, ['settled']);
-    const board = await page.getByTestId('entrance-sign-board').boundingBox();
+    await expect(page.getByTestId('entrance-body')).toHaveAttribute('data-mode', 'play');
+    await page.waitForTimeout(600);
+    await shot(page, '01-entrance-arriving');
+    const sign = await page.getByTestId('entrance-sign').boundingBox();
     const stage = await page.getByTestId('entrance-stage').boundingBox();
-    expect(board && stage && Math.abs(board.x + board.width / 2 - (stage.x + stage.width / 2))).toBeLessThan(3);
-    await expect(page.getByTestId('entrance-grip-near')).toBeHidden();
+    await expect(page.getByTestId('entrance-goals')).toHaveCSS('opacity', '1');
+    const placed = await page.getByTestId('entrance-sign').boundingBox();
+    expect(placed && stage && Math.abs(placed.x + placed.width / 2 - (stage.x + stage.width / 2))).toBeLessThan(3);
+    expect(sign).not.toBeNull();
     await expect(page.getByTestId('entrance-sign-text')).toHaveText('OSRIP');
     await shot(page, '03-entrance-placed-in-centre');
-    await page.clock.runFor(1200);
-    await expect(page.getByTestId('entrance-body')).toHaveAttribute('data-revealed', 'true');
     const goals = page.getByTestId('entrance-goals');
-    for (const text of ['Understand Oman’s resources', 'فهم موارد عُمان', 'Analyse reliable data', 'تحليل البيانات الموثوقة',
-      'Support informed decisions', 'دعم القرارات المبنية على البيانات']) await expect(goals).toContainText(text);
+    for (const text of ['Understand Oman’s resources', 'افهم موارد عُمان', 'Analyse reliable data', 'حلّل البيانات الموثوقة',
+      'Support informed decisions', 'ادعم القرار بالمعلومة']) await expect(goals).toContainText(text);
+    await expect(page.getByTestId('entrance-sector')).toHaveCount(3);
     await expect(page.getByTestId('entrance-name-ar')).toHaveText('منصة عُمان الذكية لمعلومات الموارد');
     await shot(page, '04-entrance-bilingual-goals');
     // Skip closes it at once; the footer's Replay introduction plays it again.
     await page.getByTestId('entrance-skip').click();
-    await page.clock.runFor(500);
     await expect(page.getByTestId('entrance')).toBeHidden();
     await page.getByTestId('replay-entrance').click();
     await expect(page.getByTestId('entrance')).toBeVisible();
-    await page.clock.runFor(1500);
+    await expect(page.getByTestId('entrance-goals')).toHaveCSS('opacity', '1');
     await shot(page, '05-entrance-replayed');
     await page.getByTestId('entrance-skip').click();
-    await page.clock.runFor(500);
     await expect(page.getByTestId('entrance')).toBeHidden();
   });
 });

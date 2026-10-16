@@ -31,6 +31,13 @@ export function formatCompact(value: number, language: AppLanguage): string {
   return new Intl.NumberFormat(LOCALES[language], { notation: 'compact', maximumFractionDigits: 1 }).format(value);
 }
 
+/** A calendar date, or the date of a timestamp (e.g. 16 Oct 2026); the input itself if unreadable. */
+export function formatDate(value: string, language: AppLanguage): string {
+  const date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00Z` : value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(LOCALES[language], { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }).format(date);
+}
+
 export function formatPeriod(start: string, end: string, language: AppLanguage): string {
   const s = new Date(`${start}T00:00:00Z`);
   const e = new Date(`${end}T00:00:00Z`);

@@ -15,6 +15,7 @@ import '@fontsource/ibm-plex-sans-arabic/600.css';
 import { installClientErrorReporting } from '@/api/monitoring';
 import { router } from '@/app/router';
 import '@/i18n';
+import '@/lib/theme';
 import './index.css';
 
 // The Content-Security-Policy forbids evaluating strings as code; without this, zod
