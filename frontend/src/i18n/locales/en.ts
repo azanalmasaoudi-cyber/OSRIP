@@ -1501,7 +1501,8 @@ export const en = {
     assistantBody: 'Who answers your questions and speaks in Talk: Al Mulhim (a man’s voice) or Ilham (a woman’s voice).',
     title: 'Settings',
     introTitle: 'Introduction',
-    introBody: 'A short opening scene shown on your first visit. Closing it is remembered in this browser only.',
+    introBody: 'A short opening scene on the home page, once per browser session. Explore and Skip enter the dashboard.',
+    introAuto: 'Show it when the home page opens (once per session)',
   },
   intro: {
     label: 'OSRIP introduction',

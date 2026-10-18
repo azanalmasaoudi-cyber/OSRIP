@@ -38,7 +38,7 @@ export default defineConfig({
     launchOptions: { args: ['--use-fake-device-for-media-stream', '--autoplay-policy=no-user-gesture-required'] },
     storageState: {
       cookies: [],
-      origins: [{ origin: `http://localhost:${WEB_PORT}`, localStorage: [{ name: 'osrip.entrance', value: 'seen-1' }] }],
+      origins: [{ origin: `http://localhost:${WEB_PORT}`, localStorage: [{ name: 'osrip.intro.autoplay', value: 'off' }] }],
     },
   },
   webServer: [

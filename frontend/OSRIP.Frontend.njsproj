@@ -47,6 +47,7 @@
     <Folder Include="public\images\assistant\" />
     <Folder Include="public\images\editorial\" />
     <Folder Include="public\images\illustrations\" />
+    <Folder Include="public\images\intro\" />
     <Folder Include="public\images\photos\" />
     <Folder Include="scripts\" />
     <Folder Include="src\" />
@@ -256,8 +257,12 @@
     <Content Include=".env.example" />
     <Content Include="assets\editorial\canva-previews\ai-assistant-face-MAHW1qlLO9M-200.jpg" />
     <Content Include="assets\editorial\masters\electricity.png" />
+    <Content Include="assets\editorial\masters\intro-electricity.jpg" />
+    <Content Include="assets\editorial\masters\intro-trade.jpg" />
+    <Content Include="assets\editorial\masters\intro-water.jpg" />
     <Content Include="assets\editorial\masters\omani-man-courtyard.png" />
     <Content Include="assets\editorial\masters\omani-professional.png" />
+    <Content Include="assets\editorial\masters\omani-woman-courtyard.jpg" />
     <Content Include="assets\editorial\masters\omani-woman-professional.jpg" />
     <Content Include="assets\editorial\masters\trade.png" />
     <Content Include="assets\editorial\masters\water.png" />
@@ -324,6 +329,11 @@
     <Content Include="public\images\illustrations\sector-food.svg" />
     <Content Include="public\images\illustrations\sector-trade.svg" />
     <Content Include="public\images\illustrations\sector-water.svg" />
+    <Content Include="public\images\intro\electricity.jpg" />
+    <Content Include="public\images\intro\ilham.jpg" />
+    <Content Include="public\images\intro\mulhim.jpg" />
+    <Content Include="public\images\intro\trade.jpg" />
+    <Content Include="public\images\intro\water.jpg" />
     <Content Include="public\images\photos\bahla-fort.jpg" />
     <Content Include="public\images\photos\desalination-al-khaluf.jpg" />
     <Content Include="public\images\photos\duqm-port.jpg" />

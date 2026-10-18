@@ -18,6 +18,27 @@ async function openMail(page: Page, to: string, purpose: string): Promise<void> 
   await message.getByRole('link').first().click();
 }
 
+test.describe('with the introduction switched on', () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test('the introduction never blocks signing in, and does not come back in the session', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByTestId('entrance')).toBeVisible();
+    await page.getByTestId('entrance-skip').click();
+    await expect(page).toHaveURL(/\/overview$/);
+    await page.goto('/sign-in'); // a direct link: no introduction
+    await expect(page.getByTestId('entrance')).toBeHidden();
+    const form = page.getByTestId('sign-in-form');
+    await form.getByLabel('E-mail address').fill('viewer@e2e.invalid');
+    await form.getByLabel('Password').fill(PASSWORD);
+    await form.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page.getByTestId('signed-in-as')).toBeVisible();
+    await page.goto('/');
+    await expect(page.getByTestId('home-page')).toBeVisible();
+    await expect(page.getByTestId('entrance')).toBeHidden();
+  });
+});
+
 async function register(page: Page, email: string): Promise<void> {
   await page.goto('/register');
   const form = page.getByTestId('register-form');

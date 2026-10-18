@@ -12,7 +12,7 @@ import { AssistantOrb } from '@/components/assistant/AssistantOrb';
 import { PersonaProvider } from '@/components/assistant/persona';
 import { AccountControl } from './AccountControl';
 import { DataModeSelector } from './DataModeSelector';
-import { Entrance, entranceSeen } from './Entrance';
+import { Entrance, introDue } from './Entrance';
 import { EntranceReplayContext } from './entranceControl';
 import { GlobalSearch } from './GlobalSearch';
 import { LanguageSwitcher } from './LanguageSwitcher';
@@ -75,10 +75,17 @@ export function AppShell() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  // The first-visit entrance plays on the home page only: a direct link (a study, the
-  // workspace, the account) opens straight away. It stays unseen until shown, and replayable.
-  const [entranceOpen, setEntranceOpen] = useState(() => pathname === '/' && !entranceSeen());
+  // The introduction opens the home page once per browser session: a direct link (a study, the
+  // workspace, sign-in, the account) opens straight away. Replayable from the footer and Settings.
+  const [entranceOpen, setEntranceOpen] = useState(() => pathname === '/' && introDue());
   const replayEntrance = useCallback(() => setEntranceOpen(true), []);
+  // Arriving at the home page later in the session (after a direct link) also opens it, once
+  // (adjusting state while rendering, as React recommends instead of an effect).
+  const [introPath, setIntroPath] = useState(pathname);
+  if (introPath !== pathname) {
+    setIntroPath(pathname);
+    if (pathname === '/' && introDue()) setEntranceOpen(true);
+  }
   const mainRef = useRef<HTMLElement>(null);
   const handledLocation = useRef<string | null>(null);
   const isHome = pathname === '/';
@@ -241,10 +248,10 @@ export function AppShell() {
         </footer>
       </div>
       {pathname === '/talk' ? null : <AssistantOrb />}
-      <Entrance open={entranceOpen} onClose={(explore) => {
+      <Entrance open={entranceOpen} onClose={(action) => {
         setEntranceOpen(false);
-        // Explore from the home page opens the overview; a direct link stays where it pointed.
-        if (explore && pathname === '/') void navigate(to('/overview'));
+        // Explore and Skip enter the dashboard (the Overview); Escape only closes.
+        if (action !== 'dismiss' && pathname !== '/overview') void navigate(to('/overview'));
       }} />
     </div>
     </EntranceReplayContext.Provider>

@@ -31,10 +31,10 @@ export default defineConfig({
     baseURL: `http://localhost:${WEB_PORT}`,
     trace: 'retain-on-failure',
     channel,
-    // The first-visit entrance counts as seen (it is tested in the mock suite).
+    // The introduction is switched off (the Settings choice); it is tested in the mock suite.
     storageState: {
       cookies: [],
-      origins: [{ origin: `http://localhost:${WEB_PORT}`, localStorage: [{ name: 'osrip.entrance', value: 'seen-1' }] }],
+      origins: [{ origin: `http://localhost:${WEB_PORT}`, localStorage: [{ name: 'osrip.intro.autoplay', value: 'off' }] }],
     },
   },
   webServer: [

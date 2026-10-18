@@ -15,10 +15,10 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${PORT}`,
     trace: 'retain-on-failure',
-    // The first-visit entrance counts as seen; e2e/entrance.spec.ts starts from a clean browser.
+    // The introduction is switched off (the Settings choice); e2e/entrance.spec.ts starts from a clean browser.
     storageState: {
       cookies: [],
-      origins: [{ origin: `http://localhost:${PORT}`, localStorage: [{ name: 'osrip.entrance', value: 'seen-1' }] }],
+      origins: [{ origin: `http://localhost:${PORT}`, localStorage: [{ name: 'osrip.intro.autoplay', value: 'off' }] }],
     },
   },
   webServer: {

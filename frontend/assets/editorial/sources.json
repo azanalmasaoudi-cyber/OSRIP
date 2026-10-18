@@ -226,6 +226,121 @@
       ],
       "status": "in_use",
       "usage": "Assistant persona 'ilham': avatar (portrait) and Talk workspace (figure); listed in the assistant profile"
+    },
+    {
+      "id": "intro-mulhim",
+      "subject": "Al Mulhim in the introduction: fictional, generated image of an adult Omani man in a white dishdasha and an embroidered kumma, in a courtyard",
+      "origin": "owner_supplied_introduction",
+      "document": "docs/OSRIP_Intro_Single_File.html",
+      "master": "omani-man-courtyard.png",
+      "sha256": "3e02f5aa9f48a19fa1ab4994f99e07a1483e02387081e8845924c2022c9ff6f0",
+      "source_width": 1145,
+      "source_height": 1374,
+      "generator": "Not recorded; generated artwork supplied by the project owner (fictional people; no real-person identity implied)",
+      "chosen": "2026-10-16, by the project owner, for the introduction",
+      "transformations": "Downscaled whole to 600 px wide (no cropping, retouching or upscaling); JPEG quality 84.",
+      "derivatives": [
+        {
+          "file": "frontend/public/images/intro/mulhim.jpg",
+          "width": 600,
+          "height": 720,
+          "bytes": 59958
+        }
+      ],
+      "status": "in_use",
+      "usage": "The first-visit introduction (Entrance.tsx)"
+    },
+    {
+      "id": "intro-ilham",
+      "subject": "Ilham in the introduction: fictional, generated image of an adult Omani woman in a dark teal headscarf and an abaya with gold-embroidered sleeves, in a courtyard",
+      "origin": "owner_supplied_introduction",
+      "document": "docs/OSRIP_Intro_Single_File.html",
+      "master": "omani-woman-courtyard.jpg",
+      "sha256": "1b021bab4b17ddf74db9495ff46025de1d76ac53b9b24f14a3bc5f230d7b16a4",
+      "source_width": 1145,
+      "source_height": 1374,
+      "generator": "Not recorded; generated artwork supplied by the project owner (fictional people; no real-person identity implied)",
+      "chosen": "2026-10-16, by the project owner, for the introduction",
+      "transformations": "Downscaled whole to 600 px wide (no cropping, retouching or upscaling); JPEG quality 84.",
+      "derivatives": [
+        {
+          "file": "frontend/public/images/intro/ilham.jpg",
+          "width": 600,
+          "height": 720,
+          "bytes": 67214
+        }
+      ],
+      "status": "in_use",
+      "usage": "The first-visit introduction (Entrance.tsx)"
+    },
+    {
+      "id": "intro-electricity",
+      "subject": "Illustration of solar panels and an electricity substation (white background)",
+      "origin": "owner_supplied_introduction",
+      "document": "docs/OSRIP_Intro_Single_File.html",
+      "master": "intro-electricity.jpg",
+      "sha256": "2cac02f7f7b29d0d03ca0275b37fbb69f78bd5549463d0978b2eb4a26ed40fbc",
+      "source_width": 1536,
+      "source_height": 1024,
+      "generator": "Not recorded; generated artwork supplied by the project owner (fictional people; no real-person identity implied)",
+      "chosen": "2026-10-16, by the project owner, for the introduction",
+      "transformations": "Downscaled whole to 600 px wide (no cropping, retouching or upscaling); JPEG quality 84.",
+      "derivatives": [
+        {
+          "file": "frontend/public/images/intro/electricity.jpg",
+          "width": 600,
+          "height": 400,
+          "bytes": 50838
+        }
+      ],
+      "status": "in_use",
+      "usage": "The first-visit introduction (Entrance.tsx)"
+    },
+    {
+      "id": "intro-water",
+      "subject": "Illustration of a water facility and channels (white background)",
+      "origin": "owner_supplied_introduction",
+      "document": "docs/OSRIP_Intro_Single_File.html",
+      "master": "intro-water.jpg",
+      "sha256": "08e6d5cacfd209dcc3fe631c24ca364accd913159d268534969a5ad1e029615f",
+      "source_width": 1536,
+      "source_height": 1024,
+      "generator": "Not recorded; generated artwork supplied by the project owner (fictional people; no real-person identity implied)",
+      "chosen": "2026-10-16, by the project owner, for the introduction",
+      "transformations": "Downscaled whole to 600 px wide (no cropping, retouching or upscaling); JPEG quality 84.",
+      "derivatives": [
+        {
+          "file": "frontend/public/images/intro/water.jpg",
+          "width": 600,
+          "height": 400,
+          "bytes": 56229
+        }
+      ],
+      "status": "in_use",
+      "usage": "The first-visit introduction (Entrance.tsx)"
+    },
+    {
+      "id": "intro-trade",
+      "subject": "Illustration of a port and a container ship (white background)",
+      "origin": "owner_supplied_introduction",
+      "document": "docs/OSRIP_Intro_Single_File.html",
+      "master": "intro-trade.jpg",
+      "sha256": "8eccac68b8cc0460b7b920da1c1ac2a26398289e9fb46d7f74572b426cba912d",
+      "source_width": 1536,
+      "source_height": 1024,
+      "generator": "Not recorded; generated artwork supplied by the project owner (fictional people; no real-person identity implied)",
+      "chosen": "2026-10-16, by the project owner, for the introduction",
+      "transformations": "Downscaled whole to 600 px wide (no cropping, retouching or upscaling); JPEG quality 84.",
+      "derivatives": [
+        {
+          "file": "frontend/public/images/intro/trade.jpg",
+          "width": 600,
+          "height": 400,
+          "bytes": 52993
+        }
+      ],
+      "status": "in_use",
+      "usage": "The first-visit introduction (Entrance.tsx)"
     }
   ]
 }

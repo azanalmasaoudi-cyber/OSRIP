@@ -42,7 +42,12 @@ SOLUTION_GUID = "{C3A1F7B2-6E4D-4A09-B8C5-71D2E9F04A36}"
 PYTHON_TYPE = "{888888A0-9F3D-457C-B088-3A5042F75D52}"
 NODE_TYPE = "{9092AA53-FB77-4645-B42D-1CCCA6BD08BD}"
 FOLDER_TYPE = "{2150E333-8FDC-42A3-9474-1A3956D46DE8}"
-TOOLS_SCRIPTS = ("build_editorial_images.py", "build_persona_portraits.py", "make_vs_projects.py")
+TOOLS_SCRIPTS = (
+    "build_editorial_images.py",
+    "build_intro_images.py",
+    "build_persona_portraits.py",
+    "make_vs_projects.py",
+)
 ROOT_ITEMS = (
     "README.md", "start-osrip.cmd", ".editorconfig", ".vsconfig", ".env.example", ".gitignore",
     ".gitattributes", ".dockerignore",

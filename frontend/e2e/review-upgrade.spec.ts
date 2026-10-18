@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 test('direct links bypass the entrance; workspace navigation remains bilingual @mobile', async ({ page }) => {
-  await page.addInitScript(() => localStorage.removeItem('osrip.entrance'));
+  await page.addInitScript(() => localStorage.removeItem('osrip.intro.autoplay')); // the introduction switched on
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('/overview?mode=synthetic');

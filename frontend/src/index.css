@@ -417,29 +417,68 @@ details > summary:hover { color: var(--color-primary); }
 /*
  * The introduction (Entrance.tsx), after the owner's design (docs/OSRIP_Intro_Single_File.html):
  * the two assistants arrive from the sides, the OSRIP sign is set down between them, then the
- * name, the three resources and the goals appear. Its own deep-teal palette in both themes.
- * Movement only under [data-mode="play"]: reduced motion and low-power devices get the final
- * frame (data-mode="static"). The stage keeps its left-to-right order in both languages.
+ * name, the three resources and the goals appear. Dark theme: the design's deep teal; light
+ * theme: the same layout on warm ivory with teal ink. Movement only under [data-mode="play"]:
+ * reduced motion and low-power devices get the final frame (data-mode="static"). The stage keeps
+ * its left-to-right order in both languages.
  */
-.intro {
-  --intro-cream: #f7eedb;
+.intro-dialog {
+  --intro-bg: #062426;
+  --intro-text: #f7eedb;
   --intro-gold: #e1bd78;
   --intro-muted: #b3c8c3;
-  --intro-ink: #163d36;
-  background: radial-gradient(ellipse at 50% 35%, rgb(33 96 90 / 0.53), transparent 62%), linear-gradient(145deg, #062426, #103e39);
-  color: var(--intro-cream);
+  --intro-line: rgb(176 212 197 / 0.14);
+  --intro-card: rgb(196 220 195 / 0.03);
+  --intro-caption: #123f39;
+  --intro-caption-text: #f7eedb;
+  --intro-cta: #f7eedb;
+  --intro-cta-text: #163d36;
+  --intro-grid: #c5d8bd;
+  --ring: #e8c48e;
+  background: var(--intro-bg);
+  color: var(--intro-text);
 }
+.intro-dialog::backdrop { background: var(--intro-bg); }
+:root[data-theme="light"] .intro-dialog {
+  --intro-bg: #f7f3ea;
+  --intro-text: #163d36;
+  --intro-gold: #8a5a14;
+  --intro-muted: #4a625d;
+  --intro-line: rgb(22 61 54 / 0.16);
+  --intro-card: rgb(255 255 255 / 0.65);
+  --intro-caption: #ffffff;
+  --intro-caption-text: #163d36;
+  --intro-cta: #163d36;
+  --intro-cta-text: #f7eedb;
+  --intro-grid: #7f9c8f;
+  --ring: #163d36;
+}
+.intro {
+  background: radial-gradient(ellipse at 50% 35%, rgb(33 96 90 / 0.53), transparent 62%), linear-gradient(145deg, #062426, #103e39);
+  color: var(--intro-text);
+}
+:root[data-theme="light"] .intro {
+  background: radial-gradient(ellipse at 50% 35%, rgb(225 189 120 / 0.22), transparent 62%), linear-gradient(145deg, #fbf7ee, #eaf1ec);
+}
+.intro-muted { color: var(--intro-muted); }
+.intro-gold { color: var(--intro-gold); }
+.intro-skip { border: 1px solid var(--intro-line); color: var(--intro-text); }
+.intro-skip:hover { background: rgb(127 127 127 / 0.08); }
+.intro-explore { background: var(--intro-cta); color: var(--intro-cta-text); box-shadow: 0 7px 25px rgb(0 0 0 / 0.13); }
+.intro-explore:hover { filter: brightness(1.06); }
+.intro-goal { border: 1px solid var(--intro-line); background: var(--intro-card); }
 .intro-grid {
   position: absolute;
   inset: 0;
   pointer-events: none;
   opacity: 0.08;
   background-image:
-    linear-gradient(30deg, transparent 48%, #c5d8bd 49%, #c5d8bd 50%, transparent 51%),
-    linear-gradient(-30deg, transparent 48%, #c5d8bd 49%, #c5d8bd 50%, transparent 51%);
+    linear-gradient(30deg, transparent 48%, var(--intro-grid) 49%, var(--intro-grid) 50%, transparent 51%),
+    linear-gradient(-30deg, transparent 48%, var(--intro-grid) 49%, var(--intro-grid) 50%, transparent 51%);
   background-size: 80px 138px;
   mask-image: linear-gradient(#000, transparent);
 }
+:root[data-theme="light"] .intro-grid { opacity: 0.14; }
 .intro-stage { position: relative; width: min(100%, 1000px); height: 340px; margin: 4px auto 0; flex-shrink: 0; }
 .intro-halo {
   position: absolute; left: 50%; top: 0; width: 330px; height: 330px; transform: translateX(-50%);
@@ -456,6 +495,8 @@ details > summary:hover { color: var(--color-primary); }
 .intro-person-male, .intro-name-male { left: calc(50% - 300px); }
 .intro-person-female, .intro-name-female { right: calc(50% - 300px); }
 .intro-name { position: absolute; bottom: 0; width: 164px; font-size: 12px; text-align: center; color: var(--intro-muted); }
+:root[data-theme="light"] .intro-halo { border-color: rgb(138 90 20 / 0.22); }
+:root[data-theme="light"] .intro-person { box-shadow: 0 14px 34px rgb(22 61 54 / 0.18); }
 .intro-sign {
   position: absolute; top: 102px; left: 50%; width: 295px; padding: 27px 10px 23px; transform: translateX(-50%);
   border: 1px solid rgb(220 192 138 / 0.6); border-radius: 13px; text-align: center; color: #173c37;
@@ -464,9 +505,11 @@ details > summary:hover { color: var(--color-primary); }
 .intro-sign strong { display: block; font-size: 45px; line-height: 1.1; letter-spacing: 0.18em; padding-left: 0.18em; }
 .intro-sign small { display: block; margin-top: 8px; font-size: 9px; letter-spacing: 0.24em; text-transform: uppercase; }
 .intro-sector { overflow: hidden; margin: 0; border: 1px solid rgb(225 189 120 / 0.33); border-radius: 16px; background: #fff; text-align: start; }
-.intro-sector img { height: 112px; object-fit: contain; padding: 5px 8px; background: #fff; transition: transform 0.4s; }
+/* The whole illustration, never cropped or stretched: one height for all three, width follows. */
+.intro-sector img { display: block; width: 100%; height: 112px; object-fit: contain; padding: 5px 8px; background: #fff; transition: transform 0.4s; }
 .intro-sector:hover img { transform: scale(1.035); }
-.intro-sector figcaption { padding: 9px 14px; background: #123f39; color: var(--intro-cream); line-height: 1.6; }
+.intro-sector figcaption { padding: 9px 14px; background: var(--intro-caption); color: var(--intro-caption-text); line-height: 1.6; }
+:root[data-theme="light"] .intro-sector figcaption { border-top: 1px solid var(--intro-line); }
 [data-mode="play"] .intro-person-male { animation: intro-arrive-start 1.8s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
 [data-mode="play"] .intro-person-female { animation: intro-arrive-end 1.8s 0.2s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
 [data-mode="play"] .intro-sign { animation: intro-place 2.2s cubic-bezier(0.2, 0.7, 0.3, 1) both; }

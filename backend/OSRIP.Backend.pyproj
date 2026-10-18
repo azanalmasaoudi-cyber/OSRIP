@@ -315,6 +315,9 @@
     <Compile Include="..\tools\build_editorial_images.py">
       <Link>tools\build_editorial_images.py</Link>
     </Compile>
+    <Compile Include="..\tools\build_intro_images.py">
+      <Link>tools\build_intro_images.py</Link>
+    </Compile>
     <Compile Include="..\tools\build_persona_portraits.py">
       <Link>tools\build_persona_portraits.py</Link>
     </Compile>

@@ -87,11 +87,11 @@ test('a signed-in choice is saved on the account and follows to another browser'
   await settings.getByTestId('persona-option-ilham').click();
   expect((await saved).status()).toBe(200);
 
-  // Another browser: no cookies or saved choice; only the first-visit entrance counts as seen.
+  // Another browser: no cookies or saved choice; only the introduction is switched off.
   const baseURL = test.info().project.use.baseURL ?? '';
   const other = await browser.newContext({
     baseURL,
-    storageState: { cookies: [], origins: [{ origin: baseURL, localStorage: [{ name: 'osrip.entrance', value: 'seen-1' }] }] },
+    storageState: { cookies: [], origins: [{ origin: baseURL, localStorage: [{ name: 'osrip.intro.autoplay', value: 'off' }] }] },
   });
   const second = await other.newPage();
   try {

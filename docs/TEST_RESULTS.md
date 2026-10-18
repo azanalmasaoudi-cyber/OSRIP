@@ -1,5 +1,31 @@
 # Test results
 
+## 2026-10-18: the owner's introduction as the opening experience (branch `redesign/dark-dashboard`)
+
+The introduction from `docs/OSRIP_Intro_Single_File.html` is now native React, using its own
+five images (`docs/ENTRANCE.md`). It shows once per browser session, on the home page only.
+Explore and Skip enter the dashboard. Replay is in the footer and Settings, and Settings has
+a switch for the automatic showing.
+
+Browsers: installed Edge (`PW_CHANNEL=msedge`).
+
+| Check | Result |
+|---|---|
+| `tsc -b`, `npm run lint`, `npm run build` | Pass (the existing bundle-size warning remains) |
+| `npm run check:contrast` | Pass, 0 failing pairs |
+| Research-brief unit tests | 5 passed |
+| `MSBuild OSRIP.sln /t:Build` | Pass (exit 0); the regenerated projects list `tools/build_intro_images.py` |
+| Mock browser suite, desktop and Pixel 7 | **41 passed**, 3 skipped (device-specific). Includes 16 introduction tests (`e2e/entrance.spec.ts`) |
+| Full-stack suite, desktop and Pixel 7 | **123 passed**, 1 skipped, 5 failed. The laptop was on battery and went into Modern Standby during the run (Kernel-Power 506/507): the five failures ran for 50 minutes and 10 hours across the sleep. Each re-run alone **passed** (`assistant.spec` lines 93 and 134, `geography-forecast.spec` lines 22 and 37, `workspace.spec` line 165). The new test (the introduction switched on, Skip, then a real sign-in) passed |
+| `start-osrip.cmd` | Reported `OSRIP is ready: http://localhost:5173/  (API http://127.0.0.1:8010/api/v1)`, release 0.8.0, migration 0019. Through port 5173, `/`, `/overview`, `/theme-init.js`, the five `/images/intro/*.jpg` and `/api/v1/health` and `/health/ready` all returned 200 |
+| The running site, in the desktop app's browser | Opened on `/`, then: all five images loaded at 600 px; the portraits use `cover` and the illustrations use `contain`, all at one height; there is no audio; focus was on Explore. Explore → `/overview`; the home page did not show it again. A direct link to `/trade` was not interrupted. In a new session, Skip → `/overview`. The footer replay opened it, and Escape closed it and returned focus |
+
+**Found while testing (existing since the initial import, not caused by this change):**
+- The local development database holds both full-year and year-to-date trade figures. With the
+  frequency filter on *All*, `GET /observations?section=trade` (and electricity, on the Overview)
+  returns 422 `incompatible_series`.
+- The browser console warns of duplicate React keys for `TRADE_MERCH_IMPORTS` comparisons.
+
 ## 2026-10-16: dashboard redesign (branch `redesign/dark-dashboard`)
 
 The redesign covers:
