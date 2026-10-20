@@ -34,6 +34,9 @@ export function GlobalSearch({ shortcut = false, focusOnOpen = false, inline = f
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const input = useRef<HTMLInputElement>(null);
+  // Closing after a blur waits a moment (a click on an option lands first); focusing again
+  // cancels it, so a late close cannot hide the list while the reader is typing.
+  const closing = useRef<number | undefined>(undefined);
   const listId = useId();
 
   useEffect(() => {
@@ -114,8 +117,8 @@ export function GlobalSearch({ shortcut = false, focusOnOpen = false, inline = f
         value={query}
         placeholder={t('search.placeholder')}
         onChange={(event) => { setQuery(event.target.value); setActive(0); setOpen(true); }}
-        onFocus={() => setOpen(true)}
-        onBlur={() => window.setTimeout(() => setOpen(false), 120)}
+        onFocus={() => { window.clearTimeout(closing.current); setOpen(true); }}
+        onBlur={() => { closing.current = window.setTimeout(() => setOpen(false), 120); }}
         onKeyDown={onKeyDown}
         className="h-9 w-full rounded-md border border-border bg-card ps-8 pe-14 text-sm placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:hidden"
         data-testid="global-search-input"

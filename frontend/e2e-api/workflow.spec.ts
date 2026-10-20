@@ -14,7 +14,8 @@ async function signIn(page: Page, email: string): Promise<void> {
 }
 
 test('the published synthetic fixture is served by the API and shown in the interface', async ({ page }) => {
-  const apiResponse = page.waitForResponse((r) => r.url().includes('/api/v1/observations') && r.ok());
+  // "All" frequencies reads each period kind apart; the fixture's full years are the annual read.
+  const apiResponse = page.waitForResponse((r) => r.url().includes('/api/v1/observations') && r.url().includes('period_kind=annual') && r.ok());
   await page.goto('/energy/electricity?mode=synthetic');
   const body = await (await apiResponse).json();
   expect(body.status).toBe('ok');
