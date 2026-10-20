@@ -66,6 +66,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{951A985D-D
 		docs\requirements.md = docs\requirements.md
 		docs\SPEC_CONFLICTS.md = docs\SPEC_CONFLICTS.md
 		docs\TECHNICAL_REPORT.md = docs\TECHNICAL_REPORT.md
+		docs\TECHNICAL_REPORT_AR.md = docs\TECHNICAL_REPORT_AR.md
 		docs\TEST_RESULTS.md = docs\TEST_RESULTS.md
 		docs\TRACEABILITY.md = docs\TRACEABILITY.md
 		docs\VERIFICATION.md = docs\VERIFICATION.md

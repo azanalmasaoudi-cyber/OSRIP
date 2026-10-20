@@ -76,6 +76,7 @@
     <Compile Include="app\api\routes\analysis.py" />
     <Compile Include="app\api\routes\assistant.py" />
     <Compile Include="app\api\routes\auth.py" />
+    <Compile Include="app\api\routes\balance.py" />
     <Compile Include="app\api\routes\forecasting.py" />
     <Compile Include="app\api\routes\geography.py" />
     <Compile Include="app\api\routes\health.py" />
@@ -99,6 +100,7 @@
     <Compile Include="app\db\session.py" />
     <Compile Include="app\db\sql_files.py" />
     <Compile Include="app\domain\__init__.py" />
+    <Compile Include="app\domain\balance.py" />
     <Compile Include="app\domain\calculations.py" />
     <Compile Include="app\domain\compatibility.py" />
     <Compile Include="app\domain\enums.py" />
@@ -128,6 +130,8 @@
     <Compile Include="app\services\accounts.py" />
     <Compile Include="app\services\alerts.py" />
     <Compile Include="app\services\analysis\__init__.py" />
+    <Compile Include="app\services\analysis\balance.py" />
+    <Compile Include="app\services\analysis\balance_export.py" />
     <Compile Include="app\services\analysis\evidence.py" />
     <Compile Include="app\services\analysis\rules.py" />
     <Compile Include="app\services\analysis\runs.py" />
@@ -192,6 +196,8 @@
     <Compile Include="tests\test_assistant_integration.py" />
     <Compile Include="tests\test_assistant_profile.py" />
     <Compile Include="tests\test_auth_integration.py" />
+    <Compile Include="tests\test_balance.py" />
+    <Compile Include="tests\test_balance_integration.py" />
     <Compile Include="tests\test_calculations.py" />
     <Compile Include="tests\test_db_constraints.py" />
     <Compile Include="tests\test_forecast_scenarios_integration.py" />
@@ -257,6 +263,7 @@
     <Compile Include="alembic\versions\0017_assistant_personas.py" />
     <Compile Include="alembic\versions\0018_provider_calls.py" />
     <Compile Include="alembic\versions\0019_study_events.py" />
+    <Compile Include="alembic\versions\0020_balance_analysis.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="alembic\sql\0001_core_down.sql" />
@@ -297,6 +304,8 @@
     <Content Include="alembic\sql\0018_provider_calls_up.sql" />
     <Content Include="alembic\sql\0019_study_events_down.sql" />
     <Content Include="alembic\sql\0019_study_events_up.sql" />
+    <Content Include="alembic\sql\0020_balance_analysis_down.sql" />
+    <Content Include="alembic\sql\0020_balance_analysis_up.sql" />
     <Content Include="app\knowledge\assistant_profile_v1.json" />
     <Content Include="app\knowledge\assistant_profile_v2.json" />
     <Content Include="app\knowledge\assistant_profile_v3.json" />

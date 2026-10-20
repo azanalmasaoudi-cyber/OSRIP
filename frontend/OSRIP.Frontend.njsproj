@@ -63,6 +63,7 @@
     <Folder Include="src\components\geography\" />
     <Folder Include="src\components\layout\" />
     <Folder Include="src\components\research\" />
+    <Folder Include="src\components\results\" />
     <Folder Include="src\components\settings\" />
     <Folder Include="src\components\studies\" />
     <Folder Include="src\components\ui\" />
@@ -78,6 +79,7 @@
   </ItemGroup>
   <ItemGroup>
     <TypeScriptCompile Include="e2e-api\accounts.spec.ts" />
+    <TypeScriptCompile Include="e2e-api\analysis-workspace.spec.ts" />
     <TypeScriptCompile Include="e2e-api\analysis.spec.ts" />
     <TypeScriptCompile Include="e2e-api\assistant.spec.ts" />
     <TypeScriptCompile Include="e2e-api\geography-forecast.spec.ts" />
@@ -110,6 +112,7 @@
     <TypeScriptCompile Include="src\api\analysis.ts" />
     <TypeScriptCompile Include="src\api\assistant.ts" />
     <TypeScriptCompile Include="src\api\auth.ts" />
+    <TypeScriptCompile Include="src\api\balance.ts" />
     <TypeScriptCompile Include="src\api\client.ts" />
     <TypeScriptCompile Include="src\api\config.ts" />
     <TypeScriptCompile Include="src\api\forecasting.ts" />
@@ -135,12 +138,14 @@
     <TypeScriptCompile Include="src\components\assistant\AssistantContext.tsx" />
     <TypeScriptCompile Include="src\components\assistant\AssistantOrb.tsx" />
     <TypeScriptCompile Include="src\components\assistant\AssistantPanel.tsx" />
+    <TypeScriptCompile Include="src\components\assistant\AssistantStatusBar.tsx" />
     <TypeScriptCompile Include="src\components\assistant\MulhimPanels.tsx" />
     <TypeScriptCompile Include="src\components\assistant\persona.tsx" />
     <TypeScriptCompile Include="src\components\assistant\PersonaImage.tsx" />
     <TypeScriptCompile Include="src\components\assistant\ResearchBriefBuilder.tsx" />
     <TypeScriptCompile Include="src\components\assistant\ResearchProgress.tsx" />
     <TypeScriptCompile Include="src\components\assistant\StructuredReply.tsx" />
+    <TypeScriptCompile Include="src\components\assistant\VoicePanel.tsx" />
     <TypeScriptCompile Include="src\components\auth\PhoneVerification.tsx" />
     <TypeScriptCompile Include="src\components\brand\BrandMark.tsx" />
     <TypeScriptCompile Include="src\components\brand\EditorialImage.tsx" />
@@ -181,6 +186,8 @@
     <TypeScriptCompile Include="src\components\layout\StatusBanners.tsx" />
     <TypeScriptCompile Include="src\components\layout\ThemeSelector.tsx" />
     <TypeScriptCompile Include="src\components\research\ResearchQueue.tsx" />
+    <TypeScriptCompile Include="src\components\results\model.ts" />
+    <TypeScriptCompile Include="src\components\results\ResultsPanel.tsx" />
     <TypeScriptCompile Include="src\components\settings\SettingsSection.tsx" />
     <TypeScriptCompile Include="src\components\studies\StudyCharts.tsx" />
     <TypeScriptCompile Include="src\components\studies\StudyView.tsx" />
@@ -215,6 +222,7 @@
     <TypeScriptCompile Include="src\i18n\languages.ts" />
     <TypeScriptCompile Include="src\i18n\locales\ar.ts" />
     <TypeScriptCompile Include="src\i18n\locales\en.ts" />
+    <TypeScriptCompile Include="src\lib\exportResults.ts" />
     <TypeScriptCompile Include="src\lib\format.ts" />
     <TypeScriptCompile Include="src\lib\provenance.ts" />
     <TypeScriptCompile Include="src\lib\recorder.ts" />
@@ -343,6 +351,7 @@
     <Content Include="public\theme-init.js" />
     <Content Include="scripts\check-contrast.mjs" />
     <Content Include="src\index.css" />
+    <Content Include="tests\export-results.test.mjs" />
     <Content Include="tests\research-brief.test.mjs" />
     <Content Include="tsconfig.app.json" />
     <Content Include="tsconfig.json" />

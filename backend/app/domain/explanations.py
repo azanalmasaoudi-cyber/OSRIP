@@ -130,6 +130,14 @@ REASONS: dict[ReasonCode, tuple[str, str]] = {
         "The component is larger than the published total, so a share is not calculated.",
         "المكوّن أكبر من الإجمالي المنشور، لذا لا تُحسب الحصة.",
     ),
+    ReasonCode.NOT_A_RATIO: (
+        "A self-sufficiency gap needs a ratio published in percent.",
+        "تتطلب فجوة الاكتفاء الذاتي نسبة منشورة بالنسبة المئوية.",
+    ),
+    ReasonCode.NEGATIVE_RATIO: (
+        "A self-sufficiency ratio cannot be negative, so no gap is calculated.",
+        "لا يمكن أن تكون نسبة الاكتفاء الذاتي سالبة، لذا لا تُحسب فجوة.",
+    ),
 }
 
 CAVEATS: dict[Caveat, tuple[str, str]] = {

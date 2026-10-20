@@ -741,6 +741,63 @@ class Tools:
             "evidence id; do not recompute its numbers.",
         }
 
+    def balance_analysis(self, sector: str, period_kind: str = "annual") -> dict[str, Any]:
+        """Shortage and surplus analysis of one sector (deterministic; stored with the reply only
+        if it is cited, like a study)."""
+        import uuid as _uuid
+
+        from app.services.analysis import balance
+
+        doc = balance.build(
+            self.session, {"sector": sector, "period_kind": period_kind}, self.ledger.data_mode
+        )
+        item = self.ledger.add(
+            {
+                "kind": "study",
+                "study_id": str(_uuid.uuid4()),
+                "study_kind": doc["kind"],
+                "title": doc["title"],
+                "status": doc["status"],
+                "study": doc,
+            }
+        )
+        return {
+            "status": doc["status"],
+            "evidence_id": item["id"],
+            "title": doc["title"]["en"],
+            "summary": [s["en"] for s in doc["summary"]],
+            "summary_ar": [s["ar"] for s in doc["summary"]],
+            "balances": [
+                {
+                    "title": b["title"]["en"],
+                    "status": b["status"],
+                    "status_label": b["status_label"]["en"],
+                    "period": b["period"],
+                    "gap": b["gap"],
+                    "gap_unit": (b["gap_unit"] or {}).get("code"),
+                    "reason": b["reason"]["en"],
+                }
+                for b in doc["balances"]
+            ],
+            "recommendations": [
+                {
+                    "priority": r["priority"],
+                    "problem": r["problem"]["en"],
+                    "action": r["action"]["en"],
+                    "quantity": r["quantity"],
+                    "unit": (r["quantity_unit"] or {}).get("code"),
+                }
+                for r in doc["recommendations"][:10]
+            ],
+            "missing_information": [g["missing"]["en"] for g in doc["data_gaps"]],
+            "forecast": doc["forecast"]["text"]["en"],
+            "data_mode": doc["data_mode"],
+            "note": "The user sees this analysis as tables, charts and a recommendation table. Cite its "
+            "evidence id for every number you take from it and do not recompute them. State a "
+            "shortage or surplus only for a balance whose status is not 'not_determinable'; for the "
+            "others, say what information is missing.",
+        }
+
     # -------------------------------------------------------------- web research (untrusted)
     def web_search(
         self, query: str, domain: str = "general", query_other_language: str | None = None
@@ -1072,6 +1129,29 @@ WEB_TOOL_SPECS: list[dict[str, Any]] = [
 
 ANALYSIS_TOOL_SPECS: list[dict[str, Any]] = [
     {
+        "name": "balance_analysis",
+        "description": "Shortage and surplus analysis of one sector from approved observations: each "
+        "supply-against-demand balance with its status (surplus, shortfall, balanced, or "
+        "not_determinable with the reason and the missing information), a structured recommendation "
+        "table built by fixed rules (costs are always unknown), and the sources. Use it for questions "
+        "about shortages, surpluses, deficits, self-sufficiency or what to do about them.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "sector": {
+                    "type": "string",
+                    "enum": ["electricity", "water", "food_security", "trade"],
+                },
+                "period_kind": {
+                    "type": "string",
+                    "enum": ["annual", "year_to_date"],
+                    "default": "annual",
+                },
+            },
+            "required": ["sector"],
+        },
+    },
+    {
         "name": "growth_rate",
         "description": "Compound annual growth rate between two comparable periods (same series, unit, "
         "coverage and period kind) of one indicator and area, computed by the platform.",
@@ -1344,6 +1424,7 @@ def run_tool(tools: Tools, name: str, arguments: dict[str, Any]) -> dict[str, An
         "compare_areas": tools.compare_areas,
         "data_quality_notes": tools.data_quality_notes,
         "run_study": tools.run_study,
+        "balance_analysis": tools.balance_analysis,
     }.get(name)
     if handler is None:
         return {"error": "unknown_tool"}

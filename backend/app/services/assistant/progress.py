@@ -51,6 +51,7 @@ TOOL_STAGE = {
     "share_of_total": "calculating",
     "compare_areas": "calculating",
     "run_study": "calculating",
+    "balance_analysis": "calculating",
     "scenario_projection": "calculating",
     "explain_calculation": "calculating",
 }

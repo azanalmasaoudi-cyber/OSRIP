@@ -8,6 +8,8 @@ import {
   MessageSquarePlus,
   Mic,
   MicOff,
+  Pause,
+  Play,
   RotateCcw,
   Search,
   Send,
@@ -558,6 +560,7 @@ function useVoice(
   const [listening, setListening] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [paused, setPaused] = useState(false); // server audio paused by the person
   const [preparing, setPreparing] = useState(false); // spoken answer requested, not playing yet
   const [notice, setNotice] = useState<VoiceNotice>(null);
   const [muted, setMutedState] = useState(() => readStore('local', MUTE_KEY) === '1');
@@ -602,8 +605,11 @@ function useVoice(
     stopSpeaking();
     setVoiceLevel(0);
     setSpeaking(false);
+    setPaused(false);
     setPreparing(false);
   }, []);
+  const pausePlayback = useCallback(() => playback.current?.pause(), []);
+  const resumePlayback = useCallback(() => playback.current?.resume(), []);
 
   const finishRecording = async () => {
     const rec = recording.current;
@@ -707,8 +713,9 @@ function useVoice(
           playback.current = playAudio(audio, {
             onStart: () => { setPreparing(false); setSpeaking(true); },
             onLevel: setVoiceLevel,
-            onEnd: () => { setPreparing(false); setSpeaking(false); },
-            onError: () => { setPreparing(false); setSpeaking(false); setNotice('playback'); ui.reportError(); },
+            onEnd: () => { setPreparing(false); setSpeaking(false); setPaused(false); },
+            onError: () => { setPreparing(false); setSpeaking(false); setPaused(false); setNotice('playback'); ui.reportError(); },
+            onPause: setPaused,
           });
         })
         .catch((error: unknown) => {
@@ -745,7 +752,7 @@ function useVoice(
   }, [stopPlayback]);
   return {
     canListen, canSpeak, noVoice, noLanguageVoice, serverMode, listening, transcribing, preparing, speaking: speaking || preparing, notice, muted,
-    start, stop, cancel, cancelAll, say, stopPlayback, setMuted,
+    paused, canPause: server && speaking, start, stop, cancel, cancelAll, say, stopPlayback, pausePlayback, resumePlayback, setMuted,
   };
 }
 
@@ -805,13 +812,18 @@ function SignInPrompt({ onNavigate }: { onNavigate?: () => void }) {
 
 // ------------------------------------------------------------------ the chat
 
+/** Asks a question from outside the chat (a suggested question, or "Run analysis"). */
+export type AskFromOutside = (question: string, mode?: AssistantMode) => void;
+
 /** The chat itself, used by the side panel and by the full AI Assistant page. */
-export function AssistantChat({ onClose, initialDraft = '', active = true, showIdentity = true }: {
+export function AssistantChat({ onClose, initialDraft = '', active = true, showIdentity = true, askRef }: {
   onClose?: () => void;
   initialDraft?: string;
   active?: boolean;
   /** False in the Talk workspace, which shows the large portrait and state itself. */
   showIdentity?: boolean;
+  /** Filled with this chat's send function, so a page can ask a question in it. */
+  askRef?: { current: AskFromOutside | null };
 }) {
   const { t } = useTranslation();
   const appLanguage = useAppLanguage();
@@ -957,14 +969,22 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
     }
   }, [activeId, accountAsk, chatLanguage, webResearch, persona.code, crossCheck]);
 
-  const send = (question: string) => {
+  const send = (question: string, modeOverride?: AssistantMode) => {
     const text = question.trim();
     if (!text || pending || needsAccount) return;
     if (voice.listening) voice.stop();
-    last.current = { text, requestId: newRequestId(), mode: answerMode };
+    const askMode = modeOverride ?? answerMode;
+    last.current = { text, requestId: newRequestId(), mode: askMode };
     setDraft('');
-    dispatch(text, last.current.requestId, answerMode);
+    dispatch(text, last.current.requestId, askMode);
   };
+  // The page may ask through this chat; the latest send (with the current state) is exposed.
+  useEffect(() => {
+    if (askRef) askRef.current = send;
+  });
+  useEffect(() => () => {
+    if (askRef) askRef.current = null;
+  }, [askRef]);
   // Retrying the same failed question reuses its request id (and mode): it is never charged twice.
   const retry = () => {
     if (last.current && !pending) dispatch(last.current.text, last.current.requestId, last.current.mode);
@@ -1061,6 +1081,13 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
           <Button variant="ghost" size="sm" aria-pressed={voice.muted} onClick={() => voice.setMuted(!voice.muted)} data-testid="voice-mute">
             {voice.muted ? <VolumeX aria-hidden="true" /> : <Volume2 aria-hidden="true" />}
             {voice.muted ? t('voice.unmute') : t('voice.mute')}
+          </Button>
+        ) : null}
+        {voice.canPause ? (
+          <Button variant="ghost" size="sm" onClick={voice.paused ? voice.resumePlayback : voice.pausePlayback}
+            aria-pressed={voice.paused} data-testid="voice-pause">
+            {voice.paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}
+            {voice.paused ? t('voicePanel.resume') : t('voicePanel.pause')}
           </Button>
         ) : null}
         {voice.speaking ? (

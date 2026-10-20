@@ -37,6 +37,8 @@ class ReasonCode(StrEnum):
     NON_POSITIVE_START = "non_positive_start"  # growth needs a positive first value
     PERIODS_NOT_IN_ORDER = "periods_not_in_order"
     COMPONENT_EXCEEDS_TOTAL = "component_exceeds_total"
+    NOT_A_RATIO = "not_a_ratio"  # a self-sufficiency gap needs a percent ratio
+    NEGATIVE_RATIO = "negative_ratio"
 
 
 class Caveat(StrEnum):

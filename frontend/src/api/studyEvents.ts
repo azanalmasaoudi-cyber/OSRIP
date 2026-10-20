@@ -66,7 +66,7 @@ export function checkTableAndCharts(t: z.infer<typeof table>, charts: z.infer<ty
 
 export const datasetSchema = z.object({
   dataset_id: z.string().regex(/^D\d{1,3}$/),
-  origin: z.enum(['get_observations', 'latest_period', 'compare_areas', 'run_study', 'scenario_projection', 'workspace']),
+  origin: z.enum(['get_observations', 'latest_period', 'compare_areas', 'run_study', 'scenario_projection', 'workspace', 'balance_analysis']),
   provisional: z.boolean(),
   data_status: dataStatus,
   title: text,

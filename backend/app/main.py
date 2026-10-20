@@ -15,6 +15,7 @@ from app.api.routes import (
     analysis,
     assistant,
     auth,
+    balance,
     forecasting,
     geography,
     health,
@@ -164,6 +165,7 @@ def create_app() -> FastAPI:
         observations.router,
         geography.router,
         reference.router,
+        balance.router,  # before analysis: /analysis/balance is not a section
         analysis.router,
         forecasting.router,
         assistant.router,

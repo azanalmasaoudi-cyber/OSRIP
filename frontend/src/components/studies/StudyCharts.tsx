@@ -23,6 +23,28 @@ const NATURE_STYLE = {
   scenario: { stroke: 'var(--copper)', dash: '2 5' },
 } as const;
 
+type Marker = 'circle' | 'square' | 'diamond';
+const MARKERS: readonly Marker[] = ['circle', 'square', 'diamond'];
+const PALETTE = ['var(--chart-1)', 'var(--chart-2)', 'var(--copper)'] as const;
+
+/** A series' line style: its nature (observed, calculated, forecast, scenario) decides the dash;
+ * a second series of the same nature gets the next colour, and every series its own marker
+ * shape, so lines are told apart without relying on colour alone. */
+function seriesStyle(chart: StudyChart, index: number): { stroke: string; dash: string | undefined; marker: Marker } {
+  const s = chart.series[index];
+  const base = NATURE_STYLE[s?.nature ?? 'observed'];
+  const sameBefore = chart.series.slice(0, index).filter((x) => x.nature === s?.nature).length;
+  const start = Math.max(0, PALETTE.indexOf(base.stroke));
+  const stroke = sameBefore === 0 ? base.stroke : (PALETTE[(start + sameBefore) % PALETTE.length] ?? base.stroke);
+  return { stroke, dash: base.dash, marker: MARKERS[index % MARKERS.length] ?? 'circle' };
+}
+
+function Point({ x, y, r, marker, fill, stroke }: { x: number; y: number; r: number; marker: Marker; fill: string; stroke: string }) {
+  if (marker === 'square') return <rect x={x - r} y={y - r} width={r * 2} height={r * 2} fill={fill} stroke={stroke} strokeWidth="2" />;
+  if (marker === 'diamond') return <polygon points={`${x},${y - r - 1} ${x + r + 1},${y} ${x},${y + r + 1} ${x - r - 1},${y}`} fill={fill} stroke={stroke} strokeWidth="2" />;
+  return <circle cx={x} cy={y} r={r} fill={fill} stroke={stroke} strokeWidth="2" />;
+}
+
 function toNumber(v: string | null | undefined): number | null {
   if (v == null) return null;
   const n = Number(v);
@@ -50,12 +72,13 @@ function Legend({ chart }: { chart: StudyChart }) {
   if (chart.series.length < 2 && chart.series[0]?.nature === 'observed') return null;
   return (
     <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-      {chart.series.map((s) => {
-        const style = NATURE_STYLE[s.nature];
+      {chart.series.map((s, i) => {
+        const style = seriesStyle(chart, i);
         return (
           <li key={s.column} className="inline-flex items-center gap-1.5" data-nature={s.nature}>
-            <svg width="22" height="8" aria-hidden="true">
-              <line x1="1" y1="4" x2="21" y2="4" stroke={style.stroke} strokeWidth="2.5" strokeDasharray={style.dash} strokeLinecap="round" />
+            <svg width="26" height="12" aria-hidden="true">
+              <line x1="1" y1="6" x2="25" y2="6" stroke={style.stroke} strokeWidth="2.5" strokeDasharray={style.dash} strokeLinecap="round" />
+              {chart.type === 'line' ? <Point x={13} y={6} r={3} marker={style.marker} fill="var(--card)" stroke={style.stroke} /> : null}
             </svg>
             {s.label[language]} · {t(`studies.nature.${s.nature}`)}
           </li>
@@ -104,8 +127,8 @@ export function StudyLineChart({ chart, rows, labelFor, highlight = NONE }: { ch
         {rows.map((r, i) => (i % labelEvery === 0 || i === n - 1 ? (
           <text key={i} x={xAt(i)} y={H - 8} fontSize="11" textAnchor="middle" fill="var(--muted-foreground)">{labelFor(r, chart.x)}</text>
         ) : null))}
-        {chart.series.map((s) => {
-          const style = NATURE_STYLE[s.nature];
+        {chart.series.map((s, si) => {
+          const style = seriesStyle(chart, si);
           // Missing values break the line: a gap is never bridged.
           const segments: string[] = [];
           let current = '';
@@ -131,7 +154,7 @@ export function StudyLineChart({ chart, rows, labelFor, highlight = NONE }: { ch
                 return (
                   <g key={i} data-point={i} data-highlighted={on ? 'true' : undefined}>
                     {on ? <circle cx={xAt(i)} cy={yAt(v)} r="10" fill="var(--copper)" opacity="0.25" /> : null}
-                    <circle cx={xAt(i)} cy={yAt(v)} r={on ? 5.5 : 3.5} fill={on ? 'var(--copper)' : 'var(--card)'} stroke={style.stroke} strokeWidth="2" />
+                    <Point x={xAt(i)} y={yAt(v)} r={on ? 5.5 : 3.5} marker={style.marker} fill={on ? 'var(--copper)' : 'var(--card)'} stroke={style.stroke} />
                   </g>
                 );
               })}

@@ -463,6 +463,47 @@ export async function speakMessage(messageId: number, language: 'en' | 'ar', sig
   return response.blob();
 }
 
+const voiceCheck = z.object({
+  name: z.string(),
+  verified: z.boolean().nullable(),
+  locale: z.string().nullable().optional(),
+  gender: z.string().nullable().optional(),
+});
+const voicesSchema = z.object({
+  configured: z.boolean(),
+  personas: z.array(z.object({
+    code: z.string(),
+    gender: z.enum(['male', 'female']),
+    configured: z.boolean(),
+    voices: z.object({ ar: voiceCheck, en: voiceCheck }),
+  })),
+});
+export type VoiceCheck = z.infer<typeof voiceCheck>;
+
+/** Each persona's configured voice per language, and whether the speech service lists it. */
+export function useVoiceVoices(enabled = true) {
+  return useQuery({
+    queryKey: ['assistant', 'voice', 'voices'],
+    queryFn: () => apiJson('/assistant/voice/voices', voicesSchema),
+    enabled: adapterKind === 'http' && enabled,
+    staleTime: 10 * 60_000,
+  });
+}
+
+/** A fixed sample sentence in the persona's configured voice (not arbitrary text). */
+export async function testVoice(persona: string, language: 'en' | 'ar', signal?: AbortSignal): Promise<Blob> {
+  const init = jsonBody('POST', { persona, language });
+  const response = await apiFetch('/assistant/voice/test', { ...init, signal, headers: guestHeaders(init.headers) });
+  return response.blob();
+}
+
+/** The concise spoken summary of a stored shortage and surplus analysis. */
+export async function speakAnalysis(analysisId: string, persona: string, language: 'en' | 'ar', signal?: AbortSignal): Promise<Blob> {
+  const init = jsonBody('POST', { analysis_id: analysisId, persona, language });
+  const response = await apiFetch('/assistant/voice/analysis', { ...init, signal, headers: guestHeaders(init.headers) });
+  return response.blob();
+}
+
 /** One narration segment of a reply's study, spoken by the server (N1, N2, ...). */
 export async function speakSegment(messageId: number, segmentId: string, language: 'en' | 'ar', signal?: AbortSignal): Promise<Blob> {
   const init = jsonBody('POST', { message_id: messageId, language, segment_id: segmentId });

@@ -256,3 +256,29 @@ def test_0019_study_events_checks_and_round_trip(scratch_url: str) -> None:
     )
     _alembic("upgrade", "head")
     assert _one(scratch_url, "SELECT count(*) FROM study_event") == (0,)
+
+
+def test_0020_balance_analyses_checks_and_round_trip(scratch_url: str) -> None:
+    _alembic("upgrade", "head")
+    insert = (
+        "INSERT INTO study_run (kind, schema_version, params, data_mode, result, result_sha256) "
+        "VALUES (%s, %s, '{}'::jsonb, 'synthetic', %s::jsonb, %s)"
+    )
+    sha = "a" * 64
+    balance = '{"kind": "supply_balance", "data_mode": "synthetic"}'
+    trend = '{"kind": "trend", "data_mode": "synthetic"}'
+    _exec(scratch_url, insert, "supply_balance", "osrip.balance/1", balance, sha)
+    _exec(scratch_url, insert, "trend", "osrip.study/1", trend, sha)
+    # Each kind keeps its own document schema.
+    with pytest.raises(psycopg.errors.CheckViolation):
+        _exec(scratch_url, insert, "supply_balance", "osrip.study/1", balance, sha)
+    with pytest.raises(psycopg.errors.CheckViolation):
+        _exec(scratch_url, insert, "trend", "osrip.balance/1", trend, sha)
+
+    _alembic("downgrade", "0019_study_events")
+    assert _one(scratch_url, "SELECT count(*) FROM study_run WHERE kind = 'supply_balance'") == (0,)
+    assert _one(scratch_url, "SELECT count(*) FROM study_run WHERE kind = 'trend'") == (1,)
+    with pytest.raises(psycopg.errors.CheckViolation):
+        _exec(scratch_url, insert, "supply_balance", "osrip.balance/1", balance, sha)
+    _alembic("upgrade", "head")
+    _exec(scratch_url, insert, "supply_balance", "osrip.balance/1", balance, sha)

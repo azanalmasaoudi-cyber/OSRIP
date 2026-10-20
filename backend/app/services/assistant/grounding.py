@@ -93,7 +93,39 @@ def _evidence_numbers(item: dict[str, Any], ledger: dict[str, dict[str, Any]]) -
         if isinstance(item.get("published"), str):
             for part in item["published"].split("-"):
                 add(part)
-    if item.get("kind") == "study" and isinstance(item.get("study"), dict):
+    if (
+        item.get("kind") == "study"
+        and isinstance(item.get("study"), dict)
+        and item["study"].get("kind") == "supply_balance"
+    ):
+        # A shortage and surplus analysis: its balance tables, gaps, summary sentences,
+        # recommendation quantities and evidence, scenario rows and source values and periods.
+        doc = item["study"]
+        texts: list[str] = []
+        for b in doc.get("balances", []):
+            for row in b["table"]["rows"]:
+                texts += [str(c or "") for c in row.values()]
+            texts += [
+                str(b.get("gap") or ""),
+                str(b.get("gap_share") or ""),
+                str(b.get("period") or ""),
+            ]
+            texts += [b["reason"][lang] for lang in ("en", "ar")]
+        for s in doc.get("summary", []):
+            texts += [s["en"], s["ar"]]
+        for r in doc.get("recommendations", []):
+            texts += [str(r.get("quantity") or ""), r["evidence"]["en"], r["evidence"]["ar"]]
+        scenario = doc.get("scenario") or {}
+        for row in (scenario.get("table") or {}).get("rows", []):
+            texts += [str(c or "") for c in row.values()]
+        for a in scenario.get("assumptions", []):
+            texts += [a["en"], a["ar"]]
+        for s in doc.get("sources", []):
+            texts += [str(s.get("value") or ""), s.get("period_start", ""), s.get("period_end", "")]
+        for text in texts:
+            for number, _ in numbers_in(text):
+                add(number)
+    elif item.get("kind") == "study" and isinstance(item.get("study"), dict):
         # A deterministic study: its table cells, cards, findings and periods.
         doc = item["study"]
         for row in doc.get("table", {}).get("rows", []):

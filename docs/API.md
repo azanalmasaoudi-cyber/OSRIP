@@ -1,7 +1,7 @@
 # OSRIP API (v1)
 
 Generated reference: [`docs/api/openapi.json`](api/openapi.json) (OpenAPI 3, exported
-from the running code; last regenerated 2026-10-10 after migration 0019: 116 paths, 134 operations). With the API running, interactive
+from the running code; last regenerated 2026-10-20 after migration 0020: 125 paths, 143 operations). With the API running, interactive
 documentation is at `http://localhost:8010/docs` and `http://localhost:8010/redoc`.
 Every route below is exercised by the integration or browser tests listed in
 [TRACEABILITY.md](TRACEABILITY.md).
@@ -97,6 +97,9 @@ Password sign-in is refused with `403 email_not_verified` until the address is c
 | Both message endpoints: `persona` (0017, optional) | Who replies (`mulhim` or `ilham`); default: the saved choice, then the profile's default. Only the name, introduction and Arabic grammatical gender of the reply change; tools, evidence checks, results and the guest allowance do not. Stored replies carry `persona`. Unknown → 422 `unknown_persona` |
 | `GET /assistant/voice` | Public: whether server speech is configured, provider, voices and locales per language (the default persona's), `personas[]` (`code`, `default`, `gender`, `voices` {`ar`, `en`}), `max_seconds`, `stores_audio: false` |
 | `POST /assistant/voice/transcribe?language=en\|ar` (body `audio/wav`, PCM 16 kHz mono, ≤ 60 s) | Signed in with `assistant.use`, or a guest (cookie and `X-Guest-CSRF`; refused with `guest_allowance_exhausted` once the allowance is used). Returns `{text, stored_audio: false}` for review; nothing is asked. 422 `speech_invalid_audio`/`speech_too_long`/`speech_no_speech`, 503 `speech_not_configured`, 502 `speech_unavailable`, 429 per client |
+| `GET /assistant/voice/voices` | (0020) Public: each persona's configured voice per language with `verified` (true or false from the speech service's own voice list, cached for an hour; `null` when it cannot be checked or speech is not configured), `locale` and `gender`. English is read only by English voices |
+| `POST /assistant/voice/test` `{persona?, language}` | (0020) A fixed sample sentence (with a number and a unit) in the persona's configured voice, for the person to hear before relying on it; never arbitrary text. Same callers, limits and errors as `voice/speak`; header `X-Voice` |
+| `POST /assistant/voice/analysis` `{analysis_id, persona?, language}` | (0020) A concise spoken summary of a stored shortage and surplus analysis (its summary and each balance's status, not every table cell). Unknown analysis 404 |
 | `POST /assistant/voice/speak` `{message_id, language, segment_id?}` | `audio/mpeg` of an assistant reply the caller owns (others' 404), spoken with the configured voice of the persona that gave the reply (header `X-Voice` names it); evidence markers are not read. With `segment_id` (0019, `N1`…): only that narration segment of the reply's completed live study, so playback can follow the explanation sentence by sentence; unknown segment 404 |
 | Replies (0019): `structured.study_id` | The live study the reply was prepared as (the request id); the workspace reopens it |
 | `GET /assistant/memory`, `DELETE /assistant/conversations` | Signed in: what is kept (conversation and message counts, saved research, retention policy `until_deleted`); delete every own conversation (saved research is kept separately). Returns `{deleted}` |
@@ -143,11 +146,26 @@ paragraph; otherwise the reply is withheld (`unverified`) and the evidence is sh
 | `GET /studies` | Signed in: the caller's own runs (latest 100) |
 | `GET /studies/{id}` | The stored study (anyone with its identifier; studies contain published data and the stated parameters only) |
 | `GET /studies/{id}/reproduce` | Rebuilds from the stored parameters: `{identical, stored_versions, current_versions}` |
-| `GET /studies/{id}/export.csv?language=en\|ar`, `GET /studies/{id}/export.json` | The table exactly as shown, with provenance comment lines (CSV has a BOM for spreadsheet programs) / the full stored result |
+| `GET /studies/{id}/export.csv?language=en\|ar`, `GET /studies/{id}/export.json` | The table exactly as shown, with provenance comment lines (CSV has a BOM for spreadsheet programs; since 0020 its text cells are neutralised against spreadsheet formula injection) / the full stored result |
 | `DELETE /studies/{id}` | Signed in: the caller's own run only (others' 404) |
 
 The assistant's `run_study` tool runs the same builders in its read-only transaction; a
 study cited by a reply is stored with that message.
+
+### Shortage and surplus analysis (migration 0020)
+
+| Method and path | Purpose |
+|---|---|
+| `POST /analysis/balance` `{data_mode, params}` | Public. `params`: `sector` (`electricity`, `water`, `food_security`, `trade`), `area` (default `OM`), `period_kind` (`annual` or `year_to_date`) and an optional scenario given in full (`supply_growth_pct`, `demand_growth_pct` between −50 and 50, `years` 1–10). Runs and stores the analysis: `{id, created_at, sha256, analysis}`. `analysis` follows `osrip.balance/1`: `status` (`ok`, `partial`, `not_available`), `summary` (EN/AR), `balances[]` (each `surplus`, `shortfall`, `balanced` or `not_determinable` with its `reason`, `interpretation`, `gap` and unit, own `table` and `charts`, evidence `S#`, `constraints`), `recommendations[]` (problem, evidence, action, quantity and unit or why not quantified, horizon, constraints, `cost` always unknown with `cost_known: false`, outcome and assumptions, priority with its basis, monitoring KPI, nature), `prioritization`, `data_gaps[]`, `scenario` (labelled assumptions, never a forecast), `forecast` (whether the forecasting method accepts the demand series), `sources[]` (publisher, title, URL, publication, retrieval date, period, value, dataset version, record, `older_context` before 2022). 422 `invalid_analysis_parameters`. 240 per hour per client |
+| `POST /analysis/balance/preview` `{data_mode, params}` | The same analysis, not stored: `{analysis}`. 600 per hour per client |
+| `GET /analysis/balance/{id}` | The stored analysis (a study's identifier here, or an analysis's at `/studies/{id}`, is 404) |
+| `GET /analysis/balance/{id}/reproduce` | `{identical, stored_versions, current_versions}` |
+| `GET /analysis/balance/{id}/export.csv?language=en\|ar` | Every balance table, the recommendation table, the missing information, the scenario and the sources (BOM; text cells neutralised against spreadsheet formula injection; missing values empty) |
+| `GET /analysis/balance/{id}/report.html?language=en\|ar` | A readable, printable report (`lang`/`dir` per language, values escaped, no script; served with `Content-Security-Policy: default-src 'none'`) |
+
+The assistant's `balance_analysis` tool builds the same document; each balance appears in the
+live study as a validated dataset, and every figure the reply takes from it is checked
+against it.
 
 ### Accounts (additions in 0.8)
 

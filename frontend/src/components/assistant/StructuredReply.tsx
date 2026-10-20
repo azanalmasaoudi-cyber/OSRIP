@@ -81,7 +81,9 @@ export function StructuredParts({ structured, messageId, known }: { structured: 
           <ul className="flex flex-col gap-1">
             {studies.map((s) => (
               <li key={s.id}>
-                <Link to={to(`/studies/${s.id}`)} className="text-primary underline underline-offset-2" data-testid="reply-study-link">
+                <Link to={s.kind === 'supply_balance'
+                  ? { pathname: '/assistant', search: `${to('/assistant').search ? `${to('/assistant').search}&` : '?'}analysis=${encodeURIComponent(s.id)}` }
+                  : to(`/studies/${s.id}`)} className="text-primary underline underline-offset-2" data-testid="reply-study-link">
                   {s.title[language]}
                 </Link>
               </li>

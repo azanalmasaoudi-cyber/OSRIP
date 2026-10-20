@@ -38,6 +38,7 @@ from app.domain.quantities import Unit as QUnit
 from app.models import Area, DataQualityNote, Indicator, ReferencePack, StudyRun
 from app.services import comparisons, forecasting, scenarios
 from app.services.analysis import sections
+from app.services.imports.csv_file import safe_cell
 from app.services.imports.validation import STATISTICAL_SCOPE_START
 from app.services.observations import ObservationQuery, SeriesOut, query_observations
 from app.services.principal import Principal
@@ -1244,9 +1245,13 @@ def out(row: StudyRun) -> dict[str, Any]:
             "sha256": row.result_sha256, "study": row.result}  # fmt: skip
 
 
+BALANCE_KIND = "supply_balance"  # stored shortage and surplus analyses (osrip.balance/1)
+
+
 def get(session: Session, study_id: uuid.UUID) -> StudyRun:
     row = session.get(StudyRun, study_id)
-    if row is None:
+    # A shortage and surplus analysis has its own document and routes (/analysis/balance).
+    if row is None or row.kind == BALANCE_KIND:
         raise not_found("study")
     return row
 
@@ -1254,7 +1259,7 @@ def get(session: Session, study_id: uuid.UUID) -> StudyRun:
 def list_mine(session: Session, principal: Principal) -> list[dict[str, Any]]:
     rows = session.scalars(
         select(StudyRun)
-        .where(StudyRun.user_id == principal.user_id)
+        .where(StudyRun.user_id == principal.user_id, StudyRun.kind != BALANCE_KIND)
         .order_by(StudyRun.created_at.desc())
         .limit(100)
     )
@@ -1295,10 +1300,23 @@ def export_csv(document: dict[str, Any], language: str) -> str:
     cols = document["table"]["columns"]
     writer.writerow(
         [
-            c["label"][lang] + (f" ({c['unit'][f'label_{lang}']})" if c.get("unit") else "")
+            safe_cell(
+                c["label"][lang] + (f" ({c['unit'][f'label_{lang}']})" if c.get("unit") else "")
+            )
             for c in cols
         ]
     )
     for row in document["table"]["rows"]:
-        writer.writerow(["" if row.get(c["key"]) is None else row.get(c["key"]) for c in cols])
+        # Numeric cells hold validated decimal strings (negative values stay numbers); text
+        # cells are neutralised against spreadsheet formula injection.
+        writer.writerow(
+            [
+                ""
+                if row.get(c["key"]) is None
+                else row[c["key"]]
+                if c["kind"] == "number"
+                else safe_cell(str(row[c["key"]]))
+                for c in cols
+            ]
+        )
     return buf.getvalue()

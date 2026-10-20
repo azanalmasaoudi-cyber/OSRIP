@@ -606,6 +606,90 @@ def voice_speak(
     )
 
 
+@router.get("/voice/voices")
+def voice_voices(session: DbSession) -> dict[str, Any]:
+    """Public: each persona's configured voice per language and whether the speech service
+    lists it (``verified``: true, false, or null when it cannot be checked). English is read
+    only by English voices; nothing assumes an Arabic voice speaks English."""
+    personas = _personas(session)
+    return {
+        "configured": speech.configured(),
+        "personas": [
+            {"code": p.code, "gender": p.gender, **speech.voice_check(dict(p.voices.azure))}
+            for p in personas
+        ],
+    }
+
+
+class VoiceTestIn(BaseModel):
+    language: Literal["en", "ar"] = "en"
+    persona: str | None = Field(default=None, pattern=PERSONA_CODE)
+
+
+@router.post("/voice/test")
+def voice_test(
+    body: VoiceTestIn, request: Request, session: DbSession, principal: CurrentPrincipal
+) -> Response:
+    """A fixed sample sentence (with a number and a unit) in the chosen persona's configured
+    voice, so the person can hear it before relying on it. Not arbitrary text."""
+    user = _voice_caller(request, session, principal)
+    _voice_limit(request)
+    with session.begin():
+        code = service.resolve_persona(
+            session, body.persona, user_id=user.user_id if user is not None else None
+        )
+        current = profile.active(session)
+        if current is None:
+            raise ApiError(503, "assistant_profile_missing", "No assistant profile is active.")
+        who = profile.persona(current.profile, code)
+        voice = who.voices.azure[body.language]
+        name = who.name.ar if body.language == "ar" else who.name.en
+    try:
+        audio, media_type = speech.synthesize(
+            speech.TEST_PHRASES[body.language].format(name=name), body.language, voice
+        )
+    except speech.SpeechError as exc:
+        raise _speech_failure(exc) from exc
+    return Response(
+        audio, media_type=media_type, headers={"Cache-Control": "no-store", "X-Voice": voice}
+    )
+
+
+class AnalysisSpeakIn(BaseModel):
+    analysis_id: uuid.UUID
+    language: Literal["en", "ar"] = "en"
+    persona: str | None = Field(default=None, pattern=PERSONA_CODE)
+
+
+@router.post("/voice/analysis")
+def voice_analysis(
+    body: AnalysisSpeakIn, request: Request, session: DbSession, principal: CurrentPrincipal
+) -> Response:
+    """A concise spoken explanation of a stored shortage and surplus analysis (its summary
+    and each balance's status, not every table cell), in the chosen persona's voice."""
+    from app.services.analysis import balance, balance_export
+
+    user = _voice_caller(request, session, principal)
+    _voice_limit(request)
+    with session.begin():
+        row = balance.get(session, body.analysis_id)
+        text = balance_export.spoken_summary(row.result, body.language)
+        code = service.resolve_persona(
+            session, body.persona, user_id=user.user_id if user is not None else None
+        )
+        current = profile.active(session)
+        if current is None:
+            raise ApiError(503, "assistant_profile_missing", "No assistant profile is active.")
+        voice = profile.persona(current.profile, code).voices.azure[body.language]
+    try:
+        audio, media_type = speech.synthesize(text, body.language, voice)
+    except speech.SpeechError as exc:
+        raise _speech_failure(exc) from exc
+    return Response(
+        audio, media_type=media_type, headers={"Cache-Control": "no-store", "X-Voice": voice}
+    )
+
+
 @router.get("/voice/realtime")
 def voice_realtime_status(session: DbSession) -> dict[str, Any]:
     """Public: whether real-time voice (LiveKit) is ready, and which settings are missing

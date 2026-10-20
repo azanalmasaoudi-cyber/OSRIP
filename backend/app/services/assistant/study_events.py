@@ -143,7 +143,12 @@ class Dataset(_M):
 
     dataset_id: str = Field(pattern=r"^D\d{1,3}$")
     origin: Literal[
-        "get_observations", "latest_period", "compare_areas", "run_study", "scenario_projection"
+        "get_observations",
+        "latest_period",
+        "compare_areas",
+        "run_study",
+        "scenario_projection",
+        "balance_analysis",
     ]
     provisional: bool = True
     data_status: DataStatus
@@ -520,6 +525,47 @@ def study_dataset(output: dict[str, Any], by_id: dict[str, dict[str, Any]]) -> l
     }]  # fmt: skip
 
 
+def balance_datasets(
+    output: dict[str, Any], by_id: dict[str, dict[str, Any]], data_mode: DataMode
+) -> list[dict[str, Any]]:
+    """Each balance of a shortage and surplus analysis with its own validated table and charts."""
+    item = by_id.get(str(output.get("evidence_id", "")))
+    if (
+        not item
+        or item.get("kind") != "study"
+        or (item.get("study") or {}).get("kind") != "supply_balance"
+    ):
+        return []
+    doc = item["study"]
+    observed = (
+        "approved_official" if data_mode is DataMode.VERIFIED_SOURCE else "synthetic_demonstration"
+    )
+    out = []
+    for b in doc["balances"]:
+        if not b["table"]["rows"]:
+            continue
+        out.append({
+            "origin": "balance_analysis",
+            "data_status": observed if b["status"] == "not_determinable" else "calculated",
+            "title": b["title"],
+            "subtitle": b["status_label"],
+            "table": b["table"],
+            "charts": b["charts"],
+            "row_evidence": [None] * len(b["table"]["rows"]),
+            "source_evidence_id": item["id"],
+            "study": {
+                "kind": "supply_balance",
+                "status": b["status"],
+                "reason": b["reason"],
+                "findings": [b["interpretation"]],
+                "method": doc["method"],
+                "assumptions": doc["assumptions"],
+                "limitations": doc["limitations"],
+            },
+        })  # fmt: skip
+    return out
+
+
 def scenario_dataset(
     output: dict[str, Any], by_id: dict[str, dict[str, Any]]
 ) -> list[dict[str, Any]]:
@@ -561,6 +607,7 @@ BUILDERS = {
     "compare_areas": lambda out, by_id, mode: areas_dataset(out, by_id, mode),
     "run_study": lambda out, by_id, mode: study_dataset(out, by_id),
     "scenario_projection": lambda out, by_id, mode: scenario_dataset(out, by_id),
+    "balance_analysis": lambda out, by_id, mode: balance_datasets(out, by_id, mode),
 }
 
 

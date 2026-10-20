@@ -174,10 +174,134 @@ def transcribe(audio: bytes, language: str) -> str:
     raise SpeechError("recognition_failed")
 
 
-def speakable(text: str) -> str:
-    """Reply text as it should be read: evidence markers such as [E3] are dropped."""
-    text = re.sub(r"\s*\[E\d+\]", "", text)
+def speakable(text: str, language: str | None = None) -> str:
+    """Reply text as it should be read: evidence markers such as [E3] are dropped and, when the
+    language is given, units and numbers are written the way they are said."""
+    text = re.sub(r"\s*\[[ES]\d+\]", "", text)
+    if language is not None:
+        text = pronounce(text, language)
     return re.sub(r"\s+", " ", text).strip()[:MAX_SPEAK_CHARS]
+
+
+# Units as they are said, longest first so "million m³" wins over "m³". Arabic uses the
+# usual spoken forms; neural voices read the Western digits OSRIP displays in either language.
+UNITS_SPOKEN: dict[str, list[tuple[str, str]]] = {
+    "ar": [
+        (r"million\s*m3|million\s*m³|million_m3|مليون\s*م³", "مليون متر مكعب"),
+        (r"m³|m3|م³", "متر مكعب"),
+        (r"GWh|غيغاواط\s*ساعة", "غيغاواط ساعة"),
+        (r"MWh", "ميغاواط ساعة"),
+        (r"MW|ميغاواط", "ميغاواط"),
+        (r"million\s*OMR|million_OMR|مليون\s*ر\.ع\.?", "مليون ريال عماني"),
+        (r"thousand\s*OMR|thousand_OMR", "ألف ريال عماني"),
+        (r"OMR|ر\.ع\.?", "ريال عماني"),
+        (r"percentage\s*points|percentage_points|نقطة\s*مئوية", "نقطة مئوية"),
+        (r"%|٪", " بالمئة"),
+        (r"tonnes?|tons?", "طن"),
+    ],
+    "en": [
+        (r"million\s*m3|million\s*m³|million_m3", "million cubic metres"),
+        (r"m³|m3", "cubic metres"),
+        (r"GWh", "gigawatt hours"),
+        (r"MWh", "megawatt hours"),
+        (r"MW", "megawatts"),
+        (r"million\s*OMR|million_OMR", "million Omani rials"),
+        (r"thousand\s*OMR|thousand_OMR", "thousand Omani rials"),
+        (r"OMR", "Omani rials"),
+        (r"percentage_points", "percentage points"),
+        (r"%|٪", " percent"),
+    ],
+}
+
+
+def pronounce(text: str, language: str) -> str:
+    """Numbers and units for speech: thousands separators are removed (so 23,264 is one
+    number, not two), a leading + is said as "plus"/"زائد", a range's en dash (2022–2025) is
+    said as "to"/"إلى" (hyphens are left alone: they are minus signs or dates), and unit
+    symbols are spelled out in the voice's language."""
+    lang = "ar" if language == "ar" else "en"
+    text = re.sub(r"(?<=\d)[,٬](?=\d{3}\b)", "", text)
+    text = re.sub(r"(?<![\w.])\+(?=\d)", "زائد " if lang == "ar" else "plus ", text)
+    text = re.sub(r"(?<=\d)\s*–\s*(?=\d)", " إلى " if lang == "ar" else " to ", text)
+    for pattern, spoken in UNITS_SPOKEN[lang]:
+        boundary = r"(?<![A-Za-z])(?:" + pattern + r")(?![A-Za-z])"
+        text = re.sub(boundary, f" {spoken.strip()}" if spoken.startswith(" ") else spoken, text)
+    return text
+
+
+TEST_PHRASES = {
+    "ar": "مرحباً، أنا {name}. هذا اختبار للصوت: بلغ الاستهلاك 41,234 غيغاواط ساعة في 2025، بزيادة 3.5٪.",
+    "en": "Hello, I am {name}. This is a voice test: consumption reached 41,234 GWh in 2025, up 3.5%.",
+}
+
+
+def voice_check(voices: dict[str, str]) -> dict[str, Any]:
+    """Whether each configured voice name exists for this speech resource, from the provider's
+    own voice list (cached for an hour). ``verified`` is None when the list cannot be read."""
+    name = provider_name()
+    if name is None:
+        return {
+            "configured": False,
+            "voices": {k: {"name": v, "verified": None} for k, v in voices.items()},
+        }
+    available = _voice_list()
+    result = {}
+    for lang, voice in voices.items():
+        if available is None:
+            result[lang] = {"name": voice, "verified": None}
+            continue
+        found = available.get(voice)
+        result[lang] = {
+            "name": voice,
+            "verified": found is not None,
+            "locale": (found or {}).get("Locale"),
+            "gender": (found or {}).get("Gender"),
+        }
+    return {"configured": True, "voices": result}
+
+
+_VOICES_CACHE: dict[str, Any] = {"at": 0.0, "voices": None}
+
+
+def _voice_list() -> dict[str, dict[str, Any]] | None:
+    import time
+
+    if _VOICES_CACHE["voices"] is not None and time.monotonic() - _VOICES_CACHE["at"] < 3600:
+        return _VOICES_CACHE["voices"]
+    name = provider_name()
+    if name == "fake":
+        voices = {
+            v: {"ShortName": v, "Locale": v[:5], "Gender": g}
+            for v, g in (
+                ("ar-OM-AbdullahNeural", "Male"), ("ar-OM-AyshaNeural", "Female"),
+                ("en-GB-RyanNeural", "Male"), ("en-GB-SoniaNeural", "Female"),
+            )
+        }  # fmt: skip
+    else:
+        s = get_settings()
+        url = _base("tts").replace("/cognitiveservices/v1", "/cognitiveservices/voices/list")
+        try:
+            with http_client_factory(s.speech_timeout_seconds) as client:
+                response = client.get(
+                    url,
+                    headers={"Ocp-Apim-Subscription-Key": s.speech_key.get_secret_value()},  # type: ignore[union-attr]
+                )
+        except httpx.HTTPError:
+            monitoring.external_failure("speech", "voices_network")
+            return None
+        if response.status_code != 200:
+            monitoring.external_failure("speech", f"voices_http_{response.status_code}")
+            return None
+        try:
+            voices = {
+                v["ShortName"]: v
+                for v in response.json()
+                if isinstance(v, dict) and "ShortName" in v
+            }
+        except ValueError:
+            return None
+    _VOICES_CACHE.update(at=time.monotonic(), voices=voices)
+    return voices
 
 
 def _test_tone(seconds: float = 1.5, rate: int = 16000) -> bytes:
@@ -216,7 +340,7 @@ def synthesize(
     name = provider_name()
     if name is None:
         raise SpeechError("not_configured")
-    text = speakable(text)
+    text = speakable(text, language)
     if not text:
         raise SpeechError("empty_text")
     if name == "fake":

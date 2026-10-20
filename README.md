@@ -152,6 +152,7 @@ government branding.
 | [docs/VERIFICATION_REPORT.md](docs/VERIFICATION_REPORT.md) | The integrated experience, verified together (11 Oct 2026): the nine demonstrations with screenshots, guest-allowance rules mapped to tests, tests actually run, services not live-tested, missing credentials and assets, files changed |
 | [docs/implementation-status.md](docs/implementation-status.md) | Al Mulhim programme register: implemented, locally tested, live-tested and deployed, per feature; provider readiness |
 | [docs/TECHNICAL_REPORT.md](docs/TECHNICAL_REPORT.md) | English technical report for stages 1–8 |
+| [docs/TECHNICAL_REPORT_AR.md](docs/TECHNICAL_REPORT_AR.md) | Arabic technical report with an English summary (20 Oct 2026): purpose, architecture, languages and libraries, folders, database and API, AI, search, shortage and surplus analysis and speech, local startup, implemented versus unconfigured features, Azure Speech setup |
 | [docs/دليل_البدء.md](docs/دليل_البدء.md) | Arabic beginner instructions (تشغيل المنصة خطوة بخطوة) |
 | [docs/avatar-providers.md](docs/avatar-providers.md) | Talking-avatar providers: comparison and acceptance test (none selected) |
 | [docs/requirements.md](docs/requirements.md) | Requirements register compiled from the booklet, with status |

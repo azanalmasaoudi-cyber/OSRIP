@@ -20,9 +20,9 @@ _NUMERIC = re.compile(
     r"\d|\b(how (much|many)|what (is|was|were) the (level|amount|value|total|share|rate)|"
     r"latest (figure|value|number)|growth|increase|decrease|change|rate|share|percent|percentage|"
     r"total|average|compare|comparison|gwh|mwh|tonnes?|tons?|cubic|m3|omr|rial|volume|production|"
-    r"generation|consumption|imports?|exports?)\b"
+    r"generation|consumption|imports?|exports?|shortages?|surplus(es)?|deficits?|self-sufficiency)\b"
     r"|كم|نسبة|معدل|نمو|زيادة|انخفاض|تغير|تغيّر|حصة|إجمالي|اجمالي|متوسط|قارن|مقارنة|حجم|إنتاج|انتاج|"
-    r"توليد|استهلاك|واردات|صادرات|رقم|قيمة|[٠-٩]",
+    r"توليد|استهلاك|واردات|صادرات|رقم|قيمة|عجز|فائض|نقص|اكتفاء|[٠-٩]",
     re.IGNORECASE,
 )
 _RECENT = re.compile(
@@ -37,7 +37,7 @@ DATA_TOOLS = frozenset(
     {
         "list_indicators", "get_observations", "latest_period", "compare_periods",
         "growth_rate", "share_of_total", "compare_areas", "run_study", "data_quality_notes",
-        "get_forecast", "scenario_projection",
+        "get_forecast", "scenario_projection", "balance_analysis",
     }
 )  # fmt: skip
 

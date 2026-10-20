@@ -1,5 +1,34 @@
 # Test results
 
+## 2026-10-20: shortage and surplus analysis, assistant workspace and voices (branch `feature/assistant-analysis-voice`)
+
+What changed:
+- **Shortage and surplus analysis** (`/api/v1/analysis/balance`, migration 0020).
+- **Assistant workspace** (`/assistant`): the conversation, sector questions and "Run analysis" on one side; Summary, Tables, Charts, Sources and Recommendations tabs on the other; a status bar with Stop generating and Stop audio.
+- **Voice:** per-persona voice check, Test voice, pause, resume and stop, numbers and units spoken in words, and a spoken analysis summary.
+- **Exports:** formula-safe CSV exports and a readable HTML report.
+- **Docs:** the Arabic technical report (`docs/TECHNICAL_REPORT_AR.md`).
+
+Browsers: installed Edge (`PW_CHANNEL=msedge`). Scripted assistant, research and speech providers; no real AI, search or Azure Speech credentials were used.
+
+| Check | Result |
+|---|---|
+| `ruff check` and `ruff format --check` (backend `app` and `tests`) | Pass |
+| Backend `pytest` with database tests (`OSRIP_RUN_DB_TESTS=1`) | **613 passed**. New: `test_balance.py` (52: arithmetic, missing values never zero, classification of inequalities, priority rule, document validation, CSV formula neutralisation, report escaping, pronunciation, Azure voice-list check); `test_balance_integration.py` (10: tables, charts and exports agree, trade balance = exports − imports, electricity not determinable, allowlisted parameters, voice check, Test voice, spoken summary, not-configured message); migration 0020 round trip |
+| `tsc -b`, `npm run lint`, `npm run build` | Pass (the existing bundle-size warning remains) |
+| `MSBuild OSRIP.sln /t:Build` | Pass (exit 0); projects regenerated with the new files |
+| `npm run check:contrast` | Pass, 0 failing pairs |
+| Frontend unit tests (`node --test tests/research-brief.test.mjs tests/export-results.test.mjs`) | 7 passed (2 new: client-side CSV neutralisation, report escaping) |
+| New full-stack spec `e2e-api/analysis-workspace.spec.ts` | **5 passed**: the stored result agrees with the tabs, CSV and report; electricity is not determinable and names the missing peak demand; Arabic right to left in the light theme at 360 px with no sideways scrolling; voice check, Test voice (`X-Voice: ar-OM-AyshaNeural`) and Stop audio; a sector question fills the results with the assistant's study |
+| Full-stack suite, desktop and Pixel 7 (134 tests) | **129 passed**, 1 skipped, 4 failed under load: `interface.spec.ts:123` (`net::ERR_NETWORK_IO_SUSPENDED`), `quality.spec.ts:33` (network-idle timeout) and two `talk.spec.ts` microphone tests. All four, with the rest of `talk.spec.ts`, **passed when re-run alone** (8 passed) |
+| Mock suite (44 tests) | **40 passed**, 3 skipped, 1 failed: the intro's phone test (`entrance.spec.ts:262`) timed out right after the full-stack run. Re-run alone three times on both projects: 6 passed. The intro's files are unchanged in this branch |
+| `openapi.json` | Regenerated: 125 paths, 143 operations |
+| In the desktop app's browser (`osrip-api-verify` and `osrip-frontend-verify`, dev database) | Trade analysis run: a calculated 2025 surplus of 6,103 million OMR; summary, cards, 4 charts each with unit, periods and source, 21 sources, 4 recommendation rows with the ten requested columns. Arabic RTL, light theme and a 375 px phone with no sideways scrolling. Voice: Ilham's voices listed as available, Test voice played, pause held, Stop audio stopped it. `?analysis=<id>` reopens a stored analysis. A render loop found here (`useNarration` received a new array on every render) was fixed |
+
+**Not verified:**
+- real AI, web-search and Azure Speech providers (`OSRIP_SPEECH_KEY` and `OSRIP_SPEECH_REGION` are not set in this environment);
+- the laptop was on battery and entered Modern Standby during the runs, which caused the load failures above.
+
 ## 2026-10-18: the owner's introduction as the opening experience (branch `redesign/dark-dashboard`)
 
 The introduction from `docs/OSRIP_Intro_Single_File.html` is now native React, using its own

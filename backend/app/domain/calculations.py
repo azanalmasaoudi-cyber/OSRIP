@@ -200,6 +200,61 @@ def gross_import_contribution(imports: Measurement, availability: CalcResult) ->
     )
 
 
+# --------------------------------------------------------------------------- balances
+
+
+def supply_demand_gap(supply: Measurement, demand: Measurement) -> CalcResult:
+    """Supply minus demand for the same period, coverage, commodity and unit.
+
+    Positive: supply above the demand measure; negative: below. Whether that is a surplus, a
+    shortfall or neither (losses, unbilled use, different definitions) is decided by the
+    balance definition that chose the two measures, never by the sign alone."""
+    reason = _same_unit(supply, demand) or _same_frame(supply, demand)
+    if reason is not None:
+        return CalcResult.fail(CalcStatus.INCOMPATIBLE, reason)
+    if _any_missing(supply, demand):
+        return CalcResult.fail(CalcStatus.MISSING, ReasonCode.INPUT_MISSING)
+    assert supply.value is not None and demand.value is not None
+    return CalcResult.ok(supply.value - demand.value)
+
+
+def gap_share_of_demand(gap: CalcResult, demand: Measurement) -> CalcResult:
+    """100 x gap / demand: the gap as a share of the demand measure. Guard: positive demand."""
+    if gap.status is not CalcStatus.OK:
+        assert gap.reason is not None
+        return CalcResult.fail(gap.status, gap.reason, *gap.caveats)
+    if demand.value is None:
+        return CalcResult.fail(CalcStatus.MISSING, ReasonCode.INPUT_MISSING)
+    if demand.value <= ZERO:
+        return CalcResult.fail(CalcStatus.NOT_CALCULATED, ReasonCode.NON_POSITIVE_DENOMINATOR)
+    assert gap.value is not None
+    return CalcResult.ok(HUNDRED * gap.value / demand.value, *gap.caveats)
+
+
+def self_sufficiency_gap(ratio: Measurement) -> CalcResult:
+    """A published self-sufficiency ratio (domestic production as a percent of domestic
+    consumption) minus 100, in percentage points: above zero, production exceeds domestic
+    consumption; below zero, it falls short of it (the rest comes from imports or stocks)."""
+    if ratio.unit.dimension is not PhysicalDimension.RATIO or ratio.unit.code != "percent":
+        return CalcResult.fail(CalcStatus.INCOMPATIBLE, ReasonCode.NOT_A_RATIO)
+    if ratio.value is None:
+        return CalcResult.fail(CalcStatus.MISSING, ReasonCode.INPUT_MISSING)
+    if ratio.value < ZERO:
+        return CalcResult.fail(CalcStatus.NOT_CALCULATED, ReasonCode.NEGATIVE_RATIO)
+    return CalcResult.ok(ratio.value - HUNDRED)
+
+
+def compound_projection(base: Decimal, growth_pct: Decimal, years: int) -> list[Decimal]:
+    """``base`` grown by ``growth_pct`` per year for 1..``years`` years (a stated scenario
+    assumption, never a forecast)."""
+    factor = Decimal(1) + growth_pct / HUNDRED
+    out, value = [], base
+    for _ in range(years):
+        value = value * factor
+        out.append(value)
+    return out
+
+
 # --------------------------------------------------------------------------- partners
 
 
