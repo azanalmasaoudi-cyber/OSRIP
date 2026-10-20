@@ -7,7 +7,7 @@ import { DataAdapterError } from '@/api/adapter';
 import { adapterKind } from '@/api/config';
 import { useAreaRegistry } from '@/api/geography';
 import { useAreaComparison } from '@/api/library';
-import { useSeries } from '@/api/queries';
+import { useSectionSeries, type SectionSeriesQuery } from '@/api/queries';
 import { useAssistantUi } from '@/components/assistant/AssistantContext';
 import { FilterBar } from '@/components/common/FilterBar';
 import { IndicatorCard } from '@/components/common/IndicatorCard';
@@ -25,7 +25,7 @@ import { ResourceKpis } from '@/components/workspace/ResourceKpis';
 import { SelectionStudy } from '@/components/workspace/SelectionStudy';
 import { Tabs, tabPanelProps } from '@/components/workspace/Tabs';
 import { WorkspaceLaunchpad } from '@/components/workspace/WorkspaceLaunchpad';
-import { ALL, seriesKey } from '@/domain/filters';
+import { ALL, byPeriodKind, seriesKey } from '@/domain/filters';
 import { DOMAINS, SECTION_PATHS } from '@/domain/sections';
 import { DATA_MODES, type DomainCode, type SectionCode, type Series } from '@/domain/types';
 import { FREQUENCY_KEY } from '@/i18n/keys';
@@ -53,12 +53,6 @@ const DOMAIN_OPTIONS = [ALL, ...DOMAINS.map((d) => d.code)] as const;
 const FILTER_PARAMS = ['domain', 'section', 'indicator', 'area', 'frequency', 'from', 'to'] as const;
 const TABS = ['data', 'study', 'assistant'] as const;
 type Tab = (typeof TABS)[number];
-
-/** Series of one section, of one frequency when chosen (stated totals are picked later). */
-function useSectionSeries(section: SectionCode, frequency?: string) {
-  const [mode] = useDataMode();
-  return useSeries(section, mode, frequency);
-}
 
 /** A card with a heading row, used for the workspace's main panels. */
 function Panel({ id, title, icon, action, children, testId }: {
@@ -102,10 +96,12 @@ export function OverviewPage() {
   const [section, setSection] = useUrlFilter<string>('section', [ALL, ...sectionOptions], ALL);
   const focusSection = (section === ALL ? sectionOptions[0] : section) as SectionCode;
   // A section can mix annual, year-to-date and monthly series of one indicator: those are not
-  // shown side by side, so the person chooses one frequency here (or from the notice).
+  // shown side by side. "All" reads each period kind on its own and lists them apart; the
+  // person can choose one frequency here.
   const [frequency, setFrequency] = useUrlFilter<string>('frequency', [ALL, ...FREQUENCIES], ALL);
   const freq = frequency === ALL ? undefined : frequency;
-  const series = useSectionSeries(focusSection, freq);
+  // Stated totals (no partner) are picked below.
+  const series = useSectionSeries(focusSection, mode, freq);
   const registry = useAreaRegistry();
   const governorates = (registry.data?.areas ?? []).filter((a) => a.level === 'governorate');
   const [area, setArea] = useUrlFilter<string>('area', [ALL, 'OM', ...governorates.map((g) => g.code)], ALL);
@@ -217,7 +213,7 @@ export function OverviewPage() {
                 <ArrowRight aria-hidden="true" className="size-3.5 rtl:-scale-x-100" />
               </Link>}>
               <IndicatorCards query={series} shown={inArea} focus={focus}
-                onAnalyse={(code) => setIndicator(code)} onChooseFrequency={setFrequency} />
+                onAnalyse={(code, kind) => { setIndicator(code); if (kind) setFrequency(kind); }} onChooseFrequency={setFrequency} />
             </Panel>
           </div>
 
@@ -259,10 +255,11 @@ export function OverviewPage() {
 }
 
 function IndicatorCards({ query, shown, focus, onAnalyse, onChooseFrequency }: {
-  query: ReturnType<typeof useSectionSeries>;
+  query: SectionSeriesQuery;
   shown: readonly Series[];
   focus: Series | null;
-  onAnalyse: (code: string) => void;
+  /** The card's indicator, and its period kind when several kinds are listed. */
+  onAnalyse: (code: string, kind: string | undefined) => void;
   onChooseFrequency: (frequency: string) => void;
 }) {
   const { t } = useTranslation();
@@ -278,6 +275,9 @@ function IndicatorCards({ query, shown, focus, onAnalyse, onChooseFrequency }: {
   if (query.data.status === 'no_published_data') return <StatePanel kind="no_verified_data" />;
   if (!shown.length) return <StatePanel kind="empty" />;
   const stale = shown.filter((s) => isStale(s));
+  // With "All", each period kind is its own group (a year-to-date total is not a full year).
+  const groups = byPeriodKind(shown);
+  const grouped = groups.length > 1;
   return (
     <div className="@container flex flex-col gap-3">
       {stale.length ? (
@@ -285,12 +285,18 @@ function IndicatorCards({ query, shown, focus, onAnalyse, onChooseFrequency }: {
           <Clock aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />{t('workspace.stale.banner', { count: stale.length })}
         </p>
       ) : null}
-      <div className="grid gap-3 @xl:grid-cols-2 @4xl:grid-cols-3">
-        {shown.map((s) => (
-          <IndicatorCard key={seriesKey(s)} series={s} headingLevel={3} stale={isStale(s)}
-            selected={focus !== null && seriesKey(focus) === seriesKey(s)} onAnalyse={() => onAnalyse(s.indicatorCode)} />
-        ))}
-      </div>
+      {grouped ? <p className="text-xs text-muted-foreground" data-testid="period-kinds-note">{t('states.periodKindsApart')}</p> : null}
+      {groups.map(({ kind, series }) => (
+        <div key={kind ?? 'unstated'} className="flex flex-col gap-2" data-testid="period-kind-group" data-period-kind={kind}>
+          {grouped && kind ? <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t(FREQUENCY_KEY[kind])}</h3> : null}
+          <div className="grid gap-3 @xl:grid-cols-2 @4xl:grid-cols-3">
+            {series.map((s) => (
+              <IndicatorCard key={seriesKey(s)} series={s} headingLevel={grouped ? 4 : 3} stale={isStale(s)}
+                selected={focus !== null && seriesKey(focus) === seriesKey(s)} onAnalyse={() => onAnalyse(s.indicatorCode, grouped ? s.frequency : undefined)} />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

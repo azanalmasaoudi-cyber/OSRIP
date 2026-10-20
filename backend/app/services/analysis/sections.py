@@ -173,7 +173,10 @@ def _changes(
         items.sort(key=lambda e: e.period)
         name = items[0].meta["indicator"]
         kind_tag = "" if key[8] == key[4] else f":{key[8]}{key[9] or ''}"
-        base = f"{key[1]}:{key[2]}:{key[4]}{kind_tag}:{key[0][:8]}"
+        # Commodity, partner and flow slices (and units) of one indicator are separate series,
+        # so they are part of the id: no two series' changes share one.
+        slices = "".join(f":{part}" for part in (key[5], key[6], key[7], key[3]) if part)
+        base = f"{key[1]}:{key[2]}:{key[4]}{kind_tag}{slices}:{key[0][:8]}"
         ratio = items[0].meta["unit"]["dimension"] == "ratio"
         if len(items) < 2:
             out.append(
