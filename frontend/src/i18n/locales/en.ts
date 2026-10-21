@@ -110,6 +110,8 @@ export const en = {
     mixedFrequency:
       'This selection contains annual, quarterly or monthly values of the same indicator. They are not shown side by side because their periods are not comparable. Choose one frequency.',
     showFrequency: 'Show {{frequency}} data',
+    periodKindsApart:
+      'Each kind of period (full years, year-to-date totals, quarters, months, dated statements) is listed on its own, because their values are not comparable. Choose one under Frequency to see it alone.',
   },
   filters: {
     heading: 'Filters',

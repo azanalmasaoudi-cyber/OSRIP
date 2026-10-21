@@ -57,8 +57,9 @@ names its evidence. Wording is suggested, not prescribed. Measured values are fr
 * §3.12 API: implemented and documented (`docs/API.md`, `docs/api/openapi.json`, 41
   paths). Additional routes beyond Table 3.5: sources, import mapping/rows/errors,
   rejection, admin, areas, coverage, forecast eligibility and runs, exports.
-  A read that mixes frequencies returns `422 incompatible_series`; the interface now
-  asks the reader to choose a frequency (audit defect D4).
+  A read that mixes frequencies returns `422 incompatible_series`; the interface reads
+  each period kind separately and lists the kinds apart, or the reader chooses one
+  frequency (audit defect D4).
 * §3.13 Rules: R01–R04 implemented; thresholds (3 %, 50 %, 10 %) are run parameters
   shown as "not an official standard" (C22). Reviews are append-only (database
   trigger).

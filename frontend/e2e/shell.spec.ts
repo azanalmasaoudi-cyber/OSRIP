@@ -130,6 +130,8 @@ test('search finds pages in either language and drafts a question for the assist
   await expect(page.getByTestId('search-result-page')).toHaveText(['Water']);
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/energy\/water\?mode=synthetic$/);
+  // The address changes before the new page renders and takes focus; type after that, as a reader would.
+  await expect(page.locator('main#main')).toBeFocused();
   await input.fill('electricity growth since 2022');
   await expect(page.getByTestId('search-result-page')).toHaveCount(0); // no page has that name
   await page.keyboard.press('ArrowDown'); // the one option: ask the assistant

@@ -1,4 +1,4 @@
-import type { Series, TradeFlow } from './types';
+import { PERIOD_KINDS, type Frequency, type Series, type TradeFlow } from './types';
 
 /**
  * Selection only. These helpers choose which series to show; they never derive
@@ -58,6 +58,17 @@ export function seriesKey(s: Series): string {
   // The source too: two sources can publish the same indicator, area and period kind in one
   // reference-pack version (each is its own series and card).
   return `${s.indicatorCode}_${s.area?.code ?? 'OM'}_${s.frequency ?? ''}_${s.ytdEndMonth ?? ''}_${s.flow ?? ''}_${s.partnerCode ?? ''}_${s.commodityCode ?? ''}_${s.source.versionLabel}_${s.source.sourceCode ?? s.source.title}`;
+}
+
+/**
+ * Series listed by period kind (full years, year-to-date totals, quarters, months, dated
+ * statements, then any without a stated kind), so a year-to-date total is never shown among
+ * full years. Empty kinds are left out.
+ */
+export function byPeriodKind(series: readonly Series[]): { kind: Frequency | undefined; series: Series[] }[] {
+  return [...PERIOD_KINDS, undefined]
+    .map((kind) => ({ kind, series: series.filter((s) => s.frequency === kind) }))
+    .filter((group) => group.series.length > 0);
 }
 
 /** Latest observation by period end; null if the series has none. */

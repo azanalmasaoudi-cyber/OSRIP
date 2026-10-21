@@ -9,7 +9,7 @@ import { StatePanel } from './StatePanel';
 import type { SectionFilters } from '@/api/analysis';
 import { adapterKind } from '@/api/config';
 import { useAreaRegistry } from '@/api/geography';
-import { useSeries } from '@/api/queries';
+import { useSectionSeries } from '@/api/queries';
 import { AnalysisPanel, ExportLinks } from '@/components/analysis/AnalysisPanel';
 import { ReviewCards } from '@/components/analysis/ReviewCards';
 import { SectionInsights } from '@/components/analysis/SectionInsights';
@@ -58,7 +58,8 @@ export function SectionView({ section, filters, title, headingLevel = 2 }: Secti
   const [mode] = useDataMode();
   const [frequency, setFrequency] = useUrlFilter<string>('frequency', [ALL, ...FREQUENCIES], ALL);
   const freq = frequency === ALL ? undefined : frequency;
-  const query = useSeries(section, mode, freq);
+  // "All" reads each period kind on its own (a mixed read is refused) and lists them apart.
+  const query = useSectionSeries(section, mode, freq);
   const registry = useAreaRegistry();
   const governorates = (registry.data?.areas ?? []).filter((a) => a.level === 'governorate');
   const [area, setArea] = useUrlFilter<string>('area', [ALL, 'OM', ...governorates.map((g) => g.code)], ALL);
@@ -182,6 +183,7 @@ export function SectionView({ section, filters, title, headingLevel = 2 }: Secti
           frequency={freq}
           onChooseFrequency={setFrequency}
           onResetFilters={reset}
+          headingLevel={headingLevel === 2 ? 3 : 4}
           renderAbove={
             section === 'trade' && display === 'chart'
               ? (visible) => {
