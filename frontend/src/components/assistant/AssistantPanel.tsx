@@ -2,6 +2,7 @@ import {
   BookmarkPlus,
   BookOpenCheck,
   Calculator,
+  CircleHelp,
   ExternalLink,
   Globe,
   Loader2,
@@ -31,7 +32,7 @@ import { PersonaPicker, usePersona } from './persona';
 import { PersonaImage } from './PersonaImage';
 import { ResearchBriefBuilder } from './ResearchBriefBuilder';
 import { ResearchProgress } from './ResearchProgress';
-import { CitedText, evidenceAnchor, ModeSelector, StructuredParts } from './StructuredReply';
+import { CitedText, DataReportNotice, evidenceAnchor, ModeSelector, StructuredParts, WebNotice } from './StructuredReply';
 import {
   ASSISTANT_MODES,
   speakMessage,
@@ -92,6 +93,7 @@ const STATUS_BADGE = {
   lookup: 'assistant.statusLookup',
   profile: 'assistant.statusProfile',
   cancelled: 'assistant.statusCancelled',
+  data_report: 'assistant.statusDataReport',
 } as const;
 
 const EVIDENCE_CLASS_KEY = {
@@ -458,7 +460,8 @@ function MessageView({ message, onAsk, onRetry, onSpeak, canSave, onOpenStudy, a
         {message.ai_generated ? (
           <Badge variant="accent" data-testid="ai-label"><Sparkles aria-hidden="true" />{t('assistant.aiLabel')}</Badge>
         ) : <Badge variant="muted" data-testid="non-ai-label">
-          {message.status === 'lookup' ? t('assistant.lookupLabel') : message.status === 'profile' ? t('assistant.profileLabel') : t('assistant.systemLabel')}
+          {message.status === 'lookup' ? t('assistant.lookupLabel') : message.status === 'profile' ? t('assistant.profileLabel')
+            : message.status === 'data_report' ? t('assistant.dataReportLabel') : t('assistant.systemLabel')}
         </Badge>}
         {badge ? <Badge variant="sand">{t(badge)}</Badge> : null}
         {message.mode && message.mode !== 'ask' ? <Badge variant="outline" data-testid="reply-mode">{t(`assistant.mode.${message.mode}`)}</Badge> : null}
@@ -472,8 +475,12 @@ function MessageView({ message, onAsk, onRetry, onSpeak, canSave, onOpenStudy, a
       <p className="whitespace-pre-wrap" dir="auto" data-testid="assistant-text">
         <CitedText text={message.content} messageId={message.id} known={known} />
       </p>
-      {message.status === 'unavailable' ? (
-        <Button variant="outline" size="sm" className="w-fit" onClick={onRetry}><RotateCcw aria-hidden="true" />{t('states.retry')}</Button>
+      {message.structured.data_report ? <DataReportNotice report={message.structured.data_report} /> : null}
+      {message.structured.web_notice ? <WebNotice notice={message.structured.web_notice} /> : null}
+      {message.status === 'unavailable' || message.status === 'data_report' ? (
+        <Button variant="outline" size="sm" className="w-fit" onClick={onRetry} data-testid="retry-answer">
+          <RotateCcw aria-hidden="true" />{message.status === 'data_report' ? t('assistant.dataReport.retryAi') : t('states.retry')}
+        </Button>
       ) : null}
       {message.structured && Object.keys(message.structured).length ? (
         <StructuredParts structured={message.structured} messageId={message.id} known={known} />
@@ -482,7 +489,7 @@ function MessageView({ message, onAsk, onRetry, onSpeak, canSave, onOpenStudy, a
       {shown.length > 0 ? (
         <div>
           <p className="mb-1 text-xs font-semibold">
-            {message.status === 'unverified' ? t('assistant.retrievedEvidence') : message.status === 'lookup' ? t('assistant.records') : t('assistant.sources')}
+            {message.status === 'unverified' ? t('assistant.retrievedEvidence') : message.status === 'lookup' || message.status === 'data_report' ? t('assistant.records') : t('assistant.sources')}
           </p>
           <ul className="flex flex-col gap-1.5">
             {shown.map((e) => (e.kind === 'web'
@@ -927,7 +934,7 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
     if (!viaVoice || !lastMessage || lastMessage.role !== 'assistant' || spokenFor.current === lastMessage.id) return;
     spokenFor.current = lastMessage.id;
     setViaVoice(false);
-    if (lastMessage.status === 'lookup' || lastMessage.status === 'unavailable') return;
+    if (lastMessage.status === 'lookup' || lastMessage.status === 'unavailable' || lastMessage.status === 'cancelled') return;
     voice.say(lastMessage, byCode(lastMessage.persona).gender);
   }, [lastMessage, viaVoice, voice, byCode]);
 
@@ -1035,8 +1042,6 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
               <Badge variant="accent">{t('assistant.aiAssistant')}</Badge>
               <span className="font-medium" role="status" data-testid="assistant-state" data-state={ui.state}>{t(ORB_STATE_KEY[ui.state])}</span>
             </p>
-            <p className="mt-0.5 text-muted-foreground">{t('assistant.avatarNote')}</p>
-            {voice.canSpeak ? <p className="mt-0.5 text-muted-foreground">{t('voice.animationNote')}</p> : null}
           </div>
         </div>
         {showIdentity ? <PersonaPicker /> : null /* Talk has its own, beside the portrait */}
@@ -1119,28 +1124,41 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
       ) : null}
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 max-sm:min-h-[45dvh] max-sm:flex-none max-sm:overflow-visible" aria-live="polite">
-        <p className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <DataModeBadge mode={(signedIn ? conversation.data?.data_mode : guestConversation.data?.data_mode) ?? mode} /> {t('assistant.disclaimer', { name: persona.name[appLanguage] })}
+        <p className="mb-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <DataModeBadge mode={(signedIn ? conversation.data?.data_mode : guestConversation.data?.data_mode) ?? mode} />
+          <span data-testid="assistant-disclaimer-short">{t('assistant.disclaimerShort')}</span>
         </p>
+        {status.data && !configured ? (
+          <p role="status" className="mb-2 rounded-md border border-dashed border-border-strong/50 px-3 py-2 text-sm" data-testid="assistant-unconfigured">
+            {t('assistant.notConfiguredShort')}
+          </p>
+        ) : null}
         <div className="mb-3 flex flex-col gap-2">
+          {/* Explanations and limits, collapsed: the conversation comes first. */}
+          <details className="rounded-md border border-border px-3 py-2 text-xs" data-testid="assistant-help">
+            <summary className="flex cursor-pointer items-center gap-1.5 font-semibold">
+              <CircleHelp aria-hidden="true" className="size-3.5" />{t('assistant.help.title')}
+            </summary>
+            <ul className="mt-2 flex list-disc flex-col gap-1 ps-4 text-muted-foreground">
+              <li>{t('assistant.disclaimer', { name: persona.name[appLanguage] })}</li>
+              <li>{t('assistant.help.dataReport')}</li>
+              {status.data?.research_cutoff ? (
+                <li data-testid="research-cutoff">
+                  {t('assistant.cutoff', { date: formatPeriod(status.data.research_cutoff, status.data.research_cutoff, appLanguage) })}
+                </li>
+              ) : null}
+              {status.data && !configured ? <li>{t('assistant.notConfiguredLookup')}</li> : null}
+              {status.data && configured && !webAvailable ? <li data-testid="web-unavailable">{t('assistant.webUnavailable')}</li> : null}
+              {webResearch ? <li>{t('assistant.webToggleHint')}</li> : null}
+              <li>{t('assistant.avatarNote')}</li>
+              {voice.canSpeak ? <li>{t('voice.animationNote')}</li> : null}
+              <li>{voice.serverMode ? t('voice.serverDisclosure') : voice.canListen ? t('voice.disclosure') : t('voice.unsupported')}</li>
+            </ul>
+          </details>
           <AboutMulhim />
           <MemoryPanel signedIn={signedIn} guestExpires={guestData?.expires_at ?? null} guestConversationId={signedIn ? null : guestId}
             onGuestDeleted={() => setGuestId(null)} onAllDeleted={() => setActiveId(null)} />
         </div>
-        {status.data?.research_cutoff ? (
-          <p className="mb-3 text-xs text-muted-foreground" data-testid="research-cutoff">
-            {t('assistant.cutoff', { date: formatPeriod(status.data.research_cutoff, status.data.research_cutoff, appLanguage) })}
-          </p>
-        ) : null}
-        {status.data && !configured ? (
-          <p role="status" className="mb-3 rounded-md border border-dashed border-border-strong/50 p-3 text-sm" data-testid="assistant-unconfigured">
-            {t('assistant.notConfiguredLookup')}
-          </p>
-        ) : null}
-        {status.data && configured && !webAvailable ? (
-          <p className="mb-3 text-xs text-muted-foreground" data-testid="web-unavailable">{t('assistant.webUnavailable')}</p>
-        ) : null}
-        {webResearch ? <p className="mb-3 text-xs text-muted-foreground">{t('assistant.webToggleHint')}</p> : null}
         {signedIn && !allowed ? <p className="mb-3 text-sm">{t('assistant.noPermission')}</p> : null}
         {!signedIn && allowance && guestData ? <div className="mb-3"><AllowanceMeter allowance={allowance} notice={guestData.notice} /></div> : null}
         {linkable ? (
@@ -1233,7 +1251,7 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
             </Button>
           </div>
           <p className="text-xs text-muted-foreground" data-testid="voice-support">
-            {voice.serverMode ? t('voice.serverDisclosure') : voice.canListen ? t('voice.disclosure') : t('voice.unsupported')}
+            {voice.serverMode ? t('voice.consentServer') : voice.canListen ? t('voice.consentBrowser') : t('voice.unsupported')}
           </p>
           {voice.noLanguageVoice ? (
             <p className="text-xs text-muted-foreground" data-testid="voice-no-language" data-language={chatLanguage}>

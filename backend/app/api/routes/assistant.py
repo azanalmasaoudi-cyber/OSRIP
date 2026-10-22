@@ -11,6 +11,7 @@ import time
 import uuid
 from collections.abc import AsyncIterator
 from typing import Annotated, Any, Literal
+from urllib.parse import quote
 
 from fastapi import APIRouter, Body, Depends, Request, Response
 from fastapi.responses import StreamingResponse
@@ -644,15 +645,14 @@ def voice_test(
         who = profile.persona(current.profile, code)
         voice = who.voices.azure[body.language]
         name = who.name.ar if body.language == "ar" else who.name.en
+    phrase = speech.TEST_PHRASES[body.language].format(name=name)
     try:
-        audio, media_type = speech.synthesize(
-            speech.TEST_PHRASES[body.language].format(name=name), body.language, voice
-        )
+        audio, media_type = speech.synthesize(phrase, body.language, voice)
     except speech.SpeechError as exc:
         raise _speech_failure(exc) from exc
-    return Response(
-        audio, media_type=media_type, headers={"Cache-Control": "no-store", "X-Voice": voice}
-    )
+    # The words spoken, shown as a transcript beside the player (percent-encoded UTF-8).
+    headers = {"Cache-Control": "no-store", "X-Voice": voice, "X-Transcript": quote(phrase)}
+    return Response(audio, media_type=media_type, headers=headers)
 
 
 class AnalysisSpeakIn(BaseModel):

@@ -151,7 +151,8 @@ def test_the_daily_limit_refuses_the_call_and_the_guest_is_not_charged(app, monk
         lambda timeout: httpx.Client(transport=httpx.MockTransport(never)),
     )
     body = _ask(_guest(app), "What is the latest electricity generation?")
-    assert body["message"]["status"] == "unavailable" and body["allowance"]["used"] == 0
+    assert body["message"]["status"] == "data_report" and body["allowance"]["used"] == 0
+    assert body["message"]["structured"]["data_report"]["category"] == "budget"
 
 
 def test_google_search_grounding_is_shown_apart_and_never_used_as_evidence(
@@ -250,7 +251,13 @@ def test_provider_readiness_and_live_test_are_for_administrators_only(
     assert auditor.post(f"{API}/admin/providers/openai/test").status_code == 403
     admin = login(make_user(Role.ADMINISTRATOR))
     view = admin.get(f"{API}/admin/providers").json()
-    assert [p["provider"] for p in view["providers"]] == ["anthropic", "openai", "gemini", "brave"]
+    assert [p["provider"] for p in view["providers"]] == [
+        "anthropic",
+        "openai",
+        "gemini",
+        "brave",
+        "firecrawl",
+    ]
     assert view["routing"]["answer"]["primary"] == "fake"
     assert "sk-integration" not in str(view)
     tested = admin.post(f"{API}/admin/providers/openai/test?capability=answer").json()

@@ -75,8 +75,8 @@ test('run analysis: summary, tables, charts, sources and recommendations agree w
   await panel.getByRole('tab', { name: /^Recommendations/ }).click();
   const table = panel.getByTestId('results-recommendation-table');
   await expect(table.locator('th')).toHaveText([
-    'Problem', 'Evidence', 'Proposed action', 'Quantity and unit', 'Time horizon', 'Constraints', 'Cost evidence',
-    'Expected outcome and assumptions', 'Priority', 'Monitoring KPI',
+    'Issue', 'Evidence', 'Proposed action', 'Quantity / unit', 'Feasibility constraints', 'Time horizon', 'Cost evidence',
+    'Expected effect and assumptions', 'Priority', 'Monitoring KPI',
   ]);
   await expect(table.getByTestId('recommendation-row')).toHaveCount(a.recommendations.length);
   expect(a.recommendations.every((r) => !r.cost_known && r.cost.en.startsWith('Unknown'))).toBe(true);
@@ -127,9 +127,10 @@ test('Arabic, right to left, light theme and a phone screen', async ({ page }) =
 
 test('voice: the persona voice is checked and tested, and audio can be stopped', async ({ page }) => {
   await page.goto('/assistant');
+  await page.getByTestId('voice-details').locator('summary').click();
   const voice = page.getByTestId('voice-panel');
   await expect(voice).toHaveAttribute('data-configured', 'true');
-  await voice.getByTestId('persona-option-ilham').click();
+  await page.getByTestId('assistant-identity-card').getByTestId('persona-option-ilham').click();
   await expect(voice.getByTestId('voice-name-ar')).toHaveText('ar-OM-AyshaNeural');
   await expect(voice.getByTestId('voice-name-en')).toHaveText('en-GB-SoniaNeural');
   await expect(voice.getByTestId('voice-verified')).toHaveCount(2);
@@ -138,6 +139,8 @@ test('voice: the persona voice is checked and tested, and audio can be stopped',
   await voice.getByTestId('voice-test').click();
   const response = await tested;
   expect(response.headers()['x-voice']).toBe('ar-OM-AyshaNeural');
+  // The words spoken are shown as a transcript beside the player.
+  await expect(voice.getByTestId('voice-transcript')).toContainText('هذا اختبار للصوت');
   await expect(voice.getByTestId('voice-test-state')).toHaveAttribute('data-state', /playing|idle/);
   // Stop audio (status bar) stops any playback on the page.
   if (await page.getByTestId('stop-audio').isVisible()) await page.getByTestId('stop-audio').click();

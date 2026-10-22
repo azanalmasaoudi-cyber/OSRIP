@@ -25,6 +25,15 @@ SCHEMA = "osrip.balance/1"
 SECTORS = ("electricity", "water", "food_security", "trade")
 Sector = Literal["electricity", "water", "food_security", "trade"]
 BalanceStatus = Literal["surplus", "shortfall", "balanced", "not_determinable"]
+# What kind of response a recommendation is. For a shortfall: efficiency, loss reduction,
+# redistribution, storage, capacity expansion or supplier diversification; for a surplus:
+# storage, local use, redistribution, processing or exports where feasible (never assumed);
+# and data improvements and monitoring for either.
+OptionKind = Literal[
+    "efficiency", "loss_reduction", "redistribution", "storage", "capacity_expansion",
+    "supplier_diversification", "local_use", "processing", "export", "data_improvement",
+    "monitoring",
+]  # fmt: skip
 _EV = r"^S\d{1,4}$"
 
 
@@ -133,6 +142,7 @@ class Recommendation(_M):
     priority_basis: Text
     kpi: Text
     nature: Literal["recommendation", "data_improvement", "conditional_option"]
+    option: OptionKind | None = None
 
     @model_validator(mode="after")
     def _check(self) -> Recommendation:
@@ -148,6 +158,29 @@ class DataGap(_M):
     missing: Text  # what is missing
     blocks: Text  # what it prevents
     where: Text | None = None  # who would publish it (never a guessed URL)
+
+
+class Finding(_M):
+    text: Text
+    evidence: list[str] = Field(default_factory=list)  # S ids
+    balance: str | None = Field(default=None, pattern=r"^B\d{1,3}$")
+
+
+class NextStudy(_M):
+    question: Text
+    data: Text  # the information that would answer it
+    where: Text | None = None  # who would publish it (never a guessed URL)
+
+
+class Conclusion(_M):
+    """How every study ends: what was found, how far the evidence goes, what to do now and
+    later, and what the next study needs."""
+
+    main_findings: list[Finding]
+    evidence_limitations: list[Text]
+    immediate_actions: list[str] = Field(default_factory=list)  # R ids, short horizon
+    medium_term_options: list[str] = Field(default_factory=list)  # R ids, medium or long
+    next_study: list[NextStudy] = Field(default_factory=list)
 
 
 class Scenario(_M):
@@ -198,6 +231,8 @@ class BalanceAnalysis(_M):
     method: Text
     assumptions: list[Text] = Field(default_factory=list)
     limitations: list[Text] = Field(default_factory=list)
+    # Present in every analysis built since 2026-10-21 (older stored ones have none).
+    conclusion: Conclusion | None = None
     generated_by: Literal["deterministic"] = "deterministic"
 
     @model_validator(mode="after")
@@ -220,6 +255,18 @@ class BalanceAnalysis(_M):
         for g in self.data_gaps:
             if g.balance is not None and g.balance not in balances:
                 raise ValueError(f"{g.id} names an unknown balance")
+        if self.conclusion is not None:
+            recs = {r.id: r for r in self.recommendations}
+            named = self.conclusion.immediate_actions + self.conclusion.medium_term_options
+            if set(named) - set(recs):
+                raise ValueError("the conclusion names an unknown recommendation")
+            for f in self.conclusion.main_findings:
+                if set(f.evidence) - known:
+                    raise ValueError("a finding cites unknown evidence")
+                if f.balance is not None and f.balance not in balances:
+                    raise ValueError("a finding names an unknown balance")
+            if any(recs[r].horizon != "short" for r in self.conclusion.immediate_actions):
+                raise ValueError("immediate actions are short-term recommendations only")
         determined = [b for b in self.balances if b.status != "not_determinable"]
         expected = (
             "ok"

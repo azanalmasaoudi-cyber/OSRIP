@@ -28,7 +28,7 @@ function VerifiedBadge({ check }: { check: VoiceCheck | undefined }) {
       : <Badge variant="muted" data-testid="voice-unchecked">{t('voicePanel.unchecked')}</Badge>;
 }
 
-export function VoicePanel() {
+export function VoicePanel({ showPicker = true }: { showPicker?: boolean }) {
   const { t } = useTranslation();
   const appLanguage = useAppLanguage();
   const { persona } = usePersona();
@@ -38,6 +38,7 @@ export function VoicePanel() {
   const [language, setLanguage] = useState<'en' | 'ar'>(appLanguage);
   const [state, setState] = useState<'idle' | 'loading' | 'playing' | 'paused'>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [transcript, setTranscript] = useState<string | null>(null);
   const playback = useRef<Playback | null>(null);
   const aborter = useRef<AbortController | null>(null);
   const configured = Boolean(status.data?.configured);
@@ -61,9 +62,11 @@ export function VoicePanel() {
     const controller = new AbortController();
     aborter.current = controller;
     setState('loading');
+    setTranscript(null);
     testVoice(persona.code, language, controller.signal)
-      .then((audio) => {
+      .then(({ audio, transcript: words }) => {
         if (controller.signal.aborted) return;
+        setTranscript(words);
         playback.current = playAudio(audio, {
           onStart: () => setState('playing'),
           onLevel: (level) => document.documentElement.style.setProperty('--assistant-voice', level.toFixed(3)),
@@ -85,13 +88,13 @@ export function VoicePanel() {
     <section className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3" aria-labelledby="voice-panel-heading" data-testid="voice-panel"
       data-configured={configured ? 'true' : 'false'}>
       <h3 id="voice-panel-heading" className="flex items-center gap-1.5 text-sm font-semibold"><Volume2 aria-hidden="true" className="size-4" />{t('voicePanel.heading')}</h3>
-      <PersonaPicker compact />
+      {showPicker ? <PersonaPicker compact /> : null}
       {configured ? (
         <p className="text-xs"><Badge variant="verified">{t('voicePanel.configured')}</Badge></p>
       ) : (
         <div className="rounded-md border border-dashed border-border-strong/60 p-2 text-xs" role="status" data-testid="voice-not-configured">
           <p className="font-semibold">{t('voicePanel.notConfigured')}</p>
-          <p className="mt-1 text-muted-foreground">{t('voicePanel.setup')}</p>
+          <p className="mt-1 text-muted-foreground">{t('voicePanel.setupShort')}</p>
         </div>
       )}
       <ul className="flex flex-col gap-1 text-xs" data-testid="voice-list">
@@ -127,6 +130,11 @@ export function VoicePanel() {
         ) : null}
       </div>
       <p className="text-xs" role="status" data-testid="voice-test-state" data-state={state}>{error ? <span className="text-destructive">{error}</span> : null}</p>
+      {transcript ? (
+        <p className="rounded-md bg-muted/60 p-2 text-xs" dir="auto" lang={language} data-testid="voice-transcript">
+          <span className="font-semibold">{t('voicePanel.transcript')}: </span>{transcript}
+        </p>
+      ) : null}
       <ul className="flex list-disc flex-col gap-0.5 ps-4 text-xs text-muted-foreground">
         <li>{t('voicePanel.microphone')}</li>
         <li>{t('voicePanel.written')}</li>

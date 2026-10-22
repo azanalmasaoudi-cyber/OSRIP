@@ -28,11 +28,11 @@ test('choosing Ilham changes who answers; switching back keeps the conversation,
   await page.goto('/assistant?mode=synthetic');
   const picker = page.getByTestId('persona-picker').first();
   await expect(picker).toHaveAttribute('data-selected', 'mulhim'); // the default
-  await expect(page.getByTestId('mulhim-name')).toHaveText('Al Mulhim');
+  await expect(page.getByTestId('identity-name')).toHaveText('Al Mulhim');
 
   await choose(page, 'ilham');
-  await expect(page.getByTestId('mulhim-name')).toHaveText('Ilham');
-  const avatar = page.getByTestId('assistant-identity').getByTestId('assistant-avatar');
+  await expect(page.getByTestId('identity-name')).toHaveText('Ilham');
+  const avatar = page.getByTestId('assistant-identity-card').getByTestId('assistant-avatar');
   await expect(avatar).toHaveAttribute('data-persona', 'ilham');
   await expect(avatar.locator('img')).toHaveAttribute('src', /ilham-portrait/);
   await expect(avatar.locator('img')).toHaveAttribute('alt', /fictional Omani woman/);

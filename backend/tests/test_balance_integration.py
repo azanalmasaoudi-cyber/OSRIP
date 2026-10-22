@@ -204,3 +204,33 @@ def test_without_speech_the_voice_test_says_not_configured(app, monkeypatch) -> 
     assert {v["verified"] for p in voices["personas"] for v in p["voices"].values()} == {None}
     r = client.post(f"{API}/assistant/voice/test", json={"persona": "ilham", "language": "ar"})
     assert r.status_code == 503 and r.json()["error"]["code"] == "speech_not_configured"
+
+
+@pytest.mark.parametrize("sector", ["electricity", "water", "food_security", "trade"])
+def test_every_study_ends_with_a_conclusion_and_classified_options(app, sector: str) -> None:  # noqa: ANN001
+    from app.services.analysis.balance import OPTION_BY_ACTION
+
+    doc = _run(TestClient(app), sector)["analysis"]
+    recs = {r["id"]: r for r in doc["recommendations"]}
+    # Each row says what kind of response it is; data requests are data improvements.
+    for r in recs.values():
+        assert r["option"] is not None, r["action"]["en"]
+        if r["nature"] == "data_improvement":
+            assert r["option"] == "data_improvement"
+        else:
+            assert OPTION_BY_ACTION[r["action"]["en"]] == r["option"]
+        assert r["cost_known"] is False and r["cost"]["en"].startswith("Unknown")
+    end = doc["conclusion"]
+    assert len(end["main_findings"]) == len(doc["balances"])
+    assert {f["balance"] for f in end["main_findings"]} == {b["id"] for b in doc["balances"]}
+    known = {s["id"] for s in doc["sources"]}
+    assert all(set(f["evidence"]) <= known for f in end["main_findings"])
+    assert end["evidence_limitations"] and end["next_study"]
+    # Immediate actions are short-term and ranked; later options are medium or long term.
+    assert all(recs[i]["horizon"] == "short" and recs[i]["priority"] != "conditional"
+               for i in end["immediate_actions"])  # fmt: skip
+    assert all(recs[i]["horizon"] in ("medium", "long") for i in end["medium_term_options"])
+    # A surplus is never assumed exportable: any export wording carries a feasibility limit.
+    for r in recs.values():
+        if "export" in r["action"]["en"].lower() and r["option"] != "processing":
+            assert "feasib" in r["action"]["en"].lower() or "only where" in r["action"]["en"]

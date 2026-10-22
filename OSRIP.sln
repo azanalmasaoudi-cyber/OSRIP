@@ -93,6 +93,19 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "demo", "demo", "{5F4E4F17-9
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "evidence", "evidence", "{0B712951-2047-5BE0-A42C-68C45DAA3B66}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2026-10-22-research-workflow", "2026-10-22-research-workflow", "{D0192171-A157-51D2-93CF-8D3B8E28109D}"
+	ProjectSection(SolutionItems) = preProject
+		docs\evidence\2026-10-22-research-workflow\assistant-arabic-1440.jpg = docs\evidence\2026-10-22-research-workflow\assistant-arabic-1440.jpg
+		docs\evidence\2026-10-22-research-workflow\assistant-arabic-phone.jpg = docs\evidence\2026-10-22-research-workflow\assistant-arabic-phone.jpg
+		docs\evidence\2026-10-22-research-workflow\assistant-english-1440.jpg = docs\evidence\2026-10-22-research-workflow\assistant-english-1440.jpg
+		docs\evidence\2026-10-22-research-workflow\data-report-reply.png = docs\evidence\2026-10-22-research-workflow\data-report-reply.png
+		docs\evidence\2026-10-22-research-workflow\electricity-indicators-trends.jpg = docs\evidence\2026-10-22-research-workflow\electricity-indicators-trends.jpg
+		docs\evidence\2026-10-22-research-workflow\electricity-monthly-arabic.jpg = docs\evidence\2026-10-22-research-workflow\electricity-monthly-arabic.jpg
+		docs\evidence\2026-10-22-research-workflow\settings-schedules.png = docs\evidence\2026-10-22-research-workflow\settings-schedules.png
+		docs\evidence\2026-10-22-research-workflow\settings-services.jpg = docs\evidence\2026-10-22-research-workflow\settings-services.jpg
+		docs\evidence\2026-10-22-research-workflow\study-completed.png = docs\evidence\2026-10-22-research-workflow\study-completed.png
+	EndProjectSection
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ai-providers", "ai-providers", "{D32045D4-499E-52DC-B174-22CB7E6DE501}"
 	ProjectSection(SolutionItems) = preProject
 		docs\evidence\ai-providers\grounded-panel-ar-phone.png = docs\evidence\ai-providers\grounded-panel-ar-phone.png
@@ -189,6 +202,7 @@ Global
 		{EEDDB7A6-C2B2-5952-86EC-8463417DCABF} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
 		{5F4E4F17-9349-5ECE-AD7A-EB60F6948C39} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
 		{0B712951-2047-5BE0-A42C-68C45DAA3B66} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
+		{D0192171-A157-51D2-93CF-8D3B8E28109D} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{D32045D4-499E-52DC-B174-22CB7E6DE501} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{792931BC-B131-5863-A4F2-D392362DE4F8} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{BE95394C-9AA0-5C1C-BD9C-66405DE6D1A4} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}

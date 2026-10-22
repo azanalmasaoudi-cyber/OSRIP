@@ -53,3 +53,32 @@ test('The report escapes every value and contains no script', () => {
   assert.ok(!html.includes('href="javascript'), 'only http(s) links become links');
   assert.ok(html.includes('&#39;=HYPERLINK') || html.includes('=HYPERLINK(&quot;'));
 });
+
+test('The report ends with the conclusion, escaped, and recommendation columns in the agreed order', () => {
+  const model = {
+    kind: 'balance', id: 'abc', title: 'Water', question: null, textLanguage: 'en',
+    status: { code: 'ok', label: 'Done', tone: 'verified' }, running: false, dataMode: 'synthetic',
+    summary: [], cards: [], dataGaps: [], scenario: null, forecast: null, method: [], assumptions: [], limitations: [],
+    prioritization: null, tables: [], sources: [],
+    recommendations: [{ id: 'R1', problem: 'Issue', evidence: 'Ev', evidenceIds: [], action: 'Act', quantity: null, quantityUnit: null,
+      quantityNote: 'n', horizon: 'Short', constraints: 'Feasible?', cost: 'Unknown', outcome: 'Effect', priority: null, priorityBasis: null,
+      kpi: 'KPI', nature: { code: 'recommendation', label: 'R' }, option: { code: 'storage', label: 'Storage' } }],
+    conclusion: { findings: ['<b>gap</b>'], limitations: ['Missing peak'], immediate: [{ id: 'R1', action: 'Act' }], mediumTerm: [],
+      nextStudy: [{ question: 'Q?', data: 'Data', where: null }] },
+    downloads: { csv: null, report: null },
+  };
+  const labels = {
+    summary: 'S', tables: 'T', sources: 'So', recommendations: 'R', dataGaps: 'G', decisionSupport: 'D', charts: 'C',
+    conclusion: { title: 'Conclusion', findings: 'Findings', limits: 'Limits', immediate: 'Now', mediumTerm: 'Later', next: 'Next', none: 'None' },
+    columns: { problem: 'Issue', evidence: 'Evidence', action: 'Action', quantity: 'Qty', horizon: 'Horizon', constraints: 'Feasibility',
+      cost: 'Cost', outcome: 'Effect', priority: 'Priority', kpi: 'KPI' },
+  };
+  const html = modelToHtml(model, 'en', labels);
+  const order = ['Issue', 'Evidence', 'Action', 'Qty', 'Feasibility', 'Horizon', 'Cost', 'Effect', 'Priority', 'KPI']
+    .map((h) => html.indexOf(`<th scope="col">${h}</th>`));
+  assert.deepEqual([...order].sort((a, b) => a - b), order, 'columns in the agreed order');
+  assert.ok(order.every((i) => i > 0));
+  assert.ok(html.indexOf('<h2>Conclusion</h2>') > html.indexOf('<h2>R</h2>'), 'the conclusion follows the recommendations');
+  assert.ok(html.includes('&lt;b&gt;gap&lt;/b&gt;') && !html.includes('<b>gap'));
+  assert.ok(html.includes('<h3>Later</h3><p class="muted">None</p>'), 'an empty part says so');
+});

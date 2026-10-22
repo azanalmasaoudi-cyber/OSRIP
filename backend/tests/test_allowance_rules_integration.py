@@ -98,7 +98,7 @@ def test_the_allowance_rules_hold_together_across_personas_languages_text_and_vo
     failed = uuid.uuid4()
     for _ in range(2):
         r = _ask(client, "please fail", failed)
-        assert r.status_code == 201 and r.json()["message"]["status"] == "unavailable"
+        assert r.status_code == 201 and r.json()["message"]["status"] == "data_report"
     assert _used(client) == 0
 
     # Answer 1 (Al Mulhim, English, typed) counts once...

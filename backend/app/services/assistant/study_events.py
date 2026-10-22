@@ -837,11 +837,11 @@ class StudyStream:
                       "حُجبت الإجابة: رقم غير مدعوم بمصادره.")  # fmt: skip
         findings = (
             split_findings(reply.content)
-            if status in ("answered", "no_evidence", "clarification")
+            if status in ("answered", "no_evidence", "clarification", "data_report")
             else []
         )
         cited = set(reply.citations or [])
-        if status == "answered":
+        if status in ("answered", "data_report"):
             final = [d for d, ds in self.datasets.items()
                      if (set(ds["evidence_ids"]) & cited)]  # fmt: skip
         else:

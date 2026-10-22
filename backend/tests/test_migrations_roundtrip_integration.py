@@ -282,3 +282,57 @@ def test_0020_balance_analyses_checks_and_round_trip(scratch_url: str) -> None:
         _exec(scratch_url, insert, "supply_balance", "osrip.balance/1", balance, sha)
     _alembic("upgrade", "head")
     _exec(scratch_url, insert, "supply_balance", "osrip.balance/1", balance, sha)
+
+
+def test_0021_research_workflow_checks_and_round_trip(scratch_url: str) -> None:
+    _alembic("upgrade", "head")
+    guest, conv = uuid.uuid4(), uuid.uuid4()
+    _exec(
+        scratch_url,
+        "INSERT INTO guest_session (id, token_hash, csrf_hash, client_hash, answer_limit, expires_at, policy_version) "
+        "VALUES (%s, %s, %s, %s, 5, now() + interval '1 day', 1)",
+        guest, "t" * 64, "c" * 64, "h" * 64,
+    )  # fmt: skip
+    _exec(
+        scratch_url,
+        "INSERT INTO assistant_conversation (id, guest_session_id, title, language, data_mode) "
+        "VALUES (%s, %s, 'c', 'en', 'synthetic')",
+        conv, guest,
+    )  # fmt: skip
+    _exec(scratch_url, "INSERT INTO assistant_message (conversation_id, role, content, status) "
+          "VALUES (%s, 'assistant', 'a data-based report', 'data_report')", conv)  # fmt: skip
+    _exec(scratch_url, "INSERT INTO provider_call (provider, capability, status, credits) "
+          "VALUES ('firecrawl', 'retrieve', 'ok', 3)")  # fmt: skip
+    schedule = (
+        "INSERT INTO report_schedule (name, sector, data_mode, question, frequency, source_scope, "
+        "allow_paid, enabled) VALUES ('s', 'water', 'synthetic', 'q', 'monthly', %s, %s, %s)"
+    )
+    # A schedule that calls external services cannot be enabled without allow_paid.
+    with pytest.raises(psycopg.errors.CheckViolation):
+        _exec(scratch_url, schedule, "official", False, True)
+    _exec(scratch_url, schedule, "official", True, True)
+    _exec(scratch_url, schedule, "none", False, True)
+    job = (
+        "INSERT INTO research_job (sector, area, question, language, data_mode, source_scope, "
+        "state, cache_key, finished_at) VALUES ('water', 'OM', 'q', 'en', 'synthetic', 'none', %s, %s, %s)"
+    )
+    with pytest.raises(psycopg.errors.CheckViolation):  # a finished job needs its end time
+        _exec(scratch_url, job, "succeeded", "a" * 64, None)
+    with pytest.raises(psycopg.errors.CheckViolation):  # unknown state
+        _exec(scratch_url, job, "paused", "a" * 64, None)
+    _exec(scratch_url, job, "queued", "a" * 64, None)
+
+    _alembic("downgrade", "0020_balance_analysis")
+    # Messages are kept (as 'unavailable'); the job tables and retrieval calls are gone.
+    assert _one(
+        scratch_url, "SELECT status FROM assistant_message WHERE conversation_id = %s", conv
+    ) == ("unavailable",)
+    assert _one(scratch_url, "SELECT to_regclass('research_job') IS NULL") == (True,)
+    assert _one(scratch_url, "SELECT count(*) FROM provider_call WHERE provider = 'firecrawl'") == (
+        0,
+    )
+    with pytest.raises(psycopg.errors.CheckViolation):
+        _exec(scratch_url, "INSERT INTO assistant_message (conversation_id, role, content, status) "
+              "VALUES (%s, 'assistant', 'x', 'data_report')", conv)  # fmt: skip
+    _alembic("upgrade", "head")
+    _exec(scratch_url, job, "queued", "b" * 64, None)

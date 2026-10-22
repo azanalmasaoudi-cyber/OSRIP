@@ -88,6 +88,8 @@
     <Compile Include="app\api\routes\reference.py" />
     <Compile Include="app\api\routes\reports.py" />
     <Compile Include="app\api\routes\research.py" />
+    <Compile Include="app\api\routes\research_jobs.py" />
+    <Compile Include="app\api\routes\series.py" />
     <Compile Include="app\api\routes\studies.py" />
     <Compile Include="app\cli.py" />
     <Compile Include="app\core\__init__.py" />
@@ -110,6 +112,7 @@
     <Compile Include="app\domain\results.py" />
     <Compile Include="app\domain\scenarios.py" />
     <Compile Include="app\domain\study.py" />
+    <Compile Include="app\domain\timeline.py" />
     <Compile Include="app\main.py" />
     <Compile Include="app\models\__init__.py" />
     <Compile Include="app\models\accounts.py" />
@@ -137,6 +140,7 @@
     <Compile Include="app\services\analysis\runs.py" />
     <Compile Include="app\services\analysis\sections.py" />
     <Compile Include="app\services\assistant\__init__.py" />
+    <Compile Include="app\services\assistant\data_report.py" />
     <Compile Include="app\services\assistant\grounding.py" />
     <Compile Include="app\services\assistant\guest.py" />
     <Compile Include="app\services\assistant\lookup.py" />
@@ -172,8 +176,13 @@
     <Compile Include="app\services\reference_pack.py" />
     <Compile Include="app\services\reports.py" />
     <Compile Include="app\services\research\__init__.py" />
+    <Compile Include="app\services\research\crawl.py" />
+    <Compile Include="app\services\research\firecrawl.py" />
+    <Compile Include="app\services\research\jobs.py" />
     <Compile Include="app\services\research\pages.py" />
+    <Compile Include="app\services\research\robots.py" />
     <Compile Include="app\services\research\safe_fetch.py" />
+    <Compile Include="app\services\research\schedules.py" />
     <Compile Include="app\services\research\search.py" />
     <Compile Include="app\services\research\service.py" />
     <Compile Include="app\services\research\sources.py" />
@@ -181,6 +190,7 @@
     <Compile Include="app\services\sms.py" />
     <Compile Include="app\services\speech.py" />
     <Compile Include="app\services\studies.py" />
+    <Compile Include="app\services\timeline.py" />
     <Compile Include="app\services\voice_realtime.py" />
     <Compile Include="app\voice\__init__.py" />
     <Compile Include="app\voice\agent.py" />
@@ -199,6 +209,10 @@
     <Compile Include="tests\test_balance.py" />
     <Compile Include="tests\test_balance_integration.py" />
     <Compile Include="tests\test_calculations.py" />
+    <Compile Include="tests\test_change_ids.py" />
+    <Compile Include="tests\test_crawl.py" />
+    <Compile Include="tests\test_data_report.py" />
+    <Compile Include="tests\test_data_report_integration.py" />
     <Compile Include="tests\test_db_constraints.py" />
     <Compile Include="tests\test_forecast_scenarios_integration.py" />
     <Compile Include="tests\test_forecasting.py" />
@@ -221,12 +235,15 @@
     <Compile Include="tests\test_release_audit_integration.py" />
     <Compile Include="tests\test_research.py" />
     <Compile Include="tests\test_research_assistant_units.py" />
+    <Compile Include="tests\test_research_jobs_integration.py" />
     <Compile Include="tests\test_research_progress_integration.py" />
     <Compile Include="tests\test_research_workflow.py" />
     <Compile Include="tests\test_reviews_reports_integration.py" />
+    <Compile Include="tests\test_series_integration.py" />
     <Compile Include="tests\test_settings_isolation.py" />
     <Compile Include="tests\test_studies_integration.py" />
     <Compile Include="tests\test_study_schema.py" />
+    <Compile Include="tests\test_timeline.py" />
     <Compile Include="tests\test_upgrade_integration.py" />
     <Compile Include="tests\test_voice_bridge.py" />
     <Compile Include="tests\test_voice_gender.py" />
@@ -264,6 +281,7 @@
     <Compile Include="alembic\versions\0018_provider_calls.py" />
     <Compile Include="alembic\versions\0019_study_events.py" />
     <Compile Include="alembic\versions\0020_balance_analysis.py" />
+    <Compile Include="alembic\versions\0021_research_workflow.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="alembic\sql\0001_core_down.sql" />
@@ -306,6 +324,8 @@
     <Content Include="alembic\sql\0019_study_events_up.sql" />
     <Content Include="alembic\sql\0020_balance_analysis_down.sql" />
     <Content Include="alembic\sql\0020_balance_analysis_up.sql" />
+    <Content Include="alembic\sql\0021_research_workflow_down.sql" />
+    <Content Include="alembic\sql\0021_research_workflow_up.sql" />
     <Content Include="app\knowledge\assistant_profile_v1.json" />
     <Content Include="app\knowledge\assistant_profile_v2.json" />
     <Content Include="app\knowledge\assistant_profile_v3.json" />

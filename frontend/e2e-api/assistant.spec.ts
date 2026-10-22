@@ -65,8 +65,8 @@ test('the orb shows real states and the panel works by keyboard', async ({ page 
   await expect(page.getByTestId('assistant-panel')).toBeVisible();
   await page.getByTestId('assistant-input').fill('please fail');
   await page.keyboard.press('Enter');
-  await expect(page.getByTestId('assistant-message').last()).toHaveAttribute('data-status', 'unavailable');
-  // A failure is not charged.
+  // The answer service failed: a data-based report (no topic named, so no figures), not charged.
+  await expect(page.getByTestId('assistant-message').last()).toHaveAttribute('data-status', 'data_report');
   await expect(page.getByTestId('guest-allowance')).toHaveAttribute('data-remaining', '5');
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('assistant-panel')).toBeHidden();
@@ -101,8 +101,8 @@ test('an unsupported number is withheld; failures and ambiguity are explained', 
 
   await ask(page, 'please fail');
   const failed = page.getByTestId('assistant-message').last();
-  await expect(failed).toHaveAttribute('data-status', 'unavailable');
-  await expect(failed.getByRole('button', { name: 'Try again' })).toBeVisible();
+  await expect(failed).toHaveAttribute('data-status', 'data_report');
+  await expect(failed.getByRole('button', { name: 'Try the AI answer again' })).toBeVisible();
 
   await ask(page, 'How did it change?');
   await expect(page.getByTestId('assistant-message').last()).toHaveAttribute('data-status', 'clarification');

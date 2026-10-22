@@ -59,6 +59,17 @@ def get(analysis_id: uuid.UUID, session: DbSession) -> dict[str, Any]:
         return balance.out(balance.get(session, analysis_id))
 
 
+@router.get("/{analysis_id}/spoken")
+def spoken(
+    analysis_id: uuid.UUID, session: DbSession, language: Literal["en", "ar"] = "en"
+) -> dict[str, str]:
+    """The exact words the voice reads for this analysis (the transcript shown beside the
+    player): its summary and each balance's status, not every table cell."""
+    with session.begin():
+        row = balance.get(session, analysis_id)
+        return {"language": language, "text": balance_export.spoken_summary(row.result, language)}
+
+
 @router.get("/{analysis_id}/reproduce")
 def reproduce(analysis_id: uuid.UUID, session: DbSession) -> dict[str, Any]:
     with session.begin():

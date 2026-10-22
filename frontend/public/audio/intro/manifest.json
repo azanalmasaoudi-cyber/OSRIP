@@ -1,0 +1,7 @@
+{
+  "about": "Pre-recorded Arabic introductions made in Canva, one for each persona. They are recordings, never live speech, and they play only when the person presses Play. To add one: export the clip from Canva (MP3, M4A, OGG or WAV), put the file in this folder (frontend/public/audio/intro/), and set its file name in 'src' and its exact words in 'transcript'. While 'src' is null the introduction is simply not offered.",
+  "clips": {
+    "mulhim": { "ar": { "src": null, "transcript": null } },
+    "ilham": { "ar": { "src": null, "transcript": null } }
+  }
+}

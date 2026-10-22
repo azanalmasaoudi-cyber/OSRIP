@@ -64,7 +64,10 @@ from app.models.reference import (
 from app.models.research import (
     AlertEvent,
     AlertRule,
+    ReportSchedule,
     ResearchCandidate,
+    ResearchDocument,
+    ResearchJob,
     SavedResearch,
     StudyRun,
     WatchlistItem,
@@ -73,6 +76,9 @@ from app.models.research import (
 __all__ = [
     "AlertEvent",
     "AlertRule",
+    "ReportSchedule",
+    "ResearchDocument",
+    "ResearchJob",
     "SavedResearch",
     "StudyRun",
     "WatchlistItem",

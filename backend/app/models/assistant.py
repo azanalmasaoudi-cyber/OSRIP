@@ -136,13 +136,14 @@ class ProviderCall(Base):
 
     id: Mapped[int] = mapped_column(Identity(always=True), primary_key=True)
     provider: Mapped[str] = mapped_column(Text)
-    capability: Mapped[str] = mapped_column(Text)  # answer | search | test_answer | test_search
+    capability: Mapped[str] = mapped_column(Text)  # answer | search | retrieve | test_*
     model: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(Text)  # ok, or the failure code
     duration_ms: Mapped[int] = mapped_column(Integer, server_default=text("0"))
     input_tokens: Mapped[int | None] = mapped_column(Integer)
     output_tokens: Mapped[int | None] = mapped_column(Integer)
     searches: Mapped[int | None] = mapped_column(Integer)
+    credits: Mapped[int | None] = mapped_column(Integer)  # page retrieval (migration 0021)
     estimated_cost_usd: Mapped[Decimal | None] = mapped_column(Numeric(12, 6))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), **NOW)
 

@@ -25,14 +25,16 @@ import { periodRange, type ResultRecommendation, type ResultSource, type ResultT
  * assistant study, which stay in the language the question was asked in.
  */
 
-const TABS = ['summary', 'tables', 'charts', 'sources', 'recommendations'] as const;
+const TABS = ['summary', 'tables', 'charts', 'sources', 'recommendations', 'conclusion'] as const;
 type Tab = (typeof TABS)[number];
 
-export function ResultsPanel({ model, onListen, listenLabel, listening = false }: {
+export function ResultsPanel({ model, onListen, listenLabel, listening = false, transcript = null }: {
   model: ResultsModel;
   onListen?: () => void;
   listenLabel?: string;
   listening?: boolean;
+  /** The exact words the voice reads (shown while and after it plays). */
+  transcript?: string | null;
 }) {
   const { t } = useTranslation();
   const language = useAppLanguage();
@@ -41,11 +43,17 @@ export function ResultsPanel({ model, onListen, listenLabel, listening = false }
   const chartCount = model.tables.reduce((n, x) => n + x.charts.length, 0);
   const counts: Record<Tab, number | null> = {
     summary: null, tables: model.tables.length, charts: chartCount, sources: model.sources.length, recommendations: model.recommendations.length,
+    conclusion: null,
   };
   const reportLabels: ReportLabels = {
     summary: t('results.tabs.summary'), tables: t('results.tabs.tables'), sources: t('results.tabs.sources'),
     recommendations: t('results.tabs.recommendations'), dataGaps: t('balance.dataGaps'), decisionSupport: t('balance.decisionSupport'),
     charts: t('results.noCharts'),
+    conclusion: {
+      title: t('results.conclusion.title'), findings: t('results.conclusion.findings'), limits: t('results.conclusion.limits'),
+      immediate: t('results.conclusion.immediate'), mediumTerm: t('results.conclusion.mediumTerm'), next: t('results.conclusion.next'),
+      none: t('results.conclusion.none'),
+    },
     columns: {
       problem: t('balance.columns.problem'), evidence: t('balance.columns.evidence'), action: t('balance.columns.action'),
       quantity: t('balance.columns.quantity'), horizon: t('balance.columns.horizon'), constraints: t('balance.columns.constraints'),
@@ -82,6 +90,11 @@ export function ResultsPanel({ model, onListen, listenLabel, listening = false }
             </Button>
           ) : null}
         </div>
+        {transcript ? (
+          <p className="rounded-md bg-muted/60 p-2 text-xs" dir="auto" data-testid="results-transcript">
+            <span className="font-semibold">{t('voicePanel.transcript')}: </span>{transcript}
+          </p>
+        ) : null}
       </header>
 
       <Tabs tabs={TABS.map((id) => ({ id, label: t(`results.tabs.${id}`), badge: counts[id] ? String(counts[id]) : null }))}
@@ -103,6 +116,9 @@ export function ResultsPanel({ model, onListen, listenLabel, listening = false }
       </div>
       <div {...tabPanelProps(idBase, 'recommendations', tab === 'recommendations')} data-testid="results-recommendations" className="flex flex-col gap-3 focus-visible:outline-2 focus-visible:outline-ring">
         {tab === 'recommendations' ? <RecommendationsTab model={model} /> : null}
+      </div>
+      <div {...tabPanelProps(idBase, 'conclusion', tab === 'conclusion')} data-testid="results-conclusion" className="flex flex-col gap-3 focus-visible:outline-2 focus-visible:outline-ring">
+        {tab === 'conclusion' ? <ConclusionTab model={model} /> : null}
       </div>
     </section>
   );
@@ -322,11 +338,13 @@ function RecommendationsTab({ model }: { model: ResultsModel }) {
   );
 }
 
-const COLUMNS = ['problem', 'evidence', 'action', 'quantity', 'horizon', 'constraints', 'cost', 'outcome', 'priority', 'kpi'] as const;
+// Issue | Evidence | Proposed action | Quantity/unit | Feasibility constraints | Time horizon | Cost evidence |
+// Expected effect and assumptions | Priority | Monitoring KPI.
+const COLUMNS = ['problem', 'evidence', 'action', 'quantity', 'constraints', 'horizon', 'cost', 'outcome', 'priority', 'kpi'] as const;
 
 function cell(r: ResultRecommendation, key: (typeof COLUMNS)[number], language: 'en' | 'ar', notQuantified: string): ReactNode {
   switch (key) {
-    case 'problem': return <><span className="me-1 font-mono text-xs text-muted-foreground" dir="ltr">{r.id}</span><bdi>{r.problem}</bdi><span className="mt-1 block text-xs text-muted-foreground">{r.nature.label}</span></>;
+    case 'problem': return <><span className="me-1 font-mono text-xs text-muted-foreground" dir="ltr">{r.id}</span><bdi>{r.problem}</bdi><span className="mt-1 block text-xs text-muted-foreground">{r.nature.label}{r.option ? ` · ${r.option.label}` : ''}</span></>;
     case 'evidence': return <><bdi>{r.evidence}</bdi>{r.evidenceIds.length ? <span className="block font-mono text-xs text-muted-foreground" dir="ltr">[{r.evidenceIds.join(', ')}]</span> : null}</>;
     case 'action': return <bdi className="font-medium">{r.action}</bdi>;
     case 'quantity': return r.quantity ? <><span dir="ltr" className="tabular-nums">{formatDecimal(r.quantity, language, 3) ?? r.quantity}</span> {r.quantityUnit}<span className="block text-xs text-muted-foreground">{r.quantityNote}</span></>
@@ -338,6 +356,25 @@ function cell(r: ResultRecommendation, key: (typeof COLUMNS)[number], language: 
     case 'priority': return r.priority ? <><Badge variant={PRIORITY_TONE[r.priority.code] ?? 'outline'} data-testid="priority" data-priority={r.priority.code}>{r.priority.label}</Badge>{r.priorityBasis ? <span className="mt-1 block text-xs text-muted-foreground">{r.priorityBasis}</span> : null}</> : '—';
     case 'kpi': return r.kpi ?? '—';
   }
+}
+
+function ConclusionTab({ model }: { model: ResultsModel }) {
+  const { t } = useTranslation();
+  const c = model.conclusion;
+  if (!c) return <Empty text={model.kind === 'study' ? t('results.conclusion.studyNone') : t('results.conclusion.missing')} />;
+  const list = (items: string[], testid: string) => (items.length
+    ? <ul className="list-disc ps-5 text-sm" data-testid={testid}>{items.map((x, i) => <li key={i} dir="auto">{x}</li>)}</ul>
+    : <p className="text-sm text-muted-foreground">{t('results.conclusion.none')}</p>);
+  return (
+    <Appear className="flex flex-col gap-3" data-testid="conclusion">
+      <section><h3 className="text-sm font-semibold">{t('results.conclusion.findings')}</h3>{list(c.findings, 'conclusion-findings')}</section>
+      <section><h3 className="text-sm font-semibold">{t('results.conclusion.limits')}</h3>{list(c.limitations, 'conclusion-limits')}</section>
+      <section><h3 className="text-sm font-semibold">{t('results.conclusion.immediate')}</h3>{list(c.immediate.map((a) => `${a.id} · ${a.action}`), 'conclusion-immediate')}</section>
+      <section><h3 className="text-sm font-semibold">{t('results.conclusion.mediumTerm')}</h3>{list(c.mediumTerm.map((a) => `${a.id} · ${a.action}`), 'conclusion-medium')}</section>
+      <section><h3 className="text-sm font-semibold">{t('results.conclusion.next')}</h3>
+        {list(c.nextStudy.map((n) => `${n.question} — ${n.data}${n.where ? ` (${n.where})` : ''}`), 'conclusion-next')}</section>
+    </Appear>
+  );
 }
 
 function RecommendationTable({ rows }: { rows: ResultRecommendation[] }) {

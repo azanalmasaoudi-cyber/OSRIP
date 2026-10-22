@@ -1,5 +1,36 @@
 # Test results
 
+## 2026-10-22: data-based fallback reports, series timelines, background studies and Firecrawl (branch `feature/research-crawl-series`)
+
+What changed:
+- **Assistant failure diagnosed.** `OSRIP_ANTHROPIC_API_KEY` in `backend/.env` is truncated (Anthropic answers 401 `authentication_error`) and `OSRIP_RESEARCH_API_KEY` holds the same value, not a Brave key (Brave answers 422). No key value was printed.
+- **Graceful degradation** (migration 0021): a failing answer service gives a labelled "data-based report without AI interpretation" (`data_report`), never charged, retryable; sanitized server log with the request id; web-search failure notice with the data's last update; missing inputs and next steps when the data do not answer.
+- **Chronological series** (`/series/timeline`, `.csv`), sector pages in the order key indicators → trends → detailed table → analysis → recommendations → sources.
+- **Studies:** option kinds, an end-of-study conclusion, the requested recommendation columns; background studies with progress, stop, retry, cache and resume; Firecrawl v2 adapter with robots.txt, SSRF and limit checks; scheduled reports off by default.
+- **Interface:** conversation on the right on wide screens; compact identity card; Settings page; navigation Overview … Settings; Help panel; transcripts; one playback at a time; optional recorded-introduction slots.
+
+Browsers: installed Edge (`PW_CHANNEL=msedge`). Scripted assistant, research and speech providers; no Firecrawl key; no real AI, search or Azure Speech call succeeded (see "In the desktop app's browser").
+
+| Check | Result |
+|---|---|
+| `ruff check` and `ruff format --check` (backend) | Pass |
+| Backend `pytest` with database tests | **693 passed**. Two fixes found by the full run: a new test's assertions depended on test order (rewritten), and Alembic's logging setup disabled the app's loggers when migrations ran in the same process (`alembic/env.py` now keeps them; the launcher runs migrations in a separate process, so the server was not affected). New: `test_data_report.py` (21), `test_data_report_integration.py` (4), `test_timeline.py` (11), `test_series_integration.py` (4), `test_crawl.py` (26), `test_research_jobs_integration.py` (8), migration 0021 round trip; balance tests extended (65) |
+| `tsc -b`, `npm run lint`, `npm run build` | Pass (the existing bundle-size warning remains) |
+| Frontend unit tests | 8 passed (1 new: the report's conclusion and column order) |
+| New full-stack spec `e2e-api/research-workflow.spec.ts` | **7 passed**: conversation right of the portrait and results at 1440 px in English and Arabic, composer in view, no long notes under the portrait; phone order identity → conversation → results; a failing answer service gives a labelled, cited data report with a retry and, without a topic, missing inputs and next steps with no figures; the sector page order, chart and table with one dataset id, chronological periods and the CSV; a background study with eight steps, conclusion and next steps; navigation order, Settings services and a schedule created switched off |
+| Full-stack suite, desktop and Pixel 7 (141 tests), before the last fixes | 131 passed, 1 skipped, 9 failed. Five were tests expecting the old "unavailable" reply or the old provider list (updated); one was a real regression (the readiness panel rejected the new `firecrawl` provider, fixed); three were sideways scrolling on `/assistant` in Arabic at 1024 px (fixed: two columns only from 1280 px, mirrored chart margins). One phone keyboard test is unrelated to these changes |
+| Re-runs after the fixes | Chunk of seven specs on both projects (50 tests): 48 passed, 2 timed out on battery power. The affected specs on Chromium (36 tests, including `research-workflow`, `quality`, `research-brief`, `phone`, `personas`, `upgrade`, `studies`, `workspace` and the map filter): 35 passed; the responsive matrix ran out of its own 5-minute budget, then **passed alone** (six widths, English and Arabic, seven routes including `/assistant`) |
+| Mock suite (44 tests) | 40 passed, 3 skipped, 1 failed: the intro's phone test (`entrance.spec.ts:262`, sector images of unequal height while loading). It also fails with this round's only global style change removed (3 of 3 runs), so it is not caused by these changes; the intro is unchanged here |
+| `openapi.json` | Regenerated: 137 paths, 158 operations |
+| In the desktop app's browser, with the real `backend/.env` (separate ports 8029/5179) | The question «ما آخر قيمة لتوليد الكهرباء، وكيف تغيرت؟» called Anthropic, got 401, and returned an Arabic data-based report with 7 cited figures and two OSRIP change calculations; the server log line has the request id, model, `code=http_401 detail=authentication_error category=authentication` and no key. Settings › Services shows "AI unavailable · data reports" with the fix, and web search "brave · last call failed". The assistant page in Arabic and English at 1440 px (conversation on the right), Arabic at 1024 px and 375 px with no sideways scrolling; electricity series annual and monthly with Arabic month names and year-to-date totals apart. Screenshots: `docs/evidence/2026-10-22-research-workflow/` |
+
+**Not verified:**
+- a working AI answer, Brave search and Azure Speech with real credentials (the configured keys are wrong or missing);
+- Firecrawl against the live service (no key; the adapter is tested with a mock transport built from the v2 reference);
+- scheduled runs over days (the scheduler is off by default; `tick()` is tested directly);
+- recorded Canva introductions (no clip supplied yet; the slots stay hidden).
+- The laptop ran on battery (27%), which slowed the browser runs.
+
 ## 2026-10-20: shortage and surplus analysis, assistant workspace and voices (branch `feature/assistant-analysis-voice`)
 
 What changed:

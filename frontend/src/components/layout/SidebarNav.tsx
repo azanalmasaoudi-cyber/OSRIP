@@ -11,6 +11,7 @@ import {
   LineChart,
   Lock,
   Map,
+  Settings,
   Ship,
   UserRound,
   Users,
@@ -38,6 +39,7 @@ export type NavKey =
   | 'nav.reports'
   | 'nav.library'
   | 'nav.accountShort'
+  | 'nav.settings'
   | 'nav.dataManagement'
   | 'nav.users'
   | 'nav.health';
@@ -50,36 +52,33 @@ export interface NavItem {
 }
 
 interface NavGroup {
-  label: 'nav.groupResources' | 'nav.groupAnalyse' | 'nav.groupMore' | 'nav.groupYou' | 'nav.groupAdmin' | null;
+  label: 'nav.groupMain' | 'nav.groupMoreTools' | 'nav.groupYou' | 'nav.groupAdmin' | null;
   items: readonly NavItem[];
 }
 
-/** Overview; the four resources; Map, Studies, Scenarios and Sources; the AI Assistant; outputs;
- * the account; administration (authorized users). Page titles keep their full names. */
+/** The main destinations, in this order: Overview, the four sectors, Studies, Sources and
+ * Settings. Then the other tools (the AI Assistant, the map, scenarios, reports, the library),
+ * the account and administration (authorized users). Page titles keep their full names. */
 export const NAV_GROUPS: readonly NavGroup[] = [
-  { label: null, items: [{ path: '/overview', key: 'nav.overview', icon: LayoutDashboard }] },
   {
-    label: 'nav.groupResources',
+    label: null,
     items: [
+      { path: '/overview', key: 'nav.overview', icon: LayoutDashboard },
       { path: '/energy/electricity', key: 'nav.electricity', icon: Zap },
       { path: '/energy/water', key: 'nav.water', icon: Droplets },
       { path: '/food-security', key: 'nav.foodSecurity', icon: Wheat },
       { path: '/trade', key: 'nav.trade', icon: Ship },
-    ],
-  },
-  {
-    label: 'nav.groupAnalyse',
-    items: [
-      { path: '/geography', key: 'nav.map', icon: Map },
       { path: '/studies', key: 'nav.studies', icon: FlaskConical },
-      { path: '/forecasts', key: 'nav.scenarios', icon: LineChart },
       { path: '/sources', key: 'nav.sourcesShort', icon: BookOpen },
-      { path: '/assistant', key: 'nav.aiAssistant', icon: Bot },
+      { path: '/settings', key: 'nav.settings', icon: Settings },
     ],
   },
   {
-    label: 'nav.groupMore',
+    label: 'nav.groupMoreTools',
     items: [
+      { path: '/assistant', key: 'nav.aiAssistant', icon: Bot },
+      { path: '/geography', key: 'nav.map', icon: Map },
+      { path: '/forecasts', key: 'nav.scenarios', icon: LineChart },
       { path: '/reports', key: 'nav.reports', icon: FileText },
       { path: '/library', key: 'nav.library', icon: LibraryBig },
     ],

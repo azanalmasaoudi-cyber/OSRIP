@@ -25,7 +25,7 @@ from urllib.parse import urljoin, urlsplit
 import httpx
 
 MAX_REDIRECTS = 3
-ALLOWED_TYPES = ("text/html", "application/xhtml+xml", "text/plain", "application/pdf")
+ALLOWED_TYPES = ("text/html", "application/xhtml+xml", "text/plain", "text/csv", "application/pdf")
 USER_AGENT = "OSRIP-research/1.0 (academic research prototype)"
 
 

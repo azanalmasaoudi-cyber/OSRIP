@@ -22,9 +22,17 @@ LABELS = {
         "priority": {"high": "High", "medium": "Medium", "low": "Low", "conditional": "Conditional"},
         "horizon": {"short": "Short term", "medium": "Medium term", "long": "Long term"},
         "nature": {"recommendation": "Recommendation", "data_improvement": "Data improvement", "conditional_option": "Conditional option"},
-        "rec_header": ["Id", "Problem", "Evidence", "Evidence ids", "Proposed action", "Quantity", "Unit", "Quantity note",
-                       "Time horizon", "Constraints", "Cost evidence", "Expected outcome and assumptions", "Priority",
-                       "Priority basis", "Monitoring KPI", "Kind"],
+        "rec_header": ["Id", "Issue", "Evidence", "Evidence ids", "Proposed action", "Quantity", "Unit", "Quantity note",
+                       "Feasibility constraints", "Time horizon", "Cost evidence", "Expected effect and assumptions", "Priority",
+                       "Priority basis", "Monitoring KPI", "Kind", "Type of option"],
+        "option": {"efficiency": "Efficiency", "loss_reduction": "Loss reduction", "redistribution": "Redistribution",
+                   "storage": "Storage", "capacity_expansion": "Capacity expansion",
+                   "supplier_diversification": "Supplier diversification", "local_use": "Local use",
+                   "processing": "Processing", "export": "Exports where feasible", "data_improvement": "Data improvement",
+                   "monitoring": "Monitoring"},
+        "conclusion": "Conclusion", "findings": "Main findings", "evidence_limits": "Evidence limitations",
+        "immediate": "Immediate actions", "medium_term": "Medium-term options", "next_study": "Questions and data for the next study",
+        "none": "None.", "data_needed": "Data needed",
         "gap_header": ["Id", "Balance", "Missing information", "What it blocks", "Who would publish it"],
         "source_header": ["Id", "Indicator", "Area", "Period", "Period kind", "Value", "Qualifier", "Unit", "Publisher", "Title",
                           "URL", "Publication", "Accessed", "Dataset version", "Record", "Status", "Older context"],
@@ -40,9 +48,16 @@ LABELS = {
         "priority": {"high": "عالية", "medium": "متوسطة", "low": "منخفضة", "conditional": "مشروطة"},
         "horizon": {"short": "المدى القصير", "medium": "المدى المتوسط", "long": "المدى الطويل"},
         "nature": {"recommendation": "توصية", "data_improvement": "تحسين البيانات", "conditional_option": "خيار مشروط"},
-        "rec_header": ["المعرّف", "المشكلة", "الدليل", "معرّفات الأدلة", "الإجراء المقترح", "الكمية", "الوحدة", "ملاحظة الكمية",
-                       "الأفق الزمني", "القيود", "دليل التكلفة", "النتيجة المتوقعة والافتراضات", "الأولوية",
-                       "أساس الأولوية", "مؤشر المتابعة", "النوع"],
+        "rec_header": ["المعرّف", "القضية", "الدليل", "معرّفات الأدلة", "الإجراء المقترح", "الكمية", "الوحدة", "ملاحظة الكمية",
+                       "قيود الجدوى", "الأفق الزمني", "دليل التكلفة", "الأثر المتوقع والافتراضات", "الأولوية",
+                       "أساس الأولوية", "مؤشر المتابعة", "النوع", "نوع الخيار"],
+        "option": {"efficiency": "الكفاءة", "loss_reduction": "خفض الفاقد", "redistribution": "إعادة التوزيع",
+                   "storage": "التخزين", "capacity_expansion": "توسيع الطاقة", "supplier_diversification": "تنويع الموردين",
+                   "local_use": "الاستخدام المحلي", "processing": "التصنيع", "export": "التصدير حيث يكون مجدياً",
+                   "data_improvement": "تحسين البيانات", "monitoring": "المتابعة"},
+        "conclusion": "الخلاصة", "findings": "النتائج الرئيسية", "evidence_limits": "حدود الأدلة",
+        "immediate": "الإجراءات الفورية", "medium_term": "خيارات المدى المتوسط", "next_study": "أسئلة وبيانات للدراسة التالية",
+        "none": "لا شيء.", "data_needed": "البيانات اللازمة",
         "gap_header": ["المعرّف", "الميزان", "المعلومة الناقصة", "ما تمنعه", "الجهة التي تنشرها"],
         "source_header": ["المعرّف", "المؤشر", "المنطقة", "الفترة", "نوع الفترة", "القيمة", "المؤهِّل", "الوحدة", "الناشر", "العنوان",
                           "الرابط", "المنشور", "تاريخ الاسترجاع", "إصدار البيانات", "السجل", "الحالة", "سياق أقدم"],
@@ -116,10 +131,26 @@ def export_csv(doc: dict[str, Any], language: str) -> str:
     for r in doc["recommendations"]:
         w.writerow([_cell(x) for x in (
             r["id"], r["problem"][lang], r["evidence"][lang], " ".join(r["evidence_ids"]), r["action"][lang], r["quantity"],
-            _unit_label(r["quantity_unit"], lang), r["quantity_note"][lang], L["horizon"][r["horizon"]], r["constraints"][lang],
+            _unit_label(r["quantity_unit"], lang), r["quantity_note"][lang], r["constraints"][lang], L["horizon"][r["horizon"]],
             r["cost"][lang], r["outcome"][lang], L["priority"][r["priority"]], r["priority_basis"][lang], r["kpi"][lang],
-            L["nature"][r["nature"]],
+            L["nature"][r["nature"]], L["option"].get(r.get("option") or "", ""),
         )])  # fmt: skip
+    end = doc.get("conclusion")
+    if end:
+        w.writerow([])
+        w.writerow([_cell(L["conclusion"])])
+        for f in end["main_findings"]:
+            w.writerow(
+                [_cell(L["findings"]), _cell(f["text"][lang]), _cell(" ".join(f["evidence"]))]
+            )
+        for x in end["evidence_limitations"]:
+            w.writerow([_cell(L["evidence_limits"]), _cell(x[lang])])
+        for rid in end["immediate_actions"]:
+            w.writerow([_cell(L["immediate"]), _cell(rid)])
+        for rid in end["medium_term_options"]:
+            w.writerow([_cell(L["medium_term"]), _cell(rid)])
+        for n in end["next_study"]:
+            w.writerow([_cell(L["next_study"]), _cell(n["question"][lang]), _cell(n["data"][lang])])
     w.writerow([])
     w.writerow([_cell(L["gaps"])])
     w.writerow(L["gap_header"])
@@ -229,6 +260,50 @@ def _table_html(table: dict[str, Any], lang: str, empty: str) -> str:
     return f"<table><thead><tr>{head}</tr></thead><tbody>{''.join(body)}</tbody></table>"
 
 
+def _conclusion_html(doc: dict[str, Any], lang: str) -> str:
+    """The end of the study: findings, limits of the evidence, what to do now and later,
+    and what the next study needs."""
+    L = LABELS[lang]  # noqa: N806
+    end = doc.get("conclusion")
+    if not end:
+        return ""
+    recs = {r["id"]: r for r in doc["recommendations"]}
+
+    def actions(ids: list[str]) -> str:
+        if not ids:
+            return f'<p class="muted">{_e(L["none"])}</p>'
+        return (
+            "<ul>"
+            + "".join(
+                f"<li><bdi>{_e(i)}</bdi> {_e(recs[i]['action'][lang])}</li>"
+                for i in ids
+                if i in recs
+            )
+            + "</ul>"
+        )
+
+    out = [f"<h2>{_e(L['conclusion'])}</h2>", f"<h3>{_e(L['findings'])}</h3><ul>"]
+    out += [
+        f"<li>{_e(f['text'][lang])}"
+        + (f" <bdi>[{_e(', '.join(f['evidence']))}]</bdi>" if f["evidence"] else "")
+        + "</li>"
+        for f in end["main_findings"]
+    ]
+    out.append(f"</ul><h3>{_e(L['evidence_limits'])}</h3><ul>")
+    out += [f"<li>{_e(x[lang])}</li>" for x in end["evidence_limitations"]]
+    out.append(f"</ul><h3>{_e(L['immediate'])}</h3>{actions(end['immediate_actions'])}")
+    out.append(f"<h3>{_e(L['medium_term'])}</h3>{actions(end['medium_term_options'])}")
+    out.append(f"<h3>{_e(L['next_study'])}</h3><ul>")
+    out += [
+        f'<li>{_e(n["question"][lang])} <span class="muted">{_e(L["data_needed"])}: {_e(n["data"][lang])}'
+        + (f" ({_e(n['where'][lang])})" if n.get("where") else "")
+        + "</span></li>"
+        for n in end["next_study"]
+    ]
+    out.append("</ul>")
+    return "".join(out)
+
+
 def export_html(doc: dict[str, Any], language: str) -> str:
     lang = "ar" if language == "ar" else "en"
     L = LABELS[lang]  # noqa: N806
@@ -273,7 +348,9 @@ def export_html(doc: dict[str, Any], language: str) -> str:
     )
     # Evidence ids are shown inside the evidence cell, and the unit beside the quantity.
     head = "".join(
-        f'<th scope="col">{_e(h)}</th>' for i, h in enumerate(L["rec_header"]) if i not in (3, 6)
+        f'<th scope="col">{_e(h)}</th>'
+        for i, h in enumerate(L["rec_header"])
+        if i not in (3, 6, 16)
     )
     rows = []
     for r in doc["recommendations"]:
@@ -284,11 +361,13 @@ def export_html(doc: dict[str, Any], language: str) -> str:
         )
         rows.append("<tr>" + "".join(f"<td>{c}</td>" for c in (
             _e(r["id"]), _e(r["problem"][lang]), _e(r["evidence"][lang]) + (f" <bdi>[{_e(', '.join(r['evidence_ids']))}]</bdi>" if r["evidence_ids"] else ""),
-            _e(r["action"][lang]), quantity, _e(r["quantity_note"][lang]), _e(L["horizon"][r["horizon"]]),
-            _e(r["constraints"][lang]), _e(r["cost"][lang]), _e(r["outcome"][lang]), _e(L["priority"][r["priority"]]),
-            _e(r["priority_basis"][lang]), _e(r["kpi"][lang]), _e(L["nature"][r["nature"]]),
+            _e(r["action"][lang]), quantity, _e(r["quantity_note"][lang]), _e(r["constraints"][lang]),
+            _e(L["horizon"][r["horizon"]]), _e(r["cost"][lang]), _e(r["outcome"][lang]), _e(L["priority"][r["priority"]]),
+            _e(r["priority_basis"][lang]), _e(r["kpi"][lang]),
+            _e(L["nature"][r["nature"]]) + (f" · {_e(L['option'][r['option']])}" if r.get("option") else ""),
         )) + "</tr>")  # fmt: skip
     parts.append(f"<table><thead><tr>{head}</tr></thead><tbody>{''.join(rows)}</tbody></table>")
+    parts.append(_conclusion_html(doc, lang))
     parts.append(f"<h2>{_e(L['gaps'])}</h2><ul>" + "".join(
         f"<li><strong>{_e(g['missing'][lang])}</strong> — {_e(g['blocks'][lang])}{(' (' + _e(g['where'][lang]) + ')') if g.get('where') else ''}</li>"
         for g in doc["data_gaps"]) + "</ul>")  # fmt: skip

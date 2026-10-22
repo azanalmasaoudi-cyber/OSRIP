@@ -2,6 +2,8 @@
 
 import logging
 import uuid
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -26,6 +28,8 @@ from app.api.routes import (
     reference,
     reports,
     research,
+    research_jobs,
+    series,
     studies,
 )
 from app.api.routes import (
@@ -73,10 +77,26 @@ def _check_production_settings() -> None:
         raise RuntimeError(f"Unsafe settings for {settings.environment}: " + "; ".join(problems))
 
 
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    """Server start: studies left queued or interrupted by a restart are resumed, and the
+    scheduled-report check starts only if it is switched on (off by default)."""
+    from app.services.research import jobs, schedules
+
+    try:
+        jobs.kick()
+        schedules.start_scheduler()
+    except Exception:  # noqa: BLE001 - the API must start even if the database is not ready
+        logger.exception("background studies could not be started")
+    yield
+    schedules.stop_scheduler()
+
+
 def create_app() -> FastAPI:
     _check_production_settings()
     settings = get_settings()
     app = FastAPI(
+        lifespan=lifespan,
         title="OSRIP API",
         version=monitoring.RELEASE,
         description=(
@@ -163,6 +183,7 @@ def create_app() -> FastAPI:
         admin.router,
         imports.router,
         observations.router,
+        series.router,
         geography.router,
         reference.router,
         balance.router,  # before analysis: /analysis/balance is not a section
@@ -171,6 +192,7 @@ def create_app() -> FastAPI:
         assistant.router,
         reports.router,
         research.router,
+        research_jobs.router,
         library.router,
         studies.router,
     ):

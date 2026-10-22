@@ -14,8 +14,11 @@ test('the floating control is Al Mulhim, labelled as an AI assistant, in English
   await open.click();
   const identity = page.getByTestId('assistant-identity');
   await expect(identity).toContainText('AI assistant');
-  await expect(identity).toContainText('not a real person');
-  await expect(identity).toContainText('not lip synchronisation');
+  await expect(identity).not.toContainText('not a real person'); // no long notes under the portrait
+  const help = page.getByTestId('assistant-help');
+  await help.locator('summary').click();
+  await expect(help).toContainText('not a real person');
+  await expect(help).toContainText('not lip synchronisation');
   await expect(identity.getByRole('img', { name: /generated image of a fictional Omani man/i })).toBeVisible();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'العربية' }).click();

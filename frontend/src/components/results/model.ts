@@ -66,6 +66,18 @@ export interface ResultRecommendation {
   priorityBasis: string | null;
   kpi: string | null;
   nature: { code: string; label: string };
+  /** The kind of response (efficiency, storage, exports where feasible ...), when classified. */
+  option: { code: string; label: string } | null;
+}
+
+/** How a study ends: findings, the limits of its evidence, what to do now and later, and what
+ * the next study needs. */
+export interface ResultConclusion {
+  findings: string[];
+  limitations: string[];
+  immediate: { id: string; action: string }[];
+  mediumTerm: { id: string; action: string }[];
+  nextStudy: { question: string; data: string; where: string | null }[];
 }
 
 export interface ResultCard {
@@ -100,6 +112,7 @@ export interface ResultsModel {
   tables: ResultTable[];
   sources: ResultSource[];
   recommendations: ResultRecommendation[];
+  conclusion: ResultConclusion | null;
   downloads: { csv: string | null; report: string | null };
 }
 
@@ -111,6 +124,7 @@ export interface Labels {
   priority: Record<string, string>;
   horizon: Record<string, string>;
   nature: Record<string, string>;
+  option: Record<string, string>;
   studyRecommendation: string;
   notQuantified: string;
 }
@@ -182,7 +196,21 @@ export function fromBalance(stored: StoredBalance, language: AppLanguage, labels
       horizon: labels.horizon[r.horizon] ?? r.horizon, constraints: pick(r.constraints), cost: pick(r.cost), outcome: pick(r.outcome),
       priority: { code: r.priority, label: labels.priority[r.priority] ?? r.priority }, priorityBasis: pick(r.priority_basis),
       kpi: pick(r.kpi), nature: { code: r.nature, label: labels.nature[r.nature] ?? r.nature },
+      option: r.option ? { code: r.option, label: labels.option[r.option] ?? r.option } : null,
     })),
+    conclusion: a.conclusion ? {
+      findings: a.conclusion.main_findings.map((f) => pick(f.text)),
+      limitations: a.conclusion.evidence_limitations.map(pick),
+      immediate: a.conclusion.immediate_actions.flatMap((id) => {
+        const r = a.recommendations.find((x) => x.id === id);
+        return r ? [{ id, action: pick(r.action) }] : [];
+      }),
+      mediumTerm: a.conclusion.medium_term_options.flatMap((id) => {
+        const r = a.recommendations.find((x) => x.id === id);
+        return r ? [{ id, action: pick(r.action) }] : [];
+      }),
+      nextStudy: a.conclusion.next_study.map((n) => ({ question: pick(n.question), data: pick(n.data), where: n.where ? pick(n.where) : null })),
+    } : null,
     downloads: { csv: balanceExportUrl(stored.id, 'csv', language), report: balanceExportUrl(stored.id, 'html', language) },
   };
 }
@@ -261,9 +289,10 @@ export function fromStudy(study: LiveStudyState, ref: { id: string; question: st
     recommendations: (completion?.recommendations ?? []).map((r, i) => ({
       id: `A${i + 1}`, problem: r.finding, evidence: labels.studyRecommendation, evidenceIds: r.citations ?? [], action: r.action,
       quantity: null, quantityUnit: null, quantityNote: labels.notQuantified, horizon: null, constraints: null, cost: null,
-      outcome: [r.expected_benefit, r.uncertainty].filter(Boolean).join(' — '), priority: null, priorityBasis: null, kpi: null,
+      outcome: [r.expected_benefit, r.uncertainty].filter(Boolean).join(' — '), priority: null, priorityBasis: null, kpi: null, option: null,
       nature: { code: 'recommendation', label: labels.nature.recommendation ?? 'Recommendation' },
     })),
+    conclusion: null,
     downloads: { csv: null, report: null },
   };
 }

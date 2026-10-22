@@ -1,6 +1,6 @@
 import { FlaskConical, Trash2 } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
 import { useMe } from '@/api/auth';
@@ -11,6 +11,7 @@ import { useCommodities } from '@/api/queries';
 import { STUDY_KINDS, useDeleteStudy, useMyStudies, useRunStudy, useStudy, type StudyKind } from '@/api/studies';
 import { PageHeader } from '@/components/common/PageHeader';
 import { StatePanel } from '@/components/common/StatePanel';
+import { CreateStudy, JobView, MyJobs } from '@/components/studies/ResearchJobs';
 import { StudyView } from '@/components/studies/StudyView';
 import { Button } from '@/components/ui/button';
 import { SelectField } from '@/components/ui/select';
@@ -249,6 +250,8 @@ function OpenStudy({ id }: { id: string }) {
 export function StudiesPage() {
   const { t } = useTranslation();
   const { studyId } = useParams();
+  const [params] = useSearchParams();
+  const jobId = params.get('job');
   if (adapterKind !== 'http') {
     return (
       <>
@@ -262,10 +265,15 @@ export function StudiesPage() {
       <PageHeader title={t('studies.title')} intro={t('studies.intro')} />
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="flex min-w-0 flex-col gap-6">
+          <CreateStudy />
+          {jobId ? <JobView id={jobId} /> : null}
           <StudyForm />
           {studyId ? <OpenStudy id={studyId} /> : null}
         </div>
-        <MyStudies />
+        <div className="flex flex-col gap-6">
+          <MyJobs activeId={jobId} />
+          <MyStudies />
+        </div>
       </div>
     </>
   );

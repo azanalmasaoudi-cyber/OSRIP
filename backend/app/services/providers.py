@@ -9,6 +9,8 @@ consumer subscription is not API access):
   (search route; its results are shown to the person verbatim with the Search Suggestions
   and never given to another model, as the Gemini API terms require).
 * brave: Brave Search API (search route).
+* firecrawl: Firecrawl v2 (/scrape, /map): page retrieval for background studies, billed in
+  credits (1 per page, plus 1 per PDF page parsed).
 
 Every call is recorded in ``provider_call`` (outcome, time, tokens, estimated cost; never the
 question or the answer). Before each call ``meter.check`` enforces the daily request limit and,
@@ -62,6 +64,10 @@ CATALOG: dict[str, Spec] = {
         "brave", "Brave Search API", ("search",),
         "https://api-dashboard.search.brave.com/app/documentation",
     ),
+    "firecrawl": Spec(
+        "firecrawl", "Firecrawl (page retrieval for studies)", ("retrieve",),
+        "https://docs.firecrawl.dev/api-reference/endpoint/scrape",
+    ),
 }  # fmt: skip
 
 FAKES = {"fake", "fake-openai", "fake-gemini"}
@@ -102,6 +108,9 @@ def missing(name: str, capability: str) -> list[str]:
     elif name == "brave":
         if not s.research_api_key:
             out.append("OSRIP_RESEARCH_API_KEY")
+    elif name == "firecrawl":
+        if not s.firecrawl_api_key:
+            out.append("OSRIP_FIRECRAWL_API_KEY")
     return out
 
 
@@ -128,6 +137,8 @@ def roles() -> dict[str, list[str]]:
     ):
         if value:
             out.setdefault(value, []).append(role)
+    if s.firecrawl_api_key:
+        out.setdefault("firecrawl", []).append("retrieve_primary")
     return out
 
 
@@ -135,7 +146,11 @@ def roles() -> dict[str, list[str]]:
 
 
 def estimate_cost(
-    provider: str, input_tokens: int | None, output_tokens: int | None, searches: int | None
+    provider: str,
+    input_tokens: int | None,
+    output_tokens: int | None,
+    searches: int | None,
+    credits: int | None = None,
 ) -> Decimal | None:
     """Cost from the configured prices only (OSRIP_PROVIDER_PRICES); None when unknown."""
     prices = get_settings().provider_prices.get(provider)
@@ -146,6 +161,7 @@ def estimate_cost(
         (input_tokens, "input_per_mtok", Decimal(1_000_000)),
         (output_tokens, "output_per_mtok", Decimal(1_000_000)),
         (searches, "per_search", Decimal(1)),
+        (credits, "per_credit", Decimal(1)),
     ):
         if count and key in prices:
             total += Decimal(str(prices[key])) * Decimal(count) / per
@@ -208,8 +224,8 @@ class DbMeter:
         with session_factory()() as session, session.begin():
             rows = {}
             for kind, caps in (
-                ("test", ("test_answer", "test_search")),
-                ("call", ("answer", "search")),
+                ("test", ("test_answer", "test_search", "test_retrieve")),
+                ("call", ("answer", "search", "retrieve")),
             ):
                 row = session.scalar(
                     select(ProviderCall)
@@ -249,8 +265,8 @@ class MemoryMeter:
     def latest(self, provider: str) -> dict[str, Any] | None:
         out: dict[str, Any] = {}
         for kind, caps in (
-            ("test", ("test_answer", "test_search")),
-            ("call", ("answer", "search")),
+            ("test", ("test_answer", "test_search", "test_retrieve")),
+            ("call", ("answer", "search", "retrieve")),
         ):
             rows = [r for r in self.rows if r["provider"] == provider and r["capability"] in caps]
             if rows:
@@ -309,6 +325,7 @@ def record(
     input_tokens: int | None = None,
     output_tokens: int | None = None,
     searches: int | None = None,
+    credits: int | None = None,
 ) -> None:
     if _TEST_CALL.get() and not capability.startswith("test_"):
         capability = f"test_{capability}"
@@ -322,7 +339,10 @@ def record(
             "input_tokens": input_tokens,
             "output_tokens": output_tokens,
             "searches": searches,
-            "estimated_cost_usd": estimate_cost(provider, input_tokens, output_tokens, searches)
+            "credits": credits,
+            "estimated_cost_usd": estimate_cost(
+                provider, input_tokens, output_tokens, searches, credits
+            )
             if status == "ok"
             else None,
         }
@@ -346,7 +366,8 @@ TEST_TOOL = {
 def run_test(name: str, capability: str) -> dict[str, Any]:
     """One minimal live call (an administrator's action; it may cost a little). The outcome is
     recorded as a test call, so readiness shows "tested" only after a call really worked."""
-    from app.services.assistant.provider import ProviderError, build_provider
+    from app.services.assistant.provider import ProviderError, build_provider, failure_category
+    from app.services.research.firecrawl import FirecrawlError
     from app.services.research.search import SearchError, build_search_provider
 
     if name not in CATALOG or capability not in CATALOG[name].capabilities:
@@ -360,6 +381,7 @@ def run_test(name: str, capability: str) -> dict[str, Any]:
         }
     token = _TEST_CALL.set(True)
     started = time.monotonic()
+    detail: str | None = None
     try:
         if capability == "answer":
             provider = build_provider(name)
@@ -372,6 +394,21 @@ def run_test(name: str, capability: str) -> dict[str, Any]:
             )
             ok = any(b.get("type") in ("tool_use", "text") for b in result.get("content") or [])
             status = "ok" if ok else "invalid_response"
+        elif capability == "retrieve":
+            from app.services.research import firecrawl
+
+            client = firecrawl.client()
+            if client is None:
+                return {"provider": name, "capability": capability, "status": "not_configured"}
+            # One official page (robots.txt is checked first, as for every study).
+            from app.services.research.robots import RobotsCache
+
+            page = "https://www.ncsi.gov.om/"
+            if not RobotsCache().allows(page):
+                status = "robots_disallowed"
+            else:
+                client.scrape(page, max_pdf_pages=1)
+                status = "ok"
         else:
             route = build_search_provider(name)
             if route is None:
@@ -382,14 +419,19 @@ def run_test(name: str, capability: str) -> dict[str, Any]:
             else:
                 route.search(query, language="en", count=1)
             status = "ok"
-    except (ProviderError, SearchError, LimitReached) as exc:
+    except (ProviderError, SearchError, LimitReached, FirecrawlError) as exc:
         status = str(exc)[:40] or "failed"
+        detail = getattr(exc, "detail", None)
     finally:
         _TEST_CALL.reset(token)
     return {
         "provider": name,
         "capability": capability,
         "status": status,
+        # What kind of failure (authentication, model_unavailable, timeout ...) and the
+        # service's own error type, never its message.
+        "category": None if status == "ok" else failure_category(status, detail),
+        "detail": detail,
         "duration_ms": int((time.monotonic() - started) * 1000),
     }
 

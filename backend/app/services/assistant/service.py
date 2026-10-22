@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import time
 import uuid
 from collections import Counter
@@ -39,11 +40,12 @@ from app.models import (
     ReferencePack,
 )
 from app.services import accounts
-from app.services.assistant import grounding, lookup, profile, routing
+from app.services.assistant import data_report, grounding, lookup, profile, routing
 from app.services.assistant.progress import Cancelled, Tracker
 from app.services.assistant.provider import (
     ProviderError,
     answering_available,
+    failure_category,
     get_fallback_provider,
     get_provider,
     transient,
@@ -51,6 +53,8 @@ from app.services.assistant.provider import (
 from app.services.assistant.tools import MODES, Ledger, Tools, run_tool, tool_specs
 from app.services.principal import Principal
 from app.services.research import service as research
+
+log = logging.getLogger("osrip.assistant")
 
 MAX_ROUNDS = 5
 HISTORY_MESSAGES = 6
@@ -205,7 +209,29 @@ def status() -> dict[str, Any]:
         "research_cutoff": research_cutoff(),
         "max_message_chars": s.assistant_max_message_chars,
         "suggestions": SUGGESTIONS,
+        # From the latest recorded call (never a guess): ok, failed with its category, or
+        # untested; a failing service means replies are data-based reports for now.
+        "health": _health(provider.vendor if provider else None),
+        "search_health": _health(search_routes[0] if search_routes else None),
     }
+
+
+def _health(vendor: str | None) -> dict[str, Any]:
+    from app.services import providers
+
+    if vendor is None:
+        return {"state": "not_configured", "category": None, "at": None}
+    try:
+        latest = providers.meter.latest(vendor) or {}
+    except Exception:  # noqa: BLE001 - the status must render without the call log
+        return {"state": "unknown", "category": None, "at": None}
+    events = [e for e in (latest.get("call"), latest.get("test")) if e]
+    if not events:
+        return {"state": "untested", "category": None, "at": None}
+    newest = max(events, key=lambda e: e["at"])
+    if newest["status"] == "ok":
+        return {"state": "ok", "category": None, "at": newest["at"]}
+    return {"state": "failing", "category": failure_category(newest["status"]), "at": newest["at"]}
 
 
 def availability() -> dict[str, bool]:
@@ -668,6 +694,12 @@ def _run_model(
                     )
                 messages.append({"role": "user", "content": results})
             raise ProviderError("too_many_rounds")
+        except ProviderError as exc:
+            # Who failed, and the evidence gathered so far (the data report continues it).
+            exc.provider = exc.provider or provider.vendor
+            exc.model = exc.model or provider.name
+            exc.ledger = ledger
+            raise
         finally:
             reader.rollback()
 
@@ -880,14 +912,8 @@ def generate_reply(
             mode=mode,
             persona=persona,
         )
-    except ProviderError:
-        return Reply(
-            content=MESSAGES["unavailable"][language],
-            status="unavailable",
-            outcome="unavailable",
-            mode=mode,
-            persona=persona,
-        )
+    except ProviderError as exc:
+        return degraded_reply(exc, question, language, data_mode, mode, tracker, persona)
     tracker.stage("checking")
     status_ = str(final.get("status", ""))
     reply_text = str(final.get("text", "")).strip()
@@ -958,6 +984,9 @@ def generate_reply(
             )}
             for g in grounded
         ]  # fmt: skip
+    notice = web_failure_notice(ledger.items)
+    if notice is not None:
+        structured["web_notice"] = notice
     records = final.get("web_records") if isinstance(final.get("web_records"), list) else []
     searches = [i for i in ledger.items if i.get("kind") == "search"]
     search_failed = (
@@ -982,6 +1011,105 @@ def generate_reply(
         studies=[(i["study_id"], i["study"]) for i in cited_studies],
         persona=persona,
     )
+
+
+def degraded_reply(
+    exc: ProviderError,
+    question: str,
+    language: str,
+    data_mode: DataMode,
+    mode: str,
+    tracker: Tracker,
+    persona: str | None,
+) -> Reply:
+    """The answer service failed. What failed is logged with the request id (codes and the
+    service's error type only: never a key, a header or a message text), and the question
+    gets the data-based report without AI interpretation (``data_report``), which is not
+    charged and can be retried. Only if that report cannot be built is the reply the plain
+    'unavailable' message."""
+    code = str(exc)
+    category = failure_category(code, exc.detail)
+    incident = tracker.stream.study_id if tracker.stream is not None else uuid.uuid4().hex
+    log.warning(
+        "assistant provider failed request_id=%s provider=%s model=%s code=%s detail=%s "
+        "category=%s",
+        incident,
+        exc.provider or get_settings().assistant_provider,
+        exc.model,
+        code,
+        exc.detail,
+        category,
+    )
+    try:
+        report = data_report.build(
+            question, language, data_mode, category=category, incident=incident,
+            ledger=exc.ledger, tracker=tracker,
+        )  # fmt: skip
+    except Cancelled:
+        return Reply(
+            content=MESSAGES["cancelled"][language],
+            status="cancelled",
+            outcome="cancelled",
+            mode=mode,
+            persona=persona,
+        )
+    except Exception:  # noqa: BLE001 - the person still gets a clear, retryable reply
+        log.exception("data report failed request_id=%s", incident)
+        return Reply(
+            content=MESSAGES["unavailable"][language],
+            status="unavailable",
+            outcome="unavailable",
+            mode=mode,
+            persona=persona,
+            structured={"incident": incident, "failure": category},
+        )
+    tracker.stage("checking")
+    studies = report["studies"]
+    structured: dict[str, Any] = {"data_report": report["notice"]}
+    if studies:
+        structured["studies"] = [
+            {"id": i["study_id"], "kind": i["study_kind"], "title": i["title"],
+             "status": i["status"]}
+            for i in studies
+        ]  # fmt: skip
+    structured["method"] = method_summary(report["ledger"].items, tracker.reached, {})
+    evidence = [
+        {k: v for k, v in i.items() if k != "study"} if i.get("kind") == "study" else i
+        for i in report["evidence"]
+    ]
+    return Reply(
+        content=report["content"],
+        status="data_report",
+        outcome="data_report",
+        evidence=[i for i in evidence if i.get("kind") not in ("calculation", "method")],
+        calculations=[i for i in evidence if i.get("kind") in ("calculation", "method")],
+        citations=report["citations"],
+        mode=mode,
+        structured=structured,
+        studies=[(i["study_id"], i["study"]) for i in studies],
+        persona=persona,
+    )
+
+
+def web_failure_notice(items: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """When every web search of an answer failed, the answer rests on OSRIP's verified data
+    only: say so, with when that data was last updated."""
+    searches = [i for i in items if i.get("kind") == "search"]
+    failed = [
+        i for i in searches if i.get("status") in ("failed", "rate_limited", "not_configured")
+    ]
+    if not searches or len(failed) < len(searches):
+        return None
+    published = [
+        str(i["published_at"])
+        for i in items
+        if i.get("kind") == "observation" and i.get("published_at")
+    ]
+    return {
+        "web_search": "not_configured" if all(i.get("status") == "not_configured" for i in failed) else "failed",
+        "data_last_updated": data_report._latest(published),
+        "research_cutoff": research_cutoff(),
+    }  # fmt: skip
 
 
 def ask(

@@ -11,7 +11,8 @@
  * pressing "Read aloud", "Test voice" or "Listen").
  *
  * Every playback is registered, so one "Stop audio" control can stop whatever is playing
- * anywhere on the page (a reply, a narration, a voice test).
+ * anywhere on the page (a reply, a narration, a voice test). Only one thing speaks at a time:
+ * starting a playback stops every other one, and any browser speech.
  */
 
 export interface Playback {
@@ -36,6 +37,10 @@ export function stopAllPlayback(): void {
   for (const p of [...active]) p.stop();
 }
 
+// Browser speech starting (lib/speech) stops every server playback too. The event name is
+// repeated here so the two modules stay independent of each other.
+if (typeof window !== 'undefined') window.addEventListener('osrip:exclusive-audio', () => stopAllPlayback());
+
 /** Called with the number of playing (or paused) audio clips whenever it changes. */
 export function onPlaybackChange(listener: (count: number) => void): () => void {
   listeners.add(listener);
@@ -56,6 +61,8 @@ export function playAudio(
     onPause?: (paused: boolean) => void;
   },
 ): Playback {
+  stopAllPlayback(); // a new response stops the previous playback
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) window.speechSynthesis.cancel();
   const url = URL.createObjectURL(blob);
   const audio = new Audio(url) as CapturableAudio;
   let context: AudioContext | null = null;

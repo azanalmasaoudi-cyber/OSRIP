@@ -13,6 +13,7 @@ import { LibraryPage } from '@/pages/LibraryPage';
 import { NotFoundPage, SourcesPage } from '@/pages/InfoPages';
 import { OverviewPage } from '@/pages/OverviewPage';
 import { ReportPage, ReportsPage } from '@/pages/ReportsPages';
+import { SettingsPage } from '@/pages/SettingsPage';
 import { StudiesPage } from '@/pages/StudiesPage';
 import { TalkPage } from '@/pages/TalkPage';
 import { ElectricityPage, FoodSecurityPage, TradePage, WaterPage } from '@/pages/SectionPages';
@@ -70,6 +71,7 @@ export const router = createBrowserRouter([
       { path: 'reports', element: <ReportsPage /> },
       { path: 'reports/:reportId', element: <ReportPage /> },
       { path: 'sources', element: <SourcesPage /> },
+      { path: 'settings', element: <SettingsPage /> },
       { path: 'methodology', element: <MethodologyRedirect /> },
       { path: 'data-management', element: <DataManagementPage /> },
       { path: 'sign-in', element: <SignInPage /> },

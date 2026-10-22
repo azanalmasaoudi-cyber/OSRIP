@@ -62,10 +62,10 @@ def provider_readiness(
 
 @router.post("/admin/providers/{name}/test")
 def provider_test(
-    name: Literal["anthropic", "openai", "gemini", "brave"],
+    name: Literal["anthropic", "openai", "gemini", "brave", "firecrawl"],
     _: Annotated[Principal, Depends(require(Permission.AUDIT_READ))],
     principal: Annotated[Principal, Depends(require(Permission.USER_MANAGE))],
-    capability: Literal["answer", "search"] = "answer",
+    capability: Literal["answer", "search", "retrieve"] = "answer",
 ) -> dict[str, Any]:
     """One minimal live call to check a provider really works (it may cost a little), so it
     needs an administrator (``user.manage``) besides the read permission of the view."""

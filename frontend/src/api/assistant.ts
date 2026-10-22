@@ -88,9 +88,12 @@ const calculationSchema = z.object({
 export type AssistantCalculation = z.infer<typeof calculationSchema>;
 
 // 'profile': a greeting or identity reply from Al Mulhim's approved profile (not AI-generated,
-// never charged); 'cancelled': the user stopped the question before it was answered.
+// never charged); 'cancelled': the user stopped the question before it was answered;
+// 'data_report': the answer service failed, so the reply lists published records and OSRIP
+// calculations without AI interpretation (never charged, can be retried).
 export const MESSAGE_STATUSES = [
   'answered', 'clarification', 'no_evidence', 'unverified', 'unavailable', 'lookup', 'profile', 'cancelled',
+  'data_report',
 ] as const;
 
 /** Ask: a direct answer. Analyze: calculations and recommendation cards. Research: web and
@@ -150,6 +153,28 @@ const structuredSchema = z.object({
   }).passthrough()).optional(),
   // The live study this reply was prepared as (its request id): the workspace can reopen it.
   study_id: z.string().optional(),
+  // A data-based report given because the answer service failed (status 'data_report').
+  data_report: z.object({
+    label: bilingual,
+    category: z.string(),
+    reason: bilingual,
+    incident: z.string(),
+    sufficient: z.boolean(),
+    data_last_updated: z.string().nullable(),
+    web_search: z.string(),
+    missing: z.array(bilingual),
+    next_steps: z.array(bilingual),
+    domains: z.array(z.string()),
+  }).optional(),
+  // Every web search of an AI answer failed: it rests on OSRIP's verified data only.
+  web_notice: z.object({
+    web_search: z.enum(['failed', 'not_configured']),
+    data_last_updated: z.string().nullable(),
+    research_cutoff: z.string().nullable(),
+  }).optional(),
+  // A failed request's reference for the administrator (no details of the failure).
+  incident: z.string().optional(),
+  failure: z.string().optional(),
   // How the answer was prepared, counted by the server from what was actually done.
   method: z.object({
     answer_provider: z.string().nullable().optional(),
@@ -224,6 +249,18 @@ const statusSchema = z.object({
   cross_check_available: z.boolean().optional(),
   max_message_chars: z.number(),
   suggestions: z.object({ en: z.array(z.string()), ar: z.array(z.string()) }),
+  // The answer service's latest recorded outcome: ok, failing (replies are data-based
+  // reports meanwhile), untested or not configured.
+  health: z.object({
+    state: z.enum(['ok', 'failing', 'untested', 'not_configured', 'unknown']),
+    category: z.string().nullable(),
+    at: z.string().nullable(),
+  }).optional(),
+  search_health: z.object({
+    state: z.enum(['ok', 'failing', 'untested', 'not_configured', 'unknown']),
+    category: z.string().nullable(),
+    at: z.string().nullable(),
+  }).optional(),
 });
 export type AssistantStatus = z.infer<typeof statusSchema>;
 
@@ -491,10 +528,18 @@ export function useVoiceVoices(enabled = true) {
 }
 
 /** A fixed sample sentence in the persona's configured voice (not arbitrary text). */
-export async function testVoice(persona: string, language: 'en' | 'ar', signal?: AbortSignal): Promise<Blob> {
+/** The voice test: the audio, and the exact words spoken (shown as its transcript). */
+export async function testVoice(persona: string, language: 'en' | 'ar', signal?: AbortSignal): Promise<{ audio: Blob; transcript: string | null }> {
   const init = jsonBody('POST', { persona, language });
   const response = await apiFetch('/assistant/voice/test', { ...init, signal, headers: guestHeaders(init.headers) });
-  return response.blob();
+  const raw = response.headers.get('X-Transcript');
+  let transcript: string | null = null;
+  try {
+    transcript = raw ? decodeURIComponent(raw) : null;
+  } catch {
+    transcript = null;
+  }
+  return { audio: await response.blob(), transcript };
 }
 
 /** The concise spoken summary of a stored shortage and surplus analysis. */

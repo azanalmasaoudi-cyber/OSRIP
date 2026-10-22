@@ -176,6 +176,9 @@ export function createRecognizer(
   };
 }
 
+/** Sent before browser speech starts, so other playback stops (see lib/voicePlayer). */
+export const EXCLUSIVE_AUDIO_EVENT = 'osrip:exclusive-audio';
+
 /** Reads text aloud with a voice of the persona's gender; returns false (and does nothing) when
  * the browser has no such voice for the language. */
 export function speak(
@@ -186,6 +189,8 @@ export function speak(
 ): boolean {
   const voice = voiceFor(language, gender);
   if (!voice) return false;
+  // One voice at a time: server audio stops too (lib/voicePlayer listens for this event).
+  window.dispatchEvent(new Event(EXCLUSIVE_AUDIO_EVENT));
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = voice.lang || LOCALE[language];

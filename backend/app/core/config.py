@@ -117,6 +117,32 @@ class Settings(BaseSettings):
     research_fetch_max_bytes: int = 2 * 1024 * 1024
     research_per_client_hour: int = 60  # web searches per client address per hour
 
+    # ------------------------------------------------------------ studies and page retrieval
+    # Background studies (research jobs): a repeated study with the same parameters and the
+    # same published data is served from cache for this many hours; bounded attempts.
+    research_job_cache_hours: int = 24
+    research_job_max_attempts: int = 3
+    research_job_stale_minutes: int = 15  # a running job without a heartbeat is resumed
+    # Firecrawl page retrieval (https://docs.firecrawl.dev, v2 /scrape and /map). Without a
+    # key, studies retrieve pages directly with the SSRF-safe fetcher, or not at all.
+    firecrawl_api_key: SecretStr | None = None
+    firecrawl_base_url: str = "https://api.firecrawl.dev"
+    firecrawl_timeout_seconds: float = 45.0
+    # Per study: pages retrieved, link depth followed from retrieved pages (0: only the
+    # discovered addresses), run time, credits (1 per page, plus 1 per PDF page) and PDF
+    # pages parsed. Hosts are limited to the official registry of the chosen source scope,
+    # or to this list when set; each host is asked at most once per interval.
+    crawl_max_pages: int = 8
+    crawl_max_depth: int = 0
+    crawl_max_runtime_seconds: int = 300
+    crawl_max_credits: int = 60
+    crawl_max_pdf_pages: int = 30
+    crawl_host_interval_seconds: float = 2.0
+    crawl_allowed_domains: list[str] = Field(default_factory=list)
+    # Scheduled reports run only when this is switched on, and each schedule is off until
+    # an administrator enables it; schedules that call paid services need allow_paid too.
+    scheduled_reports_enabled: bool = False
+
     # ------------------------------------------------------------ speech (voice in and out)
     # azure: Azure AI Speech REST (speech_key and speech_region, or speech_endpoint);
     # "" or disabled: the browser's own speech features are used where available.

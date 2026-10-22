@@ -401,6 +401,35 @@ localhost; never do that elsewhere. If port 5173 is busy: `$env:PORT=5180; npm r
 Offline interface work without a backend: `$env:VITE_DATA_ADAPTER="mock"; npm run dev`
 (synthetic fixtures in the browser only; no calculations, reports or sign-in).
 
+## Services, studies and recorded introductions
+
+Set these in `backend/.env` (never in the frontend) and restart OSRIP. Settings › Services shows
+what is set up, the latest outcome of the answer service, and what to fix, without values.
+
+- **AI answers:** `OSRIP_ASSISTANT_PROVIDER` and its key (for Claude, the full
+  `OSRIP_ANTHROPIC_API_KEY` and `OSRIP_ASSISTANT_MODEL`). If the key is wrong or truncated the
+  service replies 401; OSRIP then answers with a **data-based report without AI
+  interpretation** (published records and OSRIP calculations), logs the failure with its request
+  id and category (never the key), does not charge a guest, and lets the person retry.
+- **Web search:** `OSRIP_RESEARCH_PROVIDER` with its own key (`OSRIP_RESEARCH_API_KEY` for
+  Brave); it is a different key from the AI key.
+- **Page retrieval for studies (optional):** `OSRIP_FIRECRAWL_API_KEY`. Without it, studies with
+  web sources read official pages directly through the SSRF-safe fetcher. Limits:
+  `OSRIP_CRAWL_MAX_PAGES`, `_MAX_DEPTH`, `_MAX_RUNTIME_SECONDS`, `_MAX_CREDITS`, `_MAX_PDF_PAGES`,
+  `_HOST_INTERVAL_SECONDS`, `_ALLOWED_DOMAINS` (see `backend/.env.example`).
+- **Scheduled reports:** off unless `OSRIP_SCHEDULED_REPORTS_ENABLED=true`; each schedule is
+  created disabled, and one that uses web sources also needs "allow paid runs".
+- **Voices:** `OSRIP_SPEECH_KEY` and `OSRIP_SPEECH_REGION` (Azure AI Speech). Al Mulhim speaks with
+  ar-OM-AbdullahNeural / en-GB-RyanNeural and Ilham with ar-OM-AyshaNeural / en-GB-SoniaNeural.
+- **Recorded introductions (Canva):** put each exported clip in `frontend/public/audio/intro/`
+  and set its file name and exact words in `manifest.json` there (`mulhim.ar`, `ilham.ar`).
+  Until a clip is named the introduction is not offered; a clip is always labelled as a
+  recording, never as live speech.
+
+"Create study" (Studies page, signed in) runs a study in the background: discover sources,
+retrieve documents, extract evidence, validate data, calculate, build tables and charts, write
+conclusions, recommend next steps. The page follows its progress; it can be stopped and retried.
+
 ## Stop
 
 1. Press `Ctrl+C` in both terminals.

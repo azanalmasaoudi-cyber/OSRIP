@@ -89,12 +89,13 @@ test('provider readiness: administrators see each provider’s state and missing
   await page.goto('/admin/health');
   const view = page.getByTestId('provider-readiness');
   await expect(view).toContainText('Agreement between two models is not independent evidence');
-  for (const name of ['anthropic', 'openai', 'gemini', 'brave']) {
+  for (const name of ['anthropic', 'openai', 'gemini', 'brave', 'firecrawl']) {
     // No keys in the test server: every real provider is unavailable, and says why.
     await expect(view.locator(`[data-testid="provider"][data-name="${name}"]`)).toHaveAttribute('data-status', 'unavailable');
   }
   await expect(view.locator('[data-name="openai"]').getByTestId('provider-missing').first()).toContainText('OSRIP_OPENAI_API_KEY');
   await expect(view.locator('[data-name="gemini"]')).toContainText('OSRIP_GEMINI_SEARCH_MODEL');
+  await expect(view.locator('[data-name="firecrawl"]')).toContainText('OSRIP_FIRECRAWL_API_KEY');
   // Nothing to test without settings: no live-test buttons for unavailable capabilities.
   await expect(view.locator('[data-testid^="provider-test-"]')).toHaveCount(0);
   await expect(page.getByTestId('provider-routing')).toHaveText('Answering: fake · Web search: fake → fake-gemini');

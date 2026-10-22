@@ -43,6 +43,8 @@
     <Folder Include="e2e-demo\" />
     <Folder Include="e2e\" />
     <Folder Include="public\" />
+    <Folder Include="public\audio\" />
+    <Folder Include="public\audio\intro\" />
     <Folder Include="public\images\" />
     <Folder Include="public\images\assistant\" />
     <Folder Include="public\images\editorial\" />
@@ -64,6 +66,7 @@
     <Folder Include="src\components\layout\" />
     <Folder Include="src\components\research\" />
     <Folder Include="src\components\results\" />
+    <Folder Include="src\components\series\" />
     <Folder Include="src\components\settings\" />
     <Folder Include="src\components\studies\" />
     <Folder Include="src\components\ui\" />
@@ -91,6 +94,7 @@
     <TypeScriptCompile Include="e2e-api\phone.spec.ts" />
     <TypeScriptCompile Include="e2e-api\quality.spec.ts" />
     <TypeScriptCompile Include="e2e-api\research-brief.spec.ts" />
+    <TypeScriptCompile Include="e2e-api\research-workflow.spec.ts" />
     <TypeScriptCompile Include="e2e-api\research.spec.ts" />
     <TypeScriptCompile Include="e2e-api\studies.spec.ts" />
     <TypeScriptCompile Include="e2e-api\talk.spec.ts" />
@@ -125,6 +129,8 @@
     <TypeScriptCompile Include="src\api\monitoring.ts" />
     <TypeScriptCompile Include="src\api\queries.ts" />
     <TypeScriptCompile Include="src\api\referencePack.ts" />
+    <TypeScriptCompile Include="src\api\researchJobs.ts" />
+    <TypeScriptCompile Include="src\api\series.ts" />
     <TypeScriptCompile Include="src\api\studies.ts" />
     <TypeScriptCompile Include="src\api\studyEvents.ts" />
     <TypeScriptCompile Include="src\api\syntheticFixtures.ts" />
@@ -136,6 +142,7 @@
     <TypeScriptCompile Include="src\components\analysis\SectionInsights.tsx" />
     <TypeScriptCompile Include="src\components\assistant\AssistantAvatar.tsx" />
     <TypeScriptCompile Include="src\components\assistant\AssistantContext.tsx" />
+    <TypeScriptCompile Include="src\components\assistant\AssistantIdentityCard.tsx" />
     <TypeScriptCompile Include="src\components\assistant\AssistantOrb.tsx" />
     <TypeScriptCompile Include="src\components\assistant\AssistantPanel.tsx" />
     <TypeScriptCompile Include="src\components\assistant\AssistantStatusBar.tsx" />
@@ -188,7 +195,10 @@
     <TypeScriptCompile Include="src\components\research\ResearchQueue.tsx" />
     <TypeScriptCompile Include="src\components\results\model.ts" />
     <TypeScriptCompile Include="src\components\results\ResultsPanel.tsx" />
+    <TypeScriptCompile Include="src\components\series\SectorSeries.tsx" />
+    <TypeScriptCompile Include="src\components\series\SeriesParts.tsx" />
     <TypeScriptCompile Include="src\components\settings\SettingsSection.tsx" />
+    <TypeScriptCompile Include="src\components\studies\ResearchJobs.tsx" />
     <TypeScriptCompile Include="src\components\studies\StudyCharts.tsx" />
     <TypeScriptCompile Include="src\components\studies\StudyView.tsx" />
     <TypeScriptCompile Include="src\components\ui\badge.tsx" />
@@ -224,6 +234,7 @@
     <TypeScriptCompile Include="src\i18n\locales\en.ts" />
     <TypeScriptCompile Include="src\lib\exportResults.ts" />
     <TypeScriptCompile Include="src\lib\format.ts" />
+    <TypeScriptCompile Include="src\lib\introClips.ts" />
     <TypeScriptCompile Include="src\lib\provenance.ts" />
     <TypeScriptCompile Include="src\lib\recorder.ts" />
     <TypeScriptCompile Include="src\lib\researchBrief.ts" />
@@ -250,6 +261,7 @@
     <TypeScriptCompile Include="src\pages\OverviewPage.tsx" />
     <TypeScriptCompile Include="src\pages\ReportsPages.tsx" />
     <TypeScriptCompile Include="src\pages\SectionPages.tsx" />
+    <TypeScriptCompile Include="src\pages\SettingsPage.tsx" />
     <TypeScriptCompile Include="src\pages\SignInPage.tsx" />
     <TypeScriptCompile Include="src\pages\StudiesPage.tsx" />
     <TypeScriptCompile Include="src\pages\TalkPage.tsx" />
@@ -280,6 +292,7 @@
     <Content Include="index.html" />
     <Content Include="package-lock.json" />
     <Content Include="package.json" />
+    <Content Include="public\audio\intro\manifest.json" />
     <Content Include="public\favicon.svg" />
     <Content Include="public\images\assistant\ai-assistant-face-200.jpg" />
     <Content Include="public\images\assistant\ilham-figure-600.jpg" />

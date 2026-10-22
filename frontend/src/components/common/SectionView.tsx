@@ -1,3 +1,5 @@
+import { FlaskConical, Scale } from 'lucide-react';
+import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
 import { PartnerBars } from './Charts';
@@ -10,10 +12,13 @@ import type { SectionFilters } from '@/api/analysis';
 import { adapterKind } from '@/api/config';
 import { useAreaRegistry } from '@/api/geography';
 import { useSectionSeries } from '@/api/queries';
+import { useTimeline } from '@/api/series';
 import { AnalysisPanel, ExportLinks } from '@/components/analysis/AnalysisPanel';
 import { ReviewCards } from '@/components/analysis/ReviewCards';
 import { SectionInsights } from '@/components/analysis/SectionInsights';
 import { SaveReportButton } from '@/components/analysis/SaveReportButton';
+import { headlineCodes, KeyIndicators, SeriesControls, TimelineState, useSeriesSelection } from '@/components/series/SectorSeries';
+import { TimelineChart, TimelineRules, TimelineSources, TimelineTable } from '@/components/series/SeriesParts';
 import { SelectField } from '@/components/ui/select';
 import {
   ALL,
@@ -29,6 +34,7 @@ import { FLOW_KEY, FREQUENCY_KEY } from '@/i18n/keys';
 import { useAppLanguage } from '@/lib/useAppLanguage';
 import { useCodeLabels } from '@/lib/useLabels';
 import { useDataMode } from '@/state/useDataMode';
+import { usePreservedSearch } from '@/state/usePreservedSearch';
 import { useResetFilters, useUrlFilter } from '@/state/useUrlFilter';
 
 type FilterName = 'indicator' | 'flow' | 'partner' | 'commodity';
@@ -44,7 +50,13 @@ interface SectionViewProps {
 const ALL_PARAMS = ['frequency', 'area', 'indicator', 'flow', 'partner', 'commodity', 'view', 'from', 'to', 'stock'] as const;
 const STOCK_OPTIONS = ['assumed_zero', 'unknown', 'known'] as const;
 
+const PARTS = ['indicators', 'trends', 'table', 'analysis', 'recommendations', 'sources'] as const;
+
 /**
+ * One sector, in a fixed order: key indicators, historical trends, the detailed table, the
+ * analysis, the recommendations and the sources. The trend chart and the detailed table are
+ * drawn from the same chronological series (one request, one dataset id); the published
+ * observations below the table keep every series and filter as before.
  * Filters, calculations, observations and review cards for one section.
  * One set of URL filters drives the tables, charts, calculations, exports and
  * saved reports, so they always describe the same selection; filter values are
@@ -102,6 +114,15 @@ export function SectionView({ section, filters, title, headingLevel = 2 }: Secti
     from === ALL && to === ALL ? t('analysis.allYears') : `${from === ALL ? '…' : from}–${to === ALL ? '…' : to}`,
   ].filter(Boolean).join(' · ');
   const inScope = indicator === ALL ? loaded : loaded.filter((s) => s.indicatorCode === indicator);
+  const api = adapterKind === 'http';
+  const link = usePreservedSearch();
+  // National series without breakdown, headline indicators first (the chart, table and cards).
+  const nationalCodes = distinct(loaded.filter((s) => (s.area?.code ?? 'OM') === 'OM' && !s.partnerCode && !s.commodityCode)
+    .map((s) => s.indicatorCode));
+  const seriesCodes = headlineCodes(section, nationalCodes, 12);
+  const selection = useSeriesSelection(mode, seriesCodes);
+  const timeline = useTimeline(api ? selection.query : null);
+  const partHeading = (part: (typeof PARTS)[number]) => t(`sector.parts.${part}`);
   const yearOptions = [{ value: ALL, label: t('analysis.allYears') }, ...years.map((y) => ({ value: y, label: y }))];
 
   return (
@@ -161,45 +182,104 @@ export function SectionView({ section, filters, title, headingLevel = 2 }: Secti
         ) : null}
       </div>
 
-      {adapterKind === 'http' && mode === 'verified_source' ? <DataQualityNotes section={section} /> : null}
+      <nav aria-label={t('sector.partsLabel')} className="-mt-4 flex flex-wrap gap-2 text-xs" data-testid="sector-parts">
+        {PARTS.map((part, i) => (
+          <a key={part} href={`#${section}-${part}`} className="rounded-full border border-border-strong/50 px-3 py-1 hover:bg-muted">
+            {i + 1}. {partHeading(part)}
+          </a>
+        ))}
+      </nav>
 
-      {adapterKind === 'http' ? <SectionInsights section={section} mode={mode} filters={shared} series={inScope} /> : null}
-
-      {adapterKind === 'http' ? (
-        <AnalysisPanel section={section} mode={mode} filters={shared} headingLevel={headingLevel} />
-      ) : (
-        <StatePanel kind="not_implemented"><p className="text-sm text-muted-foreground">{t('analysis.requiresApi')}</p></StatePanel>
-      )}
-
-      <section aria-labelledby={`obs-${section}`} className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <Heading id={`obs-${section}`} className="text-xl font-semibold">{t('pages.reports.observations')}</Heading>
-          {adapterKind === 'http' ? <ExportLinks section={section} mode={mode} filters={shared} only="observations" /> : null}
-        </div>
-        <SectionSeries
-          section={section}
-          filter={{ indicator, flow, partner, commodity, periodFrom, periodTo, area }}
-          display={display}
-          frequency={freq}
-          onChooseFrequency={setFrequency}
-          onResetFilters={reset}
-          headingLevel={headingLevel === 2 ? 3 : 4}
-          renderAbove={
-            section === 'trade' && display === 'chart'
-              ? (visible) => {
-                  const rows = comparablePartnerRows(visible);
-                  return rows ? (
-                    <div className="rounded-lg border border-border bg-card p-5 shadow-card sm:p-6">
-                      <PartnerBars rows={rows} labelFor={partnerName} />
-                    </div>
-                  ) : null;
-                }
-              : undefined
-          }
-        />
+      <section id={`${section}-indicators`} aria-labelledby={`${section}-indicators-h`} className="flex scroll-mt-20 flex-col gap-3" data-testid="part-indicators">
+        <Heading id={`${section}-indicators-h`} className="text-xl font-semibold">{partHeading('indicators')}</Heading>
+        {api ? <KeyIndicators mode={mode} codes={seriesCodes.slice(0, 4)} />
+          : <StatePanel kind="not_implemented"><p className="text-sm text-muted-foreground">{t('analysis.requiresApi')}</p></StatePanel>}
       </section>
 
-      {adapterKind === 'http' ? <ReviewCards mode={mode} section={section} headingLevel={headingLevel} /> : null}
+      <section id={`${section}-trends`} aria-labelledby={`${section}-trends-h`} className="flex scroll-mt-20 flex-col gap-3" data-testid="part-trends">
+        <Heading id={`${section}-trends-h`} className="text-xl font-semibold">{partHeading('trends')}</Heading>
+        {api && seriesCodes.length ? (
+          <div className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4 shadow-card sm:p-5">
+            <SeriesControls selection={selection} codes={seriesCodes} nameOf={nameOf} timeline={timeline.data} />
+            <TimelineState query={timeline}>{(data) => (
+              <>
+                <TimelineChart timeline={data} />
+                <TimelineRules timeline={data} />
+              </>
+            )}</TimelineState>
+          </div>
+        ) : api ? <p className="text-sm text-muted-foreground">{t('series.noData')}</p> : null}
+      </section>
+
+      <section id={`${section}-table`} aria-labelledby={`${section}-table-h`} className="flex scroll-mt-20 flex-col gap-4" data-testid="part-table">
+        <Heading id={`${section}-table-h`} className="text-xl font-semibold">{partHeading('table')}</Heading>
+        {api && seriesCodes.length && selection.query ? (
+          <TimelineState query={timeline}>{(data) => <TimelineTable timeline={data} query={selection.query!} />}</TimelineState>
+        ) : null}
+        <section aria-labelledby={`obs-${section}`} className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <h4 id={`obs-${section}`} className="text-base font-semibold">{t('pages.reports.observations')}</h4>
+            {api ? <ExportLinks section={section} mode={mode} filters={shared} only="observations" /> : null}
+          </div>
+          <SectionSeries
+            section={section}
+            filter={{ indicator, flow, partner, commodity, periodFrom, periodTo, area }}
+            display={display}
+            frequency={freq}
+            onChooseFrequency={setFrequency}
+            onResetFilters={reset}
+            headingLevel={headingLevel === 2 ? 3 : 4}
+            renderAbove={
+              section === 'trade' && display === 'chart'
+                ? (visible) => {
+                    const rows = comparablePartnerRows(visible);
+                    return rows ? (
+                      <div className="rounded-lg border border-border bg-card p-5 shadow-card sm:p-6">
+                        <PartnerBars rows={rows} labelFor={partnerName} />
+                      </div>
+                    ) : null;
+                  }
+                : undefined
+            }
+          />
+        </section>
+      </section>
+
+      <section id={`${section}-analysis`} aria-labelledby={`${section}-analysis-h`} className="flex scroll-mt-20 flex-col gap-4" data-testid="part-analysis">
+        <Heading id={`${section}-analysis-h`} className="text-xl font-semibold">{partHeading('analysis')}</Heading>
+        {api && mode === 'verified_source' ? <DataQualityNotes section={section} /> : null}
+        {api ? <SectionInsights section={section} mode={mode} filters={shared} series={inScope} /> : null}
+        {api ? (
+          <AnalysisPanel section={section} mode={mode} filters={shared} headingLevel={headingLevel} />
+        ) : (
+          <StatePanel kind="not_implemented"><p className="text-sm text-muted-foreground">{t('analysis.requiresApi')}</p></StatePanel>
+        )}
+      </section>
+
+      <section id={`${section}-recommendations`} aria-labelledby={`${section}-recommendations-h`} className="flex scroll-mt-20 flex-col gap-4" data-testid="part-recommendations">
+        <Heading id={`${section}-recommendations-h`} className="text-xl font-semibold">{partHeading('recommendations')}</Heading>
+        {api ? (
+          <div className="flex flex-wrap gap-2">
+            <Link to={link('/assistant')} className="inline-flex items-center gap-1.5 rounded-md border border-border-strong/60 px-3 py-1.5 text-sm hover:bg-muted"
+              data-testid="sector-balance-link">
+              <Scale aria-hidden="true" className="size-4" />{t('sector.balanceLink')}
+            </Link>
+            <Link to={link(`/studies?create=${section}`)} className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
+              data-testid="sector-create-study">
+              <FlaskConical aria-hidden="true" className="size-4" />{t('jobs.create')}
+            </Link>
+          </div>
+        ) : null}
+        {api ? <ReviewCards mode={mode} section={section} headingLevel={headingLevel} /> : null}
+      </section>
+
+      <section id={`${section}-sources`} aria-labelledby={`${section}-sources-h`} className="flex scroll-mt-20 flex-col gap-3" data-testid="part-sources">
+        <Heading id={`${section}-sources-h`} className="text-xl font-semibold">{partHeading('sources')}</Heading>
+        {api && timeline.data?.status === 'ok' ? <TimelineSources timeline={timeline.data} /> : null}
+        <p className="text-sm">
+          <Link to={link('/sources')} className="text-primary underline underline-offset-2">{t('sector.allSources')}</Link>
+        </p>
+      </section>
     </div>
   );
 }

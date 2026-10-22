@@ -181,9 +181,14 @@ def test_ambiguous_questions_get_a_clarifying_question(user, fake) -> None:  # n
     assert reply["status"] == "clarification" and reply["content"].endswith("?")
 
 
-def test_model_failure_gives_a_retryable_unavailable_reply(user, fake) -> None:  # noqa: ANN001
+def test_model_failure_gives_a_retryable_data_report(user, fake) -> None:  # noqa: ANN001
+    # No topic named: no figures, but the missing information and the next steps.
     reply = ask(user, conversation(user), "please fail")
-    assert reply["status"] == "unavailable" and reply["ai_generated"] is False
+    assert reply["status"] == "data_report" and reply["ai_generated"] is False
+    report = reply["structured"]["data_report"]
+    assert report["sufficient"] is False and report["category"] == "other"
+    assert report["missing"] and report["next_steps"]
+    assert reply["citations"] == [] and reply["evidence"] == []
 
 
 def test_not_configured_is_reported(user, monkeypatch) -> None:  # noqa: ANN001
@@ -351,8 +356,13 @@ def test_anthropic_tool_loop_and_request_contract(user, monkeypatch, verified_ge
     assert "Never state a number" in first["body"]["system"]
 
 
-@pytest.mark.parametrize("failure", ["http_500", "timeout", "not_json"])
-def test_model_service_failures_become_unavailable(user, monkeypatch, failure: str) -> None:  # noqa: ANN001
+@pytest.mark.parametrize(
+    ("failure", "category"),
+    [("http_500", "server_error"), ("timeout", "timeout"), ("not_json", "invalid_response")],
+)
+def test_model_service_failures_become_a_data_report(
+    user, monkeypatch, failure: str, category: str
+) -> None:  # noqa: ANN001
     def handler(request: httpx.Request) -> httpx.Response:
         if failure == "timeout":
             raise httpx.ReadTimeout("slow", request=request)
@@ -362,5 +372,6 @@ def test_model_service_failures_become_unavailable(user, monkeypatch, failure: s
 
     _anthropic(monkeypatch, handler)
     reply = ask(user, conversation(user), "latest electricity generation")
-    assert reply["status"] == "unavailable"
-    assert "not available" in reply["content"]
+    assert reply["status"] == "data_report" and reply["ai_generated"] is False
+    assert reply["model"] is None and "unavailable" in reply["content"]
+    assert reply["structured"]["data_report"]["category"] == category

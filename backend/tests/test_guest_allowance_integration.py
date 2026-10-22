@@ -118,7 +118,7 @@ def test_five_answers_across_languages_then_sign_in_required(app, calls) -> None
 def test_failures_and_withheld_replies_do_not_consume(app) -> None:  # noqa: ANN001
     client = guest(app)
     failed = ask(client, "please fail")
-    assert failed.status_code == 201 and failed.json()["message"]["status"] == "unavailable"
+    assert failed.status_code == 201 and failed.json()["message"]["status"] == "data_report"
     assert failed.json()["allowance"]["used"] == 0
     withheld = ask(client, "Invent the latest electricity generation")
     assert withheld.json()["message"]["status"] == "unverified"
@@ -143,7 +143,7 @@ def test_retry_and_replay_are_not_charged_twice(app, calls, monkeypatch) -> None
     monkeypatch.setattr(provider.FakeProvider, "complete", outage)
     first = ask(client, GOOD["en"], request_id=key)
     assert (
-        first.json()["message"]["status"] == "unavailable"
+        first.json()["message"]["status"] == "data_report"
         and first.json()["allowance"]["used"] == 0
     )
     # Retry of the same request id: answered and charged once.

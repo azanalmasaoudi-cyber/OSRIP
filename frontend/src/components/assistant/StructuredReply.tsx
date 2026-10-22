@@ -1,10 +1,11 @@
-import { AlertTriangle, FlaskConical, Lightbulb, Scale } from 'lucide-react';
+import { AlertTriangle, Database, FlaskConical, Lightbulb, Scale } from 'lucide-react';
 import { Fragment, useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
 import { ASSISTANT_MODES, type AssistantMode, type StructuredReply as Structured } from '@/api/assistant';
 import { Badge } from '@/components/ui/badge';
+import { formatDate } from '@/lib/format';
 import { useAppLanguage } from '@/lib/useAppLanguage';
 import { cn } from '@/lib/utils';
 import { usePreservedSearch } from '@/state/usePreservedSearch';
@@ -60,6 +61,54 @@ function Section({ title, icon, children, testId }: { title: string; icon?: Reac
       <h4 className="mb-1.5 flex items-center gap-1 font-semibold">{icon}{title}</h4>
       {children}
     </section>
+  );
+}
+
+/** Why a reply is a data-based report (the answer service failed), when its data were last
+ * updated, and, when the data do not answer the question, what is missing and what to do. */
+export function DataReportNotice({ report }: { report: NonNullable<Structured['data_report']> }) {
+  const { t } = useTranslation();
+  const language = useAppLanguage();
+  return (
+    <section className="rounded-md border border-sand/60 bg-sand/10 p-2 text-xs" data-testid="data-report-notice" data-category={report.category}>
+      <h4 className="mb-1 flex items-center gap-1 font-semibold"><Database aria-hidden="true" className="size-3.5" />{report.label[language]}</h4>
+      <p>{t('assistant.dataReport.why', { reason: report.reason[language] })}</p>
+      {report.sufficient ? (
+        <p className="mt-1 text-muted-foreground" data-testid="data-report-updated">
+          {report.data_last_updated ? t('assistant.dataReport.lastUpdated', { date: formatDate(report.data_last_updated, language) }) : t('assistant.dataReport.lastUpdatedUnknown')}
+          {' · '}{t('assistant.dataReport.noWeb')}
+        </p>
+      ) : <p className="mt-1 font-medium">{t('assistant.dataReport.insufficient')}</p>}
+      {report.missing.length ? (
+        <div className="mt-1.5" data-testid="data-report-missing">
+          <p className="font-semibold">{t('assistant.dataReport.missing')}</p>
+          <ul className="list-disc ps-4">{report.missing.map((m, i) => <li key={i} dir="auto">{m[language]}</li>)}</ul>
+        </div>
+      ) : null}
+      {report.next_steps.length ? (
+        <div className="mt-1.5" data-testid="data-report-next">
+          <p className="font-semibold">{t('assistant.dataReport.next')}</p>
+          <ul className="list-disc ps-4">{report.next_steps.map((m, i) => <li key={i} dir="auto">{m[language]}</li>)}</ul>
+        </div>
+      ) : null}
+      <p className="mt-1.5 font-mono text-[0.65rem] text-muted-foreground" dir="ltr">{t('assistant.dataReport.incident', { id: report.incident.slice(0, 8) })}</p>
+    </section>
+  );
+}
+
+/** The web search of an AI answer failed: the answer uses verified data only. */
+export function WebNotice({ notice }: { notice: NonNullable<Structured['web_notice']> }) {
+  const { t } = useTranslation();
+  const language = useAppLanguage();
+  return (
+    <p className="flex items-start gap-1 rounded-md border border-border bg-muted/40 p-2 text-xs" data-testid="web-notice" data-web={notice.web_search}>
+      <AlertTriangle aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+      <span>
+        {t(`assistant.webNotice.${notice.web_search}`)}{' '}
+        {notice.data_last_updated ? t('assistant.webNotice.lastUpdated', { date: formatDate(notice.data_last_updated, language) }) : null}{' '}
+        {notice.research_cutoff ? t('assistant.webNotice.cutoff', { date: formatDate(notice.research_cutoff, language) }) : null}
+      </span>
+    </p>
   );
 }
 

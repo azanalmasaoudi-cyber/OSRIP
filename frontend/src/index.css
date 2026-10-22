@@ -188,6 +188,8 @@
   html {
     -webkit-text-size-adjust: 100%;
     scroll-behavior: smooth;
+    /* Keeps what is scrolled or focused into view clear of the sticky top bar. */
+    scroll-padding-top: 4.5rem;
   }
 
   body {

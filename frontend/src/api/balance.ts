@@ -65,6 +65,14 @@ const balance = z.object({
 export type Balance = z.infer<typeof balance>;
 
 export const PRIORITIES = ['high', 'medium', 'low', 'conditional'] as const;
+/** What kind of response a recommendation is (shortfall: efficiency, loss reduction,
+ * redistribution, storage, capacity, suppliers; surplus: storage, local use, redistribution,
+ * processing, exports only where feasible; and data improvement or monitoring). */
+export const OPTION_KINDS = [
+  'efficiency', 'loss_reduction', 'redistribution', 'storage', 'capacity_expansion', 'supplier_diversification',
+  'local_use', 'processing', 'export', 'data_improvement', 'monitoring',
+] as const;
+export type OptionKind = (typeof OPTION_KINDS)[number];
 const recommendation = z.object({
   id: z.string(),
   balance: z.string().nullable().optional(),
@@ -84,6 +92,7 @@ const recommendation = z.object({
   priority_basis: text,
   kpi: text,
   nature: z.enum(['recommendation', 'data_improvement', 'conditional_option']),
+  option: z.enum(OPTION_KINDS).nullable().optional(),
 });
 export type BalanceRecommendation = z.infer<typeof recommendation>;
 
@@ -142,6 +151,14 @@ export const analysisSchema = z.object({
   method: text,
   assumptions: z.array(text),
   limitations: z.array(text),
+  // How every study ends (analyses stored before 2026-10-21 have none).
+  conclusion: z.object({
+    main_findings: z.array(z.object({ text, evidence: z.array(z.string()), balance: z.string().nullable().optional() })),
+    evidence_limitations: z.array(text),
+    immediate_actions: z.array(z.string()),
+    medium_term_options: z.array(z.string()),
+    next_study: z.array(z.object({ question: text, data: text, where: text.nullable().optional() })),
+  }).nullable().optional(),
   generated_by: z.literal('deterministic'),
 });
 export type BalanceAnalysis = z.infer<typeof analysisSchema>;
@@ -173,6 +190,12 @@ export function useBalance(id: string | null) {
     enabled: adapterKind === 'http' && Boolean(id),
     retry: false,
   });
+}
+
+/** The exact words the voice reads for an analysis (shown as its transcript). */
+export async function spokenText(id: string, language: 'en' | 'ar'): Promise<string> {
+  const out = await apiJson(`/analysis/balance/${id}/spoken?language=${language}`, z.object({ text: z.string() }));
+  return out.text;
 }
 
 /** Downloads are plain GET links served with Content-Disposition by the API. */

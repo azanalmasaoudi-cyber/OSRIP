@@ -42,7 +42,7 @@ const callSchema = z.object({
   duration_ms: z.number().optional(),
 });
 const providerSchema = z.object({
-  provider: z.enum(['anthropic', 'openai', 'gemini', 'brave']),
+  provider: z.enum(['anthropic', 'openai', 'gemini', 'brave', 'firecrawl']),
   label: z.string(),
   docs: z.string(),
   roles: z.array(z.string()),

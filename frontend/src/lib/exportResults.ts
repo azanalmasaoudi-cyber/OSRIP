@@ -71,6 +71,7 @@ export interface ReportLabels {
   dataGaps: string;
   decisionSupport: string;
   charts: string;
+  conclusion: { title: string; findings: string; limits: string; immediate: string; mediumTerm: string; next: string; none: string };
   columns: { problem: string; evidence: string; action: string; quantity: string; horizon: string; constraints: string; cost: string; outcome: string; priority: string; kpi: string };
 }
 
@@ -90,14 +91,24 @@ export function modelToHtml(model: ResultsModel, language: 'en' | 'ar', labels: 
   ];
   if (model.recommendations.length) {
     const c = labels.columns;
-    const head = [c.problem, c.evidence, c.action, c.quantity, c.horizon, c.constraints, c.cost, c.outcome, c.priority, c.kpi]
+    const head = [c.problem, c.evidence, c.action, c.quantity, c.constraints, c.horizon, c.cost, c.outcome, c.priority, c.kpi]
       .map((h) => `<th scope="col">${escapeHtml(h)}</th>`).join('');
     const rows = model.recommendations.map((r) => `<tr>${[
       r.problem, `${r.evidence}${r.evidenceIds.length ? ` [${r.evidenceIds.join(', ')}]` : ''}`, r.action,
-      r.quantity ? `${r.quantity} ${r.quantityUnit ?? ''}` : (r.quantityNote ?? '—'), r.horizon ?? '—', r.constraints ?? '—', r.cost ?? '—',
+      r.quantity ? `${r.quantity} ${r.quantityUnit ?? ''}` : (r.quantityNote ?? '—'), r.constraints ?? '—', r.horizon ?? '—', r.cost ?? '—',
       r.outcome ?? '—', r.priority?.label ?? '—', r.kpi ?? '—',
     ].map((x) => `<td>${escapeHtml(x)}</td>`).join('')}</tr>`).join('');
     parts.push(`<h2>${escapeHtml(labels.recommendations)}</h2><p class="muted">${escapeHtml(labels.decisionSupport)}</p><table><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`);
+  }
+  if (model.conclusion) {
+    const c = model.conclusion;
+    const ul = (items: string[]) => (items.length ? `<ul>${items.map((x) => `<li>${escapeHtml(x)}</li>`).join('')}</ul>` : `<p class="muted">${escapeHtml(labels.conclusion.none)}</p>`);
+    parts.push(`<h2>${escapeHtml(labels.conclusion.title)}</h2>`
+      + `<h3>${escapeHtml(labels.conclusion.findings)}</h3>${ul(c.findings)}`
+      + `<h3>${escapeHtml(labels.conclusion.limits)}</h3>${ul(c.limitations)}`
+      + `<h3>${escapeHtml(labels.conclusion.immediate)}</h3>${ul(c.immediate.map((a) => `${a.id} · ${a.action}`))}`
+      + `<h3>${escapeHtml(labels.conclusion.mediumTerm)}</h3>${ul(c.mediumTerm.map((a) => `${a.id} · ${a.action}`))}`
+      + `<h3>${escapeHtml(labels.conclusion.next)}</h3>${ul(c.nextStudy.map((n) => `${n.question} — ${n.data}`))}`);
   }
   if (model.dataGaps.length) {
     parts.push(`<h2>${escapeHtml(labels.dataGaps)}</h2><ul>${model.dataGaps.map((g) => `<li>${escapeHtml(g.missing)}${g.blocks ? ` — ${escapeHtml(g.blocks)}` : ''}</li>`).join('')}</ul>`);

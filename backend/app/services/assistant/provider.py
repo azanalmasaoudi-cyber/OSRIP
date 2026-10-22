@@ -43,7 +43,64 @@ MAX_OUTPUT_TOKENS = 4096  # room for a final answer with cards, drivers and conf
 
 
 class ProviderError(Exception):
-    """The model service failed, timed out or returned something unusable."""
+    """The model service failed, timed out or returned something unusable.
+
+    ``str(error)`` is the short code (``http_401``, ``timeout`` ...). ``detail`` is the
+    service's own error type when it sent one (``authentication_error``, ``not_found_error``,
+    ``UNAUTHENTICATED`` ...), reduced to a safe token: never a message, URL or key.
+    """
+
+    def __init__(self, code: str, detail: str | None = None) -> None:
+        super().__init__(code)
+        self.detail = detail
+        # Set by the answer loop: who failed, and the evidence gathered before the failure.
+        self.provider: str | None = None
+        self.model: str | None = None
+        self.ledger: Any = None
+
+
+_SAFE_TOKEN = re.compile(r"[A-Za-z0-9_.-]{1,40}")
+
+
+def error_type(response_body: Any) -> str | None:
+    """The provider's error type from a JSON error body (Anthropic ``error.type``, OpenAI
+    ``error.code``/``error.type``, Gemini ``error.status``), or None. Only a short token of
+    letters, digits and ``_.-`` is kept, so nothing the service echoes back (such as part of
+    a key) can reach the logs."""
+    error = response_body.get("error") if isinstance(response_body, dict) else None
+    if not isinstance(error, dict):
+        return None
+    for key in ("type", "code", "status"):
+        value = error.get(key)
+        if isinstance(value, str) and _SAFE_TOKEN.fullmatch(value):
+            return value
+    return None
+
+
+def failure_category(code: str, detail: str | None = None) -> str:
+    """One word for what went wrong, shown to users and administrators."""
+    detail = (detail or "").lower()
+    if code == "not_configured":
+        return "not_configured"
+    if code in ("http_401", "http_403") or "auth" in detail or "permission" in detail:
+        return "authentication"
+    if code == "http_404" or "not_found" in detail or "model" in detail:
+        return "model_unavailable"
+    if code == "http_429" or "rate_limit" in detail or "overloaded" in detail:
+        return "rate_limited"
+    if code in ("timeout",):
+        return "timeout"
+    if code in ("network", "dns_failed"):
+        return "network"
+    if code.startswith("http_5"):
+        return "server_error"
+    if code in ("daily_limit", "budget_exhausted") or code.startswith("limit"):
+        return "budget"
+    if code in ("invalid_json", "no_tool_call", "invalid_arguments", "too_many_rounds") or (
+        code.startswith("status_")
+    ):
+        return "invalid_response"
+    return "other"
 
 
 class Provider(Protocol):
@@ -75,7 +132,11 @@ def _post_json(
     except httpx.HTTPError as exc:
         raise ProviderError("network") from exc
     if response.status_code != 200:
-        raise ProviderError(f"http_{response.status_code}")
+        try:
+            detail = error_type(response.json())
+        except ValueError:
+            detail = None
+        raise ProviderError(f"http_{response.status_code}", detail)
     try:
         return response.json()
     except ValueError as exc:

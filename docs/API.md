@@ -1,7 +1,7 @@
 # OSRIP API (v1)
 
 Generated reference: [`docs/api/openapi.json`](api/openapi.json) (OpenAPI 3, exported
-from the running code; last regenerated 2026-10-20 after migration 0020: 125 paths, 143 operations). With the API running, interactive
+from the running code; last regenerated 2026-10-22 after migration 0021: 137 paths, 158 operations). With the API running, interactive
 documentation is at `http://localhost:8010/docs` and `http://localhost:8010/redoc`.
 Every route below is exercised by the integration or browser tests listed in
 [TRACEABILITY.md](TRACEABILITY.md).
@@ -84,9 +84,9 @@ Password sign-in is refused with `403 email_not_verified` until the address is c
 |---|---|
 | `GET /assistant/profile` | Public, read-only (migration 0013): the active version of Al Mulhim's identity and approved project knowledge: `version`, `sha256`, `activated_at`, `name`, `meaning`, `distinguished_from`, `linguistic_note` (`status: interpretation`), `reference`, `self_description`, `introduction`, `greeting_reply`, `purpose`, `domains`, `statistics_from`, `data_modes`, `users`, `capabilities`, `limitations`, `memory_policy`, and (version 3, migration 0017) `personas[]`: `code` (`mulhim`, `ilham`), `default`, `gender`, `name`, `meaning`, `linguistic_note`, `self_description`, `introduction`, `avatar` {`portrait`, `figure`, `alt`, `live_avatar_id`}, `voices` {`azure` {`ar`, `en`}, `realtime` {`ar`, `en`}}. No write method exists (405); new versions are published with `python -m app.cli assistant-profile publish FILE`. 503 `assistant_profile_missing` if none is active |
 | `GET /assistant/persona`, `PUT /assistant/persona` `{persona}` | (0017) The signed-in person's saved persona (`{persona, stored: "account"}`; `null` = the default). Visitors get `{persona: null, stored: "browser"}` (their choice stays in the browser). `PUT` needs a signed-in session and CSRF; an unknown code → 422 `unknown_persona` |
-| `GET /assistant/status` | Public: configured or not, `fallback` (`lookup` when no provider), limits (per minute, hour, day), `guest_answer_limit`, `research_cutoff`, suggested questions (EN/AR) |
+| `GET /assistant/status` | Public: configured or not, `fallback` (`lookup` when no provider), limits (per minute, hour, day), `guest_answer_limit`, `research_cutoff`, suggested questions (EN/AR), and (0021) `health` {`state`: `ok`, `failing`, `untested`, `not_configured` or `unknown`; `category` of the latest failure; `at`} from the provider call log, never guessed |
 | `GET/POST /assistant/conversations`, `GET/DELETE /assistant/conversations/{id}` | Own conversations only (others' return 404). Deleting removes all messages |
-| `POST /assistant/conversations/{id}/messages` `{content, language, request_id?}` | Reply with `status` (answered, clarification, no_evidence, unverified, unavailable, lookup), `citations`, `evidence` (value, operator, unit, period kind, source URL and code, record reference, revision status, `evidence_class`), `calculations` (formula, inputs, result, computed by OSRIP) and `ai_generated`. Needs `assistant.use`; limited per user per minute, hour and day (429 `assistant_rate_limited`). The same `request_id` again returns the stored reply (`replayed: true`); reused for another question → 422 `request_id_reused`; still running → 409 `request_in_progress` |
+| `POST /assistant/conversations/{id}/messages` `{content, language, request_id?}` | Reply with `status` (answered, clarification, no_evidence, unverified, unavailable, lookup, and since 0021 `data_report`), `citations`, `evidence` (value, operator, unit, period kind, source URL and code, record reference, revision status, `evidence_class`), `calculations` (formula, inputs, result, computed by OSRIP) and `ai_generated`. Needs `assistant.use`; limited per user per minute, hour and day (429 `assistant_rate_limited`). The same `request_id` again returns the stored reply (`replayed: true`); reused for another question → 422 `request_id_reused`; still running → 409 `request_in_progress` |
 | `GET /assistant/guest` | Public. Issues the anonymous cookie on first use and returns `{authenticated: false, allowance: {limit, used, in_progress, remaining, authentication_required, policy_version}, notice (EN/AR cookie limitation), conversations}`; signed in: `{authenticated: true, linkable_history}` |
 | `POST /assistant/guest/messages` `{content, language, request_id, conversation_id?, data_mode}` | Guest question (header `X-Guest-CSRF`). Returns `{message, conversation_id, allowance}`. Five successful answers per guest session; then 403 `guest_allowance_exhausted` with `details.authentication_required` before any provider call. Failures, withheld replies and lookups are not charged; a repeated `request_id` is replayed without a charge. 401 `guest_session_required`, 403 `csrf_failed`, 429 `too_many_requests`, 409 `use_account_conversations` when signed in |
 | `GET /assistant/guest/conversations/{id}` | The guest session's own conversation with its allowance (others' return 404) |
@@ -166,6 +166,63 @@ study cited by a reply is stored with that message.
 The assistant's `balance_analysis` tool builds the same document; each balance appears in the
 live study as a validated dataset, and every figure the reply takes from it is checked
 against it.
+
+### When the answer service fails (migration 0021)
+
+A failure of the answering model (an invalid or truncated key → `http_401`, an unknown model,
+a timeout, a limit) no longer ends with "assistant unavailable". The server logs one line with
+the request id, provider, model, failure code, the service's own error type (a short token such
+as `authentication_error`, never its message) and a category; no key or header is logged. The
+reply then has `status: data_report`, `ai_generated: false`, `model: null` and
+`structured.data_report` = {`label` (EN/AR "Data-based report without AI interpretation"),
+`category` (`authentication`, `model_unavailable`, `rate_limited`, `timeout`, `network`,
+`server_error`, `invalid_response`, `budget`, `not_configured`, `other`), `reason`, `incident`
+(the request id), `sufficient`, `data_last_updated`, `web_search: not_attempted`, `missing[]`,
+`next_steps[]`, `domains[]`}. Its text lists the latest published records for the topics the
+question names and OSRIP's own change calculations, each with its evidence id (checked by the
+same evidence validation as a model's answer), plus the shortage and surplus analysis for a
+shortage or surplus question. With no matching topic or data it gives no figures, only what is
+missing and the next steps. It is never charged, and the request is released so the same
+`request_id` can be retried for an AI answer. When every web search of an AI answer failed, the
+reply carries `structured.web_notice` {`web_search` `failed` or `not_configured`,
+`data_last_updated`, `research_cutoff`}.
+
+### Chronological series (migration 0021)
+
+| Method and path | Purpose |
+|---|---|
+| `GET /series/timeline?data_mode&indicator&area=OM&view=annual\|quarterly\|monthly&period_from&period_to&commodity&partner&flow&include_forecast` | Public. One indicator, area, unit and breakdown as rows in time order: `period_start`, `period_end`, `frequency`, `value` (string; null when missing), `value_operator`, `nature` (`observed`, `provisional`, `estimate`, `derived`, `missing`, `forecast`), `status`, `basis` of a derived row (`sum_of_components`, `end_of_period`, `maximum_of_components`), `revision_status`, `source`, `dataset_version`, `record_ref`, `components`, `other_publications` and `revised`, `reason` for a missing value, and `changes[]` (`month_on_month`, `quarter_on_quarter`, `year_on_year`: `absolute`, `percent`, `status`, `reason`; no percentage from a zero, none from a value given as more or less than). Also `year_to_date[]` (kept apart, compared only with the same months a year earlier), `available_views`, `rules[]` (EN/AR), `sources[]`, `unit`, `other_units`, `dataset_id` and, with `include_forecast`, forecast rows after the last observation. Annual totals are never split; a quarter or year is derived from its months only by the indicator's value type and only when every component is published; averages and ratios are never combined. `needs_selection` with `options[]` when the indicator has several breakdowns; `no_published_data`; 404 for an unknown indicator; 422 for an unknown view |
+| `GET /series/timeline.csv?…&language=en\|ar` | The same rows (then the year-to-date rows) with provenance, changes and the rules as comment lines; the `dataset_id` is the one the table and chart show |
+
+### Studies in the background and scheduled reports (migration 0021)
+
+| Method and path | Purpose |
+|---|---|
+| `POST /research/jobs` `{params, refresh?}` | `assistant.use`. `params`: `sector`, `area` (default `OM`), `period_from`, `period_to`, `question`, `language`, `data_mode`, `source_scope` (`none`, `official`, `official_international`), optional `max_pages`, `max_depth`, `max_credits` (may only lower the server's limits). Returns 202 at once with the study; an identical study on the same published data within `OSRIP_RESEARCH_JOB_CACHE_HOURS` is returned completed with `cached: true` unless `refresh`. 422 `invalid_study_parameters` |
+| `GET /research/jobs`, `GET /research/jobs/{id}` | Own studies (others' are 404; administrators may read any). `state` (`queued`, `running`, `succeeded`, `partial`, `failed`, `cancelled`), `progress` (0–100), `steps[]` (`discover`, `retrieve`, `extract`, `validate`, `calculate`, `build`, `conclude`, `next_steps`, each with its state, attempts, time and EN/AR outcome), `attempts`, `error_code`, `analysis_id`, `credits_used` and `result` (sources, discovered pages, documents summary, unreviewed excerpts, validation checks, the analysis, series tables with their `dataset_id`, the conclusion written by rules, next steps) |
+| `GET /research/jobs/{id}/documents` | Retrieved documents with provenance: `url`, `final_url`, `host`, `source_class`, `publisher`, `title`, `retrieved_at`, `published` (only when the page states it), `reporting_period` (only when the title names one), `content_type`, `retriever` (`firecrawl` or `direct`), `status` (`ok`, `outside_scope`, `robots_disallowed`, `robots_unavailable`, `blocked_private_address`, `blocked_scheme_not_allowed`, …), `depth`, `pages`, `credits`, `sha256`, `duplicate_of`, `revision_of`, a bounded `excerpt`, `untrusted: true` |
+| `POST /research/jobs/{id}/cancel` | A queued study stops at once; a running one at its next step or document |
+| `POST /research/jobs/{id}/retry` | A failed, partial or stopped study is queued again; completed steps are kept. 409 `study_not_retryable` otherwise |
+| `GET /admin/research/status` | `user.manage`. Whether Firecrawl and a search route are configured, the retrieval limits, the cache hours, and whether scheduled reports are switched on (no secret values) |
+| `GET/POST /admin/report-schedules`, `PUT/DELETE /admin/report-schedules/{id}` | `user.manage`. Schedules (`name`, `sector`, `area`, `data_mode`, `question`, `language`, `frequency` weekly/monthly/quarterly, `source_scope`, `max_pages`, `max_credits_per_run`, `max_credits_per_month`, `allow_paid`, `enabled`). Created disabled by default; a schedule with a web scope cannot be enabled without `allow_paid` (422, and a database check). Audited |
+| `POST /admin/report-schedules/{id}/run` | One run now within the schedule's limits; 409 `paid_not_allowed` or `monthly_cap_reached` |
+
+Scheduled runs happen only when `OSRIP_SCHEDULED_REPORTS_ENABLED=true` (default false). Page
+retrieval reads only hosts of the study's scope, checks every address (SSRF guard), reads and
+obeys robots.txt itself, waits between requests to a host, and stops at the page, depth, time
+and credit limits. With `OSRIP_FIRECRAWL_API_KEY` it uses Firecrawl v2 (`/v2/scrape` with the
+PDF parser and `maxPages`, `/v2/map`), otherwise the direct fetcher. Provider readiness lists
+`firecrawl` (capability `retrieve`); `POST /admin/providers/firecrawl/test?capability=retrieve`
+makes one live call only when an administrator asks.
+
+Also new: `GET /analysis/balance/{id}/spoken?language=` returns the exact words the voice reads
+for an analysis (its transcript), and `POST /assistant/voice/test` returns the sample sentence
+in the `X-Transcript` header (percent-encoded UTF-8). Analyses built since 0021 carry
+`recommendations[].option` (`efficiency`, `loss_reduction`, `redistribution`, `storage`,
+`capacity_expansion`, `supplier_diversification`, `local_use`, `processing`, `export`,
+`data_improvement`, `monitoring`) and a `conclusion` {`main_findings[]`,
+`evidence_limitations[]`, `immediate_actions[]` (short-term recommendation ids),
+`medium_term_options[]`, `next_study[]` (question, data, who would publish it)}.
 
 ### Accounts (additions in 0.8)
 

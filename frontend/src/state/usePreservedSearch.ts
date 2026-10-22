@@ -8,7 +8,8 @@ import { useLocation } from 'react-router';
  */
 const GLOBAL_PARAMS = ['mode'] as const;
 
-/** Navigation targets keep the global query parameters (currently the data mode). */
+/** Navigation targets keep the global query parameters (currently the data mode). A target
+ * may carry its own parameters ("/studies?create=water"); they are added to the kept ones. */
 export function usePreservedSearch(): (pathname: string) => { pathname: string; search: string } {
   const { search } = useLocation();
   const current = new URLSearchParams(search);
@@ -17,6 +18,10 @@ export function usePreservedSearch(): (pathname: string) => { pathname: string; 
     const value = current.get(key);
     if (value !== null) kept.set(key, value);
   }
-  const keptSearch = kept.size ? `?${kept.toString()}` : '';
-  return (pathname: string) => ({ pathname, search: keptSearch });
+  return (target: string) => {
+    const [pathname = '', own = ''] = target.split('?', 2);
+    const merged = new URLSearchParams(kept);
+    for (const [key, value] of new URLSearchParams(own)) merged.set(key, value);
+    return { pathname, search: merged.size ? `?${merged.toString()}` : '' };
+  };
 }

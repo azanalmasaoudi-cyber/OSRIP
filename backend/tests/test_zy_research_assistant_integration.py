@@ -291,10 +291,14 @@ def test_unavailable_services_are_reported_honestly(app, monkeypatch) -> None:  
     searches = [e for e in msg["evidence"] if e["kind"] == "search"]
     assert [e["status"] for e in searches] == ["not_configured"]
     assert not [e for e in msg["evidence"] if e["kind"] == "web"]
+    # The answer says it rests on verified data only, and when that data was updated.
+    notice = msg["structured"]["web_notice"]
+    assert notice["web_search"] == "not_configured" and "data_last_updated" in notice
     # A failing search (the provider is configured but the call fails).
     monkeypatch.setattr(s, "research_provider", "fake")
     failed = guest_ask(app, "web search please fail", mode="research")
     assert failed["status"] == "no_evidence" and "failed" in failed["content"]
+    assert failed["structured"]["web_notice"]["web_search"] == "failed"
     # No model service: a labelled record lookup, never an AI answer.
     monkeypatch.setattr(s, "assistant_provider", "none")
     lookup = guest_ask(app, "What is the latest electricity generation?", mode="analyze")

@@ -367,6 +367,45 @@ class Rec:
     evidence_ids: list[str] = field(default_factory=list)
     quantity: str | None = None
     quantity_unit: dict[str, str] | None = None
+    option: str | None = None
+
+
+# The kind of response each action is (schema.OptionKind), by its English wording; data
+# requests are "data_improvement". Every action the rules can produce is listed (tested).
+OPTION_BY_ACTION = {
+    "Demand management and efficiency at the peak (time-of-use signals, efficient cooling standards)": "efficiency",
+    "Reduce network losses, once measured separately from unbilled use": "loss_reduction",
+    "Storage to shift supply to the peak hours": "storage",
+    "Use interconnection imports at the peak": "supplier_diversification",
+    "Add local generating capacity, including renewables": "capacity_expansion",
+    "Track consumption growth against capacity additions each year, alongside the peak data once available.": "monitoring",
+    "Demand management and efficiency (metering, efficient fittings, awareness)": "efficiency",
+    "Reduce non-revenue water once losses are metered": "loss_reduction",
+    "Increase storage and strategic reserves": "storage",
+    "Use treated wastewater for permitted non-drinking uses": "efficiency",
+    "Improve transport and distribution between production and demand centres": "redistribution",
+    "Add desalination or treatment capacity": "capacity_expansion",
+    "Expand local production where water and land allow, and diversify import suppliers meanwhile": "capacity_expansion",
+    "Diversify import suppliers and keep strategic reserves sized to shelf life": "supplier_diversification",
+    "Close the small gap by reducing losses between harvest and sale (handling, cold chain, storage)": "loss_reduction",
+    "Process and add value to the surplus, and export only where markets are accessible, standards are met and logistics allow": "processing",
+    "Store the seasonal surplus within shelf life, redistribute it between regions, or direct it to local use (processing plants, institutions)": "storage",
+    "Diversify import suppliers and size reserves to shelf life": "supplier_diversification",
+    "Use the surplus locally first (processing, storage within shelf life); export only where it is shown to be feasible": "local_use",
+    "Review the largest import groups for supplier diversification and for local production where demand and capability exist.": "supplier_diversification",
+    "Widen non-oil exports: add value to existing non-oil products and widen market access.": "processing",
+    "Diversify suppliers for essential import groups and track the largest partner's share.": "supplier_diversification",
+    "Assess local processing to replace part of the imports, and diversify suppliers meanwhile.": "processing",
+    "Add value before export and widen market access for the group.": "processing",
+}  # fmt: skip
+
+
+def option_of(r: Rec) -> str | None:
+    if r.option:
+        return r.option
+    if r.nature == "data_improvement":
+        return "data_improvement"
+    return OPTION_BY_ACTION.get(r.action["en"])
 
 
 COST_UNKNOWN = T("Unknown: OSRIP holds no cost evidence for this action. Obtain costed options from the responsible authority before deciding.",
@@ -646,8 +685,8 @@ def water(ctx: Ctx) -> SectorOut:
 
 
 FOOD_CONSTRAINTS = T(
-    "Shelf life and cold chains; nutritional needs; the water needed to grow more locally; storage capacity.",
-    "مدة الصلاحية وسلاسل التبريد؛ والاحتياجات الغذائية؛ والمياه اللازمة لزيادة الإنتاج المحلي؛ وسعة التخزين.",
+    "Shelf life and cold chains; nutritional needs; the water needed to grow more locally; storage capacity. A surplus is not assumed to be exportable: exports need market access, standards, logistics and prices that OSRIP does not hold.",
+    "مدة الصلاحية وسلاسل التبريد؛ والاحتياجات الغذائية؛ والمياه اللازمة لزيادة الإنتاج المحلي؛ وسعة التخزين. ولا يُفترض أن كل فائض قابل للتصدير: فالتصدير يحتاج إلى نفاذ إلى الأسواق ومعايير وخدمات لوجستية وأسعار لا تملكها OSRIP.",
 )
 SSR_PREFIX = "SELF_SUFFICIENCY_"
 
@@ -874,12 +913,12 @@ def _food_recs(out: SectorOut, bid: str, name: dict[str, str], status: str, gap:
             T("Post-harvest losses (% of production)", "الفاقد بعد الحصاد (٪ من الإنتاج)"))  # fmt: skip
     elif size >= 10:
         action, horizon, outcome, kpi = (
-            T("Process and add value to the surplus, and export where markets are accessible and standards are met", "تصنيع الفائض وإضافة القيمة إليه، والتصدير حيث تتاح الأسواق وتُستوفى المعايير"), "medium",
+            T("Process and add value to the surplus, and export only where markets are accessible, standards are met and logistics allow", "تصنيع الفائض وإضافة القيمة إليه، والتصدير فقط حيث تتاح الأسواق وتُستوفى المعايير وتسمح الخدمات اللوجستية"), "medium",
             T("Higher value per tonne and income from the surplus. Depends on market access, standards and logistics.", "قيمة أعلى للطن ودخل من الفائض. ويعتمد على النفاذ إلى الأسواق والمعايير والخدمات اللوجستية."),
             T("Export value of the product (OMR)", "قيمة صادرات المنتج (ريال عماني)"))  # fmt: skip
     else:
         action, horizon, outcome, kpi = (
-            T("Store or redistribute the seasonal surplus within shelf life", "تخزين الفائض الموسمي أو إعادة توزيعه ضمن مدة الصلاحية"), "short",
+            T("Store the seasonal surplus within shelf life, redistribute it between regions, or direct it to local use (processing plants, institutions)", "تخزين الفائض الموسمي ضمن مدة الصلاحية، أو إعادة توزيعه بين المناطق، أو توجيهه إلى الاستخدام المحلي (مصانع التصنيع والمؤسسات)"), "short",
             T("Less waste. Limited by cold-chain and storage capacity.", "هدر أقل. وتحده سعة سلاسل التبريد والتخزين."),
             T("Product wasted (tonnes)", "المنتج المهدر (طن)"))  # fmt: skip
     out.recs.append(Rec(
@@ -971,8 +1010,8 @@ def _food_quantities(ctx: Ctx, out: SectorOut) -> None:
                 problem=T(f"{cname['en']}: production {'below' if gap < 0 else 'above'} apparent availability", f"{cname['ar']}: الإنتاج {'أدنى من' if gap < 0 else 'أعلى من'} التوافر الظاهري"),
                 evidence=T(f"Production {production['value']} vs availability {c['result']['value']} {unit['label_en']} ({period}).",
                            f"الإنتاج {production['value']} مقابل التوافر {c['result']['value']} {unit['label_ar']} ({period})."),
-                action=T("Diversify import suppliers and size reserves to shelf life" if gap < 0 else "Process, store or export the surplus where feasible",
-                         "تنويع موردي الاستيراد وتحديد حجم الاحتياطي وفق مدة الصلاحية" if gap < 0 else "تصنيع الفائض أو تخزينه أو تصديره حيث أمكن"),
+                action=T("Diversify import suppliers and size reserves to shelf life" if gap < 0 else "Use the surplus locally first (processing, storage within shelf life); export only where it is shown to be feasible",
+                         "تنويع موردي الاستيراد وتحديد حجم الاحتياطي وفق مدة الصلاحية" if gap < 0 else "استخدام الفائض محلياً أولاً (التصنيع والتخزين ضمن مدة الصلاحية)؛ والتصدير فقط حيث تثبت جدواه"),
                 quantity=_num(abs(gap)), quantity_unit={k: unit[k] for k in ("code", "label_en", "label_ar")},
                 quantity_note=T("Size of the gap in the latest period (calculated).", "حجم الفجوة في آخر فترة (محسوب)."),
                 horizon="medium", constraints=FOOD_CONSTRAINTS,
@@ -1484,7 +1523,7 @@ def build(session: Session, params: dict[str, Any], data_mode: DataMode) -> dict
             "evidence_ids": list(dict.fromkeys(r.evidence_ids)), "action": r.action, "quantity": r.quantity,
             "quantity_unit": r.quantity_unit, "quantity_note": r.quantity_note, "horizon": r.horizon,
             "constraints": r.constraints, "cost": COST_UNKNOWN, "outcome": r.outcome, "priority": r.priority,
-            "priority_basis": r.priority_basis, "kpi": r.kpi, "nature": r.nature,
+            "priority_basis": r.priority_basis, "kpi": r.kpi, "nature": r.nature, "option": option_of(r),
         })  # fmt: skip
     for b in out.balances:
         b["evidence"] = list(dict.fromkeys(b["evidence"]))
@@ -1513,7 +1552,65 @@ def build(session: Session, params: dict[str, Any], data_mode: DataMode) -> dict
         "assumptions": out.assumptions,
         "limitations": out.limitations + COMMON_LIMITATIONS,
     }  # fmt: skip
+    doc["conclusion"] = conclusion(doc)
     return schema.validate(doc)
+
+
+def conclusion(doc: dict[str, Any]) -> dict[str, Any]:
+    """How the study ends, from its own parts only: the balances as found (with their
+    evidence), the gaps and limitations, the short-term recommendations, the medium- and
+    long-term options (conditional ones included, labelled), and what the next study needs."""
+    findings = []
+    for b in doc["balances"]:
+        if b["status"] == "not_determinable":
+            text = T(f"{b['title']['en']}: not determinable. {b['reason']['en']}",
+                     f"{b['title']['ar']}: لا يمكن تحديده. {b['reason']['ar']}")  # fmt: skip
+        else:
+            unit = b["gap_unit"] or {}
+            gap = b["gap"].lstrip("-")
+            text = T(
+                f"{b['title']['en']}: {b['status_label']['en']}; gap {gap} {unit.get('label_en', '')} ({b['period']}).",
+                f"{b['title']['ar']}: {b['status_label']['ar']}؛ الفجوة {gap} {unit.get('label_ar', '')} ({b['period']}).",
+            )  # fmt: skip
+        findings.append({"text": text, "evidence": b["evidence"][:6], "balance": b["id"]})
+    limitations = [
+        T(f"Missing: {g['missing']['en']} (needed for: {g['blocks']['en']})",
+          f"ناقص: {g['missing']['ar']} (لازم لـ: {g['blocks']['ar']})")
+        for g in doc["data_gaps"]
+    ] + list(doc["limitations"][:3])  # fmt: skip
+    recs = doc["recommendations"]
+    immediate = [
+        r["id"] for r in recs if r["horizon"] == "short" and r["priority"] != "conditional"
+    ]
+    later = [r["id"] for r in recs if r["horizon"] in ("medium", "long")]
+    topic = doc["title"]["en"].split(": ", 1)[-1].lower()
+    topic_ar = doc["title"]["ar"].split(": ", 1)[-1]
+    next_study = [
+        {
+            "question": T(
+                f"With this information, does {topic} show a shortfall or a surplus? ({g['missing']['en']})",
+                f"بهذه المعلومات، هل يظهر في {topic_ar} عجز أو فائض؟ ({g['missing']['ar']})",
+            ),
+            "data": g["missing"],
+            "where": g.get("where"),
+        }
+        for g in doc["data_gaps"]
+    ]  # fmt: skip
+    if not next_study:
+        next_study.append({
+            "question": T("Do the next published periods confirm the direction of each gap?",
+                          "هل تؤكد الفترات المنشورة التالية اتجاه كل فجوة؟"),
+            "data": T("The next annual publication of the same indicators.",
+                      "النشر السنوي التالي للمؤشرات نفسها."),
+            "where": None,
+        })  # fmt: skip
+    return {
+        "main_findings": findings,
+        "evidence_limitations": limitations,
+        "immediate_actions": immediate,
+        "medium_term_options": later,
+        "next_study": next_study,
+    }
 
 
 # ------------------------------------------------------------------ run, store, read
