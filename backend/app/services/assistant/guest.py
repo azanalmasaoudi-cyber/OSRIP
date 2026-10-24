@@ -265,6 +265,7 @@ def ask(
     verified_guest_id: uuid.UUID | None = None,
     persona: str | None = None,
     cross_check: bool = False,
+    selection: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """A guest's question. ``verified_guest_id`` is used only by the voice agent, whose
     caller identity comes from a server-signed room token instead of the browser cookie;
@@ -419,6 +420,7 @@ def ask(
         tracker=tracker,
         persona=persona,
         cross_check=cross_check,
+        selection=selection,
     )
     service.with_study(reply, tracker, request_id)
 

@@ -1,4 +1,6 @@
+import { BarChart3, EyeOff } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Dataset } from '@/api/studyEvents';
@@ -6,6 +8,7 @@ import { DataStatusBadge } from '@/components/common/DataStatusBadge';
 import { StudyBarChart, StudyHeatmap, StudyLineChart } from '@/components/studies/StudyCharts';
 import { StudyTable, useLabels } from '@/components/studies/StudyView';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useAppLanguage } from '@/lib/useAppLanguage';
 import { cn } from '@/lib/utils';
 
@@ -14,17 +17,21 @@ import { cn } from '@/lib/utils';
  * they can never disagree. ``highlight`` holds the row ids a spoken sentence is about (an
  * empty set with ``whole`` marks the whole table). ``state`` says whether the result is still
  * provisional (study in progress), final (the answer rests on it) or was not used.
+ * ``chartsOnRequest`` keeps the charts hidden until the person presses "Show chart" (for
+ * reference data the page shows by itself, which is never drawn unasked).
  */
 export type DatasetState = 'provisional' | 'final' | 'unused' | 'stopped' | 'reference';
 
-export function DatasetView({ dataset, state, highlight, whole = false, headingLevel = 3 }: {
+export function DatasetView({ dataset, state, highlight, whole = false, headingLevel = 3, chartsOnRequest = false }: {
   dataset: Dataset;
   state: DatasetState;
   highlight?: ReadonlySet<string>;
   whole?: boolean;
   headingLevel?: 3 | 4;
+  chartsOnRequest?: boolean;
 }) {
   const { t } = useTranslation();
+  const [showCharts, setShowCharts] = useState(!chartsOnRequest);
   const language = useAppLanguage();
   const labels = useLabels(language);
   const H = headingLevel === 3 ? 'h3' : 'h4';
@@ -65,7 +72,14 @@ export function DatasetView({ dataset, state, highlight, whole = false, headingL
         {dataset.subtitle ? <p className="text-sm text-muted-foreground">{dataset.subtitle[language]}</p> : null}
         {state === 'provisional' ? <p className="text-xs text-sand-foreground" role="note">{t('workspace.dataset.provisionalNote')}</p> : null}
       </header>
-      {dataset.charts.map((chart, i) => (
+      {chartsOnRequest && dataset.charts.length ? (
+        <Button variant="outline" size="sm" className="w-fit" aria-expanded={showCharts} onClick={() => setShowCharts(!showCharts)}
+          data-testid={showCharts ? 'dataset-hide-chart' : 'dataset-show-chart'}>
+          {showCharts ? <EyeOff aria-hidden="true" /> : <BarChart3 aria-hidden="true" />}
+          {showCharts ? t('sectorFlow.hideChart') : t('sectorFlow.showChart')}
+        </Button>
+      ) : null}
+      {showCharts && dataset.charts.map((chart, i) => (
         <div key={i} className="rounded-md border border-border/70 p-3" data-testid="dataset-chart" data-chart={chart.type}>
           {chart.type === 'line' ? <StudyLineChart chart={chart} rows={rows} labelFor={labels.text} highlight={indexes} />
             : chart.type === 'bar' ? <StudyBarChart chart={chart} rows={rows} labelFor={labels.text} highlight={indexes} />

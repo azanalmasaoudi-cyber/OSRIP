@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 // The opening introduction (the owner's design, with the images embedded in it): Al Mulhim and
 // Ilham arrive from the sides, the OSRIP sign is set down between them, then both names, the
 // three resources and the three goals. Shown once per browser session on the home page only (a
-// direct link opens its page at once); Explore and Skip enter the dashboard; Escape closes;
+// direct link opens its page at once); Explore and Skip enter the Overview; Escape closes;
 // replayable from Settings and the footer; switchable off in Settings; keyboard-operable; still
 // under reduced motion or on a low-power device. Each test starts from a clean browser.
 test.use({ storageState: { cookies: [], origins: [] } });
@@ -77,7 +77,7 @@ test('first visit: the owner’s images, the sign, the names, three resources an
   await page.getByTestId('entrance-explore').click();
   await expect(entrance).toBeHidden();
   await expect(page).toHaveURL(/\/overview$/);
-  await expect(page.getByTestId('workspace')).toBeVisible();
+  await expect(page.getByTestId('overview-intro')).toBeVisible();
   await page.goto('/');
   await expect(page.getByTestId('home-page')).toBeVisible();
   await expect(page.getByTestId('entrance')).toBeHidden();

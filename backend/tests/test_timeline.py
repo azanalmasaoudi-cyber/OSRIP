@@ -191,3 +191,34 @@ def test_period_range_and_digest() -> None:
     assert build(published).digest() == build(list(reversed(published))).digest()
     changed = [*published[:-1], month(2024, 6, "60")]
     assert build(changed).digest() != build(published).digest()
+
+
+def summary(t: tl.Timeline, value_type: str = "period_total") -> dict:
+    return tl.summarize(t.rows, value_type, GWH, "OM")
+
+
+def test_summary_totals_a_flow_only_when_every_period_is_published() -> None:
+    complete = build([month(2024, m, str(m * 10)) for m in (1, 2, 3)])
+    s = summary(complete)
+    assert (s["periods"], s["with_value"], s["missing"]) == (3, 3, 0)
+    assert s["total"] == "60" and s["total_reason"] is None
+    assert s["first"]["value"] == "10" and s["last"]["value"] == "30"
+    assert s["change"]["absolute"] == "20" and s["change"]["percent"] == "200.00"
+    assert s["highest"]["period_start"] == "2024-03-01" and s["lowest"]["value"] == "10"
+    # A missing month is never counted as zero: no total at all.
+    gap = summary(build([month(2024, 1, "10"), month(2024, 3, "30")]))
+    assert gap["missing"] == 1 and gap["total"] is None
+    assert gap["total_reason"]["code"] == "missing_periods"
+
+
+def test_summary_never_adds_levels_maxima_or_averages() -> None:
+    levels = build([year(2022, "100"), year(2023, "110")], view="annual")
+    for value_type in ("end_of_period", "maximum", "average"):
+        s = summary(levels, value_type)
+        assert s["total"] is None and s["total_reason"]["code"] == "not_additive"
+        assert s["last"]["value"] == "110" and s["change"]["absolute"] == "10"
+    inexact = summary(build([month(2024, 1, "5"), month(2024, 2, "95", op=">")]))
+    assert inexact["total"] is None and inexact["total_reason"]["code"] == "inexact_value"
+    assert inexact["highest"]["value"] == "5"  # a bounded value is not ranked
+    empty = summary(build([month(2024, 1, None)]))
+    assert empty["with_value"] == 0 and empty["first"] is None and empty["total"] is None

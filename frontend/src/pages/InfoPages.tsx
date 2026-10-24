@@ -1,8 +1,10 @@
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
+import { adapterKind } from '@/api/config';
 import { PageHeader } from '@/components/common/PageHeader';
 import { ReferencePackSources } from '@/components/common/ReferencePackSources';
+import { PublicFeedStatus } from '@/components/sources/SourceFeeds';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { ALL_PHOTOS } from '@/content/photos';
@@ -39,6 +41,14 @@ export function SourcesPage() {
             ))}
           </ol>
         </section>
+
+        {adapterKind === 'http' ? (
+          <section aria-labelledby="feeds-public-heading" data-testid="sources-feeds">
+            <h2 id="feeds-public-heading" className="mb-2 text-xl font-semibold">{t('feeds.heading')}</h2>
+            <p className="mb-4 max-w-3xl text-sm text-muted-foreground">{t('feeds.intro')}</p>
+            <PublicFeedStatus />
+          </section>
+        ) : null}
 
         <section aria-labelledby="data-sources-heading">
           <h2 id="data-sources-heading" className="mb-4 text-xl font-semibold">{t('pages.sources.sourcesHeading')}</h2>

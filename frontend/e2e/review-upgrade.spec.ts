@@ -4,7 +4,7 @@ test('direct links bypass the entrance; workspace navigation remains bilingual @
   await page.addInitScript(() => localStorage.removeItem('osrip.intro.autoplay')); // the introduction switched on
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
-  await page.goto('/overview?mode=synthetic');
+  await page.goto('/workspace?mode=synthetic');
   await expect(page.getByRole('heading', { name: 'Choose your next step' })).toBeVisible();
   await page.getByRole('button', { name: 'العربية', exact: true }).filter({ visible: true }).click();
   await expect(page.getByRole('heading', { name: 'اختر خطوتك التالية' })).toBeVisible();

@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useAssistantStatus, useVoiceStatus } from '@/api/assistant';
 import { hasPermission, useMe } from '@/api/auth';
 import { SECTORS, type Sector } from '@/api/balance';
-import { adapterKind } from '@/api/config';
+import { adapterKind, apiBaseUrl } from '@/api/config';
 import {
   SOURCE_SCOPES, useRetrievalStatus, useScheduleMutation, useSchedules, type ReportSchedule, type SourceScope,
 } from '@/api/researchJobs';
@@ -72,6 +72,9 @@ function Services({ admin }: { admin: boolean }) {
   return (
     <section className="surface-card flex flex-col gap-2 p-5" aria-labelledby="services-h" data-testid="settings-services">
       <h2 id="services-h" className="flex items-center gap-2 text-lg font-semibold"><ServerCog aria-hidden="true" className="size-5" />{t('settingsPage.services')}</h2>
+      <Row label={t('settingsPage.api')} testid="service-api">
+        <span data-testid="prototype-notice">{t('prototype.httpAdapter', { baseUrl: apiBaseUrl })}</span>
+      </Row>
       <Row label={t('settingsPage.answers')} testid="service-answers">
         <ServiceChip />
         {s?.provider ? <span className="text-xs text-muted-foreground" dir="ltr">{s.provider} · {s.model}</span> : null}

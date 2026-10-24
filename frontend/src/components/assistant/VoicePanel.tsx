@@ -11,6 +11,7 @@ import { useAppLanguage } from '@/lib/useAppLanguage';
 import { playAudio, type Playback } from '@/lib/voicePlayer';
 
 import { useAssistantUi } from './AssistantContext';
+import { VoiceVolume } from './VoiceVolume';
 import { PersonaPicker, usePersona } from './persona';
 
 /**
@@ -128,6 +129,7 @@ export function VoicePanel({ showPicker = true }: { showPicker?: boolean }) {
             <Square aria-hidden="true" />{t('voicePanel.stop')}
           </Button>
         ) : null}
+        <VoiceVolume />
       </div>
       <p className="text-xs" role="status" data-testid="voice-test-state" data-state={state}>{error ? <span className="text-destructive">{error}</span> : null}</p>
       {transcript ? (

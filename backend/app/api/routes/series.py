@@ -8,7 +8,7 @@ from fastapi import APIRouter, Query
 from fastapi.responses import Response
 
 from app.api.deps import DbSession
-from app.domain.enums import DataMode
+from app.domain.enums import DataMode, Section
 from app.services import timeline
 
 router = APIRouter(prefix="/series", tags=["series"])
@@ -36,6 +36,17 @@ def _build(
             partner=partner, flow=flow, period_from=period_from, period_to=period_to,
             include_forecast=include_forecast,
         )  # fmt: skip
+
+
+@router.get("/availability")
+def series_availability(
+    session: DbSession, data_mode: DataMode, section: Section
+) -> dict[str, Any]:
+    """For each indicator of the section, the areas and breakdowns with published data and
+    the periods of each view (monthly, quarterly, annual) that have a value, plus the
+    year-to-date periods. Selectors offer only these; nothing here is shown as a result."""
+    with session.begin():
+        return timeline.availability(session, data_mode, section)
 
 
 @router.get("/timeline")

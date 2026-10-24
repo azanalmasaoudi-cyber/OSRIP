@@ -1,6 +1,14 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// Full stack: the booklet's SYNTHETIC fixtures, calculated by the API and shown in the interface.
+import { openCalculations, openReviews, showResults } from './sector';
+
+// Full stack: the booklet's SYNTHETIC fixtures, calculated by the API and shown in the interface
+// once a period has been chosen and "Show results" pressed (the period-first sector workflow).
+
+const ELECTRICITY = { indicator: 'ELEC_GENERATION', view: 'annual', from: '2001-01-01', to: '2002-01-01' } as const;
+const WATER = { indicator: 'WATER_CONSUMPTION', view: 'annual', from: '2001-01-01', to: '2002-01-01' } as const;
+const FOOD = { indicator: 'FOOD_PRODUCTION', view: 'annual', from: '2002-01-01', to: '2002-01-01' } as const;
+const TRADE = { indicator: 'TRADE_VALUE', breakdown: 'SYNTH_COMMODITY||import', view: 'annual', from: '2002-01-01', to: '2002-01-01' } as const;
 
 const PASSWORD = process.env.OSRIP_E2E_PASSWORD ?? '';
 
@@ -18,6 +26,8 @@ function calc(page: Page, kind: string) {
 
 test('electricity shows growth with formula, inputs, version and limitations', async ({ page }) => {
   await page.goto('/energy/electricity?mode=synthetic');
+  await showResults(page, ELECTRICITY);
+  await openCalculations(page);
   const growth = calc(page, 'percentage_change').first();
   await expect(growth.getByTestId('calc-value')).toHaveText('4.38%');
   await expect(growth.getByTestId('calc-exact')).toContainText('4.375');
@@ -27,13 +37,16 @@ test('electricity shows growth with formula, inputs, version and limitations', a
   await expect(calc(page, 'absolute_change').first().getByTestId('calc-value')).toContainText('2,100');
   // Generation is not consumption: no per-subscriber figure is derived from it.
   await expect(calc(page, 'use_per_subscriber')).toContainText('generation is not consumption');
-  const series = page.getByTestId('series-card').first();
-  await expect(series.getByTestId('series-limitation')).toContainText('not consumption');
-  await expect(series.getByTestId('series-geography')).toHaveText('Oman (national)');
+  const limits = page.getByTestId('insight-limits');
+  await limits.locator('summary').click();
+  await expect(limits).toContainText('not consumption');
+  await expect(page.getByTestId('applied-details')).toContainText('Oman (national)');
 });
 
 test('water keeps leakage and source composition unavailable, with reasons', async ({ page }) => {
   await page.goto('/energy/water?mode=synthetic');
+  await showResults(page, WATER);
+  await openCalculations(page);
   await expect(calc(page, 'percentage_change').first().getByTestId('calc-value')).toHaveText('3.94%');
   const declined = calc(page, 'not_calculated');
   await expect(declined).toHaveCount(2);
@@ -43,6 +56,8 @@ test('water keeps leakage and source composition unavailable, with reasons', asy
 
 test('food shows the balance, both contributions and why they do not sum to 100%', async ({ page }) => {
   await page.goto('/food-security?mode=synthetic');
+  await showResults(page, FOOD);
+  await openCalculations(page);
   const availability = calc(page, 'apparent_availability');
   await expect(availability.getByTestId('calc-value')).toHaveText('160,000 tonne');
   await expect(availability.getByTestId('calc-formula')).toContainText('stock change = 0 (declared assumption)');
@@ -56,13 +71,14 @@ test('food shows the balance, both contributions and why they do not sum to 100%
 
   // The stock-assumption filter changes the calculation and the export link together.
   await page.getByTestId('filter-stock').selectOption('unknown');
-  await expect(page).toHaveURL(/stock=unknown/);
   await expect(availability.getByTestId('calc-caveats')).toContainText('not adjusted for stocks');
   await expect(page.getByTestId('export-calculations').first()).toHaveAttribute('href', /stock_assumption=unknown/);
 });
 
 test('trade shows shares, balance and unit values without profit or retail wording', async ({ page }) => {
   await page.goto('/trade?mode=synthetic');
+  await showResults(page, TRADE);
+  await openCalculations(page);
   const shares = calc(page, 'largest_partner_share');
   await expect(shares.getByTestId('calc-value')).toHaveText('60%');
   await expect(shares.getByTestId('calc-breakdown')).toContainText('Partner A (fictional)');
@@ -77,20 +93,31 @@ test('trade shows shares, balance and unit values without profit or retail wordi
   await expect(unitValues.first().getByTestId('calc-caveats')).toContainText('not a retail or consumer price');
 });
 
-test('filters narrow calculations, tables and exports consistently', async ({ page, request }) => {
-  await page.goto('/trade?mode=synthetic&commodity=WHEAT');
-  await expect(page.getByTestId('calculations')).toHaveCount(0);
-  await expect(page.locator('[data-state="empty"]').first()).toBeVisible();
-  const href = await page.getByTestId('export-observations').first().getAttribute('href');
-  expect(href).toContain('commodity=WHEAT');
-  const csv = await (await request.get(href ?? '')).text();
+test('the applied selection narrows the table, the downloads and the calculations consistently', async ({ page, request }) => {
+  await page.goto('/trade?mode=synthetic');
+  await showResults(page, { indicator: 'TRADE_QUANTITY', breakdown: 'SYNTH_COMMODITY|PARTNER_A|import', view: 'annual', from: '2002-01-01', to: '2002-01-01' });
+  await expect(page.getByTestId('applied-details')).toContainText('Partner A (fictional)');
+  // The observations download carries the same indicator, partner, flow and period.
+  const href = (await page.getByTestId('export-observations').first().getAttribute('href')) ?? '';
+  for (const part of ['indicator=TRADE_QUANTITY', 'partner=PARTNER_A', 'flow=import', 'period_from=2002-01-01', 'period_to=2002-12-31']) {
+    expect(href).toContain(part);
+  }
+  const csv = await (await request.get(href)).text();
   expect(csv).toContain('SYNTHETIC DEMONSTRATION DATA');
-  expect(csv).not.toContain('SYNTH_COMMODITY');
+  expect(csv).toContain('PARTNER_A');
+  expect(csv).not.toContain('PARTNER_B');
+  // The table's CSV is the same rows as the table.
+  const table = (await page.getByTestId('series-csv').getAttribute('href')) ?? '';
+  expect(table).toContain('partner=PARTNER_A');
+  await openCalculations(page);
+  await expect(page.getByTestId('export-calculations').first()).toHaveAttribute('href', /period_from=2002-01-01/);
 });
 
 test('an analyst runs the rules, reviews a card and freezes a report', async ({ page }) => {
   await signIn(page, 'analyst@e2e.invalid');
   await page.goto('/trade?mode=synthetic');
+  await showResults(page, TRADE);
+  await openReviews(page);
   await page.getByTestId('run-rules').click();
   const card = page.locator('[data-testid="review-card"][data-rule="R02"]').first();
   await expect(card.getByTestId('card-observation')).toContainText('supplies 60%');
@@ -105,7 +132,10 @@ test('an analyst runs the rules, reviews a card and freezes a report', async ({ 
   await expect(card.getByTestId('card-status')).toHaveText('Explained');
 
   // Freeze the food view with an explicit assumption and open the print view.
-  await page.goto('/food-security?mode=synthetic&stock=unknown');
+  await page.goto('/food-security?mode=synthetic');
+  await showResults(page, FOOD);
+  await openCalculations(page);
+  await page.getByTestId('filter-stock').selectOption('unknown');
   await page.getByTestId('save-report').click();
   await page.getByTestId('save-report-form').getByRole('button', { name: 'Create report' }).click();
   await page.getByTestId('open-new-report').click();
@@ -120,6 +150,8 @@ test('an analyst runs the rules, reviews a card and freezes a report', async ({ 
 test('a viewer sees the cards but cannot run rules, review or save reports', async ({ page }) => {
   await signIn(page, 'viewer@e2e.invalid');
   await page.goto('/trade?mode=synthetic');
+  await showResults(page, TRADE);
+  await openReviews(page);
   await expect(page.getByTestId('review-cards')).toBeVisible();
   await expect(page.getByTestId('run-rules')).toHaveCount(0);
   await expect(page.getByTestId('save-report')).toHaveCount(0);

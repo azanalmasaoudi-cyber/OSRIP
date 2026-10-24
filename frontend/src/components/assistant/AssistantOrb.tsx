@@ -32,7 +32,7 @@ export function AssistantOrb() {
   if (ui.open && !mounted) setMounted(true); // adjusting state while rendering (React docs pattern)
   // Hidden where the chat is already on screen: the assistant page and the workspace (where
   // the assistant sits beside the analysis, or in its own tab on phones).
-  if (adapterKind !== 'http' || pathname === '/assistant' || pathname === '/overview') return null;
+  if (adapterKind !== 'http' || pathname === '/assistant' || pathname === '/workspace') return null;
   const busy = ui.state !== 'idle';
   const close = () => {
     ui.setOpen(false);

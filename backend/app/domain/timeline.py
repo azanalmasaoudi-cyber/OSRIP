@@ -551,3 +551,79 @@ def _ytd_changes(rows: list[Row], unit: Unit, coverage: str) -> None:
 
 def unit_of(code: str, dimension: str) -> Unit:
     return Unit(code, PhysicalDimension(dimension))
+
+
+# ------------------------------------------------------------------ summary
+
+TOTAL_REASONS: dict[str, dict[str, str]] = {
+    "not_additive": {
+        "en": "Not added up: this indicator is a level, a maximum, an average or a ratio, so "
+        "its values over several periods have no meaningful sum.",
+        "ar": "لم تُجمع القيم: هذا المؤشر مستوى أو قيمة قصوى أو متوسط أو نسبة، فلا معنى "
+        "لمجموع قيمه عبر عدة فترات.",
+    },
+    "missing_periods": {
+        "en": "Not added up: some periods in the range are not published, and a missing "
+        "period is never counted as zero.",
+        "ar": "لم تُجمع القيم: بعض فترات النطاق غير منشورة، والفترة المفقودة لا تُحسب صفراً أبداً.",
+    },
+    "inexact_value": {
+        "en": "Not added up: a value in the range is published as 'more than' or 'less than'.",
+        "ar": "لم تُجمع القيم: إحدى قيم النطاق منشورة بصيغة «أكثر من» أو «أقل من».",
+    },
+}
+
+
+def _point(r: Row) -> dict[str, Any]:
+    return {
+        "period_start": r.start.isoformat(),
+        "period_end": r.end.isoformat(),
+        "value": _text(r.value),
+        "value_operator": r.operator,
+        "nature": r.nature,
+    }
+
+
+def summarize(rows: list[Row], value_type: str, unit: Unit, coverage: str) -> dict[str, Any]:
+    """The rows of the selected range in a few figures, each taken from those same rows:
+    how many periods are shown and how many have a value; the first and last values and the
+    change between them (the platform's change functions); the highest and lowest exact
+    values; and the total over the range, given only for a period total (a flow) and only
+    when every period in the range is published with an exact value. A level, a maximum, an
+    average or a ratio is never added up, and a missing period is never counted as zero.
+    Forecast rows are left out."""
+    shown = [r for r in rows if r.nature != "forecast"]
+    valued = [r for r in shown if r.value is not None]
+    out: dict[str, Any] = {
+        "periods": len(shown),
+        "with_value": len(valued),
+        "missing": len(shown) - len(valued),
+        "first": None,
+        "last": None,
+        "change": None,
+        "highest": None,
+        "lowest": None,
+        "total": None,
+        "total_reason": None,
+    }
+    if not valued:
+        return out
+    first, last = valued[0], valued[-1]
+    out["first"], out["last"] = _point(first), _point(last)
+    if first is not last:
+        out["change"] = change(first, last, "first_to_last", unit, coverage)
+    exact = [r for r in valued if not r.operator]
+    if exact:
+        out["highest"] = _point(max(exact, key=lambda r: r.value or Decimal(0)))
+        out["lowest"] = _point(min(exact, key=lambda r: r.value or Decimal(0)))
+    if value_type != "period_total":
+        reason = "not_additive"
+    elif out["missing"]:
+        reason = "missing_periods"
+    elif len(exact) != len(valued):
+        reason = "inexact_value"
+    else:
+        reason = None
+        out["total"] = _text(sum((r.value for r in valued if r.value is not None), Decimal(0)))
+    out["total_reason"] = {"code": reason, **TOTAL_REASONS[reason]} if reason else None
+    return out

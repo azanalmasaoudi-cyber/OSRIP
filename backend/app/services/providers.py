@@ -11,6 +11,8 @@ consumer subscription is not API access):
 * brave: Brave Search API (search route).
 * firecrawl: Firecrawl v2 (/scrape, /map): page retrieval for background studies, billed in
   credits (1 per page, plus 1 per PDF page parsed).
+* deepseek: DeepSeek Chat Completions API: function tools (answering). Usage-billed; used only
+  with OSRIP_DEEPSEEK_BILLING_ACKNOWLEDGED=true (never switched to silently).
 
 Every call is recorded in ``provider_call`` (outcome, time, tokens, estimated cost; never the
 question or the answer). Before each call ``meter.check`` enforces the daily request limit and,
@@ -45,6 +47,9 @@ class Spec:
     label: str
     capabilities: tuple[str, ...]
     docs: str
+    # How use is paid for (from the provider's own price page; shown in Settings):
+    # usage_billed | free_tier_available | plan | credits
+    billing: str = "usage_billed"
 
 
 CATALOG: dict[str, Spec] = {
@@ -59,14 +64,19 @@ CATALOG: dict[str, Spec] = {
     "gemini": Spec(
         "gemini", "Google Gemini (Interactions API, Grounding with Google Search)",
         ("answer", "search"), "https://ai.google.dev/gemini-api/docs/google-search",
+        "free_tier_available",
     ),
     "brave": Spec(
         "brave", "Brave Search API", ("search",),
-        "https://api-dashboard.search.brave.com/app/documentation",
+        "https://api-dashboard.search.brave.com/app/documentation", "plan",
     ),
     "firecrawl": Spec(
         "firecrawl", "Firecrawl (page retrieval for studies)", ("retrieve",),
-        "https://docs.firecrawl.dev/api-reference/endpoint/scrape",
+        "https://docs.firecrawl.dev/api-reference/endpoint/scrape", "credits",
+    ),
+    "deepseek": Spec(
+        "deepseek", "DeepSeek (Chat Completions API, usage-billed)", ("answer",),
+        "https://api-docs.deepseek.com/quick_start/pricing",
     ),
 }  # fmt: skip
 
@@ -105,6 +115,13 @@ def missing(name: str, capability: str) -> list[str]:
             out.append(
                 "OSRIP_GEMINI_MODEL" if capability == "answer" else "OSRIP_GEMINI_SEARCH_MODEL"
             )
+    elif name == "deepseek":
+        if not s.deepseek_api_key:
+            out.append("OSRIP_DEEPSEEK_API_KEY")
+        if not s.deepseek_model:
+            out.append("OSRIP_DEEPSEEK_MODEL")
+        if not s.deepseek_billing_acknowledged:
+            out.append("OSRIP_DEEPSEEK_BILLING_ACKNOWLEDGED")
     elif name == "brave":
         if not s.research_api_key:
             out.append("OSRIP_RESEARCH_API_KEY")
@@ -122,6 +139,7 @@ def model_for(name: str, capability: str) -> str | None:
         ("openai", "search"): s.openai_search_model,
         ("gemini", "answer"): s.gemini_model,
         ("gemini", "search"): s.gemini_search_model,
+        ("deepseek", "answer"): s.deepseek_model,
     }.get((name, capability))
 
 
@@ -474,6 +492,7 @@ def state(name: str) -> dict[str, Any]:
         "provider": name,
         "label": spec.label,
         "docs": spec.docs,
+        "billing": spec.billing,
         "roles": my_roles,
         "in_use": bool(my_roles),
         "capabilities": capabilities,

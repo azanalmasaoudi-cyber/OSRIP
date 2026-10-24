@@ -68,7 +68,15 @@ function ProviderCard({ p, onTest, testing }: { p: ProviderState; onTest: ((capa
         <div className="flex flex-wrap gap-1.5">
           <Badge variant={p.status === 'failed' ? 'accent' : p.status === 'tested' ? 'verified' : 'muted'}>{t(`providers.status.${p.status}`)}</Badge>
           {p.roles.map((role) => <Badge key={role} variant="outline">{t(`providers.role.${role as 'answer_primary'}`)}</Badge>)}
+          {p.billing ? (
+            <Badge variant={p.billing === 'free_tier_available' ? 'verified' : 'sand'} data-testid="provider-billing" data-billing={p.billing}>
+              {t(`providers.billing.${p.billing}`)}
+            </Badge>
+          ) : null}
         </div>
+        {p.billing === 'usage_billed' && p.roles.includes('answer_fallback') ? (
+          <p className="text-xs text-sand-foreground" role="note" data-testid="provider-billed-fallback">{t('providers.billedFallback')}</p>
+        ) : null}
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
           {Object.entries(p.capabilities).map(([cap, c]) => (
             <div key={cap} className="contents">

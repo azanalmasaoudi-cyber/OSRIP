@@ -30,6 +30,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { ProgressBar } from '@/components/ui/progress';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { SourceFeedsAdmin } from '@/components/sources/SourceFeeds';
 import { SelectField } from '@/components/ui/select';
 import { VERSION_STATUS_KEY } from '@/i18n/keys';
 import { cn } from '@/lib/utils';
@@ -451,7 +452,7 @@ function ImportDetail({ id, me, onBack }: { id: string; me: Me; onBack: () => vo
         {status === 'published' ? (
           <p role="status" className="text-sm font-medium text-verified-foreground" data-testid="published-note">
             {t('dm.published', { n: (imp.valid_row_count ?? 0) + (imp.warning_row_count ?? 0) })}{' '}
-            <Link to={{ ...to('/overview'), search: `?mode=${imp.data_mode}` }} className="underline">
+            <Link to={{ ...to('/workspace'), search: `?mode=${imp.data_mode}` }} className="underline">
               {t('dm.viewData')}
             </Link>
           </p>
@@ -586,7 +587,8 @@ export function DataManagementPage() {
         <Link to={to('/sign-in')} className={cn(buttonVariants({ size: 'sm' }), 'mt-3 w-fit')}>{t('auth.signIn')}</Link>
       </StatePanel>
     );
-  } else if (!hasPermission(me.data, 'import.read') && !hasPermission(me.data, 'research.review')) {
+  } else if (!hasPermission(me.data, 'import.read') && !hasPermission(me.data, 'research.review')
+    && !hasPermission(me.data, 'user.manage')) {
     body = (
       <StatePanel kind="restricted">
         <p className="text-sm text-muted-foreground">{t('dm.noPermission')}</p>
@@ -595,6 +597,9 @@ export function DataManagementPage() {
   } else {
     body = (
       <>
+        {hasPermission(me.data, 'import.read') || hasPermission(me.data, 'user.manage') ? (
+          <div className="mb-8"><SourceFeedsAdmin canManage={hasPermission(me.data, 'user.manage')} /></div>
+        ) : null}
         {hasPermission(me.data, 'import.read') ? <Workspace me={me.data} /> : null}
         {hasPermission(me.data, 'research.review') ? <ResearchQueue /> : null}
       </>

@@ -6,6 +6,7 @@ import {
   Droplets,
   FileText,
   FlaskConical,
+  Info,
   LayoutDashboard,
   LibraryBig,
   LineChart,
@@ -27,6 +28,7 @@ import { usePreservedSearch } from '@/state/usePreservedSearch';
 
 export type NavKey =
   | 'nav.overview'
+  | 'nav.workspace'
   | 'nav.electricity'
   | 'nav.water'
   | 'nav.foodSecurity'
@@ -57,13 +59,14 @@ interface NavGroup {
 }
 
 /** The main destinations, in this order: Overview, the four sectors, Studies, Sources and
- * Settings. Then the other tools (the AI Assistant, the map, scenarios, reports, the library),
- * the account and administration (authorized users). Page titles keep their full names. */
+ * Settings. Then the other tools (the AI Assistant, the analysis workspace, the map,
+ * scenarios, reports, the library), the account and administration (authorized users).
+ * Page titles keep their full names. */
 export const NAV_GROUPS: readonly NavGroup[] = [
   {
     label: null,
     items: [
-      { path: '/overview', key: 'nav.overview', icon: LayoutDashboard },
+      { path: '/overview', key: 'nav.overview', icon: Info },
       { path: '/energy/electricity', key: 'nav.electricity', icon: Zap },
       { path: '/energy/water', key: 'nav.water', icon: Droplets },
       { path: '/food-security', key: 'nav.foodSecurity', icon: Wheat },
@@ -77,6 +80,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     label: 'nav.groupMoreTools',
     items: [
       { path: '/assistant', key: 'nav.aiAssistant', icon: Bot },
+      { path: '/workspace', key: 'nav.workspace', icon: LayoutDashboard },
       { path: '/geography', key: 'nav.map', icon: Map },
       { path: '/forecasts', key: 'nav.scenarios', icon: LineChart },
       { path: '/reports', key: 'nav.reports', icon: FileText },

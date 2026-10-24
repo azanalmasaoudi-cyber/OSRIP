@@ -1,11 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { chooseSelection, openCalculations, showResults } from './sector';
+
 // Interface quality checks against the real API: images, keyboard access and focus,
 // failed requests, negative numbers and units in both languages, empty states, and
 // long Arabic labels at the current viewport (run on the desktop and mobile projects).
 
 const ROUTES = [
-  '/', '/overview', '/energy/electricity', '/energy/water', '/food-security', '/trade',
+  '/', '/overview', '/workspace', '/energy/electricity', '/energy/water', '/food-security', '/trade',
   '/geography', '/reports', '/forecasts', '/assistant', '/sources', '/data-management', '/sign-in',
   '/register', '/register?method=phone', '/sign-in?method=phone', '/forgot-password', '/account', '/admin/users', '/admin/health', '/dev/mail',
 ];
@@ -78,22 +80,27 @@ test('failed requests show an explained error with retry, and the rest of the pa
     route.fulfill({ status: 503, contentType: 'application/json',
       body: JSON.stringify({ error: { code: 'database_unavailable', message: 'The data store is not available.' } }) }));
   await page.goto('/energy/electricity?mode=synthetic');
+  await showResults(page, { indicator: 'ELEC_GENERATION', view: 'annual', from: '2001-01-01', to: '2002-01-01' });
+  await openCalculations(page);
   const error = page.locator('[data-state="error"]').first();
   await expect(error).toBeVisible();
   await expect(error).toContainText('The data store is not available.');
   await expect(error.getByRole('button', { name: 'Try again' })).toBeVisible();
-  // Observations come from another request and are still shown.
-  await expect(page.getByTestId('series-card').filter({ hasText: 'Electricity generation' }).first()
-    .getByTestId('observation-value').first()).toHaveText('48,000');
+  // The table comes from another request and is still shown.
+  await expect(page.getByTestId('series-row').first().locator('td').first()).toHaveText('48,000');
 
+  // Without the list of published periods nothing can be chosen, and the page says why.
   await page.unroute('**/api/v1/analysis/**');
-  await page.route('**/api/v1/observations**', (route) => route.abort('connectionrefused'));
+  await page.route('**/api/v1/series/availability**', (route) => route.abort('connectionrefused'));
   await page.goto('/energy/water?mode=synthetic');
-  await expect(page.locator('[data-state="error"]').first()).toBeVisible();
+  await expect(page.locator('[data-state="error"]').first()).toContainText('list of published periods could not be loaded');
+  await expect(page.getByTestId('sector-results')).toHaveCount(0);
 });
 
 test('negative values and units keep their sign and unit in English and Arabic', async ({ page }) => {
   await page.goto('/trade?mode=synthetic');
+  await showResults(page, { indicator: 'TRADE_VALUE', breakdown: 'SYNTH_COMMODITY||import', view: 'annual', from: '2002-01-01', to: '2002-01-01' });
+  await openCalculations(page);
   const balance = page.locator('[data-testid="calculation"][data-kind="trade_balance"] [data-testid="calc-value"]');
   await expect(balance).toHaveText(/^[−-]28,000,000 Omani rial \(nominal\)$/);
   await toArabic(page);
@@ -105,6 +112,8 @@ test('negative values and units keep their sign and unit in English and Arabic',
 
   await page.goto('/energy/electricity?mode=synthetic');
   await page.getByRole('button', { name: 'English' }).first().click();
+  await showResults(page, { indicator: 'ELEC_GENERATION', view: 'annual', from: '2001-01-01', to: '2002-01-01' });
+  await openCalculations(page);
   await expect(page.locator('[data-testid="calculation"][data-kind="absolute_change"]').filter({ hasText: 'Electricity generation' })
     .getByTestId('calc-value')).toContainText('2,100 gigawatt-hour');
 });
@@ -112,8 +121,12 @@ test('negative values and units keep their sign and unit in English and Arabic',
 test('empty states are explained, never blank', async ({ page }) => {
   await page.goto('/trade');
   await expect(page.locator('[data-state="no_verified_data"]').first()).toBeVisible();
-  await page.goto('/trade?mode=synthetic&commodity=RICE');
-  await expect(page.locator('[data-state="empty"]').first()).toBeVisible();
+  await page.goto('/trade?mode=synthetic');
+  await page.getByTestId('sector-show-results').click(); // no period chosen yet
+  await expect(page.getByTestId('sector-error')).toContainText('Choose both a start period and an end period.');
+  await chooseSelection(page, { indicator: 'TRADE_VALUE', breakdown: 'SYNTH_COMMODITY||import', view: 'annual', from: '2002-01-01', to: '2002-01-01' });
+  await page.getByTestId('sector-show-results').click();
+  await expect(page.getByTestId('sector-error')).toHaveCount(0);
   await page.goto('/geography');
   await expect(page.locator('[data-testid="area-table"] [data-coverage="none"]').first()).toContainText('No data');
 });

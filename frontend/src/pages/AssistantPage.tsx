@@ -3,7 +3,7 @@ import { useId, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
-import { speakAnalysis, useAssistantStatus, useVoiceStatus } from '@/api/assistant';
+import { selectionFromParams, speakAnalysis, useAssistantStatus, useVoiceStatus } from '@/api/assistant';
 import { OPTION_KINDS, SECTORS, spokenText, useBalance, useRunBalance, type Sector } from '@/api/balance';
 import { adapterKind } from '@/api/config';
 import { useAssistantUi } from '@/components/assistant/AssistantContext';
@@ -26,7 +26,9 @@ import { usePreservedSearch } from '@/state/usePreservedSearch';
 
 const SECTOR_KEY = 'osrip.assistant.sector';
 
-function readSector(): Sector {
+function readSector(fromUrl: string | null): Sector {
+  // A sector page's "Request analysis" link names its sector (?sector=water).
+  if ((SECTORS as readonly string[]).includes(fromUrl ?? '')) return fromUrl as Sector;
   try {
     const v = window.localStorage.getItem(SECTOR_KEY);
     return (SECTORS as readonly string[]).includes(v ?? '') ? (v as Sector) : 'electricity';
@@ -59,7 +61,8 @@ function useResultLabels(): Labels {
  * persona's portrait with only its name, state, service status, persona choice and audio
  * controls; "Run analysis" with questions for the chosen sector; and the results of the latest
  * analysis or assistant study, in tabs (summary, tables, charts, sources, recommendations).
- * A question passed as ?q= is prefilled, not sent; ?analysis= opens a stored analysis.
+ * A question passed as ?q= is prefilled, not sent; ?sector= chooses the sector; ?analysis= opens
+ * a stored analysis.
  */
 export function AssistantPage() {
   const { t } = useTranslation();
@@ -69,6 +72,8 @@ export function AssistantPage() {
   const to = usePreservedSearch();
   const [params] = useSearchParams();
   const question = (params.get('q') ?? '').slice(0, 1000);
+  // A question from a sector page carries its applied selection (indicator, area, period).
+  const selection = useMemo(() => selectionFromParams(params), [params]);
   const [mode] = useDataMode();
   const ui = useAssistantUi();
   const status = useAssistantStatus();
@@ -77,7 +82,7 @@ export function AssistantPage() {
   const askRef = useRef<AskFromOutside | null>(null);
   const formId = useId();
 
-  const [sector, setSectorState] = useState<Sector>(readSector);
+  const [sector, setSectorState] = useState<Sector>(() => readSector(params.get('sector')));
   const setSector = (s: Sector) => {
     setSectorState(s);
     try { window.localStorage.setItem(SECTOR_KEY, s); } catch { /* storage blocked: kept for this visit */ }
@@ -183,7 +188,8 @@ export function AssistantPage() {
       : 'flex h-[min(40rem,calc(100dvh-10rem))] min-h-[26rem] flex-col overflow-hidden rounded-lg border border-border bg-card'}
       dir={dir} aria-labelledby={`${formId}-conversation`} data-testid="conversation-panel">
       <h2 id={`${formId}-conversation`} className="sr-only">{t('assistantPage.conversation')}</h2>
-      <AssistantChat initialDraft={question} askRef={askRef} showIdentity={!api} />
+      <AssistantChat initialDraft={question} askRef={askRef} showIdentity={!api} selection={selection}
+        selectionLabel={selection ? (params.get('sl') ?? '').slice(0, 200) || undefined : undefined} />
     </section>
   );
 

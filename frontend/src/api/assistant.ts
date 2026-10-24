@@ -320,6 +320,46 @@ export function useGuestConversation(id: string | null) {
   });
 }
 
+/** The applied selection of the sector page a question comes from (the answer keeps to it). */
+export interface AskSelection {
+  sector: 'electricity' | 'water' | 'food_security' | 'trade';
+  indicator: string;
+  area: string;
+  view: 'annual' | 'quarterly' | 'monthly';
+  period_from: string;
+  period_to: string;
+  commodity?: string;
+  partner?: string;
+  flow?: 'import' | 'domestic_export' | 're_export';
+}
+
+const SELECTION_SECTORS = ['electricity', 'water', 'food_security', 'trade'] as const;
+const SELECTION_VIEWS = ['annual', 'quarterly', 'monthly'] as const;
+const SELECTION_FLOWS = ['import', 'domestic_export', 're_export'] as const;
+const CODE = /^[A-Z0-9_]{1,64}$/;
+const AREA = /^[A-Z]{2}(-[A-Z0-9]{2,24}){0,4}$/;
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** A selection from a link's parameters (sector, ind, area, view, from, to, cm, pt, fl), or
+ * null when anything is missing or malformed (the question is then asked without it). */
+export function selectionFromParams(params: URLSearchParams): AskSelection | null {
+  const sector = SELECTION_SECTORS.find((s) => s === params.get('sector'));
+  const view = SELECTION_VIEWS.find((v) => v === params.get('view'));
+  const indicator = params.get('ind') ?? '';
+  const area = params.get('area') ?? 'OM';
+  const from = params.get('from') ?? '';
+  const to = params.get('to') ?? '';
+  if (!sector || !view || !CODE.test(indicator) || !AREA.test(area) || !DAY.test(from) || !DAY.test(to) || from > to) return null;
+  const out: AskSelection = { sector, indicator, area, view, period_from: from, period_to: to };
+  const commodity = params.get('cm');
+  const partner = params.get('pt');
+  const flow = SELECTION_FLOWS.find((f) => f === params.get('fl'));
+  if (commodity && CODE.test(commodity)) out.commodity = commodity;
+  if (partner && CODE.test(partner)) out.partner = partner;
+  if (flow) out.flow = flow;
+  return out;
+}
+
 export interface GuestQuestion {
   content: string;
   language: 'en' | 'ar';
@@ -330,6 +370,7 @@ export interface GuestQuestion {
   mode: AssistantMode;
   persona?: string;
   cross_check?: boolean;
+  selection?: AskSelection;
 }
 
 export function useGuestAsk() {
@@ -406,7 +447,7 @@ export function useAsk(conversationId: string | null) {
     // request_id: a retry of the same question returns the stored reply instead of asking again.
     mutationFn: (body: {
       content: string; language: 'en' | 'ar'; request_id?: string; web_research: boolean; mode: AssistantMode;
-      persona?: string; cross_check?: boolean;
+      persona?: string; cross_check?: boolean; selection?: AskSelection;
     }) =>
       apiJson(`/assistant/conversations/${conversationId}/messages`, messageSchema, jsonBody('POST', body)),
     onSettled: () => {
@@ -540,6 +581,44 @@ export async function testVoice(persona: string, language: 'en' | 'ar', signal?:
     transcript = null;
   }
   return { audio: await response.blob(), transcript };
+}
+
+/** A sector page's selection, to be explained in a few sentences (not the whole table). */
+export interface SeriesSpeech {
+  data_mode: DataMode;
+  indicator: string;
+  area: string;
+  view: 'annual' | 'quarterly' | 'monthly';
+  period_from: string;
+  period_to: string;
+  commodity?: string;
+  partner?: string;
+  flow?: string;
+}
+
+function decodeTranscript(raw: string | null): string | null {
+  try {
+    return raw ? decodeURIComponent(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The short spoken explanation in the persona's server voice, with its words. Guests get the
+ * anonymous session first (the speech service is metered per visitor). */
+export async function speakSeries(body: SeriesSpeech, persona: string, language: 'en' | 'ar', signedIn: boolean,
+  signal?: AbortSignal): Promise<{ audio: Blob; transcript: string | null }> {
+  if (!signedIn && !document.cookie.includes('osrip_guest_csrf=')) await apiFetch('/assistant/guest', { signal });
+  const init = jsonBody('POST', { ...body, persona, language });
+  const response = await apiFetch('/assistant/voice/series', { ...init, signal, headers: guestHeaders(init.headers) });
+  return { audio: await response.blob(), transcript: decodeTranscript(response.headers.get('X-Transcript')) };
+}
+
+/** The same words without audio (for the transcript, or a browser voice). */
+export async function seriesTranscript(body: SeriesSpeech, language: 'en' | 'ar', signal?: AbortSignal): Promise<string> {
+  const result = await apiJson('/assistant/voice/series', z.object({ transcript: z.string() }),
+    { ...jsonBody('POST', { ...body, language, text_only: true }), signal });
+  return result.transcript;
 }
 
 /** The concise spoken summary of a stored shortage and surplus analysis. */

@@ -38,6 +38,13 @@ export function formatDate(value: string, language: AppLanguage): string {
   return new Intl.DateTimeFormat(LOCALES[language], { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }).format(date);
 }
 
+/** A moment in the reader's own time zone (e.g. 23 Oct 2026, 16:45); the input if unreadable. */
+export function formatDateTime(value: string, language: AppLanguage): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(LOCALES[language], { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+}
+
 export function formatPeriod(start: string, end: string, language: AppLanguage): string {
   const s = new Date(`${start}T00:00:00Z`);
   const e = new Date(`${end}T00:00:00Z`);

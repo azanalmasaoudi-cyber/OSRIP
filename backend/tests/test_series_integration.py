@@ -1,7 +1,7 @@
 """The series timeline API: published monthly values in time order with gaps kept, a quarter
 derived only from its three published months, year-on-year and month-on-month changes, the
-CSV with the same rows and provenance, and a selection asked for when one indicator has
-several breakdowns."""
+CSV with the same rows and provenance, a selection asked for when one indicator has several
+breakdowns, the summary of a selected range, and the availability the selectors offer."""
 
 from __future__ import annotations
 
@@ -148,3 +148,38 @@ def test_selection_errors_and_unknown_indicator(anonymous, published) -> None:  
         assert len(trade["options"]) > 1 and trade["rows"] == []
     none = _timeline(anonymous, indicator="ELEC_PEAK_DEMAND", area="OM-MU-03")
     assert none["status"] == "no_published_data" and none["rows"] == []
+
+
+def test_summary_of_the_selected_range(anonymous, published) -> None:  # noqa: ANN001
+    # January to April 2024: February is not published, so there is no total.
+    doc = _timeline(anonymous, view="monthly", period_from="2024-01-01", period_to="2024-04-30")
+    s = doc["summary"]
+    assert (s["periods"], s["with_value"], s["missing"]) == (4, 3, 1)
+    assert s["first"]["value"] == "15" and s["last"]["value"] == "44"
+    assert s["change"]["absolute"] == "29" and s["total"] is None
+    assert s["total_reason"]["code"] == "missing_periods"
+    # January to April 2023 are all published: the flow is totalled.
+    full = _timeline(anonymous, view="monthly", period_from="2023-01-01", period_to="2023-04-30")
+    assert full["summary"]["total"] == "90" and full["summary"]["missing"] == 0
+
+
+def test_availability_offers_only_periods_with_a_value(anonymous, published) -> None:  # noqa: ANN001
+    r = anonymous.get(f"{API}/series/availability",
+                      params={"data_mode": "synthetic", "section": "electricity"})  # fmt: skip
+    assert r.status_code == 200, r.text
+    doc = r.json()
+    assert doc["section"] == "electricity" and doc["label"]  # synthetic label
+    indicator = next(i for i in doc["indicators"] if i["code"] == "ELEC_CONSUMPTION")
+    assert indicator["name"]["en"] and indicator["value_type"] == "period_total"
+    entry = next(s for s in indicator["series"] if s["area"]["code"] == AREA)
+    months = [p["start"] for p in entry["views"]["monthly"]]
+    # Published months only: February 2024 and the unpublished gap are not offered.
+    assert months == ["2023-01-01", "2023-02-01", "2023-03-01", "2023-04-01",
+                      "2024-01-01", "2024-03-01", "2024-04-01"]  # fmt: skip
+    # Q1 2023 is derived from three published months; Q1 2024 is not (February missing).
+    assert [p["start"] for p in entry["views"]["quarterly"]] == ["2023-01-01"]
+    assert entry["views"]["annual"] == []  # no year is complete
+    assert entry["unit"]["code"] == "GWh"
+    bad = anonymous.get(f"{API}/series/availability",
+                        params={"data_mode": "synthetic", "section": "energy"})  # fmt: skip
+    assert bad.status_code == 422

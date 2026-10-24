@@ -12,6 +12,11 @@ evidence check are the same whichever provider answers:
 * ``GeminiProvider``: Interactions API with function tools (``OSRIP_GEMINI_API_KEY``,
   ``OSRIP_GEMINI_MODEL``); stateless: the model's steps (thoughts with their signatures,
   function calls) are sent back exactly as received. No code execution is enabled.
+* ``DeepSeekProvider``: Chat Completions API (OpenAI-compatible) with function tools
+  (``OSRIP_DEEPSEEK_API_KEY``, ``OSRIP_DEEPSEEK_MODEL``). Usage-billed per token from a
+  topped-up balance, so it is built only when ``OSRIP_DEEPSEEK_BILLING_ACKNOWLEDGED=true``
+  as well: a key alone never starts billing, as primary or as fallback. Thinking mode is
+  switched off, because a required tool call is refused in thinking mode.
 * ``FakeProvider``: a scripted test double; refused in production.
 
 Keys stay on the server and are never sent to browsers. Model ids are configured, never
@@ -38,7 +43,11 @@ ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_VERSION = "2023-06-01"
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 GEMINI_INTERACTIONS_URL = "https://generativelanguage.googleapis.com/v1beta/interactions"
+DEEPSEEK_CHAT_URL = "https://api.deepseek.com/chat/completions"
 RETRY_PAUSE_SECONDS = 1.0
+# A rate-limited call is retried once after the service's Retry-After, when it asks for at
+# most this long; a longer wait fails at once (and the fallback provider, if any, answers).
+MAX_RETRY_AFTER_SECONDS = 10.0
 MAX_OUTPUT_TOKENS = 4096  # room for a final answer with cards, drivers and conflicts
 
 
@@ -53,6 +62,8 @@ class ProviderError(Exception):
     def __init__(self, code: str, detail: str | None = None) -> None:
         super().__init__(code)
         self.detail = detail
+        # Seconds the service asked us to wait (Retry-After on 429/503), when it said.
+        self.retry_after: float | None = None
         # Set by the answer loop: who failed, and the evidence gathered before the failure.
         self.provider: str | None = None
         self.model: str | None = None
@@ -94,8 +105,8 @@ def failure_category(code: str, detail: str | None = None) -> str:
         return "network"
     if code.startswith("http_5"):
         return "server_error"
-    if code in ("daily_limit", "budget_exhausted") or code.startswith("limit"):
-        return "budget"
+    if code in ("daily_limit", "budget_exhausted", "http_402") or code.startswith("limit"):
+        return "budget"  # 402: a usage-billed provider's balance is used up (DeepSeek)
     if code in ("invalid_json", "no_tool_call", "invalid_arguments", "too_many_rounds") or (
         code.startswith("status_")
     ):
@@ -112,8 +123,18 @@ class Provider(Protocol):
     ) -> dict[str, Any]: ...
 
 
-# Injectable for tests (httpx.MockTransport).
+# Injectable for tests (httpx.MockTransport, no waiting).
 http_client_factory: Callable[[float], httpx.Client] = lambda timeout: httpx.Client(timeout=timeout)  # noqa: E731
+sleep: Callable[[float], None] = time.sleep
+
+
+def retry_after(response: httpx.Response) -> float | None:
+    """Seconds from a Retry-After header in its delay form (an HTTP date is not trusted)."""
+    value = response.headers.get("retry-after", "").strip()
+    try:
+        return max(0.0, float(value)) if value else None
+    except ValueError:
+        return None
 
 
 def transient(code: str) -> bool:
@@ -136,7 +157,9 @@ def _post_json(
             detail = error_type(response.json())
         except ValueError:
             detail = None
-        raise ProviderError(f"http_{response.status_code}", detail)
+        error = ProviderError(f"http_{response.status_code}", detail)
+        error.retry_after = retry_after(response)
+        raise error
     try:
         return response.json()
     except ValueError as exc:
@@ -177,8 +200,9 @@ class _HttpProvider:
                 code = str(exc)
                 monitoring.external_failure("assistant", code)
                 registry.record(self.vendor, capability, self.name, code, started)
-                if attempt == 1 and transient(code):
-                    time.sleep(RETRY_PAUSE_SECONDS)
+                wait = exc.retry_after if exc.retry_after is not None else RETRY_PAUSE_SECONDS
+                if attempt == 1 and transient(code) and wait <= MAX_RETRY_AFTER_SECONDS:
+                    sleep(wait)
                     continue
                 raise
             monitoring.external_success("assistant")
@@ -498,6 +522,134 @@ class GeminiProvider(_HttpProvider):
         return self.parse(body)
 
 
+class DeepSeekProvider(_HttpProvider):
+    """Chat Completions (POST https://api.deepseek.com/chat/completions) with function tools.
+
+    Stateless: the conversation is sent as chat messages each turn (assistant tool calls,
+    then one ``tool`` message per result, as the tool-calls guide requires). Thinking is
+    switched off (``thinking: {"type": "disabled"}``): ``tool_choice: required`` is refused
+    in thinking mode, and every turn must be a tool call (the last is final_answer)."""
+
+    vendor = "deepseek"
+
+    def __init__(self, api_key: str, model: str, timeout: float) -> None:
+        self.name = model
+        self._key = api_key
+        self._timeout = timeout
+
+    @staticmethod
+    def chat_messages(system: str, messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = [{"role": "system", "content": system}]
+        for m in messages:
+            content = m["content"]
+            if isinstance(content, str):
+                out.append({"role": m["role"], "content": content})
+                continue
+            if m["role"] == "assistant":
+                text = "".join(str(b.get("text", "")) for b in content if b.get("type") == "text")
+                calls = [
+                    {
+                        "id": str(b["id"]),
+                        "type": "function",
+                        "function": {
+                            "name": str(b["name"]),
+                            "arguments": json.dumps(b.get("input") or {}, ensure_ascii=False),
+                        },
+                    }
+                    for b in content
+                    if b.get("type") == "tool_use"
+                ]
+                message: dict[str, Any] = {"role": "assistant", "content": text or None}
+                if calls:
+                    message["tool_calls"] = calls
+                out.append(message)
+                continue
+            texts: list[str] = []
+            for b in content:  # tool results first (they answer the previous tool calls)
+                if b.get("type") == "tool_result":
+                    out.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": str(b["tool_use_id"]),
+                            "content": _result_text(b.get("content")),
+                        }
+                    )
+                elif b.get("type") == "text":
+                    texts.append(str(b.get("text", "")))
+            if texts:
+                out.append({"role": "user", "content": "\n".join(texts)})
+        return out
+
+    def _request(
+        self, system: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]]
+    ) -> dict[str, Any]:
+        return {
+            "model": self.name,
+            "messages": self.chat_messages(system, messages),
+            "tools": [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": t["name"],
+                        "description": t.get("description", ""),
+                        "parameters": t["input_schema"],
+                    },
+                }
+                for t in tools
+            ],
+            "tool_choice": "required",  # every turn is a tool call; the last is final_answer
+            "thinking": {"type": "disabled"},
+            "max_tokens": MAX_OUTPUT_TOKENS,
+            "temperature": 0,
+            "stream": False,
+        }
+
+    def _call(self, body: dict[str, Any]) -> dict[str, Any]:
+        return _post_json(
+            DEEPSEEK_CHAT_URL,
+            body,
+            {"Authorization": f"Bearer {self._key}", "Content-Type": "application/json"},
+            self._timeout,
+        )
+
+    @staticmethod
+    def parse(body: dict[str, Any]) -> tuple[dict[str, Any], dict[str, int | None]]:
+        choices = body.get("choices")
+        if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
+            raise ProviderError("invalid_json")
+        finish = choices[0].get("finish_reason")
+        if finish in ("content_filter", "insufficient_system_resource", "aborted"):
+            raise ProviderError(f"status_{finish}"[:40])
+        message = choices[0].get("message") or {}
+        blocks: list[dict[str, Any]] = []
+        if isinstance(message.get("content"), str) and message["content"]:
+            blocks.append({"type": "text", "text": message["content"]})
+        for call in message.get("tool_calls") or []:
+            function = (call or {}).get("function") or {}
+            try:
+                arguments = json.loads(function.get("arguments") or "{}")
+            except ValueError as exc:
+                raise ProviderError("invalid_arguments") from exc
+            if not isinstance(arguments, dict):
+                raise ProviderError("invalid_arguments")
+            blocks.append(
+                {
+                    "type": "tool_use",
+                    "id": str(call.get("id")),
+                    "name": str(function.get("name")),
+                    "input": arguments,
+                }
+            )
+        usage = body.get("usage") or {}
+        return {"content": blocks}, {
+            "input_tokens": usage.get("prompt_tokens"),
+            "output_tokens": usage.get("completion_tokens"),
+        }
+
+    def _parse(self, body: dict[str, Any]) -> tuple[dict[str, Any], dict[str, int | None]]:
+        return self.parse(body)
+
+
 class FakeProvider:
     """Deterministic stand-in used by tests: picks tools by keywords and answers only
     from their results. Never used in production (startup refuses it)."""
@@ -513,6 +665,12 @@ class FakeProvider:
         "water": "WATER_PRODUCTION",
         "مياه": "WATER_PRODUCTION",
     }
+    # The rule service.selection_rule adds when the question comes from a sector page.
+    SELECTION = re.compile(
+        r"applied selection: sector [a-z_]+; indicator (?P<indicator>[A-Z0-9_]+); "
+        r"area (?P<area>[A-Z0-9-]+); (?P<view>[a-z_]+) periods from "
+        r"(?P<start>\d{4}-\d{2}-\d{2}) to (?P<end>\d{4}-\d{2}-\d{2})"
+    )
 
     def complete(
         self, system: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]]
@@ -543,6 +701,9 @@ class FakeProvider:
             return self._conflict(question, tool_results, arabic)
         if ("study" in question or "دراسة" in question) and "run_study" in names:
             return self._study(tool_results, arabic)
+        chosen = self.SELECTION.search(system)
+        if chosen and question.startswith(("analyse", "حلّل", "حلل")):
+            return self._selection(chosen, tool_results, arabic)
         if "history" in question or "تاريخ" in question:
             return self._history(question, tool_results, arabic)
         if "growth" in question or "نمو" in question:
@@ -697,6 +858,39 @@ class FakeProvider:
             for o in rows
         ]
         return self._final("answered", " ".join(sentences), [o["id"] for o in rows])
+
+    def _selection(
+        self, chosen: re.Match[str], tool_results: list[dict[str, Any]], arabic: bool
+    ) -> dict[str, Any]:
+        """Request analysis from a sector page: look up exactly the applied indicator, area,
+        frequency and years, keep the periods inside the range, cite each one."""
+        start, end = chosen["start"], chosen["end"]
+        if not tool_results:
+            return self._call(
+                "get_observations",
+                {
+                    "indicator": chosen["indicator"],
+                    "area": chosen["area"],
+                    "frequency": chosen["view"],
+                    "year_from": int(start[:4]),
+                    "year_to": int(end[:4]),
+                },
+            )
+        result = self._last(tool_results)
+        inside = [
+            o
+            for o in result.get("observations", [])
+            if start <= o["period_start"] <= end and o.get("value") is not None
+        ][-6:]
+        if result.get("status") != "ok" or not inside:
+            return self._no_data(arabic)
+        sentences = [
+            f"للفترة التي تبدأ في {o['period_start']} كانت القيمة المنشورة {o['value']} {o['unit']} [{o['id']}]."
+            if arabic
+            else f"For the period starting {o['period_start']} the published value was {o['value']} {o['unit']} [{o['id']}]."
+            for o in inside
+        ]
+        return self._final("answered", " ".join(sentences), [o["id"] for o in inside])
 
     def _no_data(self, arabic: bool) -> dict[str, Any]:
         return self._final(
@@ -933,6 +1127,13 @@ def build_provider(name: str) -> Provider | None:
         return OpenAIProvider(s.openai_api_key.get_secret_value(), s.openai_model, timeout)
     if name == "gemini" and s.gemini_api_key and s.gemini_model:
         return GeminiProvider(s.gemini_api_key.get_secret_value(), s.gemini_model, timeout)
+    if (
+        name == "deepseek"
+        and s.deepseek_api_key
+        and s.deepseek_model
+        and s.deepseek_billing_acknowledged
+    ):
+        return DeepSeekProvider(s.deepseek_api_key.get_secret_value(), s.deepseek_model, timeout)
     return None
 
 

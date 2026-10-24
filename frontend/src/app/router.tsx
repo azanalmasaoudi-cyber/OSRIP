@@ -12,6 +12,7 @@ import { GeographyPage } from '@/pages/GeographyPage';
 import { LibraryPage } from '@/pages/LibraryPage';
 import { NotFoundPage, SourcesPage } from '@/pages/InfoPages';
 import { OverviewPage } from '@/pages/OverviewPage';
+import { WorkspacePage } from '@/pages/WorkspacePage';
 import { ReportPage, ReportsPage } from '@/pages/ReportsPages';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { StudiesPage } from '@/pages/StudiesPage';
@@ -49,6 +50,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <HomePage /> },
       { path: 'overview', element: <OverviewPage /> },
+      { path: 'workspace', element: <WorkspacePage /> },
       {
         path: 'energy',
         element: <EnergyLayout />,

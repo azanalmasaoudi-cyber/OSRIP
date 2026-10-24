@@ -53,7 +53,7 @@ test('guests get five answers across languages, then a sign-in prompt that survi
   // Public statistics stay open.
   await page.keyboard.press('Escape');
   await page.goto('/energy/electricity?mode=synthetic');
-  await expect(page.getByTestId('series-card').first()).toBeVisible();
+  await expect(page.getByTestId('sector-form')).toBeVisible();
 });
 
 test('the orb shows real states and the panel works by keyboard', async ({ page }) => {

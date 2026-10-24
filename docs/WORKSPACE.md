@@ -1,6 +1,8 @@
 # Analytical workspace and live studies
 
-The Overview page (`/overview`) is now OSRIP's analytical workspace. It covers the three domains:
+The Analysis workspace (`/workspace`) is OSRIP's analytical workspace. It was on the Overview
+page until the Overview became the project introduction; its reference charts are now drawn
+only when the reader presses "Show chart". It covers the three domains:
 
 - Energy and Essential Services (Electricity and Water);
 - Food Security;

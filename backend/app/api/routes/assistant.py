@@ -10,12 +10,14 @@ import json
 import time
 import uuid
 from collections.abc import AsyncIterator
+from datetime import date
 from typing import Annotated, Any, Literal
 from urllib.parse import quote
 
 from fastapi import APIRouter, Body, Depends, Request, Response
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from sqlalchemy import select
 
 from app.api.deps import CurrentPrincipal, DbSession, require, require_authenticated
 from app.core import ratelimit
@@ -88,6 +90,33 @@ def save_persona_choice(
         return {"persona": code, "stored": "account"}
 
 
+class SelectionIn(BaseModel):
+    """The applied selection of the sector page a question was asked from: the answer keeps
+    to this indicator, area, frequency and period (and breakdown)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    sector: Literal["electricity", "water", "food_security", "trade"]
+    indicator: str = Field(pattern=r"^[A-Z][A-Z0-9_]{1,63}$")
+    area: str = Field(default="OM", pattern=r"^[A-Z]{2}(-[A-Z0-9]{2,24}){0,4}$")
+    view: Literal["annual", "quarterly", "monthly"]
+    period_from: date
+    period_to: date
+    commodity: str | None = Field(default=None, pattern=r"^[A-Z0-9_]{1,40}$")
+    partner: str | None = Field(default=None, pattern=r"^[A-Z0-9_]{1,40}$")
+    flow: Literal["import", "domestic_export", "re_export"] | None = None
+
+    @model_validator(mode="after")
+    def _ordered(self) -> "SelectionIn":
+        if self.period_from > self.period_to:
+            raise ValueError("period_from is after period_to")
+        return self
+
+
+def _selection(value: SelectionIn | None) -> dict[str, Any] | None:
+    return value.model_dump(mode="json", exclude_none=True) if value is not None else None
+
+
 class ConversationIn(BaseModel):
     language: Literal["en", "ar"] = "en"
     data_mode: DataMode = DataMode.VERIFIED_SOURCE
@@ -108,6 +137,8 @@ class MessageIn(BaseModel):
     # Research mode only: also search with the second search route, as a cross-check the
     # person asked for (never automatic).
     cross_check: bool = False
+    # Asked from a sector page: its applied selection (indicator, area, period ...).
+    selection: SelectionIn | None = None
 
 
 @router.get("/conversations")
@@ -148,6 +179,7 @@ def ask(
         mode=body.mode,
         persona=body.persona,
         cross_check=body.cross_check,
+        selection=_selection(body.selection),
     )
 
 
@@ -323,6 +355,7 @@ class GuestMessageIn(BaseModel):
     mode: Literal["ask", "analyze", "research", "compare", "scenario"] = "ask"
     persona: str | None = Field(default=None, pattern=PERSONA_CODE)
     cross_check: bool = False
+    selection: SelectionIn | None = None
 
 
 @router.get("/guest")
@@ -457,6 +490,7 @@ def guest_ask(
         answer_mode=body.mode,
         persona=body.persona,
         cross_check=body.cross_check,
+        selection=_selection(body.selection),
     )
 
 
@@ -652,6 +686,67 @@ def voice_test(
         raise _speech_failure(exc) from exc
     # The words spoken, shown as a transcript beside the player (percent-encoded UTF-8).
     headers = {"Cache-Control": "no-store", "X-Voice": voice, "X-Transcript": quote(phrase)}
+    return Response(audio, media_type=media_type, headers=headers)
+
+
+class SeriesSpeakIn(BaseModel):
+    """A sector page's applied selection, to be explained in a few spoken sentences."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    data_mode: DataMode = DataMode.VERIFIED_SOURCE
+    indicator: str = Field(pattern=r"^[A-Z][A-Z0-9_]{1,63}$")
+    area: str = Field(default="OM", pattern=r"^[A-Z]{2}(-[A-Z0-9]{2,24}){0,4}$")
+    view: Literal["annual", "quarterly", "monthly"]
+    period_from: date
+    period_to: date
+    commodity: str | None = Field(default=None, pattern=r"^[A-Z0-9_]{1,40}$")
+    partner: str | None = Field(default=None, pattern=r"^[A-Z0-9_]{1,40}$")
+    flow: Literal["import", "domestic_export", "re_export"] | None = None
+    language: Literal["en", "ar"] = "en"
+    persona: str | None = Field(default=None, pattern=PERSONA_CODE)
+    # True: only the words (for the transcript, or a browser voice); nothing is synthesised.
+    text_only: bool = False
+
+
+@router.post("/voice/series", response_model=None)
+def voice_series(
+    body: SeriesSpeakIn, request: Request, session: DbSession, principal: CurrentPrincipal
+) -> Response | dict[str, Any]:
+    """A short spoken explanation of a selected range (latest value, change, missing periods,
+    total where valid), from the same figures as the sector page's table, in the persona's
+    voice. Not the whole table. The words are returned as the transcript."""
+    from app.models import Area
+    from app.services import timeline
+
+    with session.begin():
+        doc = timeline.build(
+            session, body.data_mode, body.indicator, area=body.area, view=body.view,
+            commodity=body.commodity, partner=body.partner, flow=body.flow,
+            period_from=body.period_from, period_to=body.period_to,
+        )  # fmt: skip
+        found = session.scalar(select(Area).where(Area.code == body.area))
+        area_name = (
+            (found.name_ar if body.language == "ar" else found.name_en) if found else body.area
+        )
+    text = timeline.spoken_summary(doc, body.language, area_name)
+    if body.text_only:
+        return {"transcript": text}
+    user = _voice_caller(request, session, principal)
+    _voice_limit(request)
+    with session.begin():
+        code = service.resolve_persona(
+            session, body.persona, user_id=user.user_id if user is not None else None
+        )
+        current = profile.active(session)
+        if current is None:
+            raise ApiError(503, "assistant_profile_missing", "No assistant profile is active.")
+        voice = profile.persona(current.profile, code).voices.azure[body.language]
+    try:
+        audio, media_type = speech.synthesize(text, body.language, voice)
+    except speech.SpeechError as exc:
+        raise _speech_failure(exc) from exc
+    headers = {"Cache-Control": "no-store", "X-Voice": voice, "X-Transcript": quote(text)}
     return Response(audio, media_type=media_type, headers=headers)
 
 

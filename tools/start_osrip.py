@@ -740,6 +740,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-browser", action="store_true", help="do not open the browser")
     parser.add_argument("--keep-db", action="store_true", help="leave PostgreSQL running on exit")
     parser.add_argument(
+        "--with-sync-worker",
+        action="store_true",
+        help="also run the official-statistics sync worker (or set OSRIP_SYNC_WORKER=1); feeds "
+        "are checked only after an administrator switches their schedule on",
+    )
+    parser.add_argument(
         "--check", action="store_true", help="only check prerequisites and ports, then exit"
     )
     parser.add_argument("--watchdog", type=int, help=argparse.SUPPRESS)
@@ -882,6 +888,20 @@ def main(argv: list[str] | None = None) -> int:
                 f"API ready: release {body.get('release')}, migration {body.get('checks', {}).get('migration')}.",
             )
             report_integrations(log, body)
+
+            # The official-statistics sync worker: a process of its own, never the web server.
+            if args.with_sync_worker or os.environ.get("OSRIP_SYNC_WORKER") == "1":
+                log("sync", "Starting the official-statistics sync worker ...")
+                services.append(
+                    Service(
+                        "sync",
+                        [str(VENV_PY), str(BACKEND / "scripts" / "sync_worker_dev.py")],
+                        BACKEND,
+                        {**os.environ, "PYTHONUNBUFFERED": "1"},
+                        log,
+                        job,
+                    )
+                )
 
         # Frontend.
         if not reuse_web:

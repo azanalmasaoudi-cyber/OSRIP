@@ -1,20 +1,17 @@
-import { CircleHelp, Play, Settings2, Square, Volume2 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { CircleHelp, Settings2, Volume2 } from 'lucide-react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
 import { useAssistantStatus, useVoiceStatus } from '@/api/assistant';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { clipBlob, useIntroClip } from '@/lib/introClips';
 import { useAppLanguage } from '@/lib/useAppLanguage';
-import { playAudio, type Playback } from '@/lib/voicePlayer';
 import type { LiveStudyState } from '@/state/liveStudy';
 import { usePreservedSearch } from '@/state/usePreservedSearch';
 
 import { useAssistantUi } from './AssistantContext';
 import { AssistantAvatar } from './AssistantAvatar';
 import { AssistantStatusBar } from './AssistantStatusBar';
+import { IntroPlayer } from './IntroPlayer';
 import { PersonaPicker, usePersona } from './persona';
 import { VoicePanel } from './VoicePanel';
 
@@ -51,28 +48,6 @@ export function AssistantIdentityCard({ study, analysing, failed }: {
   const { persona } = usePersona();
   const voice = useVoiceStatus();
   const to = usePreservedSearch();
-  const clip = useIntroClip(persona.code, 'ar');
-  const [intro, setIntro] = useState<'idle' | 'loading' | 'playing'>('idle');
-  const [showTranscript, setShowTranscript] = useState(false);
-  const playback = useRef<Playback | null>(null);
-  const { setActivity } = ui;
-  useEffect(() => setActivity('speaking', intro === 'playing'), [intro, setActivity]);
-  useEffect(() => () => playback.current?.stop(), []);
-
-  const playIntro = () => {
-    if (!clip) return;
-    setIntro('loading');
-    clipBlob(clip)
-      .then((blob) => {
-        playback.current = playAudio(blob, {
-          onStart: () => setIntro('playing'),
-          onLevel: (level) => document.documentElement.style.setProperty('--assistant-voice', level.toFixed(3)),
-          onEnd: () => setIntro('idle'),
-          onError: () => setIntro('idle'),
-        });
-      })
-      .catch(() => setIntro('idle'));
-  };
 
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4" aria-labelledby="assistant-identity-name"
@@ -96,33 +71,12 @@ export function AssistantIdentityCard({ study, analysing, failed }: {
       </div>
       <PersonaPicker compact />
       <AssistantStatusBar study={study} analysing={analysing} failed={failed} />
+      <IntroPlayer />
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        {clip ? (
-          <>
-            {intro === 'idle' ? (
-              <Button type="button" size="sm" variant="outline" onClick={playIntro} data-testid="intro-play">
-                <Play aria-hidden="true" />{t('voicePanel.intro.play')}
-              </Button>
-            ) : (
-              <Button type="button" size="sm" variant="outline" onClick={() => { playback.current?.stop(); setIntro('idle'); }} data-testid="intro-stop">
-                <Square aria-hidden="true" />{t('voicePanel.stop')}
-              </Button>
-            )}
-            <Badge variant="muted" data-testid="intro-recorded">{t('voicePanel.intro.recorded')}</Badge>
-            {clip.transcript ? (
-              <button type="button" className="underline underline-offset-2" aria-expanded={showTranscript} onClick={() => setShowTranscript(!showTranscript)}>
-                {t('voicePanel.transcript')}
-              </button>
-            ) : null}
-          </>
-        ) : null}
         <Link to={to('/settings')} className="ms-auto inline-flex items-center gap-1 rounded-md px-2 py-1 hover:bg-muted" data-testid="identity-settings">
           <Settings2 aria-hidden="true" className="size-3.5" />{t('nav.settings')}
         </Link>
       </div>
-      {clip?.transcript && showTranscript ? (
-        <p className="rounded-md bg-muted/60 p-2 text-xs" dir="rtl" lang="ar" data-testid="intro-transcript">{clip.transcript}</p>
-      ) : null}
       <details className="text-sm" data-testid="voice-details">
         <summary className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold">
           <CircleHelp aria-hidden="true" className="size-3.5" />{t('voicePanel.details')}

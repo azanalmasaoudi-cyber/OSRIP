@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { showResults } from './sector';
+
 // Research and decision support through the real stack: answer modes, validated
 // recommendation cards, inline citations, saved research with a downloadable brief, the
 // source library, the watchlist with alerts, and the governorate comparison. The model is
@@ -51,7 +53,8 @@ test('Analyze mode shows checked recommendation cards, inline citations, and sav
 test('a series can be watched, with alert rules the reader controls', async ({ page }) => {
   await signIn(page);
   await page.goto('/energy/electricity?mode=synthetic');
-  const card = page.getByTestId('series-card').first();
+  await showResults(page, { indicator: 'ELEC_GENERATION', view: 'annual', from: '2001-01-01', to: '2002-01-01' });
+  const card = page.getByTestId('applied-period');
   await card.getByTestId('watch-series').click();
   await expect(card.getByTestId('watching')).toBeVisible();
   await expect(page.getByTestId('alert-bell')).toBeVisible();

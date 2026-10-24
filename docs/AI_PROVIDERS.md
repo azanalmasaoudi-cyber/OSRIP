@@ -21,6 +21,7 @@ This arrived with migration `0018_provider_calls`. The vendor documentation was 
 | OpenAI | Responses API `POST https://api.openai.com/v1/responses` | Answering (function tools); web search (`web_search` tool) | `OSRIP_OPENAI_API_KEY`, `OSRIP_OPENAI_MODEL`, `OSRIP_OPENAI_SEARCH_MODEL` |
 | Google Gemini | Interactions API `POST https://generativelanguage.googleapis.com/v1beta/interactions` | Answering (function tools); Grounding with Google Search (`google_search` tool) | `OSRIP_GEMINI_API_KEY`, `OSRIP_GEMINI_MODEL`, `OSRIP_GEMINI_SEARCH_MODEL` |
 | Brave Search | Search API `GET https://api.search.brave.com/res/v1/web/search` (existing adapter) | Web search | `OSRIP_RESEARCH_API_KEY` |
+| DeepSeek (optional, **usage-billed**) | Chat Completions API `POST https://api.deepseek.com/chat/completions` (OpenAI-compatible) | Answering (function tools; thinking switched off so a tool call can be required) | `OSRIP_DEEPSEEK_API_KEY`, `OSRIP_DEEPSEEK_MODEL`, `OSRIP_DEEPSEEK_BILLING_ACKNOWLEDGED=true` |
 
 - **No consumer website is automated.** OSRIP never drives chatgpt.com, gemini.google.com, claude.ai or any other chat website, in a browser or otherwise.
 - **A consumer subscription is not API access.** ChatGPT Plus, Gemini Advanced or a Claude app plan does not give OSRIP an API key or API billing. Each provider needs an API key from its developer console (platform.openai.com, aistudio.google.com or console.cloud.google.com, console.anthropic.com, api-dashboard.search.brave.com), with API billing set up there.
@@ -30,6 +31,67 @@ This arrived with migration `0018_provider_calls`. The vendor documentation was 
 - **Keys stay on the server.** They live in `backend/.env` (development) or `deploy/.env` (hosting secrets).
   - They are never sent to a browser, logged or stored in the database.
   - The readiness view and `/assistant/status` report setting *names* only.
+
+## Cost: the recommended free-tier setup, and paid providers
+
+Checked on **2026-10-23** against the providers' own pages.
+
+**Gemini (recommended start).** Google's price list (<https://ai.google.dev/gemini-api/docs/pricing>,
+updated 2026-10-22) shows a free tier for, among others, `gemini-3.8-flash`, `gemini-3.6-flash`
+and `gemini-3.5-flash-lite`. The rate-limit page (<https://ai.google.dev/gemini-api/docs/rate-limits>)
+publishes no fixed numbers: the limits depend on the project's usage tier and are shown in Google
+AI Studio. On the free tier Google may use the content to improve its products. So:
+
+- set `OSRIP_ASSISTANT_PROVIDER=gemini`, `OSRIP_GEMINI_API_KEY` (from Google AI Studio, for a
+  project without billing) and `OSRIP_GEMINI_MODEL=gemini-3.8-flash` (or `gemini-3.5-flash-lite`
+  for higher free limits), in `backend/.env`;
+- confirm that the model answers *for your account* with Settings › AI and search providers ›
+  Test. OSRIP cannot see an account's free-tier eligibility or limits until a real call is made;
+  this was **not** verified here, because no key is configured on this machine;
+- the model receives the question, OSRIP's rules and the public statistical evidence the tools
+  return. It never receives credentials, account details or other people's records.
+
+**DeepSeek (optional).** The price page (<https://api-docs.deepseek.com/quick_start/pricing>)
+bills per input and output token, deducted from a topped-up (or granted) balance; there is no
+general free tier. The adapter is built only when `OSRIP_DEEPSEEK_BILLING_ACKNOWLEDGED=true` is set
+as well as the key and model: a key alone never starts paid use, as the primary or as the fallback.
+An exhausted balance (HTTP 402) is reported as a budget failure and is not retried.
+
+**Never switched silently.** The fallback provider is used only when an administrator sets
+`OSRIP_ASSISTANT_FALLBACK_PROVIDER`; Settings marks a usage-billed fallback. Settings shows each
+provider's billing basis (usage-billed, free tier available, plan, credits).
+
+## Reliability and limits
+
+- **Timeout:** `OSRIP_ASSISTANT_TIMEOUT_SECONDS` per call (30 s), and twice that for a whole answer.
+- **Bounded retries:** one retry on a timeout, network error, 429 or 5xx. On 429/503 the
+  provider's `Retry-After` (seconds) is waited for, up to 10 s; a longer wait fails at once and
+  the fallback provider (if one is set) answers. Authentication, model and balance errors are
+  not retried.
+- **Usage limits:** a daily call limit per provider (`OSRIP_PROVIDER_DAILY_CALL_LIMIT`), an
+  optional daily budget with prices from the provider's list (`OSRIP_PROVIDER_PRICES`,
+  `OSRIP_PROVIDER_DAILY_BUDGET_USD`), per-account limits per minute, hour and day, and five free
+  answers per guest. Every call is logged (outcome, time, tokens; never the question).
+- **Caching:** a repeated submission of the same question (same request id, for example after a
+  dropped connection) returns the stored reply without a second model call; a background study
+  with the same parameters and the same published data is served from its cache for 24 h
+  (`OSRIP_RESEARCH_JOB_CACHE_HOURS`). Answers are not shared between people: each rests on the
+  evidence retrieved for that question.
+- **Status:** Settings › Services and AI and search providers show configured / tested /
+  failed / unavailable, the role of each provider, today's calls and errors, and the names
+  (never values) of missing settings.
+
+## Answering from a sector page
+
+"Request analysis" on a sector page sends the applied selection (sector, indicator, area,
+frequency, start and end period, and breakdown) with the question. It is validated as codes and
+dates and becomes one rule in the model's instructions: answer for exactly that selection, and name
+any other period used (for example the same months a year earlier) as an additional comparison
+period. The assistant shows the selection above the question box; the reader can remove it.
+
+When no provider answers, the tables, calculations and charts on the sector pages keep working;
+the assistant gives a data-based reply labelled as prepared without AI interpretation, and the
+sector summary is labelled as a statistical summary, not AI-generated analysis.
 
 ## Routing policy (decided by rules, not by a model)
 
@@ -184,6 +246,14 @@ Production refuses to start if a scripted test route (`fake`, `fake-openai` or `
     - cross-check off by default and labelled;
     - readiness view without keys.
   - Also `e2e-api/upgrade.spec.ts`: both routes failing, both shown, not charged.
+  - **DeepSeek and Retry-After** (2026-10-24): `tests/test_ai_providers_deepseek.py` (7, mocked
+    transport): request format, tool calls, usage, the billing acknowledgement, 402 as budget,
+    one wait of up to 10 s on `Retry-After`, longer waits refused.
+  - **Sector selection** (2026-10-24): `tests/test_assistant_selection_integration.py` (3): the
+    rule reaches the model; malformed selections are refused before any provider call; the
+    scripted model looks up exactly the selected indicator, area, frequency and years and cites
+    only the periods inside the range. In the browser: `e2e-api/interface.spec.ts` and the
+    evaluation scenario (`e2e-demo`, test 9).
 - **Not verified live.** No working OpenAI, Gemini, Anthropic or Brave API key is available here (the earlier Anthropic and Brave keys were rejected). Live behaviour is therefore **pending**:
   - real response shapes;
   - how often each model calls the tools;

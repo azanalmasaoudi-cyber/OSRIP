@@ -71,7 +71,7 @@ Rules you must follow:
 - If the question rests on an incorrect premise (a figure, trend, period or fact that the evidence contradicts or does not show), say so first, then give what the evidence shows.
 - When sources disagree, give each value with its source, say which is official, and list them in `conflicts`; never choose silently. data_quality_notes lists conflicts documented between official publications.
 - A null value or 'no_data' means the data is unavailable: say so and say what is missing. Never treat missing as zero. Never divide national or governorate totals among areas, and never infer a wilayat's figure from a governorate total.
-{mode_rules}
+{mode_rules}{selection_rule}
 - Partial periods (period_complete false) are not complete years. Compare only compatible units and matching periods.
 - If the question is ambiguous (which indicator, area, period or frequency), set status 'clarification' and ask one short question.
 - If the tools give no evidence, set status 'no_evidence' and explain what is missing.
@@ -94,6 +94,32 @@ WEB_RULES = """- Web research is available (web_search, read_web_page). Prefer t
 - Two search services or two models saying the same thing is NOT independent confirmation; independence comes only from different original publishers. For national statistics prefer the original Omani statistical publication.
 - If web_search returns 'shown_separately', the person sees Google Search results apart from your answer; you cannot use them. If it returns 'data_first', look up the platform's published data before searching.
 """
+
+
+def selection_rule(selection: dict[str, Any] | None) -> str:
+    """The prompt rule for a question asked from a sector page with an applied selection. The
+    values were validated as codes and dates (routes/assistant.SelectionIn)."""
+    if not selection:
+        return ""
+    parts = [
+        f"sector {selection['sector']}",
+        f"indicator {selection['indicator']}",
+        f"area {selection.get('area', 'OM')}",
+        f"{selection['view']} periods from {selection['period_from']} to {selection['period_to']}",
+    ]
+    parts += [
+        f"{key} {selection[key]}" for key in ("commodity", "partner", "flow") if selection.get(key)
+    ]
+    return (
+        "- The reader asked from a sector page with this applied selection: "
+        + "; ".join(parts)
+        + ". Answer for exactly this selection: look up that indicator, area and period first and "
+        "keep to them. If you also use another period (for example the same period a year "
+        "earlier), say that it is an additional comparison period and name it. Do not widen the "
+        "period, the area or the breakdown unless the question asks for it.\n"
+    )
+
+
 NO_WEB_RULES = "- Web research is not available for this question; if the user asks for internet sources, say that web search is unavailable.\n"
 
 DRIVER_RULE = (
@@ -564,6 +590,7 @@ def _run_model(
     tracker: Tracker | None = None,
     persona: str | None = None,
     cross_check: bool = False,
+    selection: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], Ledger, str]:
     tracker = tracker or Tracker(None)
     s = get_settings()
@@ -637,6 +664,7 @@ def _run_model(
         cutoff=research_cutoff() or "the dates shown with each record",
         web_rules=WEB_RULES if web else NO_WEB_RULES,
         mode_rules=MODE_RULES.get(mode, MODE_RULES["ask"]),
+        selection_rule=selection_rule(selection),
     )
     deadline = time.monotonic() + get_settings().assistant_timeout_seconds * 2
     with session_factory()() as reader:
@@ -869,6 +897,7 @@ def generate_reply(
     tracker: Tracker | None = None,
     persona: str | None = None,
     cross_check: bool = False,
+    selection: dict[str, Any] | None = None,
 ) -> Reply:
     """The grounded answer, the labelled non-AI lookup when no provider is configured,
     a retryable 'unavailable' reply, or 'cancelled' when the person stopped the question.
@@ -903,6 +932,7 @@ def generate_reply(
             tracker=tracker,
             persona=persona,
             cross_check=cross_check,
+            selection=selection,
         )
     except Cancelled:
         return Reply(
@@ -1125,6 +1155,7 @@ def ask(
     mode: str = "ask",
     persona: str | None = None,
     cross_check: bool = False,
+    selection: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """A signed-in user's question. With ``request_id`` a repeated submission (for
     example after a dropped connection) returns the stored reply instead of asking again.
@@ -1228,6 +1259,7 @@ def ask(
         tracker=tracker,
         persona=persona,
         cross_check=cross_check,
+        selection=selection,
     )
     with_study(reply, tracker, request_id)
 

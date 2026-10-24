@@ -45,6 +45,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{951A985D-DAE0-5C48-A88E-B424B9B76D23}"
 	ProjectSection(SolutionItems) = preProject
 		docs\4caae3f6-c359-4130-a10a-722242bacdcf.png = docs\4caae3f6-c359-4130-a10a-722242bacdcf.png
+		docs\ACADEMIC_EVALUATION.md = docs\ACADEMIC_EVALUATION.md
 		docs\AI_PROVIDERS.md = docs\AI_PROVIDERS.md
 		docs\API.md = docs\API.md
 		docs\ARCHITECTURE.md = docs\ARCHITECTURE.md
@@ -59,6 +60,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{951A985D-D
 		docs\implementation-notes.md = docs\implementation-notes.md
 		docs\implementation-status.md = docs\implementation-status.md
 		docs\INTEGRATIONS.md = docs\INTEGRATIONS.md
+		docs\OFFICIAL_SOURCES.md = docs\OFFICIAL_SOURCES.md
 		docs\Oman_Statistics_References_and_Images_English.docx = docs\Oman_Statistics_References_and_Images_English.docx
 		docs\OSRIP_Academic_Booklet_English_60_Pages-2.docx = docs\OSRIP_Academic_Booklet_English_60_Pages-2.docx
 		docs\OSRIP_Academic_Booklet_English_60_Pages.docx = docs\OSRIP_Academic_Booklet_English_60_Pages.docx
@@ -71,6 +73,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{951A985D-D
 		docs\TRACEABILITY.md = docs\TRACEABILITY.md
 		docs\VERIFICATION.md = docs\VERIFICATION.md
 		docs\VERIFICATION_REPORT.md = docs\VERIFICATION_REPORT.md
+		docs\VOICE.md = docs\VOICE.md
 		docs\WINDOWS_STARTUP.md = docs\WINDOWS_STARTUP.md
 		docs\WORKSPACE.md = docs\WORKSPACE.md
 		docs\دليل_البدء.md = docs\دليل_البدء.md
@@ -89,6 +92,12 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "demo", "demo", "{5F4E4F17-9349-5ECE-AD7A-EB60F6948C39}"
 	ProjectSection(SolutionItems) = preProject
 		docs\demo\demo-upload.csv = docs\demo\demo-upload.csv
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "evaluation", "evaluation", "{30029E82-3C33-5B85-8CA1-CA87511FA6C7}"
+	ProjectSection(SolutionItems) = preProject
+		docs\evaluation\measurements-2026-10-23.json = docs\evaluation\measurements-2026-10-23.json
+		docs\evaluation\measurements-2026-10-23.md = docs\evaluation\measurements-2026-10-23.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "evidence", "evidence", "{0B712951-2047-5BE0-A42C-68C45DAA3B66}"
@@ -131,6 +140,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "entrance", "entrance", "{79
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "integrated", "integrated", "{BE95394C-9AA0-5C1C-BD9C-66405DE6D1A4}"
 	ProjectSection(SolutionItems) = preProject
+		docs\evidence\integrated\01-entrance-arriving.png = docs\evidence\integrated\01-entrance-arriving.png
 		docs\evidence\integrated\01-entrance-carrying.png = docs\evidence\integrated\01-entrance-carrying.png
 		docs\evidence\integrated\02-entrance-placing.png = docs\evidence\integrated\02-entrance-placing.png
 		docs\evidence\integrated\03-entrance-placed-in-centre.png = docs\evidence\integrated\03-entrance-placed-in-centre.png
@@ -148,6 +158,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "integrated", "integrated", 
 		docs\evidence\integrated\14-microphone-denied-typing-works.png = docs\evidence\integrated\14-microphone-denied-typing-works.png
 		docs\evidence\integrated\15-guest-limit-after-switching-persona.png = docs\evidence\integrated\15-guest-limit-after-switching-persona.png
 		docs\evidence\integrated\16-phone-study-tab.png = docs\evidence\integrated\16-phone-study-tab.png
+		docs\evidence\integrated\20-scenario-period-chosen.png = docs\evidence\integrated\20-scenario-period-chosen.png
+		docs\evidence\integrated\21-scenario-table.png = docs\evidence\integrated\21-scenario-table.png
+		docs\evidence\integrated\22-scenario-chart-on-request.png = docs\evidence\integrated\22-scenario-chart-on-request.png
+		docs\evidence\integrated\23-scenario-sourced-analysis.png = docs\evidence\integrated\23-scenario-sourced-analysis.png
+		docs\evidence\integrated\24-scenario-reference-inspected.png = docs\evidence\integrated\24-scenario-reference-inspected.png
+		docs\evidence\integrated\25-scenario-missing-year.png = docs\evidence\integrated\25-scenario-missing-year.png
+		docs\evidence\integrated\26-scenario-no-quarterly-figures.png = docs\evidence\integrated\26-scenario-no-quarterly-figures.png
+		docs\evidence\integrated\27-scenario-arabic.png = docs\evidence\integrated\27-scenario-arabic.png
+		docs\evidence\integrated\scenario-timings.json = docs\evidence\integrated\scenario-timings.json
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "personas", "personas", "{F1F24A2A-5BFF-5F61-BE8C-250723697D85}"
@@ -157,6 +176,17 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "personas", "personas", "{F1
 		docs\evidence\personas\talk-ilham-en.png = docs\evidence\personas\talk-ilham-en.png
 		docs\evidence\personas\talk-ilham-phone-ar.png = docs\evidence\personas\talk-ilham-phone-ar.png
 		docs\evidence\personas\talk-mulhim-ar.png = docs\evidence\personas\talk-mulhim-ar.png
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "stage1", "stage1", "{B08B19CE-18D4-5C93-96A3-78013F0A3F1E}"
+	ProjectSection(SolutionItems) = preProject
+		docs\evidence\stage1\data-report-reply.png = docs\evidence\stage1\data-report-reply.png
+		docs\evidence\stage1\sector-chart.png = docs\evidence\stage1\sector-chart.png
+		docs\evidence\stage1\sector-choose.png = docs\evidence\stage1\sector-choose.png
+		docs\evidence\stage1\sector-results-ar.png = docs\evidence\stage1\sector-results-ar.png
+		docs\evidence\stage1\sector-results.png = docs\evidence\stage1\sector-results.png
+		docs\evidence\stage1\settings-schedules.png = docs\evidence\stage1\settings-schedules.png
+		docs\evidence\stage1\study-completed.png = docs\evidence\stage1\study-completed.png
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workspace", "workspace", "{B34D6E13-8B80-59FA-9AED-693C622716DD}"
@@ -201,12 +231,14 @@ Global
 		{61FB2FA9-CA59-59B7-B336-3C9A25DE134C} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
 		{EEDDB7A6-C2B2-5952-86EC-8463417DCABF} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
 		{5F4E4F17-9349-5ECE-AD7A-EB60F6948C39} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
+		{30029E82-3C33-5B85-8CA1-CA87511FA6C7} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
 		{0B712951-2047-5BE0-A42C-68C45DAA3B66} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
 		{D0192171-A157-51D2-93CF-8D3B8E28109D} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{D32045D4-499E-52DC-B174-22CB7E6DE501} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{792931BC-B131-5863-A4F2-D392362DE4F8} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{BE95394C-9AA0-5C1C-BD9C-66405DE6D1A4} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{F1F24A2A-5BFF-5F61-BE8C-250723697D85} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
+		{B08B19CE-18D4-5C93-96A3-78013F0A3F1E} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{B34D6E13-8B80-59FA-9AED-693C622716DD} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{905C8A1C-3512-58AB-9365-318FFA4AF538} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
 	EndGlobalSection

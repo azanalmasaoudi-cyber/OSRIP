@@ -72,8 +72,12 @@ from app.models.research import (
     StudyRun,
     WatchlistItem,
 )
+from app.models.sync import SourceFeed, SourceRelease, SourceSyncRun
 
 __all__ = [
+    "SourceFeed",
+    "SourceRelease",
+    "SourceSyncRun",
     "AlertEvent",
     "AlertRule",
     "ReportSchedule",

@@ -60,6 +60,7 @@
     <Folder Include="app\services\assistant\" />
     <Folder Include="app\services\imports\" />
     <Folder Include="app\services\research\" />
+    <Folder Include="app\services\sync\" />
     <Folder Include="app\voice\" />
     <Folder Include="db_checks\" />
     <Folder Include="fixtures\" />
@@ -90,6 +91,7 @@
     <Compile Include="app\api\routes\research.py" />
     <Compile Include="app\api\routes\research_jobs.py" />
     <Compile Include="app\api\routes\series.py" />
+    <Compile Include="app\api\routes\source_sync.py" />
     <Compile Include="app\api\routes\studies.py" />
     <Compile Include="app\cli.py" />
     <Compile Include="app\core\__init__.py" />
@@ -124,6 +126,7 @@
     <Compile Include="app\models\provenance.py" />
     <Compile Include="app\models\reference.py" />
     <Compile Include="app\models\research.py" />
+    <Compile Include="app\models\sync.py" />
     <Compile Include="app\models\types.py" />
     <Compile Include="app\schemas\__init__.py" />
     <Compile Include="app\schemas\accounts.py" />
@@ -190,21 +193,32 @@
     <Compile Include="app\services\sms.py" />
     <Compile Include="app\services\speech.py" />
     <Compile Include="app\services\studies.py" />
+    <Compile Include="app\services\sync\__init__.py" />
+    <Compile Include="app\services\sync\fetch.py" />
+    <Compile Include="app\services\sync\ncsi_listing.py" />
+    <Compile Include="app\services\sync\ncsi_msb.py" />
+    <Compile Include="app\services\sync\registry.py" />
+    <Compile Include="app\services\sync\service.py" />
+    <Compile Include="app\services\sync\xlsx.py" />
     <Compile Include="app\services\timeline.py" />
     <Compile Include="app\services\voice_realtime.py" />
     <Compile Include="app\voice\__init__.py" />
     <Compile Include="app\voice\agent.py" />
     <Compile Include="app\voice\bridge.py" />
+    <Compile Include="app\worker.py" />
     <Compile Include="tests\__init__.py" />
     <Compile Include="tests\booklet_fixtures.py" />
     <Compile Include="tests\conftest.py" />
+    <Compile Include="tests\sync_fixtures.py" />
     <Compile Include="tests\test_ai_providers.py" />
+    <Compile Include="tests\test_ai_providers_deepseek.py" />
     <Compile Include="tests\test_ai_providers_integration.py" />
     <Compile Include="tests\test_allowance_rules_integration.py" />
     <Compile Include="tests\test_analysis_integration.py" />
     <Compile Include="tests\test_api_foundation.py" />
     <Compile Include="tests\test_assistant_integration.py" />
     <Compile Include="tests\test_assistant_profile.py" />
+    <Compile Include="tests\test_assistant_selection_integration.py" />
     <Compile Include="tests\test_auth_integration.py" />
     <Compile Include="tests\test_balance.py" />
     <Compile Include="tests\test_balance_integration.py" />
@@ -240,7 +254,9 @@
     <Compile Include="tests\test_research_workflow.py" />
     <Compile Include="tests\test_reviews_reports_integration.py" />
     <Compile Include="tests\test_series_integration.py" />
+    <Compile Include="tests\test_series_speech.py" />
     <Compile Include="tests\test_settings_isolation.py" />
+    <Compile Include="tests\test_source_sync.py" />
     <Compile Include="tests\test_studies_integration.py" />
     <Compile Include="tests\test_study_schema.py" />
     <Compile Include="tests\test_timeline.py" />
@@ -249,6 +265,7 @@
     <Compile Include="tests\test_voice_gender.py" />
     <Compile Include="tests\test_zy_research_assistant_integration.py" />
     <Compile Include="tests\test_zz_reference_pack_integration.py" />
+    <Compile Include="tests\test_zzz_source_sync_integration.py" />
     <Compile Include="tests\workflow_helpers.py" />
     <Compile Include="scripts\backup_restore_drill.py" />
     <Compile Include="scripts\devdb.py" />
@@ -259,6 +276,7 @@
     <Compile Include="scripts\serve_public.py" />
     <Compile Include="scripts\set_provider_keys.py" />
     <Compile Include="scripts\sms_acceptance.py" />
+    <Compile Include="scripts\sync_worker_dev.py" />
     <Compile Include="scripts\voice_acceptance.py" />
     <Compile Include="alembic\env.py" />
     <Compile Include="alembic\versions\0001_core_schema.py" />
@@ -282,6 +300,7 @@
     <Compile Include="alembic\versions\0019_study_events.py" />
     <Compile Include="alembic\versions\0020_balance_analysis.py" />
     <Compile Include="alembic\versions\0021_research_workflow.py" />
+    <Compile Include="alembic\versions\0022_source_sync.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="alembic\sql\0001_core_down.sql" />
@@ -326,6 +345,8 @@
     <Content Include="alembic\sql\0020_balance_analysis_up.sql" />
     <Content Include="alembic\sql\0021_research_workflow_down.sql" />
     <Content Include="alembic\sql\0021_research_workflow_up.sql" />
+    <Content Include="alembic\sql\0022_source_sync_down.sql" />
+    <Content Include="alembic\sql\0022_source_sync_up.sql" />
     <Content Include="app\knowledge\assistant_profile_v1.json" />
     <Content Include="app\knowledge\assistant_profile_v2.json" />
     <Content Include="app\knowledge\assistant_profile_v3.json" />

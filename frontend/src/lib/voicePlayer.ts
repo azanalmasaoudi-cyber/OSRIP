@@ -13,6 +13,10 @@
  * Every playback is registered, so one "Stop audio" control can stop whatever is playing
  * anywhere on the page (a reply, a narration, a voice test). Only one thing speaks at a time:
  * starting a playback stops every other one, and any browser speech.
+ *
+ * Spoken answers, voice tests and spoken summaries share one voice volume (remembered in this
+ * browser; changing it changes what is playing). A playback started with its own volume (the
+ * recorded welcome) keeps it.
  */
 
 export interface Playback {
@@ -20,6 +24,8 @@ export interface Playback {
   /** Pause where the audio element supports it; resume continues from the same point. */
   pause(): void;
   resume(): void;
+  /** Volume from 0 to 1 (the element's own volume; the page's other audio is unaffected). */
+  setVolume(volume: number): void;
   readonly paused: boolean;
 }
 
@@ -27,6 +33,44 @@ type CapturableAudio = HTMLAudioElement & { captureStream?: () => MediaStream; m
 
 const active = new Set<Playback>();
 const listeners = new Set<(count: number) => void>();
+
+const VOICE_VOLUME_KEY = 'osrip.voice.volume';
+const following = new Set<HTMLAudioElement>(); // playbacks that use the shared voice volume
+const volumeListeners = new Set<() => void>();
+
+function storedVolume(): number {
+  try {
+    const raw = window.localStorage.getItem(VOICE_VOLUME_KEY);
+    const percent = raw === null ? Number.NaN : Number(raw);
+    return Number.isFinite(percent) && percent >= 0 && percent <= 100 ? percent / 100 : 0.8;
+  } catch {
+    return 0.8;
+  }
+}
+
+let voiceVolume = typeof window === 'undefined' ? 0.8 : storedVolume();
+
+/** The shared voice volume, 0 to 1. */
+export function getVoiceVolume(): number {
+  return voiceVolume;
+}
+
+/** Sets the shared voice volume (also for what is playing now) and remembers it. */
+export function setVoiceVolume(volume: number): void {
+  voiceVolume = Math.min(1, Math.max(0, volume));
+  try {
+    window.localStorage.setItem(VOICE_VOLUME_KEY, String(Math.round(voiceVolume * 100)));
+  } catch {
+    /* storage blocked: kept for this visit */
+  }
+  for (const audio of following) audio.volume = voiceVolume;
+  for (const listener of volumeListeners) listener();
+}
+
+export function onVoiceVolumeChange(listener: () => void): () => void {
+  volumeListeners.add(listener);
+  return () => volumeListeners.delete(listener);
+}
 
 function changed(): void {
   for (const listener of listeners) listener(active.size);
@@ -60,11 +104,17 @@ export function playAudio(
     onError: () => void;
     onPause?: (paused: boolean) => void;
   },
+  options: { volume?: number } = {},
 ): Playback {
   stopAllPlayback(); // a new response stops the previous playback
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) window.speechSynthesis.cancel();
   const url = URL.createObjectURL(blob);
   const audio = new Audio(url) as CapturableAudio;
+  if (options.volume !== undefined) audio.volume = Math.min(1, Math.max(0, options.volume));
+  else {
+    audio.volume = voiceVolume;
+    following.add(audio);
+  }
   let context: AudioContext | null = null;
   let frame = 0;
   let ended = false;
@@ -74,6 +124,7 @@ export function playAudio(
     if (ended) return;
     ended = true;
     active.delete(playback);
+    following.delete(audio);
     changed();
     cancelAnimationFrame(frame);
     handlers.onLevel(0);
@@ -126,6 +177,9 @@ export function playAudio(
       paused = false;
       handlers.onPause?.(false);
       audio.play().catch(() => { cleanup(); handlers.onError(); });
+    },
+    setVolume: (volume: number) => {
+      audio.volume = Math.min(1, Math.max(0, volume));
     },
     get paused() {
       return paused;

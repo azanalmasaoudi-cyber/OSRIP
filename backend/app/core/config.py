@@ -70,9 +70,10 @@ class Settings(BaseSettings):
 
     # ------------------------------------------------------------ assistant
     # The answering model: anthropic (Messages API), openai (Responses API), gemini
-    # (Interactions API); fake: scripted replies for automated tests (refused in production);
-    # "" or disabled. One provider answers a question; the fallback is used only when the
-    # primary fails before answering (timeout, network, rate limit, server error, budget).
+    # (Interactions API), deepseek (Chat Completions, usage-billed); fake: scripted replies
+    # for automated tests (refused in production); "" or disabled. One provider answers a
+    # question; the fallback is used only when the primary fails before answering (timeout,
+    # network, rate limit, server error, budget).
     assistant_provider: str = "anthropic"
     assistant_fallback_provider: str = ""
     anthropic_api_key: SecretStr | None = None
@@ -84,6 +85,12 @@ class Settings(BaseSettings):
     gemini_api_key: SecretStr | None = None
     gemini_model: str | None = None  # answering model (Interactions API, function tools)
     gemini_search_model: str | None = None  # Grounding with Google Search route
+    # DeepSeek (Chat Completions API, optional): billed per token from a topped-up balance (no
+    # general free tier; checked 2026-10-23 on api-docs.deepseek.com). It is used only when
+    # billing is acknowledged too, so a key alone never starts paid use, as primary or fallback.
+    deepseek_api_key: SecretStr | None = None
+    deepseek_model: str | None = None  # e.g. deepseek-flash (set explicitly)
+    deepseek_billing_acknowledged: bool = False
     # Spending and request limits per provider and UTC day (provider_call records). The
     # budget applies only with prices configured, e.g. OSRIP_PROVIDER_PRICES=
     # {"openai": {"input_per_mtok": 1.0, "output_per_mtok": 4.0, "per_search": 0.01}}

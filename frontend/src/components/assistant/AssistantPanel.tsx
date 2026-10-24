@@ -33,6 +33,7 @@ import { PersonaImage } from './PersonaImage';
 import { ResearchBriefBuilder } from './ResearchBriefBuilder';
 import { ResearchProgress } from './ResearchProgress';
 import { CitedText, DataReportNotice, evidenceAnchor, ModeSelector, StructuredParts, WebNotice } from './StructuredReply';
+import { VoiceVolume } from './VoiceVolume';
 import {
   ASSISTANT_MODES,
   speakMessage,
@@ -52,6 +53,7 @@ import {
   type AssistantMessage,
   type AssistantMode,
   type Evidence,
+  type AskSelection,
 } from '@/api/assistant';
 import { hasPermission, useMe, useProviders } from '@/api/auth';
 import { ApiRequestError } from '@/api/client';
@@ -823,9 +825,12 @@ function SignInPrompt({ onNavigate }: { onNavigate?: () => void }) {
 export type AskFromOutside = (question: string, mode?: AssistantMode) => void;
 
 /** The chat itself, used by the side panel and by the full AI Assistant page. */
-export function AssistantChat({ onClose, initialDraft = '', active = true, showIdentity = true, askRef }: {
+export function AssistantChat({ onClose, initialDraft = '', active = true, showIdentity = true, askRef, selection = null, selectionLabel }: {
   onClose?: () => void;
   initialDraft?: string;
+  /** Asked from a sector page: its applied selection, sent with each question until removed. */
+  selection?: AskSelection | null;
+  selectionLabel?: string;
   active?: boolean;
   /** False in the Talk workspace, which shows the large portrait and state itself. */
   showIdentity?: boolean;
@@ -867,6 +872,14 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
   };
   const guestConversation = useGuestConversation(!signedIn ? guestId : null);
   const guestAsk = useGuestAsk();
+  const [scope, setScope] = useState<AskSelection | null>(selection);
+  const [shownSelection, setShownSelection] = useState(selection);
+  if (shownSelection !== selection) {
+    // A new selection from the page (adjusting state while rendering, not in an effect).
+    setShownSelection(selection);
+    setScope(selection);
+  }
+  const scoped = scope ?? undefined;
 
   const [draft, setDraftState] = useState(() => initialDraft || readStore('session', DRAFT_KEY) || '');
   const setDraft = (value: string) => {
@@ -953,14 +966,14 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
       }
       accountAsk.mutate({
         content: text, language: chatLanguage, request_id: requestId, web_research: webResearch, mode: askMode, persona: persona.code,
-        cross_check: checked,
+        cross_check: checked, selection: scoped,
       });
       return;
     }
     guestAsk.mutate(
       {
         content: text, language: chatLanguage, request_id: requestId, conversation_id: guestId, data_mode: mode,
-        web_research: webResearch, mode: askMode, persona: persona.code, cross_check: checked,
+        web_research: webResearch, mode: askMode, persona: persona.code, cross_check: checked, selection: scoped,
       },
       { onSuccess: (result) => setGuestId(result.conversation_id) },
     );
@@ -971,10 +984,10 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
       pendingRef.current = null;
       accountAsk.mutate({
         content: q.text, language: chatLanguage, request_id: q.requestId, web_research: webResearch, mode: q.mode, persona: persona.code,
-        cross_check: crossCheck && q.mode === 'research',
+        cross_check: crossCheck && q.mode === 'research', selection: scoped,
       });
     }
-  }, [activeId, accountAsk, chatLanguage, webResearch, persona.code, crossCheck]);
+  }, [activeId, accountAsk, chatLanguage, webResearch, persona.code, crossCheck, scoped]);
 
   const send = (question: string, modeOverride?: AssistantMode) => {
     const text = question.trim();
@@ -1013,9 +1026,9 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
   const preserved = usePreservedSearch();
   const openStudyHere = (id: string) => {
     ui.openStudy(id, !signedIn);
-    if (pathname !== '/overview') {
+    if (pathname !== '/workspace') {
       onClose?.();
-      void navigate(preserved('/overview'));
+      void navigate(preserved('/workspace'));
     }
   };
 
@@ -1083,10 +1096,13 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
           testId="assistant-language"
         />
         {voice.canSpeak ? (
-          <Button variant="ghost" size="sm" aria-pressed={voice.muted} onClick={() => voice.setMuted(!voice.muted)} data-testid="voice-mute">
-            {voice.muted ? <VolumeX aria-hidden="true" /> : <Volume2 aria-hidden="true" />}
-            {voice.muted ? t('voice.unmute') : t('voice.mute')}
-          </Button>
+          <>
+            <Button variant="ghost" size="sm" aria-pressed={voice.muted} onClick={() => voice.setMuted(!voice.muted)} data-testid="voice-mute">
+              {voice.muted ? <VolumeX aria-hidden="true" /> : <Volume2 aria-hidden="true" />}
+              {voice.muted ? t('voice.unmute') : t('voice.mute')}
+            </Button>
+            <VoiceVolume testId="voice-volume-replies" />
+          </>
         ) : null}
         {voice.canPause ? (
           <Button variant="ghost" size="sm" onClick={voice.paused ? voice.resumePlayback : voice.pausePlayback}
@@ -1208,6 +1224,14 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
               setViaVoice(false);
               document.getElementById(inputId)?.focus();
             }} />
+          {scope ? (
+            <p className="flex flex-wrap items-center gap-2 rounded-md border border-primary/40 bg-primary/5 px-2 py-1 text-xs" data-testid="assistant-selection">
+              <span>{t('assistant.selectionApplied', { selection: selectionLabel ?? `${scope.indicator} · ${scope.area} · ${scope.period_from} – ${scope.period_to}` })}</span>
+              <button type="button" className="text-primary underline underline-offset-2" onClick={() => setScope(null)} data-testid="assistant-selection-clear">
+                {t('assistant.selectionClear')}
+              </button>
+            </p>
+          ) : null}
           <label htmlFor={inputId} className="sr-only">{t('assistant.question')}</label>
           <textarea id={inputId} value={draft} onChange={(e) => { setDraft(e.target.value.slice(0, max)); setViaVoice(false); }} onKeyDown={onKeyDown}
             rows={2} dir="auto" placeholder={needsAccount ? t('guest.inputLocked') : t('assistant.placeholder')} disabled={needsAccount}

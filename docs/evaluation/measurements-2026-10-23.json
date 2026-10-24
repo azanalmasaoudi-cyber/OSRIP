@@ -1,0 +1,67 @@
+{
+  "measured_at": "2026-10-23T21:00:53+00:00",
+  "api": "http://127.0.0.1:8029/api/v1",
+  "data_mode": "verified_source",
+  "series_checked": 105,
+  "checks_passed": 1338,
+  "checks_failed": 0,
+  "failures": [],
+  "csv_equal_to_table": "105/105",
+  "sources": [
+    {
+      "url": "https://api.ncsi.gov.om/uploads/pdfs/monthly_statistical_bulletin__september_2026_1789899633.pdf",
+      "title": "Monthly Statistical Bulletin, September 2026 (S01)",
+      "https": true,
+      "kind": "statistics office",
+      "status": 200
+    },
+    {
+      "url": "https://api.ncsi.gov.om/uploads/pdfs/statistical_year_book_2026___issue_54_1778134524.pdf",
+      "title": "Statistical Year Book 2026, Issue 54 (S02)",
+      "https": true,
+      "kind": "statistics office",
+      "status": 200
+    },
+    {
+      "url": "https://data.gov.om/OMWTR2016/water?lang=en&tsId=1000030",
+      "title": "Water consumption (S03)",
+      "https": true,
+      "kind": "statistics office",
+      "status": 200
+    },
+    {
+      "url": "https://www.fm.gov.om/ar/42817/",
+      "title": "Food-security investment and self-sufficiency statement (Arabic) (S04)",
+      "https": true,
+      "kind": "government",
+      "status": 200
+    },
+    {
+      "url": "https://www.omanobserver.om/article/1189371/oman/community/omans-fish-sector-hits-146-as-food-production-rises",
+      "title": "Food-production ministerial statement to Shura Council (S05)",
+      "https": true,
+      "kind": "other publisher",
+      "status": 200
+    }
+  ],
+  "times": {
+    "availability": {
+      "n": 4,
+      "median_ms": 61.5,
+      "p95_ms": 108.2,
+      "max_ms": 108.2
+    },
+    "timeline": {
+      "n": 105,
+      "median_ms": 29.3,
+      "p95_ms": 43.7,
+      "max_ms": 51.6
+    },
+    "csv": {
+      "n": 105,
+      "median_ms": 31.5,
+      "p95_ms": 43.5,
+      "max_ms": 48.1
+    }
+  }
+}

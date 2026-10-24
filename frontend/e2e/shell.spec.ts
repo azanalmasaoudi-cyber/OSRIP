@@ -14,61 +14,73 @@ test('landing page explains the project and credits every photograph', async ({ 
   }
 });
 
-test('verified mode is the default and never substitutes synthetic values', async ({ page }) => {
+test('verified mode is the default and a sector shows nothing before a period is chosen', async ({ page }) => {
   await page.goto('/energy/electricity');
   await expect(page.getByTestId('data-mode-banner')).toHaveAttribute('data-mode', 'verified_source');
-  await expect(page.locator('[data-state="no_verified_data"]')).toBeVisible();
-  await expect(page.getByTestId('series-card')).toHaveCount(0);
+  // The offline prototype has no API: the sector says so and shows no figures and no chart.
+  await expect(page.locator('[data-state="not_implemented"]')).toContainText('needs the OSRIP API');
+  await expect(page.getByTestId('sector-results')).toHaveCount(0);
+  await expect(page.locator('svg[role="img"]')).toHaveCount(0);
+  await expect(page.getByTestId('sector-nav').getByRole('link')).toHaveCount(4);
 });
 
-test('synthetic mode labels every series card', async ({ page }) => {
-  await page.goto('/energy/electricity?mode=synthetic');
-  const card = page.getByTestId('series-card').first();
+test('synthetic mode labels every indicator card in the analysis workspace', async ({ page }) => {
+  await page.goto('/workspace?mode=synthetic');
+  const card = page.getByTestId('indicator-card').first();
   // .first(): the closed source-details dialog also holds a badge.
   await expect(card.getByTestId('data-mode-badge').first()).toHaveText('Synthetic demonstration data');
-  await expect(card.getByTestId('observation-value')).toHaveText(['48,000', '50,100']);
-  await expect(card.getByTestId('column-chart')).toBeVisible();
+  // Reference data shown by the page itself is never drawn unasked.
+  await expect(page.getByTestId('dataset-chart')).toHaveCount(0);
+  const show = page.getByTestId('dataset-show-chart').first();
+  if (await show.count()) {
+    await show.click();
+    await expect(page.getByTestId('dataset-chart').first()).toBeVisible();
+    await page.getByTestId('dataset-hide-chart').first().click();
+    await expect(page.getByTestId('dataset-chart')).toHaveCount(0);
+  }
 });
 
 test('T08: switching to Arabic keeps mode, route and numbers; sets RTL', async ({ page }) => {
-  await page.goto('/energy/water?mode=synthetic');
-  const values = page.getByTestId('observation-value');
-  await expect(values).toHaveText(['330', '343']);
+  await page.goto('/workspace?mode=synthetic&section=water');
+  const card = page.getByTestId('indicator-card').filter({ hasText: 'Water consumption' });
+  await expect(card.getByTestId('indicator-value')).toHaveText('343');
 
   await page.getByRole('button', { name: 'العربية' }).click();
 
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
   await expect(page.locator('html')).toHaveAttribute('lang', 'ar');
-  await expect(page).toHaveURL(/\/energy\/water\?mode=synthetic$/);
-  await expect(values).toHaveText(['330', '343']);
+  await expect(page).toHaveURL(/\/workspace\?mode=synthetic&section=water$/);
+  await expect(page.getByTestId('indicator-card').filter({ hasText: 'استهلاك المياه' }).getByTestId('indicator-value')).toHaveText('343');
   await expect(page.getByTestId('data-mode-banner')).toHaveAttribute('data-mode', 'synthetic');
 });
 
 test('T08: switching language preserves page filters and the filtered values', async ({ page }) => {
-  await page.goto('/trade?mode=synthetic');
-  await page.getByTestId('filter-flow').selectOption('import');
-  await page.getByTestId('filter-partner').selectOption('total');
-  await page.getByTestId('filter-display').selectOption('table');
-  await expect(page).toHaveURL(/flow=import/);
-  const values = page.getByTestId('observation-value');
-  await expect(values).toHaveText(['80,000', '40,000,000']);
+  await page.goto('/workspace?mode=synthetic');
+  await page.getByTestId('filter-domain').selectOption('trade');
+  await expect(page).toHaveURL(/domain=trade/);
+  const first = page.getByTestId('indicator-card').first();
+  await expect(first).toHaveAttribute('data-indicator', /^TRADE_/);
+  const indicator = await first.getAttribute('data-indicator');
 
   await page.getByRole('button', { name: 'العربية' }).click();
 
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-  await expect(page).toHaveURL(/\/trade\?mode=synthetic&flow=import&partner=total&view=table$/);
-  await expect(page.getByTestId('filter-flow')).toHaveValue('import');
-  await expect(page.getByTestId('filter-partner')).toHaveValue('total');
-  await expect(values).toHaveText(['80,000', '40,000,000']);
+  await expect(page).toHaveURL(/\/workspace\?mode=synthetic&domain=trade$/);
+  await expect(page.getByTestId('filter-domain')).toHaveValue('trade');
+  await expect(page.getByTestId('indicator-card').first()).toHaveAttribute('data-indicator', indicator ?? '');
 });
 
-test('a filter with no matches shows the empty state and can be reset', async ({ page }) => {
-  await page.goto('/food-security?mode=synthetic&commodity=WHEAT');
-  const empty = page.locator('[data-state="empty"]');
-  await expect(empty).toBeVisible();
-  await empty.getByRole('button', { name: 'Reset filters' }).click();
-  await expect(page).toHaveURL(/\/food-security\?mode=synthetic$/);
-  await expect(page.getByTestId('series-card').first()).toBeVisible();
+test('the overview introduces the project with sector cards and draws no statistics', async ({ page }) => {
+  await page.goto('/overview?mode=synthetic');
+  await expect(page.getByTestId('overview-intro')).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('OSRIP: Oman Smart Resource Intelligence Platform');
+  await expect(page.getByTestId('overview-status')).toContainText('not an official government service');
+  await expect(page.getByTestId('overview-sector')).toHaveCount(4);
+  await expect(page.getByTestId('overview-steps').locator('li')).toHaveCount(4);
+  await expect(page.locator('svg[role="img"]')).toHaveCount(0);
+  await expect(page.getByTestId('indicator-card')).toHaveCount(0);
+  await page.getByTestId('overview-sector').filter({ hasText: 'Water' }).getByTestId('overview-sector-link').click();
+  await expect(page).toHaveURL(/\/energy\/water\?mode=synthetic$/);
 });
 
 test('navigation preserves the data mode but not page filters', async ({ page }) => {
@@ -85,8 +97,8 @@ test('opening the energy domain keeps the data mode through the redirect', async
   await expect(page).toHaveURL(/\/energy\/electricity\?mode=synthetic$/);
 });
 
-test('overview shows the four resources and indicator cards with provenance in synthetic mode', async ({ page }) => {
-  await page.goto('/overview?mode=synthetic');
+test('the analysis workspace shows the four resources and indicator cards with provenance in synthetic mode', async ({ page }) => {
+  await page.goto('/workspace?mode=synthetic');
   const resources = page.getByTestId('resource-kpi');
   await expect(resources).toHaveCount(4);
   await expect(resources.nth(0)).toHaveAttribute('data-section', 'electricity');
@@ -158,8 +170,8 @@ test('@mobile the phone menu holds the theme and data mode; search opens in a di
 });
 
 test('source details dialog opens, traps focus and closes with Escape', async ({ page }) => {
-  await page.goto('/energy/water?mode=synthetic');
-  const trigger = page.getByTestId('source-details-button').first();
+  await page.goto('/workspace?mode=synthetic&section=water');
+  const trigger = page.getByTestId('indicator-card').filter({ hasText: 'Water consumption' }).getByTestId('source-details-button');
   await trigger.click();
   const dialog = page.getByRole('dialog', { name: 'Water consumption' });
   await expect(dialog).toBeVisible();
@@ -198,17 +210,21 @@ test('@mobile menu opens as a drawer and navigates', async ({ page, isMobile }) 
   await menu.getByRole('link', { name: 'Water' }).click();
   await expect(menu).toBeHidden();
   await expect(page).toHaveURL(/\/energy\/water\?mode=synthetic$/);
-  await expect(page.getByTestId('observation-value')).toHaveText(['330', '343']);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Water');
+  // The four sectors are one row of links that scrolls sideways, not the page.
+  await expect(page.getByTestId('sector-nav').getByRole('link')).toHaveCount(4);
+  const overflow = await page.evaluate<number>('document.documentElement.scrollWidth - window.innerWidth');
+  expect(overflow).toBeLessThanOrEqual(0);
 });
 
 test('@mobile filters collapse behind a toggle and nothing scrolls sideways', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'mobile only');
-  await page.goto('/trade?mode=synthetic&flow=import');
+  await page.goto('/workspace?mode=synthetic&domain=trade');
   const toggle = page.getByTestId('filters-toggle');
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect(toggle).toContainText('1');
   await toggle.click();
-  await expect(page.getByTestId('filter-flow')).toBeVisible();
+  await expect(page.getByTestId('filter-domain')).toBeVisible();
   const overflow = await page.evaluate<number>('document.documentElement.scrollWidth - window.innerWidth');
   expect(overflow).toBeLessThanOrEqual(0);
 });

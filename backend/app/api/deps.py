@@ -119,3 +119,28 @@ def require(*permissions: Permission) -> Callable[..., Principal]:
         return principal
 
     return dependency
+
+
+def require_any(*permissions: Permission) -> Callable[..., Principal]:
+    """Dependency: the principal must hold at least one of the listed permissions."""
+    check_all = require()
+
+    def dependency(request: Request, principal: CurrentPrincipal) -> Principal:
+        check_all(request, principal)  # signed in, CSRF and password-change checks
+        if not any(principal.has(p) for p in permissions):
+            wanted = [p.value for p in permissions]
+            audit.record_separately(
+                principal,
+                f"{request.method} {request.url.path}",
+                "denied",
+                metadata={"reason": "permission_denied", "any_of": wanted},
+            )
+            raise ApiError(
+                403,
+                "permission_denied",
+                "Your account does not have permission for this action.",
+                {"missing_permissions": wanted},
+            )
+        return principal
+
+    return dependency

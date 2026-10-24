@@ -1,5 +1,7 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 
+import { openCalculations, showResults } from './sector';
+
 // One complete journey through the real stack (browser -> Vite proxy -> FastAPI ->
 // PostgreSQL): a data manager uploads and publishes a file, an analyst freezes a
 // report from it, a revision is published, and the report keeps its original inputs
@@ -64,6 +66,11 @@ test('upload -> validate -> approve -> publish -> report -> revision; the report
   // 2. An analyst sees the published values and the calculation, then freezes a report.
   const analyst = await signedIn(browser, 'analyst@e2e.invalid');
   await analyst.goto('/energy/electricity?mode=synthetic');
+  // The 2013 row in another unit was rejected, so only 2011 and 2012 can be chosen.
+  await analyst.getByTestId('sector-indicator').selectOption('ELEC_CONSUMPTION');
+  await expect(analyst.getByTestId('sector-to').locator('option[value="2013-01-01"]')).toHaveCount(0);
+  await showResults(analyst, { indicator: 'ELEC_CONSUMPTION', view: 'annual', from: '2011-01-01', to: '2012-01-01' });
+  await openCalculations(analyst);
   await expect(consumptionGrowth(analyst).getByTestId('calc-value')).toHaveText('5%');
   await expect(consumptionGrowth(analyst).getByTestId('calc-inputs')).toContainText('journey-v1');
   await analyst.getByTestId('save-report').click();
@@ -92,7 +99,11 @@ test('upload -> validate -> approve -> publish -> report -> revision; the report
     'ELEC_CONSUMPTION,OM,2011-01-01,2011-12-31,annual,GWh,31000',
     'ELEC_CONSUMPTION,OM,2012-01-01,2012-12-31,annual,GWh,34100',
   ], 0);
+  // Returning to the sector shows the remembered selection again, now from v2.
   await analyst.goto('/energy/electricity?mode=synthetic');
+  await expect(analyst.getByTestId('applied-range')).toHaveText('2011 – 2012');
+  await expect(analyst.getByTestId('series-chart')).toHaveCount(0); // never drawn on return
+  await openCalculations(analyst);
   await expect(consumptionGrowth(analyst).getByTestId('calc-value')).toHaveText('10%');
   await expect(consumptionGrowth(analyst).getByTestId('calc-inputs')).toContainText('journey-v2');
   await analyst.goto(reportUrl);

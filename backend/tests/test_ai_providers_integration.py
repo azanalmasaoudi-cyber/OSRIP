@@ -257,6 +257,7 @@ def test_provider_readiness_and_live_test_are_for_administrators_only(
         "gemini",
         "brave",
         "firecrawl",
+        "deepseek",
     ]
     assert view["routing"]["answer"]["primary"] == "fake"
     assert "sk-integration" not in str(view)

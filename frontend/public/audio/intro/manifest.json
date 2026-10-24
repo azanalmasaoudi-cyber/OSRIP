@@ -1,5 +1,5 @@
 {
-  "about": "Pre-recorded Arabic introductions made in Canva, one for each persona. They are recordings, never live speech, and they play only when the person presses Play. To add one: export the clip from Canva (MP3, M4A, OGG or WAV), put the file in this folder (frontend/public/audio/intro/), and set its file name in 'src' and its exact words in 'transcript'. While 'src' is null the introduction is simply not offered.",
+  "about": "Pre-recorded Arabic introductions made with Canva AI Voice, one for each persona. They are recordings of a fixed welcome, never live speech, and play only when the person presses Play. Canva downloads AI Voice only inside an MP4 video; add a clip with: backend\\.venv\\Scripts\\python.exe tools\\import_canva_intro.py --persona mulhim|ilham --input <the MP4> --voice \"<voice name in Canva>\". The tool copies the audio track out without re-encoding, refuses silent or broken files, and fills in 'src', 'transcript' and 'provenance' here. While 'src' is null the introduction is not offered.",
   "clips": {
     "mulhim": { "ar": { "src": null, "transcript": null } },
     "ilham": { "ar": { "src": null, "transcript": null } }

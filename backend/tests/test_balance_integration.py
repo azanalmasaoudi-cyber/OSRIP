@@ -4,6 +4,7 @@ voice test and voice check endpoints (scripted speech provider; no network)."""
 from __future__ import annotations
 
 from decimal import Decimal
+from urllib.parse import unquote
 
 import pytest
 from fastapi.testclient import TestClient
@@ -234,3 +235,29 @@ def test_every_study_ends_with_a_conclusion_and_classified_options(app, sector: 
     for r in recs.values():
         if "export" in r["action"]["en"].lower() and r["option"] != "processing":
             assert "feasib" in r["action"]["en"].lower() or "only where" in r["action"]["en"]
+
+
+def test_a_selected_range_is_explained_in_a_few_spoken_sentences(app) -> None:  # noqa: ANN001
+    selection = {"data_mode": "synthetic", "indicator": "ELEC_GENERATION", "area": "OM",
+                 "view": "annual", "period_from": "2001-01-01", "period_to": "2002-12-31"}  # fmt: skip
+    anonymous = TestClient(app)
+    words = anonymous.post(f"{API}/assistant/voice/series", json={**selection, "text_only": True})
+    assert words.status_code == 200, words.text
+    transcript = words.json()["transcript"]
+    assert "Electricity generation" in transcript and "50,100" in transcript
+    assert "up 2,100" in transcript and len(transcript) < 600
+    # Audio needs a visitor session (the speech service is metered per visitor).
+    assert anonymous.post(f"{API}/assistant/voice/series", json=selection).status_code in (401, 403)
+    client = _guest(app)
+    spoken = client.post(f"{API}/assistant/voice/series",
+                         json={**selection, "language": "ar", "persona": "ilham"})  # fmt: skip
+    assert spoken.status_code == 200 and spoken.headers["x-voice"] == "ar-OM-AyshaNeural"
+    assert unquote(spoken.headers["x-transcript"]).startswith("توليد الكهرباء")
+    mulhim = client.post(
+        f"{API}/assistant/voice/series", json={**selection, "persona": "mulhim", "language": "ar"}
+    )
+    assert mulhim.headers["x-voice"] == "ar-OM-AbdullahNeural"
+    bad = client.post(
+        f"{API}/assistant/voice/series", json={**selection, "indicator": "nope; drop"}
+    )
+    assert bad.status_code == 422

@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { showResults } from './sector';
+
 // Full stack: browser -> Vite proxy -> FastAPI -> PostgreSQL. The database was
 // seeded with the booklet's SYNTHETIC fixtures through the import workflow.
 
@@ -14,39 +16,42 @@ async function signIn(page: Page, email: string): Promise<void> {
 }
 
 test('the published synthetic fixture is served by the API and shown in the interface', async ({ page }) => {
-  // "All" frequencies reads each period kind apart; the fixture's full years are the annual read.
-  const apiResponse = page.waitForResponse((r) => r.url().includes('/api/v1/observations') && r.url().includes('period_kind=annual') && r.ok());
+  // The selectors are filled from the availability the API reports, before any figure is read.
+  const availability = page.waitForResponse((r) => r.url().includes('/api/v1/series/availability') && r.ok());
   await page.goto('/energy/electricity?mode=synthetic');
-  const body = await (await apiResponse).json();
-  expect(body.status).toBe('ok');
-  const generation = body.series.find((s: { indicator: { code: string } }) => s.indicator.code === 'ELEC_GENERATION');
-  expect(generation.observations.map((o: { value: string }) => o.value)).toEqual(['48000', '50100']);
+  const body = await (await availability).json();
+  const generation = body.indicators.find((i: { code: string }) => i.code === 'ELEC_GENERATION');
+  expect(generation.series[0].views.annual.map((p: { start: string }) => p.start)).toEqual(['2001-01-01', '2002-01-01']);
+  await expect(page.getByTestId('sector-results')).toHaveCount(0); // nothing before Show results
 
-  const card = page.getByTestId('series-card').filter({ hasText: 'Electricity generation' }).first();
-  await expect(card.getByTestId('observation-value')).toHaveText(['48,000', '50,100']);
-  await expect(card.getByTestId('data-mode-badge').first()).toHaveText('Synthetic demonstration data');
-  await expect(page.getByTestId('prototype-notice')).toContainText('Connected to the OSRIP API');
-
-  await card.getByTestId('source-details-button').click();
-  const details = page.getByRole('dialog').getByTestId('source-details');
-  await expect(details).toContainText('OSRIP booklet worked-example fixtures (synthetic)');
-  await expect(details).toContainText('None (synthetic data has no publisher)');
-  await expect(details).toContainText('fixtures-v1');
+  await showResults(page, { indicator: 'ELEC_GENERATION', view: 'annual', from: '2001-01-01', to: '2002-01-01' });
+  const rows = page.getByTestId('series-row');
+  await expect(rows.locator('td').first()).toHaveText('48,000');
+  await expect(rows.nth(1).locator('td').first()).toHaveText('50,100');
+  await expect(page.getByTestId('data-mode-banner')).toHaveAttribute('data-mode', 'synthetic');
+  await expect(page.getByTestId('prototype-notice')).toHaveCount(0); // the API address is under Settings › Services
+  await expect(page.getByTestId('series-sources')).toContainText('OSRIP booklet worked-example fixtures (synthetic)');
+  const evidence = page.getByTestId('insight-evidence');
+  await evidence.locator('summary').click();
+  await expect(evidence).toContainText('fixtures-v1');
 });
 
 test('verified-source mode never falls back to the synthetic fixture', async ({ page }) => {
   await page.goto('/energy/electricity');
   await expect(page.locator('[data-state="no_verified_data"]')).toBeVisible();
-  await expect(page.getByTestId('series-card')).toHaveCount(0);
+  await expect(page.getByTestId('sector-form')).toHaveCount(0);
+  await expect(page.getByTestId('sector-results')).toHaveCount(0);
 });
 
 test('Arabic shows the same API values', async ({ page }) => {
   await page.goto('/energy/water?mode=synthetic');
-  const values = page.getByTestId('observation-value');
+  await showResults(page, { indicator: 'WATER_CONSUMPTION', view: 'annual', from: '2001-01-01', to: '2002-01-01' });
+  const values = page.getByTestId('series-row').locator('td:first-of-type');
   await expect(values).toHaveText(['330', '343']);
   await page.getByRole('button', { name: 'العربية' }).click();
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
   await expect(values).toHaveText(['330', '343']);
+  await expect(page.getByTestId('sector-show-results')).toHaveText('عرض النتائج');
 });
 
 test('a data manager uploads, maps, validates, reviews, approves and publishes a CSV', async ({ page }) => {
@@ -97,10 +102,13 @@ test('a data manager uploads, maps, validates, reviews, approves and publishes a
   await expect(detail.getByTestId('import-status')).toHaveText('Published');
   await expect(detail.getByTestId('published-note')).toContainText('1 observations are now public');
 
-  // The new value appears on the public dashboard; the rejected row does not.
+  // The new value appears on the public sector page; the rejected row (2010) does not.
   await page.goto('/energy/water?mode=synthetic');
-  const card = page.getByTestId('series-card').filter({ hasText: 'Water production' });
-  await expect(card.getByTestId('observation-value')).toHaveText(['412.5']);
+  await page.getByTestId('sector-indicator').selectOption('WATER_PRODUCTION');
+  await page.getByTestId('sector-frequency').locator('[data-value="annual"]').click();
+  await expect(page.getByTestId('sector-from').locator('option[value="2010-01-01"]')).toHaveCount(0);
+  await showResults(page, { view: 'annual', from: '2009-01-01', to: '2009-01-01' });
+  await expect(page.getByTestId('series-row').locator('td').first()).toHaveText('412.5');
 });
 
 test('a viewer is refused by the server even when calling the API directly', async ({ page }) => {

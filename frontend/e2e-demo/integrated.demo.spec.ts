@@ -1,4 +1,8 @@
+import { writeFileSync } from 'node:fs';
+
 import { expect, test, type Page } from '@playwright/test';
+
+import { chooseSelection } from '../e2e-api/sector';
 
 // The integrated experience, demonstrated on the real stack (scripted assistant, search and
 // speech; verified reference pack loaded). Every step asserts what it shows, and saves a
@@ -73,10 +77,10 @@ test('3-4. Choosing Al Mulhim or Ilham; each has its own voice (configured ids)'
 });
 
 test('5-6. A sourced analysis on approved data; table, chart and spoken explanation match', async ({ page }) => {
-  await page.goto('/overview'); // verified-source data (the reference pack) by default
+  await page.goto('/workspace'); // verified-source data (the reference pack) by default
   const ws = page.getByTestId('workspace');
   // Published electricity mixes annual, year-to-date and monthly series: choose one, here.
-  await ws.getByTestId('choose-frequency-annual').click();
+  await ws.getByTestId('filter-frequency').selectOption('annual');
   await expect(page).toHaveURL(/frequency=annual/);
   await expect(ws.getByTestId('indicator-card').first()).toBeVisible();
   await ws.getByTestId('filter-indicator').selectOption('ELEC_GROSS_GENERATION');
@@ -127,9 +131,11 @@ test('7. A failing provider and a denied microphone are explained; nothing is ch
   await page.goto('/assistant?mode=synthetic');
   await page.getByTestId('assistant-input').fill('please fail');
   await page.getByTestId('assistant-send').click();
+  // The answer service failed: a labelled data-based report instead, not charged.
   const failed = page.getByTestId('assistant-message').last();
-  await expect(failed).toHaveAttribute('data-status', 'unavailable');
-  await expect(failed.getByRole('button', { name: 'Try again' })).toBeVisible();
+  await expect(failed).toHaveAttribute('data-status', 'data_report');
+  await expect(failed.getByTestId('non-ai-label')).toBeVisible();
+  await expect(failed.getByRole('button', { name: 'Try the AI answer again' })).toBeVisible();
   await expect(page.getByTestId('guest-allowance')).toHaveAttribute('data-remaining', '5');
   await shot(page, '13-provider-unavailable-not-charged');
   await page.getByTestId('open-talk').click();
@@ -161,11 +167,114 @@ test('8. Five answers shared across personas: switching persona does not reset t
 });
 
 test('@phone the workspace on a phone: tabs and the study', async ({ page }) => {
-  await page.goto('/overview?mode=synthetic&tab=assistant');
+  await page.goto('/workspace?mode=synthetic&tab=assistant');
   await page.getByTestId('workspace-start-chat').click();
   const chat = page.getByTestId('workspace-assistant');
   await chat.getByTestId('assistant-input').fill('Show the history of electricity generation');
   await chat.getByTestId('assistant-send').click();
   await expect(page.getByTestId('live-study')).toHaveAttribute('data-status', 'completed');
   await shot(page, '16-phone-study-tab');
+});
+
+test('9. Evaluation scenario: electricity, a published period, table, chart on request, sourced analysis, references, missing data', async ({ page }) => {
+  // Each step is timed from the action to its asserted result (browser, API and the scripted
+  // model on this machine); the times are written beside the screenshots.
+  const steps: { step: string; ms: number }[] = [];
+  const timed = async (step: string, run: () => Promise<void>) => {
+    const started = performance.now();
+    await run();
+    steps.push({ step, ms: Math.round(performance.now() - started) });
+  };
+
+  await timed('Open electricity', async () => {
+    await page.goto('/energy/electricity'); // verified-source data (the reference pack) by default
+    await expect(page.getByTestId('sector-form')).toBeVisible();
+  });
+  await expect(page.getByTestId('sector-results')).toHaveCount(0); // nothing before Show results
+  await timed('Choose a published period', async () => {
+    await chooseSelection(page, { indicator: 'ELEC_GROSS_GENERATION', area: 'OM', view: 'monthly', from: '2026-06-01', to: '2026-08-01' });
+  });
+  await expect(page.getByTestId('sector-results')).toHaveCount(0);
+  await shot(page, '20-scenario-period-chosen');
+
+  await timed('Show results (table)', async () => {
+    await page.getByTestId('sector-show-results').click();
+    await expect(page.getByTestId('series-row')).toHaveCount(3);
+  });
+  const rows = page.getByTestId('series-row');
+  for (const [i, value] of ['5,755.4', '5,676.9', '5,743.9'].entries()) await expect(rows.nth(i)).toContainText(value);
+  await expect(page.getByTestId('summary-latest')).toContainText('5,743.9');
+  await expect(page.getByTestId('summary-total')).toContainText('17,176.2'); // a flow, every month published
+  await expect(page.getByTestId('sector-chart')).toHaveCount(0); // no chart until asked for
+  await page.getByTestId('sector-results').scrollIntoViewIfNeeded();
+  await shot(page, '21-scenario-table');
+
+  await timed('Show chart', async () => {
+    await page.getByTestId('sector-show-chart').click();
+    await expect(page.getByTestId('sector-chart')).toBeVisible();
+  });
+  await page.getByTestId('sector-chart').scrollIntoViewIfNeeded();
+  await shot(page, '22-scenario-chart-on-request');
+
+  await page.getByTestId('sector-request-analysis').click();
+  await expect(page).toHaveURL(/\/assistant\?.*ind=ELEC_GROSS_GENERATION/);
+  await expect(page.getByTestId('assistant-selection')).toContainText('Gross electricity generation');
+  const reply = page.getByTestId('assistant-message').last();
+  await timed('Ask for a sourced analysis (scripted model)', async () => {
+    await page.getByTestId('assistant-send').click();
+    await expect(reply).toHaveAttribute('data-status', 'answered');
+  });
+  // Exactly the applied months, each figure cited to the bulletin that published it.
+  const citations = reply.getByTestId('citation');
+  await expect(citations).toHaveCount(3);
+  await expect(reply.getByTestId('ai-label')).toBeVisible();
+  for (const value of ['5755.4', '5676.9', '5743.9']) await expect(reply.getByTestId('assistant-text')).toContainText(value);
+  await expect(citations.first()).toContainText('Monthly Statistical Bulletin, September 2026');
+  await shot(page, '23-scenario-sourced-analysis');
+
+  await timed('Inspect a reference', async () => {
+    const chip = reply.getByTestId('citation-chip').first();
+    const id = await chip.getAttribute('data-evidence');
+    await chip.click();
+    await expect(reply.locator(`[data-testid="citation"][data-evidence="${id}"]`)).toBeFocused();
+  });
+  const link = citations.first().getByRole('link');
+  await expect(link).toHaveAttribute('href', /^https:\/\/api\.ncsi\.gov\.om\/uploads\//);
+  await shot(page, '24-scenario-reference-inspected');
+
+  // Missing data: the 2026 full year is not published (only January to August, shown apart).
+  await timed('Missing-data case', async () => {
+    await page.goto('/energy/electricity');
+    await chooseSelection(page, { indicator: 'ELEC_GROSS_GENERATION', area: 'OM', view: 'annual', from: '2022-01-01', to: '2026-01-01' });
+    await page.getByTestId('sector-show-results').click();
+    await expect(page.getByTestId('series-row')).toHaveCount(5);
+  });
+  const year2026 = page.locator('[data-testid="series-row"][data-period="2026-01-01"]');
+  await expect(year2026).toHaveAttribute('data-nature', 'missing');
+  await expect(year2026).toContainText('Not published');
+  await expect(year2026).not.toContainText(/\b0\b/); // never shown as zero
+  await expect(page.getByTestId('series-ytd')).toContainText('37,481.8');
+  await expect(page.getByTestId('summary-total')).toHaveCount(0); // no total over a gap
+  await page.getByTestId('sector-results').scrollIntoViewIfNeeded();
+  await shot(page, '25-scenario-missing-year');
+  await page.getByTestId('sector-frequency').locator('[data-value="quarterly"]').click();
+  await expect(page.getByTestId('sector-no-periods')).toBeVisible();
+  await page.getByTestId('sector-form').scrollIntoViewIfNeeded();
+  await shot(page, '26-scenario-no-quarterly-figures');
+
+  // The same results in Arabic, right to left (changing the frequency cleared the periods).
+  await page.getByRole('button', { name: 'العربية' }).first().click();
+  await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+  await chooseSelection(page, { view: 'annual', from: '2022-01-01', to: '2026-01-01' });
+  await page.getByTestId('sector-show-results').click();
+  await expect(page.getByTestId('series-row')).toHaveCount(5);
+  await expect(page.getByTestId('summary-latest')).toContainText('50,973.5');
+  await page.getByTestId('sector-results').scrollIntoViewIfNeeded();
+  await shot(page, '27-scenario-arabic');
+
+  writeFileSync(`${OUT}/scenario-timings.json`, `${JSON.stringify({
+    measured_at: new Date().toISOString(),
+    note: 'Local run: Vite dev server, FastAPI, PostgreSQL and the scripted test model; not a live AI provider.',
+    steps,
+  }, null, 2)}\n`);
 });

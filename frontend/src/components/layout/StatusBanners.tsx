@@ -1,12 +1,13 @@
 import { FlaskConical, Info, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { apiBaseUrl, dataAdapter } from '@/api';
+import { dataAdapter } from '@/api';
 import { cn } from '@/lib/utils';
 import { useDataMode } from '@/state/useDataMode';
 
 /** Persistent statements of what the user is looking at, in one slim strip: the data mode
- * (with what it means) and the backend the page is connected to. */
+ * (with what it means) and, in the offline prototype only, that no backend is connected. The
+ * API address is technical detail and is listed under Settings › Services instead. */
 export function StatusBanners() {
   const { t } = useTranslation();
   const [mode] = useDataMode();
@@ -28,10 +29,12 @@ export function StatusBanners() {
         <ModeIcon aria-hidden="true" className="mt-px size-3.5 shrink-0" />
         {mode === 'synthetic' ? t('dataMode.syntheticBanner') : t('dataMode.verifiedBanner')}
       </p>
-      <p data-testid="prototype-notice" className="inline-flex min-w-0 items-start gap-1.5 text-muted-foreground">
-        <Info aria-hidden="true" className="mt-px size-3.5 shrink-0" />
-        {dataAdapter.kind === 'mock' ? t('prototype.mockAdapter') : t('prototype.httpAdapter', { baseUrl: apiBaseUrl })}
-      </p>
+      {dataAdapter.kind === 'mock' ? (
+        <p data-testid="prototype-notice" className="inline-flex min-w-0 items-start gap-1.5 text-muted-foreground">
+          <Info aria-hidden="true" className="mt-px size-3.5 shrink-0" />
+          {t('prototype.mockAdapter')}
+        </p>
+      ) : null}
     </div>
   );
 }

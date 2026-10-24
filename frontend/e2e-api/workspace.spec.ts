@@ -23,8 +23,8 @@ async function ask(page: Page, question: string) {
   await expect(panel.getByTestId('assistant-message')).toHaveCount(before + 1);
 }
 
-test('filters, cards, one dataset as chart and table, and honest empty states', async ({ page }) => {
-  await page.goto('/overview?mode=synthetic');
+test('filters, cards, one dataset as table and chart on request, and honest empty states', async ({ page }) => {
+  await page.goto('/workspace?mode=synthetic');
   const ws = page.getByTestId('workspace');
   await expect(ws.getByTestId('filter-domain')).toBeVisible();
   await expect(ws.getByTestId('filter-area')).toBeVisible();
@@ -38,10 +38,13 @@ test('filters, cards, one dataset as chart and table, and honest empty states', 
   await expect(card.getByTestId('source-details-button')).toBeVisible();
   await expect(card.getByTestId('indicator-stale')).toBeVisible();
   await expect(ws.getByTestId('workspace-stale')).toBeVisible();
-  // The history: chart points and table rows are the same validated rows.
+  // The history: the table first; the chart only on request, and its points are the same
+  // validated rows as the table.
   const trend = ws.getByTestId('workspace-data').getByTestId('dataset').first();
   const rows = trend.getByTestId('study-row');
   const points = trend.locator('[data-point]');
+  await expect(trend.getByTestId('dataset-chart')).toHaveCount(0);
+  await trend.getByTestId('dataset-show-chart').click();
   await expect(points).toHaveCount(await rows.count());
   const latest = await card.getByTestId('indicator-value').textContent();
   await expect(rows.last()).toContainText(latest ?? '-');
@@ -66,7 +69,7 @@ test('filters, cards, one dataset as chart and table, and honest empty states', 
 });
 
 test('the dashboard: four resources with their latest published values, the chart beside its findings, and comparison, studies and sources below', async ({ page }) => {
-  await page.goto('/overview?mode=synthetic');
+  await page.goto('/workspace?mode=synthetic');
   const kpi = (section: string) => page.locator(`[data-testid="resource-kpi"][data-section="${section}"]`);
   await expect(page.getByTestId('resource-kpi')).toHaveCount(4);
   const electricity = kpi('electricity');
@@ -99,7 +102,7 @@ test('the dashboard: four resources with their latest published values, the char
 });
 
 test('a live study streams steps, sources and a validated table; narration highlights its row', async ({ page }) => {
-  await page.goto('/overview?mode=synthetic');
+  await page.goto('/workspace?mode=synthetic');
   await startChat(page);
   await ask(page, 'What is the latest electricity generation?');
   // The Study tab comes forward with the study.
@@ -132,7 +135,7 @@ test('a live study streams steps, sources and a validated table; narration highl
 });
 
 test('a failed search is a visible partial failure; sources open and close by keyboard', async ({ page }) => {
-  await page.goto('/overview?mode=synthetic');
+  await page.goto('/workspace?mode=synthetic');
   await startChat(page);
   const panel = page.getByTestId('workspace-assistant');
   await panel.getByTestId('assistant-mode').getByRole('radio', { name: 'Research' }).click();
@@ -163,7 +166,7 @@ test('a failed search is a visible partial failure; sources open and close by ke
 });
 
 test('the person returns to an earlier study, and switching language keeps the values', async ({ page }) => {
-  await page.goto('/overview?mode=synthetic');
+  await page.goto('/workspace?mode=synthetic');
   await startChat(page);
   await ask(page, 'What is the latest electricity generation?');
   const study = page.getByTestId('live-study');
@@ -229,7 +232,7 @@ test('after a stop, late and superseded events are ignored and nothing becomes f
     { type: 'dataset', payload: DATASET('D2'), result_version: 3 },
     { type: 'study.completed', result_version: 4, payload: { status: 'answered', language: 'en', findings: [{ finding_id: 'F1', text: 'Late.', evidence_ids: [] }], narration: [], final_datasets: ['D2'], provisional_datasets: [] } },
   ], id));
-  await page.goto('/overview?mode=synthetic');
+  await page.goto('/workspace?mode=synthetic');
   await startChat(page);
   await ask(page, 'What is the latest electricity generation?');
   const study = page.getByTestId('live-study');
@@ -248,7 +251,7 @@ test('a table that fails validation in the browser is reported, never drawn', as
     { type: 'dataset', payload: DATASET('D1', false), result_version: 1 },
     { type: 'study.completed', result_version: 2, payload: { status: 'no_evidence', language: 'en', findings: [{ finding_id: 'F1', text: 'No published data.', evidence_ids: [] }], narration: [{ narration_segment_id: 'N1', finding_id: 'F1', text: 'No published data.', evidence_ids: [], targets: [], section: 'findings' }], final_datasets: [], provisional_datasets: [] } },
   ], id));
-  await page.goto('/overview?mode=synthetic');
+  await page.goto('/workspace?mode=synthetic');
   await startChat(page);
   await ask(page, 'What is the latest electricity generation?');
   const study = page.getByTestId('live-study');

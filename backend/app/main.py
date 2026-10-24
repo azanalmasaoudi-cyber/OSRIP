@@ -30,6 +30,7 @@ from app.api.routes import (
     research,
     research_jobs,
     series,
+    source_sync,
     studies,
 )
 from app.api.routes import (
@@ -193,6 +194,7 @@ def create_app() -> FastAPI:
         reports.router,
         research.router,
         research_jobs.router,
+        source_sync.router,
         library.router,
         studies.router,
     ):

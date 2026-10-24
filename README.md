@@ -14,8 +14,14 @@ booklet (design-stage edition).
 > - two assistant personas, **Al Mulhim** (male voice) and **Ilham** (female voice);
 > - five free guest answers, counted on the server;
 > - governed AI and research providers;
-> - the **analytical workspace** on Overview, whose live study keeps the table, the chart and
->   the spoken explanation on one validated dataset.
+> - **period-first sector pages**: on Electricity, Water, Food Security and Trade the reader
+>   chooses an indicator, its geography and frequency and a start and end period from those
+>   actually published, then presses *Show results*; the summary and table follow, and the
+>   chart only after *Show chart*;
+> - an **Overview** that introduces the project (an academic decision-support project, not an
+>   official government service) and links to the four sectors;
+> - the **analytical workspace** (`/workspace`), whose live study keeps the table, the chart
+>   and the spoken explanation on one validated dataset.
 >
 > What was demonstrated and tested, and what was not:
 > [`docs/VERIFICATION_REPORT.md`](docs/VERIFICATION_REPORT.md).
@@ -110,10 +116,12 @@ counted); each answer says how it was prepared.
 
 Navigation:
 
-- Home, Overview;
-- Domains: Energy and Essential Services (Electricity, Water), Food Security, Trade;
+- Home, Overview (the project introduction);
+- Sectors: Electricity, Water, Food Security, Trade (one row of sector links on each, with
+  its own remembered selection);
 - Analyse: Map, Studies, Scenarios, Sources;
-- Assistant and outputs: Al Mulhim (and Talk to Al Mulhim), Reports, Research library;
+- Assistant and outputs: Al Mulhim (and Talk to Al Mulhim), the Analysis workspace, Reports,
+  Research library;
 - Account;
 - Data Management, Users and roles, and Service health (authorized users only).
 
@@ -160,9 +168,12 @@ government branding.
 | [docs/TEST_RESULTS.md](docs/TEST_RESULTS.md) | Actual results of the audit run, performance and backup exercise |
 | [docs/API.md](docs/API.md), [docs/api/openapi.json](docs/api/openapi.json) | API reference |
 | [docs/WINDOWS_STARTUP.md](docs/WINDOWS_STARTUP.md) | One-time Windows setup; Visual Studio (F5), VS Code and one-click startup; what was verified |
-| [docs/WORKSPACE.md](docs/WORKSPACE.md) | The analytical workspace (Overview): filters, cards with stale flags, one validated dataset per chart and table, governorate view only with valid coverage, study panel; live study events (protocol, consistency rules), narration and highlighting, phone tabs |
+| [docs/WORKSPACE.md](docs/WORKSPACE.md) | The analytical workspace (`/workspace`): filters, cards with stale flags, one validated dataset per chart and table, governorate view only with valid coverage, study panel; live study events (protocol, consistency rules), narration and highlighting, phone tabs |
 | [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md) | Governed AI and research providers (Anthropic, OpenAI, Gemini with Google Search grounding, Brave): official APIs only, routing policy, data status labels, citations and attribution, limits and spending, provider readiness, setup and verification status |
 | [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md) | Evaluation of every connected service; settings for e-mail, Google, Microsoft, assistant (Claude), web research (Brave Search API, source classes, safe retrieval, review queue), guest allowance, voice (Azure AI Speech, Omani Arabic voices), Canva, map and NCSI data |
+| [docs/ACADEMIC_EVALUATION.md](docs/ACADEMIC_EVALUATION.md) | Academic evaluation: problem, objectives, architecture, data mapping, update and validation, AI grounding, limitations, reproducible tests, demonstration scenario and measured outcomes (no invented participants or scores) |
+| [docs/OFFICIAL_SOURCES.md](docs/OFFICIAL_SOURCES.md) | Official statistics feeds (NCSI Monthly Statistical Bulletin): registry, scheduled checks by the sync worker, validation, revisions, the live check of 23 Oct 2026, what needs access |
+| [docs/VOICE.md](docs/VOICE.md) | Al Mulhim and Ilham's Omani Arabic voices (Azure AI Speech): setup, cost, controls, what was and was not verified |
 | [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) | Ten-minute demonstration for the university presentation |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Deployment guide and unresolved limitations |
 | [docs/progress.md](docs/progress.md), [docs/implementation-notes.md](docs/implementation-notes.md) | Progress record and evidence for updating the booklet |
@@ -300,7 +311,9 @@ where each one is unavailable.
 - Or create an account at **Register** (e-mail or mobile number). In development, e-mails
   and SMS codes are not sent: read them at <http://localhost:5173/dev/mail>.
 - Choose the assistant (**Al Mulhim** or **Ilham**) with the picker in the assistant panel.
-- The analytical workspace is **Overview**.
+- **Overview** introduces the project. On a sector page, choose an indicator and a period,
+  press **Show results**, and **Show chart** if you want the chart. The analytical workspace
+  is **Analysis workspace** (`/workspace`).
 
 **E. Stop it**
 
@@ -368,12 +381,12 @@ python scripts\serve_dev.py
 Optional, before `serve_dev.py` in the same terminal (see [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md)):
 
 ```powershell
-$env:OSRIP_ANTHROPIC_API_KEY = "..."   # enables the assistant; without it the panel says "not configured"
+# Recommended: Gemini's free tier (a key from Google AI Studio; limits are per account there)
+$env:OSRIP_ASSISTANT_PROVIDER = "gemini"; $env:OSRIP_GEMINI_API_KEY = "..."; $env:OSRIP_GEMINI_MODEL = "gemini-3.8-flash"
+# Alternatives (API keys, usage-billed): anthropic (OSRIP_ANTHROPIC_API_KEY, OSRIP_ASSISTANT_MODEL),
+#   openai (OSRIP_OPENAI_API_KEY, OSRIP_OPENAI_MODEL), deepseek (OSRIP_DEEPSEEK_API_KEY,
+#   OSRIP_DEEPSEEK_MODEL and OSRIP_DEEPSEEK_BILLING_ACKNOWLEDGED=true). See docs/AI_PROVIDERS.md.
 $env:OSRIP_RESEARCH_API_KEY = "..."    # Brave Search API: web research (needs the assistant key too)
-# OpenAI or Gemini instead (API keys, not app subscriptions; model ids from each provider's list):
-#   OSRIP_ASSISTANT_PROVIDER=openai|gemini, OSRIP_OPENAI_API_KEY / OSRIP_GEMINI_API_KEY,
-#   OSRIP_OPENAI_MODEL / OSRIP_GEMINI_MODEL; search: OSRIP_RESEARCH_PROVIDER=openai|gemini with
-#   OSRIP_OPENAI_SEARCH_MODEL / OSRIP_GEMINI_SEARCH_MODEL. See docs/AI_PROVIDERS.md.
 $env:OSRIP_SPEECH_KEY = "..."; $env:OSRIP_SPEECH_REGION = "uaenorth"   # Azure AI Speech: voice in and out
 $env:OSRIP_PUBLIC_BASE_URL = "http://localhost:5173"   # address used in e-mail links
 ```
@@ -419,12 +432,31 @@ what is set up, the latest outcome of the answer service, and what to fix, witho
   `_HOST_INTERVAL_SECONDS`, `_ALLOWED_DOMAINS` (see `backend/.env.example`).
 - **Scheduled reports:** off unless `OSRIP_SCHEDULED_REPORTS_ENABLED=true`; each schedule is
   created disabled, and one that uses web sources also needs "allow paid runs".
-- **Voices:** `OSRIP_SPEECH_KEY` and `OSRIP_SPEECH_REGION` (Azure AI Speech). Al Mulhim speaks with
-  ar-OM-AbdullahNeural / en-GB-RyanNeural and Ilham with ar-OM-AyshaNeural / en-GB-SoniaNeural.
-- **Recorded introductions (Canva):** put each exported clip in `frontend/public/audio/intro/`
-  and set its file name and exact words in `manifest.json` there (`mulhim.ar`, `ilham.ar`).
-  Until a clip is named the introduction is not offered; a clip is always labelled as a
-  recording, never as live speech.
+- **AI provider choice:** `OSRIP_ASSISTANT_PROVIDER=gemini` with `OSRIP_GEMINI_API_KEY` and
+  `OSRIP_GEMINI_MODEL` is the recommended free-tier setup (Google's free tier may use the content
+  to improve its products; limits are per account in AI Studio). DeepSeek is optional and billed
+  per token: it is used only with `OSRIP_DEEPSEEK_API_KEY`, `OSRIP_DEEPSEEK_MODEL` and
+  `OSRIP_DEEPSEEK_BILLING_ACKNOWLEDGED=true`. Settings › Services shows the billing kind of each.
+  A provider's "retry after" of up to 10 seconds is waited once; longer, or a second failure,
+  gives the data-based report. See [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md).
+- **Voices:** `OSRIP_SPEECH_PROVIDER=azure`, `OSRIP_SPEECH_KEY` and `OSRIP_SPEECH_REGION` (Azure AI
+  Speech). Al Mulhim speaks with ar-OM-AbdullahNeural / en-GB-RyanNeural and Ilham with
+  ar-OM-AyshaNeural / en-GB-SoniaNeural; Settings › Voice says whether your resource lists them.
+  See [docs/VOICE.md](docs/VOICE.md).
+- **Official statistics updates (NCSI):** the feed is off until an administrator enables it in
+  Data Management › Official statistics feeds. The checks are run by a separate worker. Locally,
+  in `backend\`: `python scripts\sync_worker_dev.py` (or `tools\start_osrip.py --with-sync-worker`);
+  one pass: add `--once`; one feed now: `--check ncsi-monthly-bulletin`. In production:
+  `python -m app.worker` with `OSRIP_DATABASE_URL` set. A new release is staged as an import for
+  approval unless auto-publish is switched on. See [docs/OFFICIAL_SOURCES.md](docs/OFFICIAL_SOURCES.md).
+- **Recorded introductions (Canva AI Voice):** Canva downloads AI Voice only inside an MP4
+  video. Add each one with
+  `backend\.venv\Scripts\python.exe tools\import_canva_intro.py --persona mulhim --input "<MP4>" --voice "<voice name>"`
+  (and `--persona ilham`). It copies the audio track out without re-encoding (AAC → `.m4a`),
+  refuses silent or broken files, and lists the clip with its exact words in
+  `frontend/public/audio/intro/manifest.json`. The assistant page then shows "استمع إلى الترحيب
+  / Play introduction" with Stop and volume; until a clip is added the button is not shown. A
+  clip is always labelled as a recording; answers are still read by the speech service.
 
 "Create study" (Studies page, signed in) runs a study in the background: discover sources,
 retrieve documents, extract evidence, validate data, calculate, build tables and charts, write
@@ -448,7 +480,14 @@ ruff check app tests scripts; ruff format --check app tests scripts
 npm run lint; npm run typecheck; npm run build; npm run check:contrast
 $env:PW_CHANNEL="msedge"; npx playwright test                                   # mock mode
 $env:OSRIP_TEST_ADMIN_URL=(..\backend\.venv\Scripts\python.exe ..\backend\scripts\devdb.py url); npx playwright test -c playwright.api.config.ts   # full stack, desktop + phone
-npx playwright test -c playwright.demo.config.ts   # the nine demonstrations (same OSRIP_TEST_ADMIN_URL); screenshots to docs\evidence\integrated\
+npx playwright test -c playwright.demo.config.ts   # the demonstrations and the evaluation scenario (same OSRIP_TEST_ADMIN_URL); screenshots to docs\evidence\integrated\
+```
+
+Measurements for the academic evaluation (API running, from the repository root; writes
+`docs\evaluation\measurements-<date>.json` and `.md`):
+
+```powershell
+backend\.venv\Scripts\python.exe tools\evaluate_osrip.py --api http://127.0.0.1:8010/api/v1 --out docs\evaluation --check-links
 ```
 
 `PW_CHANNEL=msedge` uses the installed Edge; alternatively run

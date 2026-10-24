@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { showResults } from './sector';
+
 // The research workflow through the real stack (scripted assistant, search and speech
 // providers; no external service is called): the assistant workspace layout, the data-based
 // report when the answer service fails, a sector page in its fixed order with one series
@@ -88,28 +90,40 @@ test('when the answer service fails, the reply is a data-based report, labelled,
   await snap(page, 'data-report-reply');
 });
 
-test('a sector page: fixed order, one series as chart and table, chronological months, CSV', async ({ page }) => {
+test('a sector page: period first, then the table, the chart only on request, in time order, with a CSV', async ({ page }) => {
   await page.goto('/energy/electricity?mode=synthetic');
-  const parts = ['part-indicators', 'part-trends', 'part-table', 'part-analysis', 'part-recommendations', 'part-sources'];
-  const tops: number[] = [];
-  for (const part of parts) tops.push((await page.getByTestId(part).boundingBox())!.y);
-  expect([...tops].sort((a, b) => a - b)).toEqual(tops);
-  await expect(page.getByTestId('kpi-card').first()).toBeVisible();
-  const chart = page.getByTestId('series-chart');
+  // Before a period is chosen: the explanation and the selectors, no figures and no chart.
+  await expect(page.getByTestId('sector-form')).toBeVisible();
+  await expect(page.getByTestId('sector-results')).toHaveCount(0);
+  await expect(page.getByTestId('series-chart')).toHaveCount(0);
+  await snap(page, 'sector-choose');
+  await showResults(page, { indicator: 'ELEC_GENERATION', view: 'annual', from: '2001-01-01', to: '2002-01-01' });
+  await expect(page.getByTestId('applied-range')).toHaveText('2001 – 2002');
+  await expect(page.getByTestId('sector-summary')).toBeVisible();
   const table = page.getByTestId('series-table');
+  await expect(table).toBeVisible();
+  await expect(page.getByTestId('series-chart')).toHaveCount(0); // hidden until asked for
+  await snap(page, 'sector-results');
+  const periods = await table.getByTestId('series-row').evaluateAll((rows) => rows.map((r) => r.getAttribute('data-period') ?? ''));
+  expect([...periods].sort()).toEqual(periods); // time order, not alphabetical labels
+  await page.getByTestId('sector-show-chart').click();
+  const chart = page.getByTestId('series-chart');
   await expect(chart).toBeVisible();
   const id = await chart.getAttribute('data-dataset-id');
   expect(id).toBeTruthy();
   await expect(table).toHaveAttribute('data-dataset-id', id!); // the same rows
-  const periods = await table.getByTestId('series-row').evaluateAll((rows) => rows.map((r) => r.getAttribute('data-period') ?? ''));
-  expect([...periods].sort()).toEqual(periods); // time order, not alphabetical labels
-  await expect(page.getByTestId('series-csv')).toHaveAttribute('href', /\/series\/timeline\.csv\?.*indicator=/);
+  await snap(page, 'sector-chart');
+  await page.getByTestId('sector-hide-chart').click();
+  await expect(page.getByTestId('series-chart')).toHaveCount(0);
+  await expect(page.getByTestId('series-csv')).toHaveAttribute('href', /\/series\/timeline\.csv\?.*indicator=.*period_from=2001-01-01/);
   const csv = await page.request.get((await page.getByTestId('series-csv').getAttribute('href'))!);
   expect(csv.status()).toBe(200);
   expect(await csv.text()).toContain(`dataset_id=${id}`);
-  // Arabic month and year labels come from the same rows.
+  // Arabic labels for the same results.
   await page.getByRole('button', { name: 'العربية' }).first().click();
-  await expect(page.getByTestId('part-trends')).toContainText('الاتجاهات التاريخية');
+  await expect(page.getByTestId('sector-results')).toContainText('جدول البيانات');
+  await expect(page.getByTestId('sector-show-chart')).toHaveText('إظهار الرسم البياني');
+  await snap(page, 'sector-results-ar');
   await page.getByRole('button', { name: 'English' }).first().click();
 });
 

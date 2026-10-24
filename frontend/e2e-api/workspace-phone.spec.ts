@@ -6,7 +6,7 @@ import { expect, test } from '@playwright/test';
 test.skip(({ isMobile }) => !isMobile, 'phone layout only');
 
 test('phone: tabs for data, study and assistant; a question brings its study forward', async ({ page }) => {
-  await page.goto('/overview?mode=synthetic');
+  await page.goto('/workspace?mode=synthetic');
   const tabs = page.getByTestId('workspace-tabs');
   await expect(tabs.getByRole('tab')).toHaveText(['Data', 'Study', 'Assistant']);
   await expect(page.getByTestId('workspace-data')).toBeVisible();

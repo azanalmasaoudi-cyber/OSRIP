@@ -1,5 +1,36 @@
 # Test results
 
+## 2026-10-24: period-first sectors, official statistics feeds, Gemini/DeepSeek, Omani voices, evaluation (branch `feature/research-crawl-series`)
+
+What changed (stages 1–5):
+- **Sectors, period first.** Each of the four sectors has its own draft and applied selection (indicator, area, breakdown, frequency, start and end from the published periods only). Nothing is shown before *Show results*; the chart only after *Show chart*; changing the draft hides stale results. A server summary of the applied range (latest, change, highest, lowest, total only for a complete flow). The old Overview became the Analysis workspace (`/workspace`); Overview is now a project introduction.
+- **Official statistics** (migration 0022): NCSI Monthly Statistical Bulletin feed (tables 21 and 22), a separate sync worker, delta import (new / revised / unchanged), staged for approval, three moments kept apart, admin schedule and upload, logs and backoff.
+- **AI providers:** Gemini free tier as the recommended setup; DeepSeek (usage-billed) only with an explicit billing acknowledgement; Retry-After up to 10 s waited once; the sector selection sent with "Request analysis" as one validated prompt rule. The scripted test model now follows that rule (one lookup of the selected indicator, area, frequency and years; only periods in the range cited).
+- **Voices:** one shared volume; "Listen to a short explanation" on sector results (a few sentences from the summary, Al Mulhim `ar-OM-AbdullahNeural` / Ilham `ar-OM-AyshaNeural`), transcript, Stop, nothing automatic.
+- **Evaluation:** `tools/evaluate_osrip.py` (measurements), `docs/ACADEMIC_EVALUATION.md`, the evaluation scenario as demo test 9, `docs/DEMO_SCRIPT.md` rewritten for the current flow.
+
+Browsers: installed Edge (`PW_CHANNEL=msedge`). Scripted assistant, search and speech providers in all browser runs.
+
+| Check | Result |
+|---|---|
+| `ruff check` and `ruff format --check` (backend, `tools/evaluate_osrip.py`) | Pass |
+| Backend `pytest` with database tests | **724 passed** (1 min 43 s). New: `test_source_sync.py` (9), `test_zzz_source_sync_integration.py` (3), `test_ai_providers_deepseek.py` (7), `test_assistant_selection_integration.py` (3), `test_series_speech.py` (4); timeline summary and availability tests added. After the last worker change: the sync and selection tests again, 15 passed |
+| `tsc -b`, `npm run lint`, `npm run build`, `npm run check:contrast` | Pass (the existing bundle-size warning remains) |
+| Frontend unit tests (`node --test tests/export-results.test.mjs tests/research-brief.test.mjs`) | 8 passed |
+| Mock suite (`--workers=3`) | 41 passed, 3 skipped |
+| Full-stack suite, desktop and Pixel 7 (150 tests) | **149 passed, 1 skipped** (14.9 min). Then, after the scripted model's selection route was added, `interface`, `assistant`, `research-workflow`, `sector-voice` and `governed-ai` on both projects: 33 passed |
+| Demonstrations (`playwright.demo.config.ts`) | **7 of 7 passed.** Test 5-6 first failed on a removed workspace control (`choose-frequency-annual`; the test now uses the frequency filter) and passed on re-run. Test 9, the evaluation scenario, passed in 2 of 2 runs. Screenshots `docs/evidence/integrated/20`–`27`, step times `scenario-timings.json` |
+| Measurements (`tools/evaluate_osrip.py --check-links`, API with the real `backend/.env` on 8029, verified data) | 105 series; **1338 of 1338** checks passed; CSV equal to the table 105 of 105; 5 of 5 cited sources https and HTTP 200; timeline median 29.3 ms, 95th percentile 43.7 ms (`docs/evaluation/measurements-2026-10-23.md`) |
+| Live NCSI check (23 Oct) | List HTTP 200; October 2026 workbook (2,048,496 bytes): 104 new, 22 unchanged, 6 revisions by NCSI; staged for approval, nothing published. `data.gov.om` API: HTTP 403 |
+| Startup | `tools\start_osrip.py --check --with-sync-worker`: prerequisites OK. `scripts\sync_worker_dev.py --once`: connects to `localhost:55432/osrip_dev`, 0 feeds due (the feed is off), exit 0. Found: the README's first worker command (`python -m app.worker`) used the default database (`localhost:5432/osrip`, not running here) and waited without output; the README now gives the development command, and the worker logs the database it connects to (no password) |
+
+**Not verified:**
+- a live AI answer (Gemini or DeepSeek keys not set; the Anthropic key in `backend/.env` fails authentication);
+- Azure speech synthesis (no Azure key; the controls were tested with a scripted tone);
+- the scheduled NCSI checks over days (one manual live check only);
+- the NCSI data portal API (needs access);
+- recorded Canva introductions (no clip supplied yet).
+
 ## 2026-10-22: data-based fallback reports, series timelines, background studies and Firecrawl (branch `feature/research-crawl-series`)
 
 What changed:

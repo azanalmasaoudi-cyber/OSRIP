@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { showResults } from './sector';
+
 // Navigation, the four questions on analytical pages, filter summaries, motion
 // preferences, service health and a responsive matrix, against the real API.
 
@@ -17,9 +19,9 @@ test('navigation lists the required sections and every link opens its page', asy
   await page.goto('/overview?mode=synthetic');
   const nav = page.getByRole('navigation', { name: 'Main navigation' });
   const expected: Array<[string, RegExp, string]> = [
-    ['Overview', /\/overview/, 'Overview'],
-    ['Electricity', /\/energy\/electricity/, 'Energy and Essential Services'],
-    ['Water', /\/energy\/water/, 'Energy and Essential Services'],
+    ['Overview', /\/overview/, 'OSRIP: Oman Smart Resource Intelligence Platform'],
+    ['Electricity', /\/energy\/electricity/, 'Electricity'],
+    ['Water', /\/energy\/water/, 'Water'],
     ['Food Security', /\/food-security/, 'Food Security'],
     ['Trade', /\/trade/, 'Trade'],
     ['Map', /\/geography/, 'Geography'],
@@ -27,6 +29,7 @@ test('navigation lists the required sections and every link opens its page', asy
     ['Scenarios', /\/forecasts/, 'Forecasts and Scenarios'],
     ['Sources', /\/sources/, 'Sources and Methodology'],
     ['AI Assistant', /\/assistant/, 'Al Mulhim'], // the page is titled with the chosen persona
+    ['Analysis workspace', /\/workspace/, 'Analysis workspace'],
     ['Reports', /\/reports/, 'Reports'],
     ['Account', /\/(account|sign-in)/, ''],
   ];
@@ -38,9 +41,11 @@ test('navigation lists the required sections and every link opens its page', asy
   }
 });
 
-test('an analytical page answers its questions (measure, period, change, evidence, limits, next) from loaded evidence, with a filter summary', async ({ page }) => {
+test('an analytical page answers its questions (measure, period, change, evidence, limits, next) from loaded evidence, for the applied selection', async ({ page }) => {
   await page.goto('/energy/electricity?mode=synthetic');
-  await expect(page.getByTestId('filter-summary')).toContainText('All areas');
+  await showResults(page, { indicator: 'ELEC_GENERATION', view: 'annual', from: '2001-01-01', to: '2002-01-01' });
+  await expect(page.getByTestId('applied-details')).toContainText('Oman (national)');
+  await expect(page.getByTestId('applied-details')).toContainText('Annual');
   const insights = page.getByTestId('section-insights');
   await expect(insights.locator('details')).toHaveCount(5);
 
@@ -62,9 +67,6 @@ test('an analytical page answers its questions (measure, period, change, evidenc
   await next.locator('summary').click();
   await expect(next.getByRole('link', { name: /forecast/i })).toHaveAttribute('href', /\/forecasts\?mode=synthetic/);
 
-  // The summary follows the filters, and the questions follow the same selection.
-  await page.getByTestId('filter-frequency').selectOption('annual');
-  await expect(page.getByTestId('filter-summary')).toContainText('Annual');
 
   // Arabic: same structure, translated questions.
   await page.getByRole('button', { name: 'العربية' }).click();
@@ -72,13 +74,12 @@ test('an analytical page answers its questions (measure, period, change, evidenc
   await page.getByRole('button', { name: 'English' }).click();
 });
 
-test('verified mode: the questions say what is missing instead of inventing answers', async ({ page }) => {
+test('verified mode: a sector without published data says so instead of inventing results', async ({ page }) => {
   await page.goto('/trade');
-  const insights = page.getByTestId('section-insights');
-  await insights.getByTestId('insight-change').locator('summary').click();
-  await expect(insights.getByTestId('insight-change')).toContainText('No change can be calculated');
-  await insights.getByTestId('insight-evidence').locator('summary').click();
-  await expect(insights.getByTestId('insight-evidence')).toContainText('No published observations');
+  await expect(page.locator('[data-state="no_verified_data"]')).toBeVisible();
+  await expect(page.getByTestId('sector-no-data')).toContainText('No published data is available for this sector');
+  await expect(page.getByTestId('sector-results')).toHaveCount(0);
+  await expect(page.locator('svg[role="img"]')).toHaveCount(0);
 });
 
 test('motion: gentle route entrance that keeps focus and history; reduced motion removes movement', async ({ page }) => {
@@ -131,7 +132,7 @@ test('service health: administrators only; integrations and errors are listed wi
 });
 
 const WIDTHS = [360, 390, 768, 1024, 1366, 1920];
-const ROUTES = ['/', '/overview', '/energy/electricity', '/trade', '/forecasts', '/assistant', '/reports'];
+const ROUTES = ['/', '/overview', '/workspace', '/energy/electricity', '/trade', '/forecasts', '/assistant', '/reports'];
 
 test('responsive matrix: no sideways scrolling at six widths, in English and Arabic', async ({ page }) => {
   test.setTimeout(300_000);
@@ -162,4 +163,24 @@ test('responsive matrix: no sideways scrolling at six widths, in English and Ara
       await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Scenarios', exact: true })).toBeVisible();
     }
   }
+});
+
+test('Request analysis carries the applied selection to the assistant, which sends it with the question', async ({ page }) => {
+  await page.goto('/energy/electricity?mode=synthetic');
+  await showResults(page, { indicator: 'ELEC_GENERATION', view: 'annual', from: '2001-01-01', to: '2002-01-01' });
+  await page.getByTestId('sector-request-analysis').click();
+  await expect(page).toHaveURL(/\/assistant\?.*ind=ELEC_GENERATION/);
+  const chip = page.getByTestId('assistant-selection');
+  await expect(chip).toContainText('Electricity generation');
+  await expect(page.getByTestId('assistant-input')).toHaveValue(/Analyse Electricity generation/);
+  const sent = page.waitForRequest((r) => r.url().includes('/assistant/guest/messages') && r.method() === 'POST');
+  await page.getByTestId('assistant-send').click();
+  const body = (await sent).postDataJSON() as { selection?: Record<string, string> };
+  expect(body.selection).toEqual({
+    sector: 'electricity', indicator: 'ELEC_GENERATION', area: 'OM', view: 'annual',
+    period_from: '2001-01-01', period_to: '2002-12-31',
+  });
+  // The reader can remove it; the next question is asked without it.
+  await chip.getByTestId('assistant-selection-clear').click();
+  await expect(page.getByTestId('assistant-selection')).toHaveCount(0);
 });

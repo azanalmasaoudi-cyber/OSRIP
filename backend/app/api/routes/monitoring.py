@@ -62,7 +62,7 @@ def provider_readiness(
 
 @router.post("/admin/providers/{name}/test")
 def provider_test(
-    name: Literal["anthropic", "openai", "gemini", "brave", "firecrawl"],
+    name: Literal["anthropic", "openai", "gemini", "deepseek", "brave", "firecrawl"],
     _: Annotated[Principal, Depends(require(Permission.AUDIT_READ))],
     principal: Annotated[Principal, Depends(require(Permission.USER_MANAGE))],
     capability: Literal["answer", "search", "retrieve"] = "answer",
