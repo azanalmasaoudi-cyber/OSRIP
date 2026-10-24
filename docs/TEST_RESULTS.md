@@ -1,5 +1,22 @@
 # Test results
 
+## 2026-10-24 (later): the Talk page as one centred column (branch `feature/research-crawl-series`)
+
+What changed:
+- `/talk` is one centred column (at most 900px) for both personas: name and state, a compact still portrait (180–220px tall on desktop, 120–160px on phones, 3:4, never stretched), the Al Mulhim / Ilham choice, then the conversation with the message box, Send and Speak. The separate conversation column is gone.
+- Removed from the page: the fallback-mode badge, the bordered live-avatar and portrait notes, the LiveKit setup box, the voice-server requirements and the long voice paragraphs under the message box. Live avatar status (setting names only) is now in Settings › Services, and the Talk modes and missing browser voices are explained in Settings › Help; the header's help button opens Settings. When no voice can read answers, Talk shows one line with a "How to fix" link.
+- Compact controls: the answer modes, web search, answer language, Mute (an icon) and volume share one row; the research brief opens from the top of the conversation. Only the message list scrolls, at every width (on phones the message box sits below it, not pinned over it: pinned, the suggestions painted through its bottom edge in Chromium).
+
+| Check | Result |
+|---|---|
+| `npm run lint`, `tsc -b`, `npm run build` | Pass (the existing bundle-size warning remains) |
+| New `e2e-api/talk-phone.spec.ts`, desktop (1280×720) and Pixel 7 | 8 passed: column at most 900px and centred; name → portrait → choice → conversation; portrait 180 (desktop) and 160 (phone) px tall, 3:4, `object-fit: cover`; message area 152 px (desktop 720px tall) and 230 px (phone); message box in view; one scrolling region; no sideways scroll; no technical notes; Send, Speak, Mute and modes present; no microphone request before Speak; the same layout for Ilham; Arabic right to left in the light theme; the one-line voice notice and its link; the notes in Settings |
+| Full-stack suite, desktop and Pixel 7 | **157 passed, 1 skipped** (13.5 min), including the updated `talk.spec.ts` and `personas.spec.ts` |
+| Mock suite | 39 passed, 3 skipped, 2 failed with missing trace files while the full-stack suite ran at the same time (both suites write `frontend/test-results/`); the 2 re-run alone with their own output folder: passed |
+| Demonstrations 3–4 and 7 (Talk) | 2 passed |
+
+Screenshots (Playwright, exact viewports): `docs/evidence/talk/` (desktop and phone; English dark, with a conversation; Arabic light).
+
 ## 2026-10-24: period-first sectors, official statistics feeds, Gemini/DeepSeek, Omani voices, evaluation (branch `feature/research-crawl-series`)
 
 What changed (stages 1–5):

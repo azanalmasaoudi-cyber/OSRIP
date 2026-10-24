@@ -825,7 +825,7 @@ function SignInPrompt({ onNavigate }: { onNavigate?: () => void }) {
 export type AskFromOutside = (question: string, mode?: AssistantMode) => void;
 
 /** The chat itself, used by the side panel and by the full AI Assistant page. */
-export function AssistantChat({ onClose, initialDraft = '', active = true, showIdentity = true, askRef, selection = null, selectionLabel }: {
+export function AssistantChat({ onClose, initialDraft = '', active = true, showIdentity = true, askRef, selection = null, selectionLabel, variant = 'panel' }: {
   onClose?: () => void;
   initialDraft?: string;
   /** Asked from a sector page: its applied selection, sent with each question until removed. */
@@ -834,6 +834,9 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
   active?: boolean;
   /** False in the Talk workspace, which shows the large portrait and state itself. */
   showIdentity?: boolean;
+  /** "talk": compact for the Talk page (one row of controls; help, setup and voice notes are in
+   * Settings, with a one-line notice and a link when no voice can read the answers). */
+  variant?: 'panel' | 'talk';
   /** Filled with this chat's send function, so a page can ask a question in it. */
   askRef?: { current: AskFromOutside | null };
 }) {
@@ -1039,11 +1042,24 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
   const speakHandler = voice.canSpeak && !voice.muted
     ? (m: AssistantMessage) => voice.say(m, byCode(m.persona).gender)
     : null;
+  const talk = variant === 'talk';
+  // A study request to review and edit: it fills the box and the mode, and sends nothing. Above
+  // the message box; in Talk at the top of the conversation, so the pinned composer stays small.
+  const brief = (
+    <ResearchBriefBuilder language={chatLanguage} disabled={pending || needsAccount} maxLength={max}
+      onDraft={(text, briefMode) => {
+        setDraft(text);
+        setAnswerMode(briefMode);
+        setViaVoice(false);
+        document.getElementById(inputId)?.focus();
+      }} />
+  );
 
   return (
     // Narrow screens: the whole chat scrolls as one column (the composer stays pinned at the
-    // bottom), so the header and answer modes never squeeze the messages out of view.
-    <div className="flex min-h-0 flex-1 flex-col max-sm:overflow-y-auto" data-testid="assistant-panel" lang={chatLanguage}>
+    // bottom), so the header and answer modes never squeeze the messages out of view. Talk keeps
+    // one compact row of controls instead, and only the message list scrolls at every width.
+    <div className={cn('flex min-h-0 flex-1 flex-col', !talk && 'max-sm:overflow-y-auto')} data-testid="assistant-panel" lang={chatLanguage}>
       {/* Who is speaking: the chosen persona's portrait (a fictional person), always labelled
           as an AI assistant, and the choice between the two personas. */}
       <div className={cn('flex flex-col gap-3 border-b border-border bg-muted/50 px-4 py-3', !showIdentity && 'hidden')} data-testid="assistant-identity">
@@ -1059,10 +1075,12 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
         </div>
         {showIdentity ? <PersonaPicker /> : null /* Talk has its own, beside the portrait */}
       </div>
+      {/* Talk: the answer modes and the toolbar share one wrapped row (elsewhere `contents`). */}
+      <div className={talk ? 'flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-3 py-2' : 'contents'} data-testid="assistant-controls">
       {/* Answer mode: the same assistant (and the same avatar) for all five modes. */}
       {canAsk ? (
-        <div className="border-b border-border px-4 py-2.5">
-          <ModeSelector value={answerMode} onChange={setAnswerMode} />
+        <div className={talk ? 'min-w-0' : 'border-b border-border px-4 py-2.5'}>
+          <ModeSelector value={answerMode} onChange={setAnswerMode} compact={talk} />
           {answerMode === 'research' && status.data && !webAvailable ? (
             <p className="mt-1 text-xs text-destructive" role="status" data-testid="research-unavailable">{t('assistant.researchNeedsSearch')}</p>
           ) : null}
@@ -1079,7 +1097,7 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
         </div>
       ) : null}
       {/* Toolbar: answer language, web research, voice output */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-2.5">
+      <div className={talk ? 'contents' : 'flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-2.5'}>
         {webAvailable ? (
           <label className="flex items-center gap-2 text-xs font-medium" title={t('assistant.webToggleHint')}>
             <input type="checkbox" checked={webOn} className="size-4 accent-primary" data-testid="web-toggle"
@@ -1097,11 +1115,13 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
         />
         {voice.canSpeak ? (
           <>
-            <Button variant="ghost" size="sm" aria-pressed={voice.muted} onClick={() => voice.setMuted(!voice.muted)} data-testid="voice-mute">
+            <Button variant="ghost" size="sm" aria-pressed={voice.muted} onClick={() => voice.setMuted(!voice.muted)} data-testid="voice-mute"
+              title={talk ? (voice.muted ? t('voice.unmute') : t('voice.mute')) : undefined} className={cn(talk && 'w-8 px-0')}>
               {voice.muted ? <VolumeX aria-hidden="true" /> : <Volume2 aria-hidden="true" />}
-              {voice.muted ? t('voice.unmute') : t('voice.mute')}
+              <span className={cn(talk && 'sr-only')}>{voice.muted ? t('voice.unmute') : t('voice.mute')}</span>
             </Button>
-            <VoiceVolume testId="voice-volume-replies" />
+            {/* Talk on a phone: Mute and the device's own volume, to keep the controls to one row. */}
+            <span className={cn(talk && 'max-sm:hidden')}><VoiceVolume testId="voice-volume-replies" compact={talk} /></span>
           </>
         ) : null}
         {voice.canPause ? (
@@ -1116,6 +1136,7 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
             <Square aria-hidden="true" />{t('voice.stopSpeaking')}
           </Button>
         ) : null}
+      </div>
       </div>
 
       {signedIn && allowed ? (
@@ -1139,7 +1160,8 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
         </div>
       ) : null}
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 max-sm:min-h-[45dvh] max-sm:flex-none max-sm:overflow-visible" aria-live="polite">
+      <div className={cn('min-h-0 flex-1 overflow-y-auto px-4 py-3', !talk && 'max-sm:min-h-[45dvh] max-sm:flex-none max-sm:overflow-visible')} aria-live="polite"
+        data-testid="assistant-messages">
         <p className="mb-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <DataModeBadge mode={(signedIn ? conversation.data?.data_mode : guestConversation.data?.data_mode) ?? mode} />
           <span data-testid="assistant-disclaimer-short">{t('assistant.disclaimerShort')}</span>
@@ -1149,8 +1171,10 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
             {t('assistant.notConfiguredShort')}
           </p>
         ) : null}
+        {/* Explanations and limits, collapsed: the conversation comes first. Talk links to
+            Settings for them instead. */}
+        {talk ? null : (
         <div className="mb-3 flex flex-col gap-2">
-          {/* Explanations and limits, collapsed: the conversation comes first. */}
           <details className="rounded-md border border-border px-3 py-2 text-xs" data-testid="assistant-help">
             <summary className="flex cursor-pointer items-center gap-1.5 font-semibold">
               <CircleHelp aria-hidden="true" className="size-3.5" />{t('assistant.help.title')}
@@ -1175,6 +1199,8 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
           <MemoryPanel signedIn={signedIn} guestExpires={guestData?.expires_at ?? null} guestConversationId={signedIn ? null : guestId}
             onGuestDeleted={() => setGuestId(null)} onAllDeleted={() => setActiveId(null)} />
         </div>
+        )}
+        {talk && canAsk ? <div className="mb-3">{brief}</div> : null}
         {signedIn && !allowed ? <p className="mb-3 text-sm">{t('assistant.noPermission')}</p> : null}
         {!signedIn && allowance && guestData ? <div className="mb-3"><AllowanceMeter allowance={allowance} notice={guestData.notice} /></div> : null}
         {linkable ? (
@@ -1215,15 +1241,8 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
       </div>
 
       {canAsk ? (
-        <form onSubmit={submit} className="flex flex-col gap-2 border-t border-border bg-card px-4 py-3 max-sm:sticky max-sm:bottom-0 max-sm:z-10">
-          {/* A study request to review and edit: it fills the box and the mode, and sends nothing. */}
-          <ResearchBriefBuilder language={chatLanguage} disabled={pending || needsAccount} maxLength={max}
-            onDraft={(text, briefMode) => {
-              setDraft(text);
-              setAnswerMode(briefMode);
-              setViaVoice(false);
-              document.getElementById(inputId)?.focus();
-            }} />
+        <form onSubmit={submit} className={cn('flex flex-col gap-2 border-t border-border bg-card px-4 py-3', !talk && 'max-sm:sticky max-sm:bottom-0 max-sm:z-10')}>
+          {talk ? null : brief}
           {scope ? (
             <p className="flex flex-wrap items-center gap-2 rounded-md border border-primary/40 bg-primary/5 px-2 py-1 text-xs" data-testid="assistant-selection">
               <span>{t('assistant.selectionApplied', { selection: selectionLabel ?? `${scope.indicator} · ${scope.area} · ${scope.period_from} – ${scope.period_to}` })}</span>
@@ -1274,15 +1293,25 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
               <Send aria-hidden="true" className="rtl:-scale-x-100" />{t('assistant.send')}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground" data-testid="voice-support">
-            {voice.serverMode ? t('voice.consentServer') : voice.canListen ? t('voice.consentBrowser') : t('voice.unsupported')}
-          </p>
-          {voice.noLanguageVoice ? (
+          {talk ? (
+            // One line, only when answers cannot be read aloud here; the explanation is in Settings.
+            voice.noVoice || voice.noLanguageVoice ? (
+              <p className="text-xs text-muted-foreground" role="status" data-testid="talk-no-voice">
+                {t('talk.noVoice')}{' '}
+                <Link to={preserved('/settings')} className="font-medium text-primary underline underline-offset-2">{t('talk.howToFix')}</Link>
+              </p>
+            ) : null
+          ) : (
+            <p className="text-xs text-muted-foreground" data-testid="voice-support">
+              {voice.serverMode ? t('voice.consentServer') : voice.canListen ? t('voice.consentBrowser') : t('voice.unsupported')}
+            </p>
+          )}
+          {!talk && voice.noLanguageVoice ? (
             <p className="text-xs text-muted-foreground" data-testid="voice-no-language" data-language={chatLanguage}>
               {t(`voice.noLanguageVoice.${chatLanguage}`)}
             </p>
           ) : null}
-          {voice.noVoice ? (
+          {!talk && voice.noVoice ? (
             <p className="text-xs text-muted-foreground" data-testid={persona.gender === 'female' ? 'voice-no-female' : 'voice-no-male'}>
               {t(persona.gender === 'female' ? 'voice.noFemaleVoice' : 'voice.noMaleVoice', { name: persona.name[appLanguage] })}
             </p>

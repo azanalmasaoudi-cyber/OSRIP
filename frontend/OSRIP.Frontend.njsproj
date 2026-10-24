@@ -103,6 +103,7 @@
     <TypeScriptCompile Include="e2e-api\sector.ts" />
     <TypeScriptCompile Include="e2e-api\source-feeds.spec.ts" />
     <TypeScriptCompile Include="e2e-api\studies.spec.ts" />
+    <TypeScriptCompile Include="e2e-api\talk-phone.spec.ts" />
     <TypeScriptCompile Include="e2e-api\talk.spec.ts" />
     <TypeScriptCompile Include="e2e-api\upgrade.spec.ts" />
     <TypeScriptCompile Include="e2e-api\voice-gender.spec.ts" />

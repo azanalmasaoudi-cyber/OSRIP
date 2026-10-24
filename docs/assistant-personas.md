@@ -52,18 +52,29 @@ A voice in the profile must be in Microsoft's published list with the persona's 
 
 ## Modes in Talk
 
-| Mode | When | What the person sees |
+**Layout (2026-10-24).** One centred column, at most 900px wide, the same for both personas:
+the name with its state (Ready, Listening, Speaking), a compact still portrait (180–220px tall on
+desktop, 120–160px on phones, 3:4, never stretched), the Al Mulhim / Ilham choice, then the
+conversation with the message box, Send and Speak. Only the message list scrolls. No setup
+or technical notes are shown on the page: the header's help button opens Settings, where
+**Services › Live avatar (real-time voice)** lists what live avatar mode still needs (setting
+names only) and **Help** explains the Talk modes, the microphone, the voices and why a browser may
+not read answers aloud. When no voice can read the answers, Talk shows one line ("No suitable
+voice in this browser…") with a "How to fix" link.
+
+| Mode (`data-mode` on the page) | When | What the person sees |
 |---|---|---|
-| **Fallback: push-to-talk, still portrait** | Speech available (server Azure, or the browser's own recognition) | Header badge "Fallback mode: push-to-talk, still portrait", the persona's half-length portrait, a note that live avatar mode is not available. Speak → check the words → send; the answer is read with the persona's voice |
-| **Fallback: text only, still portrait** | No speech in this browser or on the server | Badge "Fallback mode: text only, still portrait"; type questions, read answers |
+| **Push-to-talk, still portrait** (`push_to_talk`) | Speech available (server Azure, or the browser's own recognition) | Speak → check the words → Send; the answer is read with the persona's voice |
+| **Text only, still portrait** (`text_only`) | No speech in this browser or on the server | No Speak button; type questions, read answers |
 | **Live avatar** | Not available: needs everything under "Live avatar" below, plus approval of the browser package `livekit-client` (decision C60) | Never shown as active today |
 
 **Controls in Talk:**
 
-- the transcript;
+- the conversation (messages, sources, Study shown);
+- the answer modes and web search;
 - the answer language;
 - the microphone (asked for only when Speak is pressed, audio only, never the camera);
-- mute;
+- mute (an icon), and the volume from the small breakpoint up (phones use their own volume);
 - Stop speaking (interrupt);
 - End call (stops the microphone tracks, any speech request and any playback);
 - Close;

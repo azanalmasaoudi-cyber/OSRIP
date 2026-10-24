@@ -62,12 +62,12 @@ test('3-4. Choosing Al Mulhim or Ilham; each has its own voice (configured ids)'
   await expect(picker).toHaveAttribute('data-selected', 'ilham');
   await expect(page.getByTestId('mulhim-name').first()).toHaveText('Ilham');
   await shot(page, '06-persona-ilham-selected');
-  // Talk shows the voice each persona speaks with (the scripted speech service here).
+  // Talk carries the voice each persona speaks with (data-voice; the scripted speech service here).
   await page.getByTestId('open-talk').click();
-  await expect(page.getByTestId('talk-voice')).toHaveText('Voice: en-GB-SoniaNeural');
+  await expect(page.getByTestId('talk-workspace')).toHaveAttribute('data-voice', 'en-GB-SoniaNeural');
   await shot(page, '07-talk-ilham-female-voice');
   await page.getByTestId('talk-workspace').getByTestId('persona-picker').getByTestId('persona-option-mulhim').click();
-  await expect(page.getByTestId('talk-voice')).toHaveText('Voice: en-GB-RyanNeural');
+  await expect(page.getByTestId('talk-workspace')).toHaveAttribute('data-voice', 'en-GB-RyanNeural');
   await shot(page, '08-talk-mulhim-male-voice');
   const voices = await page.evaluate(async () => (await (await fetch('/api/v1/assistant/voice')).json()) as { personas: { code: string; gender: string; voices: Record<string, string> }[] });
   expect(voices.personas.map((p) => [p.code, p.gender, p.voices.ar, p.voices.en])).toEqual([

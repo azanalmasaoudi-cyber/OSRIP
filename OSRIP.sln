@@ -189,6 +189,16 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "stage1", "stage1", "{B08B19
 		docs\evidence\stage1\study-completed.png = docs\evidence\stage1\study-completed.png
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "talk", "talk", "{56A21D90-4A13-5631-8986-D1F0AFE4EFAE}"
+	ProjectSection(SolutionItems) = preProject
+		docs\evidence\talk\talk-chromium-ar-light.png = docs\evidence\talk\talk-chromium-ar-light.png
+		docs\evidence\talk\talk-chromium-en-dark-conversation.png = docs\evidence\talk\talk-chromium-en-dark-conversation.png
+		docs\evidence\talk\talk-chromium-en-dark.png = docs\evidence\talk\talk-chromium-en-dark.png
+		docs\evidence\talk\talk-mobile-ar-light.png = docs\evidence\talk\talk-mobile-ar-light.png
+		docs\evidence\talk\talk-mobile-en-dark-conversation.png = docs\evidence\talk\talk-mobile-en-dark-conversation.png
+		docs\evidence\talk\talk-mobile-en-dark.png = docs\evidence\talk\talk-mobile-en-dark.png
+	EndProjectSection
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workspace", "workspace", "{B34D6E13-8B80-59FA-9AED-693C622716DD}"
 	ProjectSection(SolutionItems) = preProject
 		docs\evidence\workspace\desktop-data.png = docs\evidence\workspace\desktop-data.png
@@ -239,6 +249,7 @@ Global
 		{BE95394C-9AA0-5C1C-BD9C-66405DE6D1A4} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{F1F24A2A-5BFF-5F61-BE8C-250723697D85} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{B08B19CE-18D4-5C93-96A3-78013F0A3F1E} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
+		{56A21D90-4A13-5631-8986-D1F0AFE4EFAE} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{B34D6E13-8B80-59FA-9AED-693C622716DD} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{905C8A1C-3512-58AB-9365-318FFA4AF538} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
 	EndGlobalSection

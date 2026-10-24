@@ -112,7 +112,7 @@ test('a signed-in choice is saved on the account and follows to another browser'
 test.describe('Talk with the chosen persona', () => {
   test.use({ permissions: ['microphone'] });
 
-  test('Ilham is shown large, the fallback mode is stated, the camera is never requested', async ({ page }) => {
+  test('Ilham is shown in Talk, push-to-talk with her voice, the camera is never requested', async ({ page }) => {
     await page.addInitScript(() => {
       const store = window as unknown as { __media: MediaStreamConstraints[]; __streams: MediaStream[] };
       store.__media = [];
@@ -133,9 +133,8 @@ test.describe('Talk with the chosen persona', () => {
     await expect(workspace).toHaveAttribute('data-persona', 'ilham');
     await expect(page.getByRole('heading', { level: 1, name: 'Talk to Ilham' })).toBeFocused();
     await expect(page.getByTestId('talk-figure').locator('img')).toHaveAttribute('src', /ilham-figure/);
-    await expect(page.getByTestId('talk-mode')).toHaveText('Fallback mode: push-to-talk, still portrait');
-    await expect(page.getByTestId('talk-mode-note')).toContainText('Live avatar mode');
-    await expect(page.getByTestId('talk-voice')).toHaveText('Voice: en-GB-SoniaNeural');
+    await expect(workspace).toHaveAttribute('data-mode', 'push_to_talk');
+    await expect(workspace).toHaveAttribute('data-voice', 'en-GB-SoniaNeural');
     // Every control is there: transcript, language, microphone, mute, End call, Close.
     const sheet = page.getByTestId('talk-sheet');
     for (const id of ['assistant-language', 'voice-start', 'voice-mute', 'assistant-input']) {

@@ -3,7 +3,7 @@ import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
-import { useAssistantStatus, useVoiceStatus } from '@/api/assistant';
+import { useAssistantStatus, useRealtimeVoiceStatus, useVoiceStatus } from '@/api/assistant';
 import { hasPermission, useMe } from '@/api/auth';
 import { SECTORS, type Sector } from '@/api/balance';
 import { adapterKind, apiBaseUrl } from '@/api/config';
@@ -67,6 +67,9 @@ function Services({ admin }: { admin: boolean }) {
   const status = useAssistantStatus();
   const voice = useVoiceStatus();
   const retrieval = useRetrievalStatus(admin);
+  const realtime = useRealtimeVoiceStatus();
+  const realtimeReady = Boolean(realtime.data?.configured && realtime.data.agent_sdk_installed);
+  const language = useAppLanguage();
   const s = status.data;
   const failing = s?.health?.state === 'failing' ? s.health.category : null;
   return (
@@ -85,6 +88,20 @@ function Services({ admin }: { admin: boolean }) {
         <Badge variant={voice.data?.configured ? 'verified' : 'muted'}>{voice.data?.configured ? t('voicePanel.ready') : t('voicePanel.notConfigured')}</Badge>
         {voice.data && !voice.data.configured ? <span className="text-xs text-muted-foreground">{t('voicePanel.setup')}</span> : null}
       </Row>
+      {realtime.data ? (
+        // Moved here from the Talk page: what live avatar mode needs (setting names, never values).
+        <Row label={t('settingsPage.realtime')} testid="service-realtime">
+          <Badge variant="muted">{realtimeReady ? t('settingsPage.realtimeReady') : t('settingsPage.notSetUp')}</Badge>
+          <span className="text-xs text-muted-foreground">{language === 'ar' ? realtime.data.note.ar : realtime.data.note.en}</span>
+          {realtimeReady ? <span className="text-xs text-muted-foreground">{t('settingsPage.realtimeClientPending')}</span> : null}
+          {realtime.data.missing.length ? (
+            <details className="text-xs">
+              <summary className="cursor-pointer text-muted-foreground">{t('settingsPage.realtimeMissing')}</summary>
+              <ul className="mt-1 font-mono" dir="ltr">{realtime.data.missing.map((m) => <li key={m}>{m}</li>)}</ul>
+            </details>
+          ) : null}
+        </Row>
+      ) : null}
       <Row label={t('settingsPage.search')} testid="service-search">
         <Badge variant={!s?.web_research ? 'muted' : s.search_health?.state === 'failing' ? 'sand' : 'verified'} data-state={s?.search_health?.state}>
           {s?.web_research ? `${s.web_research_provider ?? t('settingsPage.on')}${s.search_health?.state === 'failing' ? ` · ${t('settingsPage.failing')}` : ''}` : t('settingsPage.notSetUp')}
@@ -189,7 +206,7 @@ function Schedules() {
 
 function Help() {
   const { t } = useTranslation();
-  const items = ['dataReport', 'evidence', 'microphone', 'voices', 'introClips', 'portrait', 'studies', 'retrieval'] as const;
+  const items = ['dataReport', 'evidence', 'microphone', 'voices', 'talk', 'browserVoices', 'introClips', 'portrait', 'studies', 'retrieval'] as const;
   return (
     <section className="surface-card flex flex-col gap-2 p-5" aria-labelledby="help-h" data-testid="settings-help">
       <h2 id="help-h" className="flex items-center gap-2 text-lg font-semibold"><CircleHelp aria-hidden="true" className="size-5" />{t('settingsPage.help')}</h2>

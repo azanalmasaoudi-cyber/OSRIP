@@ -215,7 +215,12 @@ export function StructuredParts({ structured, messageId, known }: { structured: 
 }
 
 /** The five answer modes as a wrapping radio group (arrow keys move the choice). */
-export function ModeSelector({ value, onChange }: { value: AssistantMode; onChange: (mode: AssistantMode) => void }) {
+export function ModeSelector({ value, onChange, compact = false }: {
+  value: AssistantMode;
+  onChange: (mode: AssistantMode) => void;
+  /** The mode's one-line description is read by screen readers only (Talk). */
+  compact?: boolean;
+}) {
   const { t } = useTranslation();
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   const hintId = useId();
@@ -246,7 +251,7 @@ export function ModeSelector({ value, onChange }: { value: AssistantMode; onChan
           </button>
         ))}
       </div>
-      <p id={hintId} className="text-xs text-muted-foreground" data-testid="assistant-mode-hint">{t(`assistant.modeHint.${value}`)}</p>
+      <p id={hintId} className={cn('text-xs text-muted-foreground', compact && 'sr-only')} data-testid="assistant-mode-hint">{t(`assistant.modeHint.${value}`)}</p>
     </div>
   );
 }

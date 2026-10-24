@@ -1,10 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
 
 // "Talk to Al Mulhim" on the real API with the scripted model and speech services: the
-// workspace states honestly that it is push-to-talk (no LiveKit project is configured), the
-// portrait is labelled static, typing still works, a spoken question is transcribed for review
-// before it is sent, the answer is read aloud and can be interrupted, and ending the call
-// stops everything. Microphone permission is denied unless a test grants it.
+// workspace is push-to-talk (no LiveKit project is configured; the setup notes are in
+// Settings), typing still works, a spoken question is transcribed for review before it is
+// sent, the answer is read aloud and can be interrupted, and ending the call stops everything.
+// Microphone permission is denied unless a test grants it. Layout: talk-phone.spec.ts.
 
 // A fake microphone device for every test here; permission is granted only where a test asks.
 test.use({ launchOptions: { args: ['--use-fake-device-for-media-stream', '--autoplay-policy=no-user-gesture-required'] } });
@@ -19,10 +19,7 @@ test('the workspace is full-viewport, labelled push-to-talk, and typing works as
   await openTalk(page);
   await expect(page).toHaveURL(/\/talk\?mode=synthetic/);
   await expect(page.getByRole('heading', { level: 1, name: 'Talk to Al Mulhim' })).toBeFocused();
-  await expect(page.getByTestId('talk-mode')).toHaveText('Fallback mode: push-to-talk, still portrait');
-  await expect(page.getByTestId('talk-portrait-note')).toContainText('does not move its lips');
-  await page.getByTestId('talk-realtime').locator('summary').click();
-  await expect(page.getByTestId('talk-realtime')).toContainText('OSRIP_LIVEKIT_URL');
+  await expect(page.getByTestId('talk-workspace')).toHaveAttribute('data-mode', 'push_to_talk');
   // The page behind is inert: the floating orb is gone and the app root cannot take focus.
   await expect(page.getByTestId('open-assistant')).toHaveCount(0);
   await expect(page.locator('#root')).toHaveAttribute('inert', '');

@@ -1535,18 +1535,12 @@ export const en = {
   talk: {
     title: 'Talk to {{name}}',
     open: 'Talk to {{name}}',
-    modePushToTalk: 'Fallback mode: push-to-talk, still portrait',
-    modeTextOnly: 'Fallback mode: text only, still portrait',
-    modeRealtimeServer: 'Real-time server ready',
-    fallbackNote: 'Live avatar mode (a real-time call with lip-synchronised video) is not available here. In this fallback mode you speak, check the words and send them; {{name}}’s answer appears as text and is read aloud with {{name}}’s voice when speech is available. The portrait does not move.',
-    textOnlyNote: 'Speech is not available in this browser or on this server, so this is text only: type your questions and read the answers.',
-    voiceLine: 'Voice: {{voice}}',
     end: 'End call',
     close: 'Close',
-    transcript: 'Transcript and results',
-    portraitNote: 'A still, generated image of a fictional person, not a real person. It does not move its lips with the voice.',
-    clientPending: 'The server side of real-time voice is configured, but this interface’s real-time client is not installed yet, so push-to-talk is used.',
-    missing: 'What real-time voice still needs on this server',
+    transcript: 'Conversation and results',
+    help: 'Help and setup',
+    noVoice: 'No suitable voice in this browser, so answers are shown as text only.',
+    howToFix: 'How to fix',
   },
   entrance: {
     explore: 'Explore',
@@ -2424,6 +2418,10 @@ export const en = {
     voice: 'Voice',
     search: 'Web search',
     retrieval: 'Page retrieval (Firecrawl)',
+    realtime: 'Live avatar (real-time voice)',
+    realtimeReady: 'Server ready; client not installed',
+    realtimeClientPending: 'The server side of real-time voice is configured, but this interface’s real-time client is not installed yet, so Talk uses push-to-talk.',
+    realtimeMissing: 'What real-time voice still needs on this server',
     on: 'On',
     notSetUp: 'Not set up',
     failing: 'last call failed',
@@ -2463,6 +2461,14 @@ export const en = {
       voices: {
         q: 'Which voices read the answers?',
         a: 'Al Mulhim uses a male voice and Ilham a female voice from the server’s speech service. A browser voice is used only when the service is not set up, and it is labelled.',
+      },
+      talk: {
+        q: 'What does Talk do without a live avatar?',
+        a: 'Live avatar mode (a real-time call with lip-synchronised video) is not available. Talk works as push-to-talk: press Speak, check the words, then Send. The answer appears as text and is read aloud in the persona’s voice when speech is available; where no speech is available, Talk is text only. The portrait is a still image.',
+      },
+      browserVoices: {
+        q: 'Why are answers not read aloud?',
+        a: 'Without the server speech service, answers are read with a voice installed in your browser, and only with the persona’s own kind of voice: a man’s voice for Al Mulhim and a woman’s for Ilham, in the answer’s language. If the browser has none, answers are shown as text. Install a voice (for example Microsoft Abdullah or Aysha for Arabic, Ryan or Sonia for English), or ask an administrator to set up Azure AI Speech (OSRIP_SPEECH_KEY and OSRIP_SPEECH_REGION).',
       },
       introClips: {
         q: 'What are the recorded introductions?',
