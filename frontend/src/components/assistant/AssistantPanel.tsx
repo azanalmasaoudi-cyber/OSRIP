@@ -1120,8 +1120,9 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
               {voice.muted ? <VolumeX aria-hidden="true" /> : <Volume2 aria-hidden="true" />}
               <span className={cn(talk && 'sr-only')}>{voice.muted ? t('voice.unmute') : t('voice.mute')}</span>
             </Button>
-            {/* Talk on a phone: Mute and the device's own volume, to keep the controls to one row. */}
-            <span className={cn(talk && 'max-sm:hidden')}><VoiceVolume testId="voice-volume-replies" compact={talk} /></span>
+            {/* Talk on a phone or a short screen: Mute and the device's own volume, to keep the
+                controls to one row. */}
+            <span className={cn(talk && 'max-sm:hidden short:hidden')}><VoiceVolume testId="voice-volume-replies" compact={talk} /></span>
           </>
         ) : null}
         {voice.canPause ? (
@@ -1254,7 +1255,7 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
           <label htmlFor={inputId} className="sr-only">{t('assistant.question')}</label>
           <textarea id={inputId} value={draft} onChange={(e) => { setDraft(e.target.value.slice(0, max)); setViaVoice(false); }} onKeyDown={onKeyDown}
             rows={2} dir="auto" placeholder={needsAccount ? t('guest.inputLocked') : t('assistant.placeholder')} disabled={needsAccount}
-            className="w-full resize-none rounded-md border border-border-strong bg-card px-3 py-2 text-sm" data-testid="assistant-input" />
+            className={cn('w-full resize-none rounded-md border border-border-strong bg-card px-3 py-2 text-sm', talk && 'short:h-10')} data-testid="assistant-input" />
           {voice.notice ? (
             <p className="text-xs text-destructive" role="alert" data-testid="voice-notice">{t(`voice.notice.${voice.notice}`)}</p>
           ) : null}

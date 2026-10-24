@@ -62,6 +62,12 @@ names only) and **Help** explains the Talk modes, the microphone, the voices and
 not read answers aloud. When no voice can read the answers, Talk shows one line ("No suitable
 voice in this browser…") with a "How to fix" link.
 
+**Short screens** (up to 560px tall, for example a phone in landscape): no large portrait (the
+persona choice still shows both faces), the name and the choice on one row, the controls on one
+row without the volume slider (Mute stays), a one-line message box, and the conversation keeps at
+least 14rem. On a Pixel 7 in landscape (863×360) the message box, Speak and Send are in view
+without scrolling; on an even shorter window the column scrolls so the message box is reachable.
+
 | Mode (`data-mode` on the page) | When | What the person sees |
 |---|---|---|
 | **Push-to-talk, still portrait** (`push_to_talk`) | Speech available (server Azure, or the browser's own recognition) | Speak → check the words → Send; the answer is read with the persona's voice |

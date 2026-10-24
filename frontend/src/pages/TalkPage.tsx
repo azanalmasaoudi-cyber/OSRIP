@@ -69,7 +69,7 @@ export function TalkPage() {
   return createPortal(
     <div className="fixed inset-0 z-40 flex flex-col bg-background" data-testid="talk-workspace" data-persona={persona.code}
       data-mode={mode} data-voice={voice}>
-      <header className="on-nav flex items-center gap-2 bg-nav px-3 py-2 text-nav-foreground sm:px-4">
+      <header className="on-nav flex items-center gap-2 bg-nav px-3 py-2 text-nav-foreground sm:px-4 short:py-1">
         <BrandMark className="size-7" />
         <span className="text-sm font-semibold" aria-hidden="true">OSRIP</span>
         <div className="ms-auto flex items-center gap-1.5">
@@ -88,8 +88,12 @@ export function TalkPage() {
         </div>
       </header>
 
-      <main className="mx-auto flex min-h-0 w-full max-w-[900px] flex-1 flex-col gap-3 px-3 py-3 sm:px-4 sm:py-4" data-testid="talk-column">
-        <section aria-labelledby="talk-heading" className="flex shrink-0 flex-col items-center gap-2 text-center" data-testid="talk-identity">
+      {/* Short screens (up to 560px tall, e.g. a phone in landscape): no large portrait (the
+          persona choice still shows both faces), name and choice on one row, and the conversation
+          keeps at least 14rem; if even that does not fit, this column scrolls so the message box
+          can always be reached. */}
+      <main className="mx-auto flex min-h-0 w-full max-w-[900px] flex-1 flex-col gap-3 px-3 py-3 sm:px-4 sm:py-4 short:gap-2 short:overflow-y-auto short:py-2" data-testid="talk-column">
+        <section aria-labelledby="talk-heading" className="flex shrink-0 flex-col items-center gap-2 text-center short:flex-row short:flex-wrap short:justify-center short:gap-x-4" data-testid="talk-identity">
           <div className="flex flex-wrap items-baseline justify-center gap-x-2">
             <h1 id="talk-heading" ref={headingRef} tabIndex={-1} className="text-xl font-semibold outline-none sm:text-2xl" data-testid="talk-persona-name">
               <span className="sr-only">{t('talk.title', { name })}</span><span aria-hidden="true">{name}</span>
@@ -100,13 +104,13 @@ export function TalkPage() {
           </div>
           {/* Width sets the height (the portrait keeps its 3:4 shape): 120–160px tall on phones,
               180–220px from the small breakpoint up. */}
-          <div className="[--talk-portrait:clamp(90px,14vh,120px)] sm:[--talk-portrait:clamp(135px,16vh,165px)]" data-testid="talk-figure">
+          <div className="[--talk-portrait:clamp(90px,14vh,120px)] sm:[--talk-portrait:clamp(135px,16vh,165px)] short:hidden" data-testid="talk-figure">
             <AssistantAvatar state={ui.state} size="var(--talk-portrait)" shape="figure" decorative={false} />
           </div>
           <PersonaPicker compact />
         </section>
         <section aria-label={t('talk.transcript')} data-testid="talk-sheet"
-          className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-card">
+          className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-card short:min-h-56">
           <AssistantChat showIdentity={false} variant="talk" onClose={end} />
         </section>
       </main>

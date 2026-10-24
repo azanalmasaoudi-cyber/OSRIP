@@ -17,6 +17,8 @@ What changed:
 
 Screenshots (Playwright, exact viewports): `docs/evidence/talk/` (desktop and phone; English dark, with a conversation; Arabic light).
 
+Follow-up, short screens (found while running OSRIP from Visual Studio in a squashed browser pane: at 915×412 the conversation shrank to 34px and the message box was off screen and could not be reached). Up to 560px tall, Talk now hides the large portrait, puts the name and persona choice on one row, keeps the controls to one row (no volume slider; Mute stays), uses a one-line message box and gives the conversation at least 14rem; if that does not fit, the column scrolls. Measured in the running app: 863×360 (Pixel 7 landscape) message area 74px, Send fully in view; 1280×720 unchanged (portrait 180px, message area 152px). Two new tests in `talk-phone.spec.ts` (Pixel 7 landscape: portrait hidden, message box, Send and Speak fully in view, a reply arrives; 411×257: the message box can be scrolled to and used): `talk-phone`, `talk` and `personas` specs 18 passed, 2 skipped (the short-screen tests run on the phone project only). `npm run lint`, `npm run build`, contrast check: pass. Screenshot `talk-mobile-landscape.png`.
+
 ## 2026-10-24: period-first sectors, official statistics feeds, Gemini/DeepSeek, Omani voices, evaluation (branch `feature/research-crawl-series`)
 
 What changed (stages 1–5):

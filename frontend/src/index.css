@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Short screens (a phone in landscape, a small window): `short:` styles apply up to 560px tall. */
+@custom-variant short (@media (max-height: 560px));
+
 /*
  * OSRIP design tokens (release 1.0: dashboard identity, dark and light).
  *

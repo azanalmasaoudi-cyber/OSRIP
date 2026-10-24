@@ -115,6 +115,48 @@ test('Talk in Arabic, right to left, in the light theme', async ({ page }, info)
   await snap(page, `talk-${info.project.name}-ar-light`);
 });
 
+test.describe('short screens', () => {
+  test.skip(({ isMobile }) => !isMobile, 'checked once, on the phone');
+
+  test('a phone in landscape: no large portrait, the conversation and message box in view', async ({ page }, info) => {
+    // Playwright's Pixel 7 in landscape: 863×360 of page below the browser's own bars.
+    await page.setViewportSize({ width: 863, height: 360 });
+    await openTalk(page, 'dark');
+    const workspace = page.getByTestId('talk-workspace');
+    await expect(workspace.getByTestId('talk-figure')).toBeHidden();
+    await expect(workspace.getByTestId('persona-picker')).toBeVisible(); // still shows both faces
+    await expect(page.getByRole('heading', { level: 1, name: 'Talk to Al Mulhim' })).toBeVisible();
+    // Name and choice share one row; the conversation has the rest, with no scrolling needed.
+    const identity = await rect(page, 'talk-identity');
+    const sheet = await rect(page, 'talk-sheet');
+    expect(identity.height).toBeLessThan(60);
+    expect(sheet.height).toBeGreaterThanOrEqual(224);
+    expect((await rect(page, 'assistant-messages')).height).toBeGreaterThanOrEqual(50);
+    for (const id of ['assistant-input', 'assistant-send', 'voice-start']) {
+      await expect(workspace.getByTestId(id)).toBeInViewport({ ratio: 1 });
+    }
+    await snap(page, `talk-${info.project.name}-landscape`);
+    await workspace.getByTestId('assistant-input').fill('What is the latest electricity generation?');
+    await workspace.getByTestId('assistant-send').click();
+    await expect(workspace.getByTestId('assistant-message').last()).toHaveAttribute('data-status', /answered|no_evidence|data_report/);
+    await expect(workspace.getByTestId('assistant-input')).toBeInViewport({ ratio: 1 });
+  });
+
+  test('an even shorter window: the conversation keeps its room and the message box can be scrolled to', async ({ page }) => {
+    await page.setViewportSize({ width: 411, height: 257 });
+    await openTalk(page, 'dark');
+    const workspace = page.getByTestId('talk-workspace');
+    expect((await rect(page, 'talk-sheet')).height).toBeGreaterThanOrEqual(224);
+    const input = workspace.getByTestId('assistant-input');
+    await input.scrollIntoViewIfNeeded();
+    await expect(input).toBeInViewport({ ratio: 1 });
+    await input.fill('Hello');
+    await workspace.getByTestId('assistant-send').click();
+    await expect(workspace.getByTestId('assistant-message').last()).toHaveAttribute('data-status', 'profile');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+  });
+});
+
 test('without a suitable voice, Talk says so in one line with a link to the fix', async ({ page }) => {
   // No server speech, and a browser with women's voices only: Al Mulhim cannot read aloud.
   await page.route(/\/api\/v1\/assistant\/voice$/, (route) => route.fulfill({

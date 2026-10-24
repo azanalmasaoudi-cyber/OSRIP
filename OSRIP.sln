@@ -197,6 +197,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "talk", "talk", "{56A21D90-4
 		docs\evidence\talk\talk-mobile-ar-light.png = docs\evidence\talk\talk-mobile-ar-light.png
 		docs\evidence\talk\talk-mobile-en-dark-conversation.png = docs\evidence\talk\talk-mobile-en-dark-conversation.png
 		docs\evidence\talk\talk-mobile-en-dark.png = docs\evidence\talk\talk-mobile-en-dark.png
+		docs\evidence\talk\talk-mobile-landscape.png = docs\evidence\talk\talk-mobile-landscape.png
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workspace", "workspace", "{B34D6E13-8B80-59FA-9AED-693C622716DD}"
