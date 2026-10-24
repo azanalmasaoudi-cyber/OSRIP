@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { closeDrawer, openChatSettings } from './chat';
+
 // Two selectable personas through the real stack (scripted model and speech services):
 // Al Mulhim (male) and Ilham (female). Choosing one changes the name, portrait, introduction and
 // voice; the conversation, the guest allowance and the facts stay the same. Talk shows the
@@ -19,6 +21,13 @@ async function ask(page: Page, text: string): Promise<void> {
   await expect(page.getByTestId('assistant-message').last()).not.toHaveAttribute('data-status', '');
 }
 
+/** The answer language is in the conversation settings. */
+async function answerIn(page: Page, name: 'العربية' | 'English'): Promise<void> {
+  await openChatSettings(page);
+  await page.getByTestId('assistant-language').getByRole('radio', { name }).click();
+  await closeDrawer(page);
+}
+
 async function choose(page: Page, code: 'mulhim' | 'ilham'): Promise<void> {
   await page.getByTestId('persona-picker').first().getByTestId(`persona-option-${code}`).click();
   await expect(page.getByTestId('persona-picker').first()).toHaveAttribute('data-selected', code);
@@ -28,17 +37,17 @@ test('choosing Ilham changes who answers; switching back keeps the conversation,
   await page.goto('/assistant?mode=synthetic');
   const picker = page.getByTestId('persona-picker').first();
   await expect(picker).toHaveAttribute('data-selected', 'mulhim'); // the default
-  await expect(page.getByTestId('identity-name')).toHaveText('Al Mulhim');
+  await expect(page.getByTestId('mulhim-name')).toHaveText('Al Mulhim');
 
   await choose(page, 'ilham');
-  await expect(page.getByTestId('identity-name')).toHaveText('Ilham');
-  const avatar = page.getByTestId('assistant-identity-card').getByTestId('assistant-avatar');
+  await expect(page.getByTestId('mulhim-name')).toHaveText('Ilham');
+  const avatar = page.getByTestId('chat-header').getByTestId('assistant-avatar');
   await expect(avatar).toHaveAttribute('data-persona', 'ilham');
   await expect(avatar.locator('img')).toHaveAttribute('src', /ilham-portrait/);
   await expect(avatar.locator('img')).toHaveAttribute('alt', /fictional Omani woman/);
 
   // «السلام عليكم» → the approved greeting, in Ilham's words, not charged.
-  await page.getByTestId('assistant-language').getByRole('radio', { name: 'العربية' }).click();
+  await answerIn(page, 'العربية');
   await ask(page, 'السلام عليكم');
   const greeting = page.getByTestId('assistant-message').last();
   await expect(greeting).toHaveAttribute('data-persona', 'ilham');
@@ -49,7 +58,7 @@ test('choosing Ilham changes who answers; switching back keeps the conversation,
   await expect(allowance).toHaveAttribute('data-remaining', '5');
 
   // A factual question as Ilham, then the same question as Al Mulhim.
-  await page.getByTestId('assistant-language').getByRole('radio', { name: 'English' }).click();
+  await answerIn(page, 'English');
   await ask(page, 'What was the growth of electricity generation?');
   const asIlham = page.getByTestId('assistant-message').last();
   await expect(asIlham).toHaveAttribute('data-persona', 'ilham');
@@ -128,6 +137,7 @@ test.describe('Talk with the chosen persona', () => {
     });
     await page.goto('/assistant?mode=synthetic');
     await choose(page, 'ilham');
+    await openChatSettings(page); // Talk is offered in the conversation settings (Voice)
     await page.getByTestId('open-talk').click();
     const workspace = page.getByTestId('talk-workspace');
     await expect(workspace).toHaveAttribute('data-persona', 'ilham');

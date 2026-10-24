@@ -125,6 +125,27 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ai-providers", "ai-provider
 		docs\evidence\ai-providers\web-source-en.png = docs\evidence\ai-providers\web-source-en.png
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "assistant-redesign", "assistant-redesign", "{F437F8F4-5524-5C94-B7FD-A55098A0B028}"
+	ProjectSection(SolutionItems) = preProject
+		docs\evidence\assistant-redesign\after-desktop-ar-light.png = docs\evidence\assistant-redesign\after-desktop-ar-light.png
+		docs\evidence\assistant-redesign\after-desktop-en-dark.png = docs\evidence\assistant-redesign\after-desktop-en-dark.png
+		docs\evidence\assistant-redesign\after-failure-report-chromium.png = docs\evidence\assistant-redesign\after-failure-report-chromium.png
+		docs\evidence\assistant-redesign\after-failure-report-mobile.png = docs\evidence\assistant-redesign\after-failure-report-mobile.png
+		docs\evidence\assistant-redesign\after-follow-up-and-chart-chromium.png = docs\evidence\assistant-redesign\after-follow-up-and-chart-chromium.png
+		docs\evidence\assistant-redesign\after-follow-up-and-chart-mobile.png = docs\evidence\assistant-redesign\after-follow-up-and-chart-mobile.png
+		docs\evidence\assistant-redesign\after-markdown-table-chromium.png = docs\evidence\assistant-redesign\after-markdown-table-chromium.png
+		docs\evidence\assistant-redesign\after-markdown-table-mobile.png = docs\evidence\assistant-redesign\after-markdown-table-mobile.png
+		docs\evidence\assistant-redesign\after-phone-en-dark.png = docs\evidence\assistant-redesign\after-phone-en-dark.png
+		docs\evidence\assistant-redesign\after-welcome-chromium.png = docs\evidence\assistant-redesign\after-welcome-chromium.png
+		docs\evidence\assistant-redesign\after-welcome-mobile.png = docs\evidence\assistant-redesign\after-welcome-mobile.png
+		docs\evidence\assistant-redesign\before-desktop-ar-light.png = docs\evidence\assistant-redesign\before-desktop-ar-light.png
+		docs\evidence\assistant-redesign\before-desktop-en-dark.png = docs\evidence\assistant-redesign\before-desktop-en-dark.png
+		docs\evidence\assistant-redesign\before-phone-en-dark.png = docs\evidence\assistant-redesign\before-phone-en-dark.png
+		docs\evidence\assistant-redesign\live-1-greeting.png = docs\evidence\assistant-redesign\live-1-greeting.png
+		docs\evidence\assistant-redesign\live-2-question.png = docs\evidence\assistant-redesign\live-2-question.png
+		docs\evidence\assistant-redesign\live-3-follow-up.png = docs\evidence\assistant-redesign\live-3-follow-up.png
+	EndProjectSection
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "entrance", "entrance", "{792931BC-B131-5863-A4F2-D392362DE4F8}"
 	ProjectSection(SolutionItems) = preProject
 		docs\evidence\entrance\entrance-desktop-ar.webp = docs\evidence\entrance\entrance-desktop-ar.webp
@@ -246,6 +267,7 @@ Global
 		{0B712951-2047-5BE0-A42C-68C45DAA3B66} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
 		{D0192171-A157-51D2-93CF-8D3B8E28109D} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{D32045D4-499E-52DC-B174-22CB7E6DE501} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
+		{F437F8F4-5524-5C94-B7FD-A55098A0B028} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{792931BC-B131-5863-A4F2-D392362DE4F8} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{BE95394C-9AA0-5C1C-BD9C-66405DE6D1A4} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{F1F24A2A-5BFF-5F61-BE8C-250723697D85} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}

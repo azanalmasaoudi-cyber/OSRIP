@@ -1,10 +1,21 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// The assistant workspace through the real stack (scripted assistant and speech providers):
-// "Run analysis" runs the server's shortage and surplus analysis, and the results area shows
-// its summary, tables, charts, sources and recommendation table from the one stored document.
+import { closeDrawer, openChatSettings, openTools } from './chat';
+
+// The shortage and surplus analysis, an optional tool of the AI Assistant page (Tools), through
+// the real stack (scripted assistant and speech providers): "Run analysis" runs the server's
+// analysis, and the results area shows its summary, tables, charts, sources and recommendation
+// table from the one stored document. The voice check is in the conversation settings.
+
+async function openAnalysis(page: Page): Promise<void> {
+  await openTools(page);
+  await page.getByTestId('open-analysis').click();
+  await expect(page.getByTestId('chat-tools-sheet')).toBeHidden(); // Tools closes first
+  await expect(page.getByTestId('analysis-form')).toBeVisible();
+}
 
 async function runAnalysis(page: Page, sector: string, explain = false): Promise<string> {
+  if (!(await page.getByTestId('analysis-form').isVisible())) await openAnalysis(page);
   await expect(page.getByTestId('analysis-form')).toBeVisible();
   const box = page.getByTestId('analysis-explain');
   if (await box.count()) await box.setChecked(explain);
@@ -127,10 +138,11 @@ test('Arabic, right to left, light theme and a phone screen', async ({ page }) =
 
 test('voice: the persona voice is checked and tested, and audio can be stopped', async ({ page }) => {
   await page.goto('/assistant');
+  await page.getByTestId('chat-header').getByTestId('persona-option-ilham').click();
+  await openChatSettings(page);
   await page.getByTestId('voice-details').locator('summary').click();
   const voice = page.getByTestId('voice-panel');
   await expect(voice).toHaveAttribute('data-configured', 'true');
-  await page.getByTestId('assistant-identity-card').getByTestId('persona-option-ilham').click();
   await expect(voice.getByTestId('voice-name-ar')).toHaveText('ar-OM-AyshaNeural');
   await expect(voice.getByTestId('voice-name-en')).toHaveText('en-GB-SoniaNeural');
   await expect(voice.getByTestId('voice-verified')).toHaveCount(2);
@@ -146,14 +158,20 @@ test('voice: the persona voice is checked and tested, and audio can be stopped',
   if (await page.getByTestId('stop-audio').isVisible()) await page.getByTestId('stop-audio').click();
   await expect(voice.getByTestId('voice-test-state')).toHaveAttribute('data-state', 'idle');
   await expect(page.getByTestId('assistant-status-bar')).toHaveAttribute('data-state', 'idle');
+  await closeDrawer(page);
+  await page.getByTestId('chat-header').getByTestId('persona-option-mulhim').click();
 });
 
-test('a suggested question for the chosen sector asks the assistant and its study fills the results', async ({ page }) => {
+test('a suggested question for the chosen sector is asked in the conversation, without a chart', async ({ page }) => {
   await page.goto('/assistant?mode=synthetic');
+  await openAnalysis(page);
   await page.getByTestId('sector-select').selectOption('water');
   await expect(page.getByTestId('sector-suggestions')).toHaveAttribute('data-sector', 'water');
+  const question = (await page.getByTestId('sector-question').first().textContent()) ?? '';
   await page.getByTestId('sector-question').first().click();
-  await expect(page.getByTestId('assistant-message').last()).toBeVisible();
-  await expect(page.getByTestId('results-panel')).toHaveAttribute('data-kind', 'study');
-  await expect(page.getByTestId('assistant-status-bar')).toHaveAttribute('data-state', 'idle');
+  // The analysis closes and the question is answered in the conversation.
+  await expect(page.getByTestId('analysis-form')).toBeHidden();
+  await expect(page.getByTestId('user-message').first()).toHaveText(question);
+  await expect(page.getByTestId('assistant-message').last()).not.toHaveAttribute('data-status', '');
+  await expect(page.getByTestId('inline-chart')).toHaveCount(0); // no chart unless asked for
 });

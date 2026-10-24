@@ -26,7 +26,7 @@ from app.core.errors import ApiError
 from app.domain.enums import DataMode, Permission
 from app.models import AppUser, AssistantConversation, AssistantMessage
 from app.services import speech, voice_realtime
-from app.services.assistant import guest, profile, service
+from app.services.assistant import guest, profile, routing, service
 from app.services.principal import Principal
 
 router = APIRouter(prefix="/assistant", tags=["assistant"])
@@ -129,8 +129,9 @@ class MessageIn(BaseModel):
     request_id: uuid.UUID | None = None
     # The reader may switch internet search off for a question.
     web_research: bool = True
-    # Ask, Analyze, Research (web search when configured), Compare or Scenario.
-    mode: Literal["ask", "analyze", "research", "compare", "scenario"] = "ask"
+    # Ask, Analyze, Research (web search when configured), Compare or Scenario; "auto" lets the
+    # question's words decide (routing.answer_mode).
+    mode: Literal["auto", "ask", "analyze", "research", "compare", "scenario"] = "ask"
     # Who replies (a persona code from the profile); default: the saved choice, then the
     # profile's default persona.
     persona: str | None = Field(default=None, pattern=PERSONA_CODE)
@@ -176,7 +177,7 @@ def ask(
         body.request_id,
         web=body.web_research,
         client_key=guest._client_hash(_client(request)),
-        mode=body.mode,
+        mode=routing.answer_mode(body.content, body.mode),
         persona=body.persona,
         cross_check=body.cross_check,
         selection=_selection(body.selection),
@@ -352,7 +353,7 @@ class GuestMessageIn(BaseModel):
     conversation_id: uuid.UUID | None = None
     data_mode: DataMode = DataMode.VERIFIED_SOURCE
     web_research: bool = True
-    mode: Literal["ask", "analyze", "research", "compare", "scenario"] = "ask"
+    mode: Literal["auto", "ask", "analyze", "research", "compare", "scenario"] = "ask"
     persona: str | None = Field(default=None, pattern=PERSONA_CODE)
     cross_check: bool = False
     selection: SelectionIn | None = None
@@ -487,7 +488,7 @@ def guest_ask(
         conversation_id=body.conversation_id,
         data_mode=body.data_mode,
         web=body.web_research,
-        answer_mode=body.mode,
+        answer_mode=routing.answer_mode(body.content, body.mode),
         persona=body.persona,
         cross_check=body.cross_check,
         selection=_selection(body.selection),

@@ -1,34 +1,34 @@
 {
-  "measured_at": "2026-10-23T20:57:55.781Z",
+  "measured_at": "2026-10-24T15:51:25.879Z",
   "note": "Local run: Vite dev server, FastAPI, PostgreSQL and the scripted test model; not a live AI provider.",
   "steps": [
     {
       "step": "Open electricity",
-      "ms": 1381
+      "ms": 1403
     },
     {
       "step": "Choose a published period",
-      "ms": 406
+      "ms": 301
     },
     {
       "step": "Show results (table)",
-      "ms": 493
+      "ms": 393
     },
     {
       "step": "Show chart",
-      "ms": 169
+      "ms": 199
     },
     {
       "step": "Ask for a sourced analysis (scripted model)",
-      "ms": 1750
+      "ms": 795
     },
     {
       "step": "Inspect a reference",
-      "ms": 119
+      "ms": 175
     },
     {
       "step": "Missing-data case",
-      "ms": 2032
+      "ms": 1850
     }
   ]
 }

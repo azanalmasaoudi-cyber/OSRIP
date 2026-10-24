@@ -885,6 +885,20 @@ def method_summary(
     }
 
 
+def _with_topic(question: str, history: list[dict[str, Any]]) -> str:
+    """For the replies made without the model (the data-based report, the plain lookup): a
+    follow-up that names no topic but asks for a figure, change or comparison ("Compare it with
+    the previous year") is read together with the latest earlier question that names one, as the
+    model would read it from the conversation. Small talk ("How is it going?") is left alone."""
+    if lookup.matched_domains(question) or not routing.classify(question).numerical:
+        return question
+    for turn in reversed(history):
+        text = turn.get("content")
+        if turn.get("role") == "user" and isinstance(text, str) and lookup.matched_domains(text):
+            return f"{text}\n{question}"
+    return question
+
+
 def generate_reply(
     question: str,
     history: list[dict[str, Any]],
@@ -910,7 +924,7 @@ def generate_reply(
     mode = normalise_mode(mode)
     tracker = tracker or Tracker(None)
     if get_provider() is None and get_fallback_provider() is None:
-        found = lookup.reply(question, language, data_mode)
+        found = lookup.reply(_with_topic(question, history), language, data_mode)
         return Reply(
             content=found["content"],
             status="lookup",
@@ -943,7 +957,9 @@ def generate_reply(
             persona=persona,
         )
     except ProviderError as exc:
-        return degraded_reply(exc, question, language, data_mode, mode, tracker, persona)
+        return degraded_reply(
+            exc, _with_topic(question, history), language, data_mode, mode, tracker, persona
+        )
     tracker.stage("checking")
     status_ = str(final.get("status", ""))
     reply_text = str(final.get("text", "")).strip()

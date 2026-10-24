@@ -1,9 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { closeDrawer, openChatSettings } from './chat';
+
 // The recorded introductions (Canva AI Voice clips listed in public/audio/intro/manifest.json):
 // hidden while no clip is listed; with clips, played only after a click, stopped by Stop and
-// by choosing the other persona, with a volume control and clear loading errors. The audio
-// here is a generated test tone served in place of the clips, not a voice and not shipped.
+// by choosing the other persona, with a volume control and clear loading errors. On the AI
+// Assistant page they are in the conversation settings (Voice). The audio here is a generated
+// test tone served in place of the clips, not a voice and not shipped.
 
 const SCRIPTS = { mulhim: 'السلام عليكم، أنا مُلهم', ilham: 'مرحبًا بك، أنا إلهام' };
 
@@ -44,8 +47,10 @@ async function serveClips(page: Page, { missingFile = false } = {}): Promise<voi
 
 test('without a clip the introduction is not offered and the page works', async ({ page }) => {
   await page.goto('/assistant?mode=synthetic');
-  await expect(page.getByTestId('assistant-identity-card')).toBeVisible();
+  await openChatSettings(page);
+  await expect(page.getByTestId('voice-details')).toBeVisible();
   await expect(page.getByTestId('intro-player')).toHaveCount(0);
+  await closeDrawer(page);
   await expect(page.getByTestId('assistant-input')).toBeEditable();
 });
 
@@ -54,6 +59,7 @@ test('a listed clip plays only after a click, with stop, volume and transcript',
   const requests: string[] = [];
   page.on('request', (r) => { if (r.url().includes('/audio/intro/') && r.url().endsWith('.wav')) requests.push(r.url()); });
   await page.goto('/assistant?mode=synthetic');
+  await openChatSettings(page);
   const player = page.getByTestId('intro-player');
   await expect(player).toHaveAttribute('data-state', 'idle');
   await expect(page.getByTestId('intro-play')).toHaveText('استمع إلى الترحيب / Play introduction');
@@ -81,11 +87,15 @@ test('a listed clip plays only after a click, with stop, volume and transcript',
 test('choosing the other persona stops the playing introduction', async ({ page }) => {
   await serveClips(page);
   await page.goto('/assistant?mode=synthetic');
-  const card = page.getByTestId('assistant-identity-card');
-  await card.getByTestId('persona-option-mulhim').click();
+  const header = page.getByTestId('chat-header');
+  await header.getByTestId('persona-option-mulhim').click();
+  await openChatSettings(page);
   await page.getByTestId('intro-play').click();
   await expect(page.getByTestId('intro-player')).toHaveAttribute('data-state', 'playing');
-  await card.getByTestId('persona-option-ilham').click();
+  // Switching in the conversation header (the settings drawer closed first).
+  await closeDrawer(page);
+  await header.getByTestId('persona-option-ilham').click();
+  await openChatSettings(page);
   const player = page.getByTestId('intro-player');
   await expect(player).toHaveAttribute('data-persona', 'ilham');
   await expect(player).toHaveAttribute('data-state', 'idle'); // Al Mulhim's clip stopped
@@ -95,16 +105,19 @@ test('choosing the other persona stops the playing introduction', async ({ page 
   await player.getByTestId('intro-transcript-toggle').click();
   await expect(player.getByTestId('intro-transcript')).toContainText(SCRIPTS.ilham);
   await page.getByTestId('intro-stop').click();
-  await card.getByTestId('persona-option-mulhim').click();
+  await closeDrawer(page);
+  await header.getByTestId('persona-option-mulhim').click();
 });
 
 test('a clip that cannot be loaded says so and the page keeps working', async ({ page }) => {
   await serveClips(page, { missingFile: true });
   await page.goto('/assistant?mode=synthetic');
+  await openChatSettings(page);
   await page.getByTestId('intro-play').click();
   await expect(page.getByTestId('intro-error')).toContainText('could not be loaded');
   await expect(page.getByTestId('intro-player')).toHaveAttribute('data-state', 'load_failed');
   await expect(page.getByTestId('intro-play')).toBeVisible(); // can be tried again
+  await closeDrawer(page);
   await page.getByTestId('assistant-input').fill('What is the latest electricity generation?');
   await expect(page.getByTestId('assistant-send')).toBeEnabled();
 });

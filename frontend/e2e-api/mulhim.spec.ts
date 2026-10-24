@@ -1,8 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { closeDrawer, openChatSettings } from './chat';
+
 // Al Mulhim's identity through the real stack: approved greeting and introduction (not
 // AI-generated, not charged), the About panel with the interpretation and reference, and
-// the "what is remembered" panel with delete controls.
+// the "what is remembered" panel with delete controls (both in the conversation settings).
 
 const PASSWORD = process.env.OSRIP_E2E_PASSWORD ?? '';
 
@@ -18,7 +20,9 @@ test('a guest greeting gets the approved reply once, free of charge, in Arabic',
   await page.goto('/assistant?mode=synthetic');
   const allowance = page.getByTestId('guest-allowance');
   await expect(allowance).toHaveAttribute('data-remaining', '5');
+  await openChatSettings(page);
   await page.getByTestId('assistant-language').getByRole('radio', { name: 'العربية' }).click();
+  await closeDrawer(page);
   await page.getByTestId('assistant-input').fill('السلام عليكم');
   await page.getByTestId('assistant-send').click();
   const reply = page.getByTestId('assistant-message').last();
@@ -37,6 +41,7 @@ test('a guest greeting gets the approved reply once, free of charge, in Arabic',
 
 test('the About panel shows the meaning, the interpretation label and the cited reference', async ({ page }) => {
   await page.goto('/assistant?mode=synthetic');
+  await openChatSettings(page);
   const about = page.getByTestId('about-mulhim');
   await about.locator('summary').click();
   await expect(about).toContainText('one who inspires');
@@ -51,6 +56,7 @@ test('a signed-in user sees what is kept and can delete all conversations', asyn
   await page.getByTestId('assistant-input').fill('Who are you?');
   await page.getByTestId('assistant-send').click();
   await expect(page.getByTestId('assistant-message').last()).toHaveAttribute('data-status', 'profile');
+  await openChatSettings(page);
   const memory = page.getByTestId('mulhim-memory');
   await memory.locator('summary').click();
   await expect(memory.getByTestId('memory-counts')).toContainText('Your conversations:');

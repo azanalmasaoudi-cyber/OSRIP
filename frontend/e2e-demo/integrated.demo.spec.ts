@@ -63,6 +63,7 @@ test('3-4. Choosing Al Mulhim or Ilham; each has its own voice (configured ids)'
   await expect(page.getByTestId('mulhim-name').first()).toHaveText('Ilham');
   await shot(page, '06-persona-ilham-selected');
   // Talk carries the voice each persona speaks with (data-voice; the scripted speech service here).
+  await page.getByTestId('chat-settings').click();
   await page.getByTestId('open-talk').click();
   await expect(page.getByTestId('talk-workspace')).toHaveAttribute('data-voice', 'en-GB-SoniaNeural');
   await shot(page, '07-talk-ilham-female-voice');
@@ -138,6 +139,7 @@ test('7. A failing provider and a denied microphone are explained; nothing is ch
   await expect(failed.getByRole('button', { name: 'Try the AI answer again' })).toBeVisible();
   await expect(page.getByTestId('guest-allowance')).toHaveAttribute('data-remaining', '5');
   await shot(page, '13-provider-unavailable-not-charged');
+  await page.getByTestId('chat-settings').click();
   await page.getByTestId('open-talk').click();
   const sheet = page.getByTestId('talk-sheet');
   await sheet.getByTestId('voice-start').click(); // no microphone permission granted

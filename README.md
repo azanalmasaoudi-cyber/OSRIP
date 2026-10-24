@@ -454,8 +454,8 @@ what is set up, the latest outcome of the answer service, and what to fix, witho
   `backend\.venv\Scripts\python.exe tools\import_canva_intro.py --persona mulhim --input "<MP4>" --voice "<voice name>"`
   (and `--persona ilham`). It copies the audio track out without re-encoding (AAC → `.m4a`),
   refuses silent or broken files, and lists the clip with its exact words in
-  `frontend/public/audio/intro/manifest.json`. The assistant page then shows "استمع إلى الترحيب
-  / Play introduction" with Stop and volume; until a clip is added the button is not shown. A
+  `frontend/public/audio/intro/manifest.json`. The AI Assistant's conversation settings (Voice) then
+  show "استمع إلى الترحيب / Play introduction" with Stop and volume; until a clip is added the button is not shown. A
   clip is always labelled as a recording; answers are still read by the speech service.
 
 "Create study" (Studies page, signed in) runs a study in the background: discover sources,

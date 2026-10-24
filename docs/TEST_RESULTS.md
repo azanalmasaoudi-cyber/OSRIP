@@ -1,5 +1,28 @@
 # Test results
 
+## 2026-10-24 (evening): the AI Assistant page as one conversation (branch `feature/research-crawl-series`)
+
+What changed:
+- `/assistant` is one centred conversation (at most 800px): a compact header (portrait, name, the answer service's real state, the Al Mulhim / Ilham switch, New conversation, Settings), the messages in one scrolling area, and one message box (Send, microphone, Tools). Before the first message: "How can I help you? / كيف يمكنني مساعدتك؟" and up to three examples. Removed from the conversation: the profile card, the "Ready" label, the analysis form and results, help and privacy notes, voice details, the research-mode tabs and the large allowance meter. They are in the Settings drawer (language, voice, Talk, recorded welcome, voice test, conversations, memory, About, Help) and the Tools drawer (answer mode, web search, cross-check, research brief, shortage and surplus analysis, a full study).
+- Answers: Markdown rendered safely as page elements (headings, lists, tables, bold, links), citation chips, "Sources (n)" in one line that opens at a cited source, Copy, Read aloud, Retry for a failed answer; the question shows at once; a progress line and Stop while answering (the server streams progress, not words: nothing imitates typing); Enter sends, Shift+Enter is a new line, one submission at a time; a question that could not be sent goes back into the box. "New messages" when reading older messages.
+- No mode to choose: the page sends `mode: "auto"`; the server infers Ask, Analyze, Research, Compare or Scenario from the words (`routing.answer_mode`, English and Arabic) and stores the mode used, which the reply shows.
+- Follow-ups: the model receives the last 6 messages; when the answer service fails, the data-based report reads a follow-up asking for a figure or comparison together with the latest earlier question that names a topic (small talk is left alone).
+- Charts only when asked for, from at least two cited published values of one series, each bar with its evidence id and the sources named.
+
+| Check | Result |
+|---|---|
+| `ruff check`, `ruff format --check` (backend) | Pass |
+| Backend `pytest` with database tests | 740 passed, then 1 failure fixed (the follow-up rule first also gave small talk the earlier topic; now only figure/comparison follow-ups): the affected files 21 passed. New: `test_assistant_conversation.py` (16: mode inference in English and Arabic), `test_assistant_conversation_integration.py` (2: greeting without lookup or charge, a follow-up keeping its topic, the data report keeping it when the provider fails, not charged) |
+| `tsc -b`, `npm run lint`, `npm run build`, contrast, unit tests | Pass; 8 unit tests passed |
+| New `e2e-api/chat-phone.spec.ts`, desktop and Pixel 7 | 16 passed: greeting at once, no lookup, no charge, welcome hidden, `mode: auto` sent; question then "Compare it with the previous year" answered with 2001 and 2002 cited, mode shown as Compare; sources open at a cited chip; no chart until "Show a chart …" (2 bars, sources); a Markdown heading, table and list; a failed send keeps the draft and Retry sends it once (charged once); a failed answer service gives a labelled, uncharged report; progress and Stop while answering; Enter and Shift+Enter, one request for a double Enter; switching to Ilham; the message box never over the latest message; "New messages" when reading from the top |
+| Updated specs (assistant page moved into drawers) | `research-brief`, `analysis-workspace`, `governed-ai`, `research`, `intro-clips`, `mulhim`, `personas`, `research-workflow` (one centred column, one scrolling area, English and Arabic, phone), `sector-voice`, `talk`, `voice-gender` (the full explanations stay in the side panel; the page has one line in Settings): 66 passed and 3 fixed after the first run, then the fixed ones passed |
+| Full-stack suite, desktop and Pixel 7 | **175 passed, 3 skipped, 1 failed** (17.7 min). The failure: the orb keyboard test on the phone, interrupted by a page reload when a translation file was edited during the run (the log shows the navigation); `assistant.spec.ts` re-run on both projects: 14 passed |
+| Mock suite | 41 passed, 3 skipped |
+| Demonstrations | 7 of 7 passed (`playwright.demo.config.ts`; Talk is now opened from the conversation settings) |
+| Live, with the real `backend/.env` (API on 8029) | Greeting: approved reply in 207–361 ms, not charged. "What is the latest electricity generation?": the configured Anthropic key is rejected, so a labelled data-based report with published figures (about 1.1–1.5 s), not charged; Retry: still a data report, no duplicate; "Compare it with the previous year.": a data-based report with the electricity figures (the topic kept). 5 of 5 free answers left at the end |
+
+Not verified: a real AI answer (no working provider key on this machine), and streaming of answer text (not offered by the server). Screenshots: `docs/evidence/assistant-redesign/` (before and after, desktop and phone, English dark and Arabic light; the live walkthrough).
+
 ## 2026-10-24 (later): the Talk page as one centred column (branch `feature/research-crawl-series`)
 
 What changed:

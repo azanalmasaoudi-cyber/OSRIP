@@ -20,6 +20,9 @@ export function evidenceAnchor(messageId: number, evidenceId: string): string {
 function focusEvidence(messageId: number, evidenceId: string): void {
   const target = document.getElementById(evidenceAnchor(messageId, evidenceId));
   if (!target) return;
+  // The conversation page lists sources in a collapsed section: open it first.
+  const list = target.closest('details');
+  if (list && !list.open) list.open = true;
   target.scrollIntoView({ block: 'nearest', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   target.focus({ preventScroll: true });
 }

@@ -2,10 +2,12 @@ import { expect, test, type Page, type Request } from '@playwright/test';
 
 import { BRIEF_DOMAINS, BRIEF_GOALS, BRIEF_MODE, briefDomains, buildResearchBrief } from '../src/lib/researchBrief';
 
-// The research brief builder in the assistant, through the real stack (scripted model). It only
-// drafts: choosing a domain and goal fills the message box in the answer language and selects the
-// answer mode. Nothing is sent and no guest answer is used until the person presses Send.
-// Runs on desktop and phone.
+import { closeDrawer, openChatSettings, openTools } from './chat';
+
+// The research brief builder in the assistant's Tools drawer, through the real stack (scripted
+// model). It only drafts: choosing a domain and goal fills the message box in the answer language,
+// selects the answer mode and closes the drawer. Nothing is sent and no guest answer is used until
+// the person presses Send. Runs on desktop and phone.
 
 /** Questions sent to the assistant (guest or account), in order. */
 function trackAsks(page: Page): Request[] {
@@ -16,7 +18,15 @@ function trackAsks(page: Page): Request[] {
   return asks;
 }
 
+/** The answer language is in the conversation settings. */
+async function answerIn(page: Page, language: 'en' | 'ar'): Promise<void> {
+  await openChatSettings(page);
+  await page.getByTestId('assistant-language').getByRole('radio', { name: language === 'ar' ? 'العربية' : 'English' }).click();
+  await closeDrawer(page);
+}
+
 async function useBrief(page: Page, domain: string, goal: string): Promise<void> {
+  await openTools(page);
   const brief = page.getByTestId('research-brief');
   if (!(await brief.evaluate((el) => (el as HTMLDetailsElement).open))) await brief.locator('summary').click();
   await page.getByTestId('research-brief-domain').selectOption(domain);
@@ -35,15 +45,16 @@ test('every domain and goal drafts an editable request with its answer mode, and
   await expect(brief.locator('summary')).toHaveText('Build a research brief');
 
   for (const language of ['en', 'ar'] as const) {
-    // The panel's answer language; the interface stays in English.
-    await page.getByTestId('assistant-language').getByRole('radio', { name: language === 'ar' ? 'العربية' : 'English' }).click();
+    // The conversation's answer language; the interface stays in English.
+    await answerIn(page, language);
     for (const domain of BRIEF_DOMAINS) {
       for (const goal of BRIEF_GOALS) {
         await useBrief(page, domain, goal);
         await expect(input).toHaveValue(buildResearchBrief(language, domain, goal));
         await expect(page.getByTestId('assistant-mode').locator(`[data-value="${BRIEF_MODE[goal]}"]`)).toHaveAttribute('aria-checked', 'true');
-        await expect(input).toBeFocused(); // ready to review
-        await expect(brief).not.toHaveAttribute('open', ''); // closed again, so the draft is in view
+        await expect(page.getByTestId('chat-mode-chip')).toBeVisible(); // the chosen mode is shown above the box
+        await expect(input).toBeFocused(); // the drawer closed: ready to review
+        await expect(brief).not.toHaveAttribute('open', '');
       }
     }
   }
@@ -53,13 +64,12 @@ test('every domain and goal drafts an editable request with its answer mode, and
   await expect(page.getByTestId('assistant-message')).toHaveCount(0);
 
   // The draft is the person's to edit; Send sends exactly the edited text, in the selected mode.
-  await page.getByTestId('assistant-language').getByRole('radio', { name: 'English' }).click();
+  await answerIn(page, 'en');
   await useBrief(page, 'water', 'trend');
   await input.press('End');
   await input.pressSequentially(' Focus on Muscat.');
   const draft = `${buildResearchBrief('en', 'water', 'trend')} Focus on Muscat.`;
   await expect(input).toHaveValue(draft);
-  await expect(page.getByText(`${draft.length}/1000`)).toBeVisible();
   await page.getByTestId('assistant-send').click();
   await expect(page.getByTestId('assistant-message').last()).toHaveAttribute('data-status', /answered|no_evidence/);
   expect(asks).toHaveLength(1);
@@ -74,6 +84,7 @@ test('in Arabic the builder is right to left, labelled in Arabic, drafts in Arab
   const asks = trackAsks(page);
   await page.goto('/assistant?mode=synthetic');
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+  await openTools(page);
   const brief = page.getByTestId('research-brief');
   await brief.locator('summary').click();
   await expect(brief.locator('summary')).toHaveText('جهّز طلب دراسة متكاملة');
@@ -105,6 +116,10 @@ test('in Arabic the builder is right to left, labelled in Arabic, drafts in Arab
 
 test('the builder works by keyboard and does not trap focus', async ({ page }) => {
   await page.goto('/assistant?mode=synthetic');
+  // Tools opens from the keyboard too.
+  await page.getByTestId('chat-tools').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('chat-tools-sheet')).toBeVisible();
   const summary = page.getByTestId('research-brief').locator('summary');
   await summary.focus();
   await page.keyboard.press('Enter');
@@ -118,9 +133,10 @@ test('the builder works by keyboard and does not trap focus', async ({ page }) =
   await page.keyboard.press('Enter');
   await expect(page.getByTestId('assistant-input')).toBeFocused();
   await expect(page.getByTestId('assistant-input')).toHaveValue(buildResearchBrief('en', 'electricity', 'trend'));
-  // Back out of the message box and past the (closed) builder.
+  // The drawer closed; focus moves back from the message box to the Tools button, not trapped.
+  await expect(page.getByTestId('chat-tools-sheet')).toBeHidden();
   await page.keyboard.press('Shift+Tab');
-  await expect(summary).toBeFocused();
+  await expect(page.getByTestId('chat-tools')).toBeFocused();
   await page.keyboard.press('Shift+Tab');
-  await expect(summary).not.toBeFocused();
+  await expect(page.getByTestId('chat-tools')).not.toBeFocused();
 });

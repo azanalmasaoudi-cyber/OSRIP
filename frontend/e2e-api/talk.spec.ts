@@ -11,6 +11,7 @@ test.use({ launchOptions: { args: ['--use-fake-device-for-media-stream', '--auto
 
 async function openTalk(page: Page): Promise<void> {
   await page.goto('/assistant?mode=synthetic');
+  await page.getByTestId('chat-settings').click(); // Talk is offered in the conversation settings
   await page.getByTestId('open-talk').click();
   await expect(page.getByTestId('talk-workspace')).toBeVisible();
 }

@@ -87,6 +87,8 @@
     <TypeScriptCompile Include="e2e-api\analysis-workspace.spec.ts" />
     <TypeScriptCompile Include="e2e-api\analysis.spec.ts" />
     <TypeScriptCompile Include="e2e-api\assistant.spec.ts" />
+    <TypeScriptCompile Include="e2e-api\chat-phone.spec.ts" />
+    <TypeScriptCompile Include="e2e-api\chat.ts" />
     <TypeScriptCompile Include="e2e-api\geography-forecast.spec.ts" />
     <TypeScriptCompile Include="e2e-api\governed-ai.spec.ts" />
     <TypeScriptCompile Include="e2e-api\interface.spec.ts" />
@@ -154,7 +156,11 @@
     <TypeScriptCompile Include="src\components\assistant\AssistantOrb.tsx" />
     <TypeScriptCompile Include="src\components\assistant\AssistantPanel.tsx" />
     <TypeScriptCompile Include="src\components\assistant\AssistantStatusBar.tsx" />
+    <TypeScriptCompile Include="src\components\assistant\ChatView.tsx" />
+    <TypeScriptCompile Include="src\components\assistant\Evidence.tsx" />
+    <TypeScriptCompile Include="src\components\assistant\InlineChart.tsx" />
     <TypeScriptCompile Include="src\components\assistant\IntroPlayer.tsx" />
+    <TypeScriptCompile Include="src\components\assistant\Markdown.tsx" />
     <TypeScriptCompile Include="src\components\assistant\MulhimPanels.tsx" />
     <TypeScriptCompile Include="src\components\assistant\persona.tsx" />
     <TypeScriptCompile Include="src\components\assistant\PersonaImage.tsx" />

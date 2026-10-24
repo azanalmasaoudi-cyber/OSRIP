@@ -115,6 +115,30 @@ export function usePersona(): PersonaState {
 }
 
 /** Choose who answers: Al Mulhim or Ilham, with their portraits and names in both languages. */
+/** The conversation header's compact choice: the two names as one segmented control. */
+export function PersonaSwitch({ className }: { className?: string }) {
+  const { t } = useTranslation();
+  const language = useAppLanguage();
+  const { personas, persona, choose } = usePersona();
+  const name = useId();
+  return (
+    <fieldset className={cn('flex rounded-full border border-border-strong/50 p-0.5', className)} data-testid="persona-picker" data-selected={persona.code}>
+      <legend className="sr-only">{t('persona.choose')}</legend>
+      {personas.map((p) => {
+        const checked = p.code === persona.code;
+        return (
+          <label key={p.code} data-testid={`persona-option-${p.code}`} data-checked={checked ? 'true' : 'false'}
+            className={cn('cursor-pointer rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-ring motion-reduce:transition-none',
+              checked ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground')}>
+            <input type="radio" name={name} value={p.code} checked={checked} onChange={() => choose(p.code)} className="sr-only" />
+            {p.name[language]}
+          </label>
+        );
+      })}
+    </fieldset>
+  );
+}
+
 export function PersonaPicker({ className, compact = false }: { className?: string; compact?: boolean }) {
   const { t } = useTranslation();
   const language = useAppLanguage();

@@ -93,6 +93,51 @@ When no provider answers, the tables, calculations and charts on the sector page
 the assistant gives a data-based reply labelled as prepared without AI interpretation, and the
 sector summary is labelled as a statistical summary, not AI-generated analysis.
 
+## The conversation page (/assistant)
+
+The AI Assistant page is one conversation, centred and at most 800px wide (2026-10-24):
+
+- **Header:** the chosen persona's portrait and name, the answer service's real state ("AI
+  unavailable · data reports", "AI set up, not yet confirmed", ...: never a plain "Ready" while
+  the service fails), the Al Mulhim / Ilham switch, New conversation and Settings.
+- **Before the first message:** "How can I help you? / كيف يمكنني مساعدتك؟" and up to three
+  example questions, hidden once a question is sent.
+- **Messages:** the question is shown at once; the answer below it is rendered as Markdown
+  (headings, paragraphs, lists, tables, **bold**, links: built as page elements, never as HTML),
+  with its citation chips, a one-line "Sources (n)" list that opens at a cited source, Copy, Read
+  aloud, and Retry when the answer service failed.
+- **Message box:** Enter sends, Shift+Enter is a new line (never mid-composition), one submission
+  at a time, Send becomes Stop while answering, and a question that could not be sent goes back
+  into the box. The microphone and an optional Tools drawer are beside it; the remaining guest
+  answers are a small label below it.
+- **Only the message list scrolls.** New messages scroll into view only while the reader is at
+  the end; otherwise a "New messages" button appears.
+- **Moved out of the conversation:** answer language, voice (mute, volume, voice test, recorded
+  welcome, Talk), conversations, memory, About and Help are in the Settings drawer; answer
+  modes, web search, the cross-check, the research brief, the shortage and surplus analysis
+  and a full study are in the Tools drawer.
+
+**No mode to choose.** The page sends questions with mode `auto`; the server picks Ask, Analyze,
+Research, Compare or Scenario from the question's words (`routing.answer_mode`, English and
+Arabic) and stores the mode used, which the reply shows ("Compare"). A mode picked in Tools
+overrides it for the visit. Greetings and questions about the assistant get the approved replies
+without any data lookup or charge.
+
+**Follow-up questions.** The model receives the conversation's last `HISTORY_MESSAGES` (6)
+messages with each question, so "Compare it with the previous year" after a question about
+electricity generation keeps that topic; it asks one short clarifying question only when the
+indicator, area or period cannot be inferred. When the answer service fails, the data-based
+report reads such a follow-up together with the latest earlier question that names a topic.
+
+**Answers are not streamed.** The server streams the study's progress and sources, not the
+answer's words, so the page shows the latest real stage ("Checking OSRIP’s published data", ...) while
+waiting and then the complete answer; nothing imitates typing.
+
+**Charts only on request.** A chart is drawn inside the conversation only when the question asks
+for one ("chart", "graph", "plot", «رسم», «مخطط») and the answer cites at least two published
+values of one indicator, area, unit and frequency; each bar carries its evidence id and the
+sources are named under it. Otherwise the page says what a chart would need.
+
 ## Routing policy (decided by rules, not by a model)
 
 1. **Numbers start with approved OSRIP data.**

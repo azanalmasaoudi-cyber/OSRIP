@@ -29,43 +29,64 @@ async function noHorizontalScroll(page: Page): Promise<void> {
   expect(overflow).toBeLessThanOrEqual(0);
 }
 
-test('desktop: the conversation is on the right and the portrait and results on the left, in English and Arabic', async ({ page }) => {
+/** The conversation page: header, messages and message box, one under another, in one centred
+ * column at most 800px wide; only the message list scrolls. */
+async function oneColumn(page: Page): Promise<void> {
+  const header = (await page.getByTestId('chat-header').boundingBox())!;
+  const messages = (await page.getByTestId('assistant-messages').boundingBox())!;
+  const composer = (await page.getByTestId('chat-composer').boundingBox())!;
+  for (const box of [header, composer]) expect(box.width).toBeLessThanOrEqual(800.5);
+  expect(header.y + header.height).toBeLessThanOrEqual(messages.y + 1);
+  expect(messages.y + messages.height).toBeLessThanOrEqual(composer.y + 1);
+  expect(Math.abs((header.x + header.width / 2) - (composer.x + composer.width / 2))).toBeLessThan(2);
+  await expect(page.getByTestId('assistant-input')).toBeInViewport();
+  const scrolling = await page.getByTestId('assistant-panel').evaluate((root) => [...root.querySelectorAll(':not(textarea)')]
+    // Only what is on screen: the closed Settings and Tools drawers are not.
+    .filter((e) => e.getClientRects().length > 0 && /(auto|scroll)/.test(getComputedStyle(e).overflowY))
+    .map((e) => e.getAttribute('data-testid')));
+  expect(scrolling).toEqual(['assistant-messages']);
+  await noHorizontalScroll(page);
+}
+
+test('desktop: one centred conversation without the profile card, analysis or notes, in English and Arabic', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   for (const language of ['English', 'العربية']) {
     await page.goto('/assistant?mode=synthetic');
     if (language === 'العربية') await page.getByRole('button', { name: 'العربية' }).first().click();
-    const workspace = page.getByTestId('assistant-workspace');
-    await expect(workspace).toHaveAttribute('data-layout', 'conversation-right');
-    const chat = await page.getByTestId('conversation-panel').boundingBox();
-    const card = await page.getByTestId('assistant-identity-card').boundingBox();
-    const results = await page.getByTestId('results-area').boundingBox();
-    expect(chat && card && results).toBeTruthy();
-    expect(chat!.x).toBeGreaterThan(card!.x + card!.width - 1); // right of the identity card
-    expect(chat!.x).toBeGreaterThan(results!.x + results!.width - 1);
-    expect(chat!.width).toBeGreaterThanOrEqual(400); // wide enough to read
-    // The composer is visible without scrolling; no long notes under the portrait.
-    await expect(page.getByTestId('assistant-input')).toBeInViewport();
-    await expect(page.getByTestId('assistant-identity-card')).not.toContainText('not a real person');
-    await expect(page.getByTestId('assistant-help')).not.toHaveAttribute('open', '');
-    await expect(page.getByTestId('voice-support')).toBeVisible(); // a short consent label
-    await noHorizontalScroll(page);
+    await expect(page.getByTestId('assistant-workspace')).toHaveAttribute('data-layout', 'conversation');
+    await expect(page.getByTestId('chat-greeting')).toHaveText(language === 'English' ? 'How can I help you?' : 'كيف يمكنني مساعدتك؟');
+    await expect(page.getByTestId('suggestion')).toHaveCount(3);
+    await expect(page.getByTestId('assistant-input')).toHaveAttribute('placeholder', language === 'English' ? 'Ask your question…' : 'اكتب سؤالك هنا…');
+    await oneColumn(page);
+    // Moved out of the conversation: the profile card, the analysis form, the results, the
+    // help and voice notes, the research-mode tabs and the large allowance meter.
+    for (const id of ['assistant-identity-card', 'conversation-panel']) await expect(page.getByTestId(id)).toHaveCount(0);
+    for (const id of ['analysis-form', 'results-area', 'assistant-help', 'assistant-mode', 'research-brief']) {
+      await expect(page.getByTestId(id)).toBeHidden();
+    }
+    await expect(page.getByTestId('voice-support')).toHaveCount(0);
+    await expect(page.getByTestId('guest-allowance')).toHaveText(language === 'English' ? '5 of 5 free answers left' : /5/);
   }
   await page.getByRole('button', { name: 'English' }).first().click();
 });
 
-test('phone: identity, conversation and results follow one another without sideways scrolling', async ({ page }) => {
+test('phone: header, conversation and message box in one column without sideways scrolling', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/assistant?mode=synthetic');
-  const card = await page.getByTestId('assistant-identity-card').boundingBox();
-  const chat = await page.getByTestId('conversation-panel').boundingBox();
-  const results = await page.getByTestId('results-area').boundingBox();
-  expect(card!.y).toBeLessThan(chat!.y);
-  expect(chat!.y).toBeLessThan(results!.y);
-  await noHorizontalScroll(page);
+  await oneColumn(page);
 });
 
 test('when the answer service fails, the reply is a data-based report, labelled, uncharged and retryable', async ({ page }) => {
   await page.goto('/assistant?mode=synthetic');
+  // A question without a topic (and nothing earlier to take one from): the missing information
+  // and next steps, no figures.
+  await page.getByTestId('assistant-input').fill('please fail');
+  await page.getByTestId('assistant-send').click();
+  const vague = page.getByTestId('assistant-message').last();
+  await expect(vague.getByTestId('data-report-missing')).toBeVisible();
+  await expect(vague.getByTestId('data-report-next')).toBeVisible();
+  await expect(vague.getByTestId('assistant-text')).not.toContainText(/\d/);
+
   await page.getByTestId('assistant-input').fill('please fail: latest electricity generation');
   await page.getByTestId('assistant-send').click();
   const reply = page.getByTestId('assistant-message').last();
@@ -79,13 +100,6 @@ test('when the answer service fails, the reply is a data-based report, labelled,
   await expect(reply.getByTestId('citation-chip').first()).toBeVisible();
   await expect(reply.getByTestId('how-calculated')).toBeVisible();
   await expect(reply.getByTestId('retry-answer')).toHaveText(/Try the AI answer again/);
-  // A question without a topic gets the missing information and next steps, no figures.
-  await page.getByTestId('assistant-input').fill('please fail');
-  await page.getByTestId('assistant-send').click();
-  const vague = page.getByTestId('assistant-message').last();
-  await expect(vague.getByTestId('data-report-missing')).toBeVisible();
-  await expect(vague.getByTestId('data-report-next')).toBeVisible();
-  await expect(vague.getByTestId('assistant-text')).not.toContainText(/\d/);
   await reply.scrollIntoViewIfNeeded();
   await snap(page, 'data-report-reply');
 });

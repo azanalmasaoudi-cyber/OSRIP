@@ -31,7 +31,7 @@ test('a sector result is explained in a few spoken sentences only when asked', a
   // In Arabic with Ilham: her Omani voice.
   await page.getByRole('button', { name: 'العربية' }).first().click();
   await page.goto('/assistant?mode=synthetic');
-  await page.getByTestId('assistant-identity-card').getByTestId('persona-option-ilham').click();
+  await page.getByTestId('chat-header').getByTestId('persona-option-ilham').click();
   await page.goto('/energy/electricity?mode=synthetic');
   const arabic = page.waitForResponse((r) => r.url().includes('/assistant/voice/series') && r.request().method() === 'POST');
   await page.getByTestId('sector-listen').click();

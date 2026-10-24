@@ -101,6 +101,8 @@ export const MESSAGE_STATUSES = [
  * arithmetic on stated assumptions, kept apart from forecasts. */
 export const ASSISTANT_MODES = ['ask', 'analyze', 'research', 'compare', 'scenario'] as const;
 export type AssistantMode = (typeof ASSISTANT_MODES)[number];
+/** What a question is sent with: a mode, or 'auto' (the server infers it from the question's words). */
+export type RequestMode = AssistantMode | 'auto';
 
 export const DRIVERS = [
   'weather', 'population', 'industrial_activity', 'desalination', 'renewable_energy',
@@ -367,7 +369,7 @@ export interface GuestQuestion {
   conversation_id: string | null;
   data_mode: DataMode;
   web_research: boolean;
-  mode: AssistantMode;
+  mode: RequestMode;
   persona?: string;
   cross_check?: boolean;
   selection?: AskSelection;
@@ -446,7 +448,7 @@ export function useAsk(conversationId: string | null) {
   return useMutation({
     // request_id: a retry of the same question returns the stored reply instead of asking again.
     mutationFn: (body: {
-      content: string; language: 'en' | 'ar'; request_id?: string; web_research: boolean; mode: AssistantMode;
+      content: string; language: 'en' | 'ar'; request_id?: string; web_research: boolean; mode: RequestMode;
       persona?: string; cross_check?: boolean; selection?: AskSelection;
     }) =>
       apiJson(`/assistant/conversations/${conversationId}/messages`, messageSchema, jsonBody('POST', body)),
@@ -768,6 +770,7 @@ const memorySchema = z.object({
   never_retained: z.array(z.string()),
 });
 export type MemorySummary = z.infer<typeof memorySchema>;
+export type ConversationSummary = z.infer<typeof summarySchema>;
 
 export function useMemory(enabled: boolean) {
   return useQuery({

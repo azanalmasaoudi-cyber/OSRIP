@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { closeDrawer, openTools } from './chat';
+
 // The governed AI and research service through the real stack (scripted providers, no
 // network): every source states its data status; one search route by default, a second only
 // as a fallback after a failure or as a cross-check the person asks for; Google-style grounded
@@ -61,15 +63,20 @@ test('the fallback route is used only after the first fails; its Google results 
 
 test('Research mode offers a cross-check, off by default and labelled as not independent', async ({ page }) => {
   await page.goto('/assistant?mode=synthetic');
+  // The answer mode and the cross-check are optional tools, in the Tools drawer.
+  await openTools(page);
   await page.getByTestId('assistant-mode').getByRole('radio', { name: 'Research' }).click();
   const toggle = page.getByTestId('cross-check-toggle');
   await expect(toggle).not.toBeChecked();
   await expect(page.getByText('agreement between two AI routes is not independent evidence')).toBeVisible();
+  await closeDrawer(page);
 
   const plain = await ask(page, 'web electricity generation 2023');
   await expect(plain.getByTestId('search-log').locator('li[data-role="cross_check"]')).toHaveCount(0);
 
+  await openTools(page);
   await toggle.check();
+  await closeDrawer(page);
   const checked = await ask(page, 'web electricity generation 2023');
   const cross = checked.getByTestId('search-log').locator('li[data-role="cross_check"]');
   await expect(cross).toHaveAttribute('data-provider', 'fake-gemini');

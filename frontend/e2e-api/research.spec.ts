@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { closeDrawer, openTools } from './chat';
 import { showResults } from './sector';
 
 // Research and decision support through the real stack: answer modes, validated
@@ -20,10 +21,15 @@ async function signIn(page: Page): Promise<void> {
 test('Analyze mode shows checked recommendation cards, inline citations, and saves a brief', async ({ page }) => {
   await signIn(page);
   await page.goto('/assistant?mode=synthetic');
+  // Automatic by default; a mode can be picked in Tools.
+  await openTools(page);
   const modes = page.getByTestId('assistant-mode');
+  await expect(modes.getByRole('radio', { name: 'Automatic' })).toHaveAttribute('aria-checked', 'true');
   await modes.getByRole('radio', { name: 'Analyze' }).click();
   await expect(modes.getByRole('radio', { name: 'Analyze' })).toHaveAttribute('aria-checked', 'true');
   await expect(page.getByTestId('assistant-mode-hint')).toContainText('recommendation cards');
+  await closeDrawer(page);
+  await expect(page.getByTestId('chat-mode-chip')).toContainText('Analyze');
   await page.getByTestId('assistant-input').fill('What do you recommend for electricity generation?');
   await page.getByTestId('assistant-send').click();
 

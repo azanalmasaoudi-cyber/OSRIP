@@ -21,7 +21,7 @@ OSRIP_SPEECH_KEY=<key of your Azure AI Speech resource>
 OSRIP_SPEECH_REGION=<its region, e.g. uaenorth>
 ```
 
-Then open **Settings › Voice** (or the assistant's voice details): each persona's voices show
+Then open **Settings › Voice** (or, on the AI Assistant page, Settings › Voice › voice details): each persona's voices show
 "listed by the service" only when the configured Azure resource's own voice list contains them
 (`GET https://<region>.tts.speech.microsoft.com/cognitiveservices/voices/list`), and **Test voice**
 plays a fixed sentence in the chosen persona's voice, with its transcript.

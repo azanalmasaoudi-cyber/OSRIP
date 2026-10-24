@@ -37,11 +37,11 @@ test('a missing persona portrait shows the AI badge in the same box and recovers
   // Ilham's images cannot be loaded here, as in a copy shared without them.
   await page.route(/\/images\/assistant\/ilham-/, (route) => route.fulfill({ status: 404, body: '' }));
   await page.goto('/assistant?mode=synthetic');
-  const identity = page.getByTestId('assistant-identity').filter({ visible: true });
+  // The conversation header: the chosen persona's portrait and the Al Mulhim / Ilham switch.
+  const identity = page.getByTestId('chat-header');
   const portrait = identity.getByTestId('assistant-avatar').locator('img');
   await expect.poll(() => portrait.evaluate(loaded)).toBeGreaterThan(0); // Al Mulhim's portrait loads
   const box = await portrait.boundingBox();
-  await expect(identity.getByTestId('persona-option-ilham').getByTestId('persona-image-fallback')).toBeVisible();
 
   await identity.getByTestId('persona-option-ilham').click();
   await expect(portrait).toHaveAttribute('data-testid', 'persona-image-fallback');
@@ -59,7 +59,7 @@ test('a missing persona portrait shows the AI badge in the same box and recovers
 
 test('an available Ilham portrait still loads', async ({ page }) => {
   await page.goto('/assistant?mode=synthetic');
-  const identity = page.getByTestId('assistant-identity').filter({ visible: true });
+  const identity = page.getByTestId('chat-header');
   await identity.getByTestId('persona-option-ilham').click();
   const portrait = identity.getByTestId('assistant-avatar').locator('img');
   await expect(portrait).toHaveAttribute('src', /ilham-portrait-432\.jpg$/);

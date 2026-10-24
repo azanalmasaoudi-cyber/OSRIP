@@ -56,3 +56,42 @@ def classify(question: str) -> Route:
     numerical = bool(_NUMERIC.search(question))
     recent = bool(_RECENT.search(question))
     return Route(numerical=numerical, recent=recent, web_first=recent or not numerical)
+
+
+# The answer mode for "auto" (the conversation page sends it): inferred from the words of the
+# question, so nobody has to choose Ask, Analyze, Research, Compare or Scenario first. Checked
+# in this order; anything else is a plain question ("ask").
+_MODE_PATTERNS = (
+    (
+        "scenario",
+        r"\b(what if|scenario|suppose|assum(e|ing)|if (demand|supply|consumption|production|"
+        r"imports?|exports?) (grows?|rises?|falls?|increases?|decreases?|doubles?))\b"
+        r"|ماذا لو|سيناريو|افترض|بافتراض|لو (زاد|زادت|ارتفع|ارتفعت|انخفض|انخفضت|تضاعف)",
+    ),
+    (
+        "compare",
+        r"\b(compare|comparison|versus|vs|difference between|previous year|year before|"
+        r"year earlier|last year)\b"
+        r"|قارن|قارني|مقارنة|الفرق بين|مقابل|السنة السابقة|العام السابق|العام الماضي|السنة الماضية",
+    ),
+    (
+        "research",
+        r"\b(search (the )?(web|internet|online)|on the (web|internet)|online sources?|news)\b"
+        r"|ابحث في|الإنترنت|الانترنت|أخبار|اخبار",
+    ),
+    (
+        "analyze",
+        r"\b(analy[sz]e|analysis|trends?|why|explain|drivers?|causes?|recommend(ations?)?|"
+        r"assess|evaluate|shortages?|surplus(es)?|deficits?)\b"
+        r"|حلل|حلّل|تحليل|اتجاه|لماذا|اشرح|فسر|فسّر|أسباب|توصي|توصيات|قيّم|عجز|فائض",
+    ),
+)
+_MODES = tuple((mode, re.compile(pattern, re.IGNORECASE)) for mode, pattern in _MODE_PATTERNS)
+
+
+def answer_mode(question: str, requested: str) -> str:
+    """The mode to answer in: the one the person chose, or for "auto" the one the question's
+    words call for (stored with the request, so the reply shows which was used)."""
+    if requested != "auto":
+        return requested
+    return next((mode for mode, pattern in _MODES if pattern.search(question)), "ask")

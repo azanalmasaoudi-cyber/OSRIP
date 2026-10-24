@@ -665,6 +665,8 @@ class FakeProvider:
         "water": "WATER_PRODUCTION",
         "مياه": "WATER_PRODUCTION",
     }
+    # A comparison that names no indicator ("Compare it with the previous year").
+    FOLLOW_UP = re.compile(r"compare|previous year|year before|قارن|السابق|الماضي")
     # The rule service.selection_rule adds when the question comes from a sector page.
     SELECTION = re.compile(
         r"applied selection: sector [a-z_]+; indicator (?P<indicator>[A-Z0-9_]+); "
@@ -706,6 +708,8 @@ class FakeProvider:
             return self._selection(chosen, tool_results, arabic)
         if "history" in question or "تاريخ" in question:
             return self._history(question, tool_results, arabic)
+        if "table" in question or "جدول" in question:
+            return self._table(question, tool_results, arabic)
         if "growth" in question or "نمو" in question:
             return self._growth(tool_results, arabic)
         if "governorate" in question or "محافظ" in question:
@@ -720,6 +724,12 @@ class FakeProvider:
         if "fail" in question:
             raise ProviderError("simulated_failure")
         indicator = next((code for k, code in self.KEYWORDS.items() if k in question), None)
+        if indicator is None and self.FOLLOW_UP.search(question):
+            # "Compare it with the previous year": the topic comes from the earlier turns.
+            earlier = self._earlier_questions(messages)
+            topic = next((code for k, code in self.KEYWORDS.items() if k in earlier), None)
+            if topic is not None:
+                return self._followup(topic, tool_results, arabic)
         if indicator is None:
             return self._final(
                 "clarification",
@@ -858,6 +868,76 @@ class FakeProvider:
             for o in rows
         ]
         return self._final("answered", " ".join(sentences), [o["id"] for o in rows])
+
+    def _table(
+        self, question: str, tool_results: list[dict[str, Any]], arabic: bool
+    ) -> dict[str, Any]:
+        """The published annual values as a Markdown heading and table, each row cited (the
+        conversation page renders Markdown)."""
+        indicator = next(
+            (code for k, code in self.KEYWORDS.items() if k in question), "ELEC_GENERATION"
+        )
+        if not tool_results:
+            return self._call("get_observations", {"indicator": indicator, "frequency": "annual"})
+        result = self._last(tool_results)
+        rows = [o for o in result.get("observations", []) if o.get("value") is not None][-6:]
+        if result.get("status") != "ok" or not rows:
+            return self._no_data(arabic)
+        head = "| السنة | القيمة |" if arabic else "| Year | Value |"
+        lines = [
+            "## القيم المنشورة" if arabic else "## Published values",
+            "",
+            head,
+            "|---|---|",
+            *[f"| {o['period_start'][:4]} | {o['value']} {o['unit']} [{o['id']}] |" for o in rows],
+            "",
+            "- "
+            + (
+                "قيم منشورة فقط، دون تقدير."
+                if arabic
+                else "Published values only, nothing estimated."
+            ),
+        ]
+        return self._final("answered", "\n".join(lines), [o["id"] for o in rows])
+
+    @staticmethod
+    def _earlier_questions(messages: list[dict[str, Any]]) -> str:
+        """The person's earlier turns (history), without the newest question."""
+        texts: list[str] = []
+        for m in messages:
+            if m["role"] != "user":
+                continue
+            if isinstance(m["content"], str):
+                texts.append(m["content"])
+            else:
+                texts += [
+                    b["text"]
+                    for b in m["content"]
+                    if isinstance(b, dict) and b.get("type") == "text"
+                ]
+        lines = "\n".join(texts).splitlines()
+        return "\n".join(lines[:-1]).lower()
+
+    def _followup(
+        self, indicator: str, tool_results: list[dict[str, Any]], arabic: bool
+    ) -> dict[str, Any]:
+        """The topic of the earlier turns, compared with the year before: the two latest
+        published annual values, each cited."""
+        if not tool_results:
+            return self._call("get_observations", {"indicator": indicator, "frequency": "annual"})
+        result = self._last(tool_results)
+        rows = [o for o in result.get("observations", []) if o.get("value") is not None][-2:]
+        if result.get("status") != "ok" or len(rows) < 2:
+            return self._no_data(arabic)
+        a, b = rows
+        text = (
+            f"في {a['period_start'][:4]} كانت القيمة المنشورة {a['value']} {a['unit']} [{a['id']}]، "
+            f"وفي {b['period_start'][:4]} كانت {b['value']} {b['unit']} [{b['id']}]."
+            if arabic
+            else f"In {a['period_start'][:4]} the published value was {a['value']} {a['unit']} "
+            f"[{a['id']}]; in {b['period_start'][:4]} it was {b['value']} {b['unit']} [{b['id']}]."
+        )
+        return self._final("answered", text, [a["id"], b["id"]])
 
     def _selection(
         self, chosen: re.Match[str], tool_results: list[dict[str, Any]], arabic: bool

@@ -89,6 +89,8 @@ export function AppShell() {
   const mainRef = useRef<HTMLElement>(null);
   const handledLocation = useRef<string | null>(null);
   const isHome = pathname === '/';
+  // The AI Assistant is a conversation that fills the window: one screen tall, one scrolling area.
+  const isChat = pathname === '/assistant';
   const title = usePageTitle(pathname);
 
   // After client-side navigation, move focus to the new page and scroll to the
@@ -141,7 +143,7 @@ export function AppShell() {
         </div>
       </aside>
 
-      <div className="flex min-h-dvh min-w-0 flex-col">
+      <div className={cn('flex min-w-0 flex-col', isChat ? 'h-dvh' : 'min-h-dvh')}>
         {/* Top bar: page title, search, language, theme and account */}
         <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur-md print:hidden" data-testid="top-bar">
           <div className="flex h-14 items-center gap-1.5 px-3 sm:gap-2 sm:px-4 lg:px-6">
@@ -200,7 +202,8 @@ export function AppShell() {
           ref={mainRef}
           tabIndex={-1}
           // Bottom padding keeps the floating assistant orb clear of the last content.
-          className={cn('flex-1 pb-24 outline-none', !isHome && 'px-4 pt-6 sm:px-6 lg:px-8')}
+          className={cn('outline-none', isChat ? 'flex min-h-0 flex-1 flex-col px-3 pt-3 sm:px-6'
+            : cn('flex-1 pb-24', !isHome && 'px-4 pt-6 sm:px-6 lg:px-8'))}
         >
           {/* Keyed by route: a short entrance on page change, never an exit animation, so
               back/forward and the focus move above stay immediate. Under reduced motion
@@ -210,7 +213,7 @@ export function AppShell() {
             initial={{ opacity: 0.01, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-            className={cn(!isHome && 'mx-auto w-full max-w-[96rem]')}
+            className={cn(!isHome && 'mx-auto w-full max-w-[96rem]', isChat && 'flex min-h-0 flex-1 flex-col')}
             data-testid="route-transition"
           >
             <ErrorBoundary resetKey={pathname} fallback={(reset) => (
@@ -221,7 +224,9 @@ export function AppShell() {
           </motion.div>
         </main>
 
-        <footer className="border-t border-border print:hidden">
+        {/* On the conversation page, phones and tablets give the footer's room to the messages
+            (the menu keeps the same note). */}
+        <footer className={cn('border-t border-border print:hidden', isChat && 'max-lg:hidden')}>
           <div className="mx-auto flex max-w-[96rem] flex-col gap-3 px-4 pt-5 pb-24 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:pe-28 sm:pb-5 lg:px-8 lg:pe-28">
             <p className="max-w-3xl">
               {t('footer.disclaimer')} {t('app.identityNote')}

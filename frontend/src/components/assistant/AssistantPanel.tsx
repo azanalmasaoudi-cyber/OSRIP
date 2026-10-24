@@ -1,9 +1,7 @@
 import {
-  BookmarkPlus,
   BookOpenCheck,
   Calculator,
   CircleHelp,
-  ExternalLink,
   Globe,
   Loader2,
   MessageSquarePlus,
@@ -12,7 +10,6 @@ import {
   Pause,
   Play,
   RotateCcw,
-  Search,
   Send,
   Sparkles,
   Square,
@@ -21,12 +18,16 @@ import {
   VolumeX,
   X,
 } from 'lucide-react';
-import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
 import { useAssistantUi } from './AssistantContext';
+import { ChatView } from './ChatView';
 import { AssistantAvatar, ORB_STATE_KEY } from './AssistantAvatar';
+import {
+  EvidenceItem, GroundedContext, pick, SAVEABLE, SaveResearchButton, SearchLog, STATUS_BADGE, WebEvidenceItem,
+} from './Evidence';
 import { AboutMulhim, MemoryPanel } from './MulhimPanels';
 import { PersonaPicker, usePersona } from './persona';
 import { PersonaImage } from './PersonaImage';
@@ -53,19 +54,18 @@ import {
   type AssistantMessage,
   type AssistantMode,
   type Evidence,
+  type RequestMode,
   type AskSelection,
 } from '@/api/assistant';
 import { hasPermission, useMe, useProviders } from '@/api/auth';
 import { ApiRequestError } from '@/api/client';
-import { useSaveResearch } from '@/api/library';
 import { DataModeBadge } from '@/components/common/DataModeBadge';
-import { DataStatusBadge } from '@/components/common/DataStatusBadge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Segmented } from '@/components/ui/segmented';
 import { SelectField } from '@/components/ui/select';
-import { formatDecimal, formatPeriod, type AppLanguage } from '@/lib/format';
+import { formatDecimal, formatPeriod } from '@/lib/format';
 import { recordingSupported, startRecording, type Recording, type RecorderError } from '@/lib/recorder';
 import {
   createRecognizer,
@@ -86,38 +86,6 @@ import { cn } from '@/lib/utils';
 import { useDataMode } from '@/state/useDataMode';
 import { usePreservedSearch } from '@/state/usePreservedSearch';
 
-const STATUS_BADGE = {
-  answered: null,
-  clarification: 'assistant.statusClarification',
-  no_evidence: 'assistant.statusNoEvidence',
-  unverified: 'assistant.statusUnverified',
-  unavailable: 'assistant.statusUnavailable',
-  lookup: 'assistant.statusLookup',
-  profile: 'assistant.statusProfile',
-  cancelled: 'assistant.statusCancelled',
-  data_report: 'assistant.statusDataReport',
-} as const;
-
-const EVIDENCE_CLASS_KEY = {
-  observed: 'assistant.class.observed',
-  calculated: 'assistant.class.calculated',
-  forecast: 'assistant.class.forecast',
-  hypothetical: 'assistant.class.hypothetical',
-  reference: 'assistant.class.reference',
-  official: 'assistant.class.official',
-  research: 'assistant.class.research',
-  secondary: 'assistant.class.secondary',
-} as const;
-
-const SOURCE_CLASS_KEY = {
-  official: 'web.sourceClass.official',
-  international: 'web.sourceClass.international',
-  research: 'web.sourceClass.research',
-  secondary: 'web.sourceClass.secondary',
-} as const;
-
-const OPERATOR = { '>': '>', '>=': '≥', '<': '<', '<=': '≤', '~': '≈' } as const;
-
 
 // Kept across sign-in (same tab): the unsent draft and the guest conversation.
 const DRAFT_KEY = 'osrip.assistant.draft';
@@ -129,168 +97,6 @@ const MODE_KEY = 'osrip.assistant.mode';
 /** The avatar reads the playing audio's loudness from this CSS variable (0-1). */
 function setVoiceLevel(level: number): void {
   document.documentElement.style.setProperty('--assistant-voice', level.toFixed(3));
-}
-
-function dateLabel(value: string | null | undefined, language: AppLanguage): string | null {
-  if (!value) return null;
-  const day = value.slice(0, 10);
-  return /^\d{4}-\d{2}-\d{2}$/.test(day) ? formatPeriod(day, day, language) : null;
-}
-
-/** One retrieved web page or search result, with its class, dates and link. */
-function WebEvidenceItem({ item, anchor }: { item: Evidence; anchor: string }) {
-  const { t } = useTranslation();
-  const language = useAppLanguage();
-  const publisher = typeof item.publisher === 'string' ? item.publisher : pick(item.publisher, language);
-  const official = item.evidence_class === 'official';
-  const research = item.evidence_class === 'research';
-  const published = dateLabel(item.published, language);
-  const retrieved = dateLabel(item.retrieved_at, language);
-  // Another AI provider's cited statement about the page, not the page's own text.
-  const summary = item.content_kind === 'provider_summary';
-  return (
-    <li id={anchor} tabIndex={-1} className="scroll-mt-4 rounded-md border border-border bg-background p-2 text-xs focus-visible:outline-2"
-      data-testid="web-citation" data-evidence={item.id} data-class={item.source_class ?? ''}>
-      <p className="flex flex-wrap items-center gap-1">
-        <span className="font-mono">[{item.id}]</span>
-        <Badge variant={official ? 'verified' : research ? 'outline' : 'sand'} data-testid="evidence-class">
-          {t(official ? 'assistant.class.official' : research ? 'assistant.class.research' : 'assistant.class.secondary')}
-        </Badge>
-        {item.source_class ? <span className="text-muted-foreground">{t(SOURCE_CLASS_KEY[item.source_class])}</span> : null}
-        <DataStatusBadge status={item.data_status} />
-        {item.role === 'cross_check' || item.role === 'fallback' ? (
-          <Badge variant="outline" data-testid="evidence-route">{t(`web.route.${item.role}`)}</Badge>
-        ) : null}
-      </p>
-      {summary ? (
-        <p className="mt-0.5 text-muted-foreground" data-testid="provider-summary">
-          {t('web.providerSummary', { model: item.summary_by ?? item.provider ?? '' })}
-        </p>
-      ) : null}
-      {item.url ? (
-        <a href={item.url} target="_blank" rel="noreferrer noopener" className="mt-1 inline-flex items-start gap-1 font-medium text-primary underline underline-offset-2">
-          <bdi>{(typeof item.title === 'string' ? item.title : pick(item.title, language)) || item.host}</bdi><ExternalLink aria-hidden="true" className="mt-0.5 size-3 shrink-0" />
-        </a>
-      ) : null}
-      <p className="mt-0.5 text-muted-foreground">
-        <bdi>{publisher}</bdi>
-        {' · '}
-        {published
-          ? item.published_basis === 'search_engine' ? t('web.publishedBySearchEngine', { date: published }) : t('web.published', { date: published })
-          : t('web.notStated')}
-        {retrieved ? <> · {t('web.retrieved', { date: retrieved })}</> : null}
-      </p>
-      {item.freshness === 'stale' ? (
-        <p className="mt-0.5"><Badge variant="sand" data-testid="evidence-stale">{t('workflow.stale')}</Badge></p>
-      ) : null}
-      {item.locator && /^pp?\. /.test(item.locator) ? (
-        <p className="mt-0.5 text-muted-foreground" data-testid="evidence-locator">
-          {t('workflow.locator', { locator: language === 'ar' ? item.locator.replace(/^pp?\. /, 'ص ') : item.locator })}
-        </p>
-      ) : null}
-      {item.text ? (
-        <details className="mt-1">
-          <summary className="cursor-pointer text-muted-foreground">
-            {item.content_kind === 'pdf_excerpt' ? t('web.pdfExcerpt') : item.content_kind === 'page_excerpt' ? t('web.excerpt')
-              : summary ? t('web.summaryText') : t('web.snippet')}
-          </summary>
-          <p className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap" dir="auto">{item.text}</p>
-        </details>
-      ) : null}
-    </li>
-  );
-}
-
-const SEARCH_PROVIDERS = ['brave', 'openai', 'gemini', 'fake-search', 'fake-openai', 'fake-gemini'] as const;
-
-/** The search route's name for people ("Brave Search", "OpenAI web search", ...). */
-function useRouteName() {
-  const { t } = useTranslation();
-  return (provider: string | null | undefined) => (provider && (SEARCH_PROVIDERS as readonly string[]).includes(provider)
-    ? t(`web.provider.${provider as 'brave'}`) : provider ?? '');
-}
-
-/** What happened to each web search, including failures (never hidden), by which route. */
-function SearchLog({ items }: { items: Evidence[] }) {
-  const { t } = useTranslation();
-  const routeName = useRouteName();
-  if (!items.length) return null;
-  return (
-    <ul className="flex flex-col gap-1 text-xs" data-testid="search-log">
-      {items.map((s) => {
-        const status = typeof s.status === 'string' ? s.status : '';
-        const failed = status !== 'ok' && status !== 'no_results';
-        const shownApart = s.display_only === true && status === 'ok';
-        const text = shownApart ? t('web.shownApart', { query: s.query ?? '' })
-          : status === 'ok' ? t('web.searched', { query: s.query ?? '', count: s.result_count ?? 0 })
-            : status === 'no_results' ? t('web.noResults', { query: s.query ?? '' })
-              : status === 'not_configured' ? t('web.notConfigured')
-                : status === 'rate_limited' ? t('web.rateLimited')
-                  : t('web.failed', { error: s.error ?? status });
-        return (
-          <li key={s.id} className={failed ? 'flex items-start gap-1 text-destructive' : 'flex items-start gap-1 text-muted-foreground'}
-            data-status={status} data-provider={s.provider ?? ''} data-role={typeof s.role === 'string' ? s.role : 'primary'}
-            role={failed ? 'status' : undefined}>
-            <Search aria-hidden="true" className="mt-0.5 size-3 shrink-0" />
-            <span dir="auto">
-              {text}
-              {s.provider ? <> · {t('web.via', { route: routeName(s.provider) })}</> : null}
-              {s.role === 'fallback' || s.role === 'cross_check' ? <> · {t(`web.route.${s.role}`)}</> : null}
-            </span>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-/**
- * Google Search grounded results (Grounding with Google Search, via Gemini), shown exactly as
- * returned, with their sources and Google's Search Suggestions, and apart from the answer: the
- * answer never uses them (Gemini API terms), and they are not reviewed OSRIP data.
- * The suggestions are Google's own HTML, rendered in a sandboxed frame that cannot run
- * scripts or reach this page; its links open in a new tab.
- */
-function GroundedContext({ entries }: { entries: NonNullable<AssistantMessage['structured']['grounded_context']> }) {
-  const { t } = useTranslation();
-  return (
-    <section className="flex flex-col gap-2 rounded-md border border-sand/50 bg-sand-subtle/30 p-2 text-xs" data-testid="grounded-context"
-      aria-label={t('web.grounded.title')}>
-      <p className="flex flex-wrap items-center gap-1 font-semibold">
-        <Globe aria-hidden="true" className="size-3.5" />{t('web.grounded.title')}
-        <DataStatusBadge status="unreviewed_external" />
-      </p>
-      <p className="text-muted-foreground">{t('web.grounded.note')}</p>
-      {entries.map((g, i) => (
-        <div key={i} className="flex flex-col gap-1.5 rounded border border-border bg-background p-2" data-testid="grounded-entry">
-          <p className="text-muted-foreground">
-            {g.attribution ?? t('web.grounded.attribution')}{g.model ? <> · <span dir="ltr">{g.model}</span></> : null}
-          </p>
-          <p className="whitespace-pre-wrap" dir="auto" data-testid="grounded-text">{g.text}</p>
-          {g.citations.length ? (
-            <ol className="flex flex-col gap-0.5" data-testid="grounded-citations">
-              {g.citations.map((c, j) => (
-                <li key={`${c.url}-${j}`} className="flex flex-wrap items-center gap-1">
-                  <span className="font-mono">[{j + 1}]</span>
-                  <a href={c.url} target="_blank" rel="noreferrer noopener" className="inline-flex items-center gap-1 text-primary underline underline-offset-2">
-                    <bdi>{c.title || c.url}</bdi><ExternalLink aria-hidden="true" className="size-3 shrink-0" />
-                  </a>
-                  {c.source_class && c.source_class in SOURCE_CLASS_KEY
-                    ? <span className="text-muted-foreground">{t(SOURCE_CLASS_KEY[c.source_class as keyof typeof SOURCE_CLASS_KEY])}</span> : null}
-                </li>
-              ))}
-            </ol>
-          ) : null}
-          {g.search_suggestions.map((html, j) => (
-            <iframe key={j} title={t('web.grounded.suggestions')} data-testid="grounded-suggestions"
-              sandbox="allow-popups allow-popups-to-escape-sandbox" referrerPolicy="no-referrer"
-              srcDoc={`<!doctype html><meta charset="utf-8"><base target="_blank">${html}`}
-              className="h-16 w-full rounded border-0 bg-transparent" />
-          ))}
-        </div>
-      ))}
-    </section>
-  );
 }
 
 function readStore(storage: 'session' | 'local', key: string): string | null {
@@ -321,105 +127,6 @@ function newRequestId(): string {
   const hex = [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
-
-function pick(text: { en: string; ar: string } | undefined, language: AppLanguage): string {
-  return text ? (language === 'ar' ? text.ar : text.en) : '';
-}
-
-function EvidenceItem({ item, anchor }: { item: Evidence; anchor: string }) {
-  const { t } = useTranslation();
-  const language = useAppLanguage();
-  const cls = typeof item.evidence_class === 'string' && item.evidence_class in EVIDENCE_CLASS_KEY
-    ? (item.evidence_class as keyof typeof EVIDENCE_CLASS_KEY)
-    : null;
-  if (item.kind === 'note') {
-    // A documented conflict, revision or limitation from the curated reference pack.
-    const title = typeof item.title === 'string' ? item.title : pick(item.title, language);
-    return (
-      <li id={anchor} tabIndex={-1} className="scroll-mt-4 rounded-md border border-border bg-background p-2 text-xs focus-visible:outline-2"
-        data-testid="citation" data-evidence={item.id} data-class="note">
-        <p className="flex flex-wrap items-center gap-1">
-          <span className="font-mono">[{item.id}]</span><Badge variant="muted">{t('assistant.note')}</Badge>
-          <span className="font-medium" dir="auto">{title}</span>
-        </p>
-        <p className="mt-0.5 whitespace-pre-wrap" dir="auto">{language === 'ar' && item.text_ar ? item.text_ar : item.text}</p>
-      </li>
-    );
-  }
-  if (item.kind !== 'observation') {
-    return (
-      <li id={anchor} tabIndex={-1} className="scroll-mt-4 text-xs focus-visible:outline-2">
-        <span className="font-mono">[{item.id}]</span> <DataStatusBadge status={item.data_status} /> {pick(item.name, language)} — {pick(item.definition, language)}
-      </li>
-    );
-  }
-  const operator = typeof item.value_operator === 'string' && item.value_operator in OPERATOR
-    ? OPERATOR[item.value_operator as keyof typeof OPERATOR]
-    : null;
-  const source = item.source;
-  return (
-    <li id={anchor} tabIndex={-1} className="scroll-mt-4 rounded-md border border-border bg-background p-2 text-xs focus-visible:outline-2"
-      data-testid="citation" data-evidence={item.id} data-class={cls ?? ''}>
-      <p className="flex flex-wrap items-center gap-1">
-        <span className="font-mono">[{item.id}]</span>
-        {cls ? <Badge variant={cls === 'observed' ? 'verified' : 'sand'} data-testid="evidence-class">{t(EVIDENCE_CLASS_KEY[cls])}</Badge> : null}
-        <DataStatusBadge status={item.data_status} />
-        <span className="font-medium">{pick(item.indicator_name, language)}</span> · {pick(item.area_name, language)} ·{' '}
-        {item.period_start && item.period_end ? formatPeriod(item.period_start, item.period_end, language) : null}
-        {item.period_kind === 'year_to_date' ? <Badge variant="sand">{t('frequency.year_to_date')}</Badge>
-          : item.period_complete === false ? <Badge variant="sand">{t('table.incompletePeriod')}</Badge> : null}
-      </p>
-      <p className="mt-0.5">
-        <span className="tabular-nums" dir="ltr">
-          {item.value == null ? t('states.dataUnavailable') : `${operator ? `${operator} ` : ''}${formatDecimal(item.value, language, 4) ?? ''}`}
-        </span>{' '}
-        {pick(item.unit_label, language) || item.unit}
-        {typeof item.revision_status === 'string' ? <> · {t(`revisionStatus.${item.revision_status as 'reported'}`)}</> : null}
-        {item.data_mode === 'synthetic' && !item.data_status ? <> · <Badge variant="synthetic">{t('dataMode.synthetic')}</Badge></> : null}
-      </p>
-      {source ? (
-        <p className="mt-0.5 text-muted-foreground">
-          {source.url ? (
-            <a href={source.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary underline underline-offset-2">
-              <bdi>{source.title}</bdi><ExternalLink aria-hidden="true" className="size-3" />
-            </a>
-          ) : <bdi>{source.title}</bdi>}
-          {source.publisher ? ` · ${source.publisher}` : ''}
-          {typeof item.record_ref === 'string' ? <> · <span dir="ltr" className="font-mono">{item.record_ref}{source.locator ? `, ${source.locator}` : ''}</span></> : null}
-          {' · '}{t('analysis.version')} <span dir="ltr">{item.dataset_version}</span>
-        </p>
-      ) : null}
-    </li>
-  );
-}
-
-/** Saves one reply (with its evidence and validated parts) to the reader's research library. */
-function SaveResearchButton({ messageId }: { messageId: number }) {
-  const { t } = useTranslation();
-  const save = useSaveResearch();
-  const to = usePreservedSearch();
-  if (save.isSuccess) {
-    const target = to('/library');
-    return (
-      <p className="text-xs" role="status" data-testid="research-saved">
-        {t('assistant.saved')} ·{' '}
-        <Link to={{ pathname: target.pathname, search: `${target.search ? `${target.search}&` : '?'}tab=saved` }}
-          className="text-primary underline underline-offset-2">{t('assistant.openLibrary')}</Link>
-      </p>
-    );
-  }
-  return (
-    <div className="flex flex-col gap-1">
-      <Button variant="outline" size="sm" className="w-fit" disabled={save.isPending} data-testid="save-research"
-        onClick={() => save.mutate({ message_id: messageId })}>
-        <BookmarkPlus aria-hidden="true" />{t('assistant.save')}
-      </Button>
-      {save.error ? <p className="text-xs text-destructive" role="alert">{t('assistant.saveFailed', { message: save.error.message })}</p> : null}
-    </div>
-  );
-}
-
-const SAVEABLE = new Set(['answered', 'no_evidence', 'clarification', 'lookup']);
 
 function MessageView({ message, onAsk, onRetry, onSpeak, canSave, onOpenStudy, activeStudyId }: {
   message: AssistantMessage;
@@ -765,6 +472,9 @@ function useVoice(
   };
 }
 
+/** The chat's voice state and actions (listening, speaking, mute), as the conversation page uses them. */
+export type ChatVoice = ReturnType<typeof useVoice>;
+
 // ------------------------------------------------------------------ allowance and sign-in
 
 function AllowanceMeter({ allowance, notice }: { allowance: Allowance; notice: { en: string; ar: string } }) {
@@ -825,7 +535,7 @@ function SignInPrompt({ onNavigate }: { onNavigate?: () => void }) {
 export type AskFromOutside = (question: string, mode?: AssistantMode) => void;
 
 /** The chat itself, used by the side panel and by the full AI Assistant page. */
-export function AssistantChat({ onClose, initialDraft = '', active = true, showIdentity = true, askRef, selection = null, selectionLabel, variant = 'panel' }: {
+export function AssistantChat({ onClose, initialDraft = '', active = true, showIdentity = true, askRef, selection = null, selectionLabel, variant = 'panel', tools }: {
   onClose?: () => void;
   initialDraft?: string;
   /** Asked from a sector page: its applied selection, sent with each question until removed. */
@@ -836,7 +546,9 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
   showIdentity?: boolean;
   /** "talk": compact for the Talk page (one row of controls; help, setup and voice notes are in
    * Settings, with a one-line notice and a link when no voice can read the answers). */
-  variant?: 'panel' | 'talk';
+  variant?: 'panel' | 'talk' | 'chat';
+  /** "chat" only: page tools for the Tools drawer (analysis, a full study). */
+  tools?: ReactNode;
   /** Filled with this chat's send function, so a page can ask a question in it. */
   askRef?: { current: AskFromOutside | null };
 }) {
@@ -891,7 +603,10 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
   };
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [viaVoice, setViaVoice] = useState(false);
-  const last = useRef<{ text: string; requestId: string; mode: AssistantMode } | null>(null);
+  const last = useRef<{ text: string; requestId: string; mode: RequestMode } | null>(null);
+  // The question being answered (shown at once on the conversation page) and the size of the
+  // conversation when it was sent: it is shown until the conversation returns it.
+  const [asked, setAsked] = useState<{ text: string; requestId: string; base: number; echo: boolean } | null>(null);
   const spokenFor = useRef<number | null>(null);
   const listRef = useRef<HTMLOListElement>(null);
   const inputId = useId();
@@ -913,10 +628,15 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
     setAnswerModeState(value);
     writeStore('local', MODE_KEY, value === 'ask' ? null : value);
   };
-  const webResearch = webAvailable && (webOn || answerMode === 'research');
+  // The conversation page asks with "auto" (the server infers the mode from the question)
+  // unless the person picks one in Tools, for this visit only.
+  const chatPage = variant === 'chat';
+  const [chatMode, setChatMode] = useState<RequestMode>('auto');
+  const effectiveMode: RequestMode = chatPage ? chatMode : answerMode;
+  const webResearch = webAvailable && (webOn || effectiveMode === 'research');
   // Research mode only: a second search route as a cross-check, when the person asks for one
   // (never on by default; it uses more of the limits and is not independent evidence).
-  const crossCheckAvailable = Boolean(status.data?.cross_check_available) && answerMode === 'research';
+  const crossCheckAvailable = Boolean(status.data?.cross_check_available) && effectiveMode === 'research';
   const [crossCheckOn, setCrossCheckOn] = useState(false);
   const crossCheck = crossCheckAvailable && crossCheckOn;
 
@@ -955,9 +675,9 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
   }, [lastMessage, viaVoice, voice, byCode]);
 
   // New account conversations: created first, the question is sent once the id is known.
-  const pendingRef = useRef<{ text: string; requestId: string; mode: AssistantMode } | null>(null);
+  const pendingRef = useRef<{ text: string; requestId: string; mode: RequestMode } | null>(null);
   const { startStudy } = ui;
-  const dispatch = (text: string, requestId: string, askMode: AssistantMode) => {
+  const dispatch = (text: string, requestId: string, askMode: RequestMode) => {
     const checked = crossCheck && askMode === 'research';
     // The question is followed as a live study (the workspace shows its progress and results).
     startStudy({ id: requestId, guest: !signedIn, question: text });
@@ -992,12 +712,13 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
     }
   }, [activeId, accountAsk, chatLanguage, webResearch, persona.code, crossCheck, scoped]);
 
-  const send = (question: string, modeOverride?: AssistantMode) => {
+  const send = (question: string, modeOverride?: RequestMode) => {
     const text = question.trim();
     if (!text || pending || needsAccount) return;
     if (voice.listening) voice.stop();
-    const askMode = modeOverride ?? answerMode;
+    const askMode = modeOverride ?? effectiveMode;
     last.current = { text, requestId: newRequestId(), mode: askMode };
+    setAsked({ text, requestId: last.current.requestId, base: messages.length, echo: true });
     setDraft('');
     dispatch(text, last.current.requestId, askMode);
   };
@@ -1010,8 +731,19 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
   }, [askRef]);
   // Retrying the same failed question reuses its request id (and mode): it is never charged twice.
   const retry = () => {
-    if (last.current && !pending) dispatch(last.current.text, last.current.requestId, last.current.mode);
+    if (!last.current || pending) return;
+    // The draft was given back after a failure: sending it again by Retry empties it.
+    if (draft === last.current.text) setDraft('');
+    setAsked({ text: last.current.text, requestId: last.current.requestId, base: messages.length, echo: !messages.length });
+    dispatch(last.current.text, last.current.requestId, last.current.mode);
   };
+  // Conversation page: a question that could not be sent goes back into the box (unless the
+  // person has typed something new), so nothing is lost; Retry sends it again.
+  const [seenError, setSeenError] = useState<unknown>(null);
+  if (chatPage && error && error !== seenError) {
+    setSeenError(error);
+    if (!draft && asked) setDraftState(asked.text);
+  }
   const submit = (event: FormEvent) => {
     event.preventDefault();
     send(draft);
@@ -1045,15 +777,60 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
   const talk = variant === 'talk';
   // A study request to review and edit: it fills the box and the mode, and sends nothing. Above
   // the message box; in Talk at the top of the conversation, so the pinned composer stays small.
+  const linkUi = (
+    <>
+      {linkable ? (
+        <div className="mb-3 flex flex-col gap-2 rounded-md border border-primary/30 bg-primary/5 p-3 text-sm" data-testid="link-guest-history">
+          <p>{t('guest.linkPrompt')}</p>
+          <Button size="sm" className="w-fit" disabled={link.isPending}
+            onClick={() => link.mutate(undefined, { onSuccess: () => { if (guestId) setActiveId(guestId); setGuestId(null); } })}>
+            {t('guest.linkAction')}
+          </Button>
+        </div>
+      ) : null}
+      {link.isSuccess ? <p className="mb-3 text-sm" role="status" data-testid="link-guest-done">{t('guest.linkDone', { count: link.data.linked_conversations })}</p> : null}
+    </>
+  );
   const brief = (
     <ResearchBriefBuilder language={chatLanguage} disabled={pending || needsAccount} maxLength={max}
       onDraft={(text, briefMode) => {
         setDraft(text);
-        setAnswerMode(briefMode);
+        if (chatPage) setChatMode(briefMode);
+        else setAnswerMode(briefMode);
         setViaVoice(false);
         document.getElementById(inputId)?.focus();
       }} />
   );
+
+  if (chatPage) {
+    const asking = asked && !error && (pending || messages.length <= asked.base)
+      ? { text: asked.text, requestId: asked.requestId, echo: asked.echo } : null;
+    return (
+      <ChatView chat={{
+        language: chatLanguage,
+        setLanguage: (l) => { pickedLanguage.current = true; setChatLanguage(l); },
+        dataMode: (signedIn ? conversation.data?.data_mode : guestConversation.data?.data_mode) ?? mode,
+        messages, pending, asking, guest: !signedIn, error, send, retry,
+        draft, type: (text) => { setDraft(text); setViaVoice(false); }, max, inputId, viaVoice,
+        canAsk, needsAccount, signedIn, allowance, signInPrompt: <SignInPrompt onNavigate={onClose} />,
+        voice, speak: speakHandler,
+        web: { available: webAvailable, on: webOn, set: (on) => { setWebOn(on); writeStore('local', WEB_KEY, on ? null : '0'); } },
+        mode: { value: chatMode, set: setChatMode },
+        crossCheck: { available: crossCheckAvailable, on: crossCheckOn, set: setCrossCheckOn },
+        conversations: signedIn && allowed ? {
+          list: conversations.data ?? [], activeId, select: setActiveId, removing: remove.isPending,
+          remove: () => { if (activeId) remove.mutate(activeId, { onSuccess: () => setActiveId(null) }); },
+        } : null,
+        newConversation: () => { if (signedIn) setActiveId(null); else setGuestId(null); setAsked(null); },
+        linkPrompt: linkUi,
+        memory: { guestExpires: guestData?.expires_at ?? null, guestConversationId: signedIn ? null : guestId,
+          onGuestDeleted: () => setGuestId(null), onAllDeleted: () => setActiveId(null) },
+        selection: { value: scope, label: selectionLabel, clear: () => setScope(null) },
+        // This page shows no study panel: a reply's study always opens in the workspace.
+        brief, openStudy: openStudyHere, activeStudyId: null, suggestions, tools,
+      }} />
+    );
+  }
 
   return (
     // Narrow screens: the whole chat scrolls as one column (the composer stays pinned at the
@@ -1204,16 +981,7 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
         {talk && canAsk ? <div className="mb-3">{brief}</div> : null}
         {signedIn && !allowed ? <p className="mb-3 text-sm">{t('assistant.noPermission')}</p> : null}
         {!signedIn && allowance && guestData ? <div className="mb-3"><AllowanceMeter allowance={allowance} notice={guestData.notice} /></div> : null}
-        {linkable ? (
-          <div className="mb-3 flex flex-col gap-2 rounded-md border border-primary/30 bg-primary/5 p-3 text-sm" data-testid="link-guest-history">
-            <p>{t('guest.linkPrompt')}</p>
-            <Button size="sm" className="w-fit" disabled={link.isPending}
-              onClick={() => link.mutate(undefined, { onSuccess: () => { if (guestId) setActiveId(guestId); setGuestId(null); } })}>
-              {t('guest.linkAction')}
-            </Button>
-          </div>
-        ) : null}
-        {link.isSuccess ? <p className="mb-3 text-sm" role="status" data-testid="link-guest-done">{t('guest.linkDone', { count: link.data.linked_conversations })}</p> : null}
+        {linkUi}
         {messages.length === 0 && !pending && canAsk && !needsAccount ? (
           <div className="flex flex-col gap-2" data-testid="suggestions">
             <p className="text-xs font-semibold">{t('assistant.suggested')}</p>
