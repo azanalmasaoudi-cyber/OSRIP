@@ -46,9 +46,14 @@ class ScheduleIn(BaseModel):
     max_credits_per_month: int = Field(default=100, ge=0, le=10000)
     allow_paid: bool = False
     enabled: bool = False
+    # study: a recurring study; data_update: research that reads official documents and saves
+    # the figures validation can check (research/data_update.py).
+    kind: Literal["study", "data_update"] = "study"
 
     @model_validator(mode="after")
     def _paid(self) -> ScheduleIn:
+        if self.kind == "data_update" and self.source_scope == "none":
+            raise ValueError("a data update searches official sources: source_scope official")
         if self.enabled and self.source_scope != "none" and not self.allow_paid:
             raise ValueError("a schedule that calls external services needs allow_paid to run")
         if self.max_credits_per_run > self.max_credits_per_month:
@@ -80,7 +85,7 @@ def out(row: ReportSchedule, credits_this_month: int | None = None) -> dict[str,
         "frequency": row.frequency, "source_scope": row.source_scope, "max_pages": row.max_pages,
         "max_credits_per_run": row.max_credits_per_run,
         "max_credits_per_month": row.max_credits_per_month, "allow_paid": row.allow_paid,
-        "enabled": row.enabled, "paid": row.source_scope != "none",
+        "enabled": row.enabled, "paid": row.source_scope != "none", "kind": row.kind,
         "next_run_at": row.next_run_at.isoformat() if row.next_run_at else None,
         "last_run_at": row.last_run_at.isoformat() if row.last_run_at else None,
         "credits_this_month": credits_this_month,
@@ -179,6 +184,21 @@ def start_run(session: Session, row: ReportSchedule) -> ResearchJob | None:
                        "This schedule calls external services; allow paid runs first.")  # fmt: skip
     if credits_this_month(session, row.id) + row.max_credits_per_run > row.max_credits_per_month:
         return None
+    if row.kind == "data_update":
+        from app.services.research import data_update
+
+        running = session.scalar(
+            select(ResearchJob.id).where(
+                ResearchJob.schedule_id == row.id, ResearchJob.state.in_(("queued", "running"))
+            )
+        )
+        if running is not None:
+            return None  # never two runs of one schedule at a time
+        return data_update.create(
+            session, row.sector, user_id=row.created_by, schedule_id=row.id,
+            question=row.question, language=row.language, max_pages=row.max_pages,
+            max_credits=row.max_credits_per_run,
+        )  # fmt: skip
     return jobs.create(
         session,
         {"sector": row.sector, "area": row.area, "question": row.question,

@@ -75,8 +75,8 @@ CATALOG: dict[str, Spec] = {
         "https://docs.firecrawl.dev/api-reference/endpoint/scrape", "credits",
     ),
     "deepseek": Spec(
-        "deepseek", "DeepSeek (Chat Completions API, usage-billed)", ("answer",),
-        "https://api-docs.deepseek.com/quick_start/pricing",
+        "deepseek", "DeepSeek (Chat Completions, Search and Fetch APIs, usage-billed)",
+        ("answer", "search", "retrieve"), "https://api-docs.deepseek.com/guides/search",
     ),
 }  # fmt: skip
 
@@ -118,7 +118,7 @@ def missing(name: str, capability: str) -> list[str]:
     elif name == "deepseek":
         if not s.deepseek_api_key:
             out.append("OSRIP_DEEPSEEK_API_KEY")
-        if not s.deepseek_model:
+        if capability == "answer" and not s.deepseek_model:
             out.append("OSRIP_DEEPSEEK_MODEL")
         if not s.deepseek_billing_acknowledged:
             out.append("OSRIP_DEEPSEEK_BILLING_ACKNOWLEDGED")
@@ -140,6 +140,8 @@ def model_for(name: str, capability: str) -> str | None:
         ("gemini", "answer"): s.gemini_model,
         ("gemini", "search"): s.gemini_search_model,
         ("deepseek", "answer"): s.deepseek_model,
+        ("deepseek", "search"): "search-api",
+        ("deepseek", "retrieve"): "fetch-api",
     }.get((name, capability))
 
 
@@ -157,6 +159,8 @@ def roles() -> dict[str, list[str]]:
             out.setdefault(value, []).append(role)
     if s.firecrawl_api_key:
         out.setdefault("firecrawl", []).append("retrieve_primary")
+    if s.research_fetch_provider == "deepseek":
+        out.setdefault("deepseek", []).append("retrieve_pages")
     return out
 
 
@@ -298,6 +302,38 @@ class MemoryMeter:
 
 # Replaced by a MemoryMeter in unit tests.
 meter: Meter = DbMeter()
+
+
+def calls_today(provider: str, capability: str) -> int:
+    """Calls made today (UTC) for one capability of a provider (the research daily limits
+    for paid search and fetch calls); 0 without the database."""
+    from app.db.session import session_factory
+    from app.models import ProviderCall
+
+    if isinstance(meter, MemoryMeter):  # tests without a database
+        return sum(
+            1
+            for r in meter.rows
+            if r["provider"] == provider
+            and r["capability"] == capability
+            and r["status"] not in ("daily_limit", "budget_exhausted")
+        )
+    start = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+    try:
+        with session_factory()() as session, session.begin():
+            return int(
+                session.scalar(
+                    select(func.count()).where(
+                        ProviderCall.provider == provider,
+                        ProviderCall.capability == capability,
+                        ProviderCall.created_at >= start,
+                        ProviderCall.status.not_in(("daily_limit", "budget_exhausted")),
+                    )
+                )
+                or 0
+            )
+    except Exception:  # noqa: BLE001 - nothing to count without the database
+        return 0
 
 
 def check(provider: str, capability: str, model: str | None) -> None:

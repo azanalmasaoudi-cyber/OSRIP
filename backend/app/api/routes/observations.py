@@ -42,6 +42,12 @@ def observation_query(
             description="Complete years, year-to-date totals, quarters, months or dated statements",
         ),
     ] = None,
+    ytd_end_month: Annotated[
+        int | None,
+        Query(
+            ge=1, le=11, description="Year-to-date totals ending in this month (default: latest)"
+        ),
+    ] = None,
 ) -> ObservationQuery:
     return ObservationQuery(
         data_mode,
@@ -56,6 +62,7 @@ def observation_query(
         period_to,
         dataset_version_id,
         period_kind,
+        ytd_end_month,
     )
 
 

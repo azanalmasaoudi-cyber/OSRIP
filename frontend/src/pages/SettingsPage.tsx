@@ -128,7 +128,7 @@ function Services({ admin }: { admin: boolean }) {
 }
 
 const EMPTY = { name: '', sector: 'water' as Sector, question: '', frequency: 'monthly' as const, source_scope: 'none' as SourceScope,
-  max_pages: 5, max_credits_per_run: 25, max_credits_per_month: 100, allow_paid: false };
+  max_pages: 5, max_credits_per_run: 25, max_credits_per_month: 100, allow_paid: false, kind: 'study' as 'study' | 'data_update' };
 
 function Schedules() {
   const { t } = useTranslation();
@@ -140,7 +140,8 @@ function Schedules() {
   const [form, setForm] = useState(EMPTY);
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    mutate.mutate({ body: { ...form, area: 'OM', data_mode: mode, language, question: form.question || t(`jobs.defaultQuestion.${form.sector}`), enabled: false } },
+    const question = form.question || (form.kind === 'data_update' ? t(`schedules.updateQuestion.${form.sector}`) : t(`jobs.defaultQuestion.${form.sector}`));
+    mutate.mutate({ body: { ...form, area: 'OM', data_mode: mode, language, question, enabled: false } },
       { onSuccess: () => setForm(EMPTY) });
   };
   const toggle = (s: ReportSchedule) => mutate.mutate({ id: s.id, body: { enabled: !s.enabled } });
@@ -157,7 +158,7 @@ function Schedules() {
             <span className="min-w-0 flex-1">
               <span className="font-medium">{s.name}</span>
               <span className="block text-xs text-muted-foreground">
-                {t(`balance.sectors.${s.sector}`, { defaultValue: s.sector })} · {t(`schedules.frequency.${s.frequency}`)} · {t(`jobs.scope.${s.source_scope}`)}
+                {t(`schedules.kind.${s.kind}`)} · {t(`balance.sectors.${s.sector}`, { defaultValue: s.sector })} · {t(`schedules.frequency.${s.frequency}`)} · {t(`jobs.scope.${s.source_scope}`)}
                 {s.paid ? ` · ${t('schedules.paid')}` : ''} · {t('schedules.credits', { used: s.credits_this_month ?? 0, cap: s.max_credits_per_month })}
                 {s.next_run_at ? ` · ${t('schedules.next', { date: formatDate(s.next_run_at, language) })}` : ''}
               </span>
@@ -181,6 +182,9 @@ function Schedules() {
         <label className="flex flex-col gap-1 text-xs font-medium">{t('schedules.name')}
           <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value.slice(0, 120) })} className="h-9 rounded-md border border-border-strong bg-card px-2 text-sm" data-testid="schedule-name" />
         </label>
+        <SelectField label={t('schedules.kindLabel')} value={form.kind} data-testid="schedule-kind"
+          onValueChange={(v) => setForm({ ...form, kind: v as typeof form.kind, source_scope: v === 'data_update' && form.source_scope === 'none' ? 'official' : form.source_scope })}
+          options={(['study', 'data_update'] as const).map((k) => ({ value: k, label: t(`schedules.kind.${k}`) }))} />
         <SelectField label={t('balance.sector')} value={form.sector} onValueChange={(v) => setForm({ ...form, sector: v as Sector })}
           options={SECTORS.map((s) => ({ value: s, label: t(`balance.sectors.${s}`) }))} />
         <SelectField label={t('schedules.frequencyLabel')} value={form.frequency} onValueChange={(v) => setForm({ ...form, frequency: v as typeof form.frequency })}

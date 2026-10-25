@@ -22,7 +22,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session, aliased
 
 from app.core.errors import ApiError, not_found, unprocessable
@@ -78,6 +78,9 @@ class ObservationQuery:
     dataset_version_id: uuid.UUID | None = None
     # annual | year_to_date | quarterly | monthly | statement (narrower than frequency).
     period_kind: str | None = None
+    # Year-to-date totals ending in this month (7: January to July). Without it, a selection
+    # of year-to-date totals with several end months shows the latest end month published.
+    ytd_end_month: int | None = None
 
 
 @dataclass(slots=True)
@@ -168,6 +171,8 @@ def query_observations(
             Observation.frequency == Frequency.ANNUAL,
             Observation.period_complete.is_(q.period_kind == "annual"),
         )
+        if q.period_kind == "year_to_date" and q.ytd_end_month:
+            stmt = stmt.where(func.extract("month", Observation.period_end) == q.ytd_end_month)
     elif q.period_kind in ("quarterly", "monthly", "statement"):
         stmt = stmt.where(Observation.frequency == Frequency(q.period_kind))
     if q.period_from:
@@ -305,6 +310,27 @@ def query_observations(
             }
         )
 
+    if q.period_kind == "year_to_date" and not q.ytd_end_month and not allow_mixed:
+        # Totals to different months (January-July, January-August) are different periods:
+        # never mixed. Each indicator shows the end month of its latest total, and says which
+        # other end months exist (ytd_end_month selects one).
+        by_indicator: dict[str, list[SeriesOut]] = defaultdict(list)
+        for out in series.values():
+            by_indicator[out.meta["indicator"]["code"]].append(out)
+        kept: dict[tuple[Any, ...], SeriesOut] = {}
+        for code, group in by_indicator.items():
+            months = sorted({g.meta["ytd_end_month"] for g in group if g.meta["ytd_end_month"]})
+            latest = max(group, key=lambda g: max(o["period_end"] for o in g.observations))
+            for g in group:
+                if len(months) <= 1 or g.meta["ytd_end_month"] == latest.meta["ytd_end_month"]:
+                    g.meta["ytd_end_months_available"] = months
+                    kept[g.key] = g
+            shapes[code] = {
+                (k, m, u)
+                for k, m, u in shapes[code]
+                if len(months) <= 1 or m == latest.meta["ytd_end_month"]
+            }
+        series = kept
     mixed = {code: sorted(s) for code, s in shapes.items() if len(s) > 1}
     if mixed and not allow_mixed:
         raise ApiError(

@@ -233,7 +233,12 @@ def relevant_passages(text: str, terms: list[str], *, limit: int = 6000) -> str:
     """Lines that mention a query term or contain a number, in page order, up to
     ``limit`` characters; the page start is used when nothing matches."""
     lowered = [t.lower() for t in terms if len(t) > 2]
-    lines = [ln.strip() for ln in text.split("\n") if ln.strip()]
+    lines = []
+    for ln in (ln.strip() for ln in text.split("\n")):
+        if len(ln) <= 600:
+            lines += [ln] if ln else []
+        else:  # a long paragraph: its sentences, so a figure late in it is not cut off
+            lines += [x.strip() for x in re.split(r"(?<=[.!?؟])\s+", ln) if x.strip()]
     picked: list[str] = []
     size = 0
     for line in lines:

@@ -10,6 +10,8 @@ only periods from January 2022 onward are used (build brief).
 
 from __future__ import annotations
 
+import uuid
+from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date
@@ -149,6 +151,21 @@ class Ledger:
     meta: dict[str, Any] = field(default_factory=dict)
     # Called with every recorded item (the live study's evidence panel), if set.
     on_add: Any = field(default=None, repr=False)
+    # Research that saves figures (research/saving.py): the data-update job, or None; who may
+    # submit figures (a Principal with research.submit, or None: nobody); what was submitted.
+    job_id: uuid.UUID | None = None
+    # Searches and pages this answer may use (None: the per-answer settings); Research mode
+    # gets its own, larger budget.
+    max_searches: int | None = None
+    max_pages: int | None = None
+    submitter: Any = field(default=None, repr=False)
+    submissions: list[dict[str, Any]] = field(default_factory=list)
+    # Tables and charts the backend built in this answer (datatable.py), the person's question
+    # (a chart only when it asks for one) and the tables of earlier answers ("Draw it").
+    question: str = ""
+    tables: list[dict[str, Any]] = field(default_factory=list)
+    charts: list[dict[str, Any]] = field(default_factory=list)
+    previous_tables: list[dict[str, Any]] = field(default_factory=list)
 
     def add(self, item: dict[str, Any]) -> dict[str, Any]:
         item = {
@@ -900,6 +917,263 @@ class Tools:
 
         return research.read_web_page(self.ledger, str(evidence_id), focus)
 
+    # -------------------------------------------------------------- research that saves figures
+    def submit_observations(self, observations: list[dict[str, Any]]) -> dict[str, Any]:
+        """Figures read in official documents, for backend validation; only the ones every
+        check passes are saved (research/saving.py). Never a database write of the model's."""
+        if self.ledger.submitter is None:
+            return {
+                "status": "not_permitted",
+                "message": "Saving figures needs a signed-in account with research permission. "
+                "Report the figures with their sources and say they were not saved.",
+            }
+        if not isinstance(observations, list) or not observations:
+            return {"status": "invalid_request", "message": "Give at least one observation."}
+        from app.db.session import session_factory
+        from app.services.research import saving
+
+        with session_factory()() as writer:
+            outcomes = saving.submit(
+                writer,
+                [o for o in observations if isinstance(o, dict)],
+                self.ledger.items,
+                submitter=self.ledger.submitter,
+                language=self.ledger.language,
+                job_id=self.ledger.job_id,
+            )
+        results = [o.as_dict() for o in outcomes]
+        self.ledger.submissions.extend(results)
+        return {
+            "status": "ok",
+            "counts": dict(Counter(r["status"] for r in results)),
+            "results": results,
+            "note": "saved=true only for figures now published as observations (status approved). "
+            "duplicate: already published, nothing added. conflict: differs from a published or "
+            "submitted figure, kept for a reviewer, nothing overwritten. pending: waits for a "
+            "reviewer (reasons). rejected: cannot be saved (reasons). Say exactly which were "
+            "saved; never call the others saved.",
+        }
+
+    def research_status(
+        self, scope: str = "this_answer", indicator: str | None = None
+    ) -> dict[str, Any]:
+        """What research saved or left waiting: this answer's submissions, or the latest ones."""
+        from app.services.research import saving
+
+        if scope == "this_answer":
+            ids = [
+                uuid.UUID(r["candidate_id"])
+                for r in self.ledger.submissions
+                if r.get("candidate_id")
+            ]
+            if not ids:
+                return {"status": "none", "message": "Nothing was submitted in this answer."}
+            out = saving.status(self.session, candidate_ids=ids)
+        else:
+            out = saving.status(self.session, indicator_code=indicator or None, limit=20)
+        for item in out["items"]:
+            if item["saved"]:
+                # A saved figure is a published observation: citable like one.
+                added = self.ledger.add(
+                    {
+                        "kind": "saved_research",
+                        "indicator": item["indicator_code"],
+                        "area": item["area_code"],
+                        "period_start": item["period_start"],
+                        "period_end": item["period_end"],
+                        "period_kind": item["period_kind"],
+                        "value": item["value"],
+                        "unit": item["unit"],
+                        "observation_id": item["observation_id"],
+                        "source": {
+                            "title": item["source_title"],
+                            "publisher": item["publisher"],
+                            "url": item["source_url"],
+                        },
+                        "publication_date": item["publication_date"],
+                        "retrieved_at": item["retrieved_at"],
+                    }
+                )
+                item["evidence_id"] = added["id"]
+        return {
+            "status": "ok",
+            **out,
+            "note": "Only items with saved=true are published data (cite their evidence_id). "
+            "Pending, conflict and rejected items are not facts: name them as waiting or refused.",
+        }
+
+    # -------------------------------------------------------------- tables and charts
+    def make_table(
+        self,
+        series: list[dict[str, Any]],
+        year_from: int | None = None,
+        year_to: int | None = None,
+        latest: int | None = None,
+    ) -> dict[str, Any]:
+        """A table built by the backend from published observations (datatable.py)."""
+        from app.services.assistant import datatable
+
+        if not isinstance(series, list) or not series or len(series) > 6:
+            return {"status": "invalid_request", "message": "Give one to six series."}
+        rows: list[dict[str, Any]] = []
+        missing: list[str] = []
+        clean = []
+        for spec in series:
+            if not isinstance(spec, dict):
+                continue
+            indicator = str(spec.get("indicator", "")).strip()
+            area = str(spec.get("area", "OM") or "OM").strip()
+            kind = str(spec.get("period_kind", "")).strip()
+            if kind not in datatable.KINDS:
+                return {
+                    "status": "invalid_request",
+                    "message": "period_kind must be monthly, quarterly, annual or year_to_date: "
+                    "one kind per series (monthly values are never made from annual ones).",
+                }
+            if self.session.scalar(select(Indicator.id).where(Indicator.code == indicator)) is None:
+                codes = self.session.scalars(select(Indicator.code).order_by(Indicator.code)).all()
+                return {
+                    "status": "unknown_indicator",
+                    "indicator": indicator,
+                    "message": "Use a platform indicator code, for example: " + ", ".join(codes),
+                }
+            clean.append({"indicator": indicator, "area": area, "period_kind": kind})
+            found = self._series(indicator, area, kind, year_from, year_to)
+            obs = [(s_, o) for s_ in found if s_.meta["partner"] is None for o in s_.observations]
+            obs.sort(key=lambda t: t[1]["period_start"])
+            if latest:
+                periods = sorted({o["period_start"] for _, o in obs})[
+                    -max(1, min(int(latest), 24)) :
+                ]
+                obs = [(s_, o) for s_, o in obs if o["period_start"] in periods]
+            if not obs:
+                missing.append(f"{indicator}/{area}/{kind}")
+            for s_, o in obs:
+                item = self.ledger.add(_observation_item(s_, o))
+                rows.append(datatable.row_from_item(item))
+        if not rows:
+            return {
+                "status": "no_data",
+                "missing": missing,
+                "message": "No published observations match. Report the data as unavailable.",
+            }
+        tables = datatable.build_tables(rows)
+        number = len(self.ledger.tables) + 1
+        self.ledger.tables.append(
+            {
+                "id": f"T{number}",
+                "params": {
+                    "series": clean,
+                    "year_from": year_from,
+                    "year_to": year_to,
+                    "latest": latest,
+                },
+                "tables": tables,
+            }
+        )
+        return {
+            "status": "ok",
+            "table_id": f"T{number}",
+            "missing_series": missing,
+            "rows": [
+                {
+                    "evidence_id": r["evidence_id"],
+                    "period": datatable.period_text(
+                        r["period_start"], r["period_end"], r["period_kind"]
+                    ),
+                    "period_kind": r["period_kind"],
+                    "indicator": r["indicator_code"],
+                    "area": r["area"],
+                    "value": r["value"],
+                    "unit": r["unit"],
+                    "revision_status": r["revision_status"],
+                    "source": r["source"]["title"],
+                }
+                for t in tables
+                for r in t["rows"]
+            ],
+            "note": "The table is shown to the person under your reply exactly as built (with a CSV "
+            "download). Do not repeat it as a Markdown table: describe what it shows and cite the "
+            "evidence ids. Missing values stay missing.",
+        }
+
+    def make_chart(self, table: str = "latest", title: str | None = None) -> dict[str, Any]:
+        """A chart over the rows of a table built in this answer, or of the previous answer's
+        table (rebuilt from published data), only when the person asked for a chart."""
+        from app.services.assistant import datatable, routing
+
+        if not routing.asks_for_chart(self.ledger.question):
+            return {
+                "status": "not_requested",
+                "message": "Charts are drawn only when the person asks for one.",
+            }
+        source = None
+        if self.ledger.tables and table != "previous":
+            source = self.ledger.tables[-1]
+        elif self.ledger.previous_tables:
+            params = self.ledger.previous_tables[-1]
+            rebuilt = self.make_table(**params)
+            if rebuilt.get("status") != "ok":
+                return {
+                    "status": "no_data",
+                    "message": "The earlier table's data are no longer published.",
+                }
+            source = self.ledger.tables[-1]
+        if source is None:
+            return {
+                "status": "no_table",
+                "message": "Build the table first (make_table) for the series to draw; if the "
+                "period is unknown, ask one short question.",
+            }
+        # One chart per unit (the table is already split by unit): values in different units
+        # never share an axis.
+        drawn, refused = [], []
+        for block in source["tables"]:
+            rows = block["rows"]
+            first = rows[0]
+            names = sorted(
+                {(r["indicator_name"] or {}).get("en", r["indicator_code"]) for r in rows}
+            )
+            names_ar = sorted(
+                {(r["indicator_name"] or {}).get("ar", r["indicator_code"]) for r in rows}
+            )
+            area = first["area_name"] or {}
+            default = {
+                "en": f"{' / '.join(names)} · {area.get('en', first['area'])}",
+                "ar": f"{' / '.join(names_ar)} · {area.get('ar', first['area'])}",
+            }
+            if title and title.strip() and len(source["tables"]) == 1:
+                default = {"en": title.strip()[:120], "ar": title.strip()[:120]}
+            built = datatable.build_chart(rows, default)
+            if built["status"] != "ok":
+                refused.append({"unit": block["unit"]["code"], **built})
+                continue
+            self.ledger.charts.append({**built, "table_id": source["id"], "title": default})
+            drawn.append(
+                {
+                    "unit": block["unit"]["code"],
+                    "type": built["type"],
+                    "points": built["points"],
+                    "period_kind": built["period_kind"],
+                    "evidence_ids": built["evidence_ids"],
+                    "sources": built["sources"],
+                }
+            )
+        if not drawn:
+            return {
+                "status": refused[0]["status"] if refused else "no_data",
+                "refused": refused,
+                "message": "No chart: explain why (only one comparable value, or values that "
+                "cannot share one chart) instead of drawing one.",
+            }
+        return {
+            "status": "ok",
+            "charts": drawn,
+            "refused": refused,
+            "note": "Each chart is drawn under your reply from the same rows as the table, one per "
+            "unit. Name what each shows (period, unit, sources); do not describe them as images.",
+        }
+
     # -------------------------------------------------------------- hypothetical scenarios
     def scenario_projection(
         self,
@@ -1192,6 +1466,105 @@ WEB_TOOL_SPECS: list[dict[str, Any]] = [
 ]
 
 
+RESEARCH_TOOL_SPECS: list[dict[str, Any]] = [
+    {
+        "name": "submit_observations",
+        "description": "Submit figures you READ in official documents (read_web_page evidence ids) for backend "
+        "validation and saving, when the person asked to research, update or save statistics. The backend checks "
+        "that the value is written in the document, that the publisher is an official Omani source, that the "
+        "indicator, area, unit and period map to platform codes without ambiguity, and that the figure is neither "
+        "a duplicate of nor in conflict with published data; only then is it saved as a published observation. "
+        "Anything uncertain waits for a reviewer. Search snippets and summaries are refused.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "observations": {
+                    "type": "array",
+                    "maxItems": 10,
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "evidence_id": {"type": "string", "description": "read_web_page evidence id of the document"},
+                            "indicator_code": {"type": "string", "description": "Platform code (list_indicators)"},
+                            "indicator": {"type": "string", "description": "The indicator as the document names it"},
+                            "area_code": {"type": "string", "description": "OM (national) or a governorate code"},
+                            "value_text": {"type": "string", "description": "The figure exactly as written in the document"},
+                            "unit": {"type": "string", "description": "The unit as written, e.g. GWh or million m³"},
+                            "scale": {"type": "string", "enum": ["one", "thousand", "million", "billion"]},
+                            "period_kind": {"type": "string", "enum": ["monthly", "quarterly", "annual", "year_to_date"]},
+                            "period_start": {"type": "string", "description": "YYYY-MM-DD"},
+                            "period_end": {"type": "string", "description": "YYYY-MM-DD"},
+                            "publication_date": {"type": "string", "description": "YYYY-MM-DD when the document states it"},
+                        },
+                        "required": ["evidence_id", "indicator_code", "area_code", "value_text", "unit",
+                                     "period_kind", "period_start", "period_end"],
+                    },
+                }
+            },
+            "required": ["observations"],
+        },
+    },
+    {
+        "name": "research_status",
+        "description": "What research saved or left waiting for review: this answer's submissions "
+        "(scope this_answer), or the latest research results (scope recent, optionally for one indicator), "
+        "with their sources, saved observation ids and the latest saved period.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "scope": {"type": "string", "enum": ["this_answer", "recent"]},
+                "indicator": {"type": "string"},
+            },
+        },
+    },
+]  # fmt: skip
+
+TABLE_TOOL_SPEC: dict[str, Any] = {
+    "name": "make_table",
+    "description": "Build a table from the platform's published observations when the person asks for a table "
+    "or a comparison: Period | Indicator | Value | Unit | Geography | Source, in period order, missing values "
+    "kept missing. The backend builds it; it is shown under your reply with a CSV download. One kind of period "
+    "per series (monthly, quarterly, annual or year_to_date: a year-to-date total is a partial year).",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "series": {
+                "type": "array",
+                "maxItems": 6,
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "indicator": {"type": "string"},
+                        "area": {"type": "string", "default": "OM"},
+                        "period_kind": {"type": "string", "enum": ["monthly", "quarterly", "annual", "year_to_date"]},
+                    },
+                    "required": ["indicator", "period_kind"],
+                },
+            },
+            "year_from": {"type": "integer"},
+            "year_to": {"type": "integer"},
+            "latest": {"type": "integer", "description": "Only the latest N periods of each series"},
+        },
+        "required": ["series"],
+    },
+}  # fmt: skip
+
+CHART_TOOL_SPEC: dict[str, Any] = {
+    "name": "make_chart",
+    "description": "Draw a chart because the person asked for one, from the rows of the table built in this "
+    "answer, or (table: previous) of the table in the previous answer (\"Draw it\"). The backend chooses a line "
+    "chart for a time trend, bars for categories or grouped bars for compatible series, with title, period, "
+    "unit, legend and sources; it refuses values that cannot share one chart or fewer than two values.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "table": {"type": "string", "enum": ["latest", "previous"]},
+            "title": {"type": "string"},
+        },
+    },
+}  # fmt: skip
+
+
 ANALYSIS_TOOL_SPECS: list[dict[str, Any]] = [
     {
         "name": "balance_analysis",
@@ -1459,17 +1832,23 @@ def _final_answer_spec(mode: str) -> dict[str, Any]:
     return {**base, "input_schema": {**base["input_schema"], "properties": props}}
 
 
-def tool_specs(web: bool, mode: str = "ask") -> list[dict[str, Any]]:
+def tool_specs(
+    web: bool, mode: str = "ask", *, can_submit: bool = False, chart: bool = False
+) -> list[dict[str, Any]]:
     """Tools per mode. The scenario tool exists only in Scenario mode, which keeps
-    hypothetical scenarios apart from forecasts and observations."""
+    hypothetical scenarios apart from forecasts and observations. Submitting figures needs
+    web research and a person allowed to submit; the chart tool exists only when the
+    question asks for a chart."""
     core = [
         t
         for t in TOOL_SPECS
         if t["name"] != "final_answer"
         and (t["name"] != "scenario_projection" or mode == "scenario")
     ]
-    tools = [*core, *ANALYSIS_TOOL_SPECS, _final_answer_spec(mode)]
-    return [*WEB_TOOL_SPECS, *tools] if web else tools
+    extra = [TABLE_TOOL_SPEC, *([CHART_TOOL_SPEC] if chart else [])]
+    tools = [*core, *ANALYSIS_TOOL_SPECS, *extra, _final_answer_spec(mode)]
+    research = RESEARCH_TOOL_SPECS if can_submit else RESEARCH_TOOL_SPECS[1:]
+    return [*WEB_TOOL_SPECS, *research, *tools] if web else [*RESEARCH_TOOL_SPECS[1:], *tools]
 
 
 def run_tool(tools: Tools, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
@@ -1490,6 +1869,10 @@ def run_tool(tools: Tools, name: str, arguments: dict[str, Any]) -> dict[str, An
         "data_quality_notes": tools.data_quality_notes,
         "run_study": tools.run_study,
         "balance_analysis": tools.balance_analysis,
+        "submit_observations": tools.submit_observations,
+        "research_status": tools.research_status,
+        "make_table": tools.make_table,
+        "make_chart": tools.make_chart,
     }.get(name)
     if handler is None:
         return {"error": "unknown_tool"}

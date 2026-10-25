@@ -76,8 +76,12 @@ _MODE_PATTERNS = (
     ),
     (
         "research",
-        r"\b(search (the )?(web|internet|online)|on the (web|internet)|online sources?|news)\b"
-        r"|ابحث في|الإنترنت|الانترنت|أخبار|اخبار",
+        r"\b(search (the )?(web|internet|online)|on the (web|internet)|online sources?|news|"
+        r"research|find (the )?(latest|newest|most recent|current)|latest published|"
+        r"original sources?|official sources?|update (the )?(data|statistics|figures)|"
+        r"save (the )?(figures|statistics|data|results|observations?))\b"
+        r"|ابحث في|ابحث عن|الإنترنت|الانترنت|أخبار|اخبار|أحدث (ال)?(إحصاءات|البيانات|الأرقام) المنشورة"
+        r"|المصادر الأصلية|المصادر الرسمية|حدّث البيانات|حدث البيانات|احفظ",
     ),
     (
         "analyze",
@@ -87,6 +91,18 @@ _MODE_PATTERNS = (
     ),
 )
 _MODES = tuple((mode, re.compile(pattern, re.IGNORECASE)) for mode, pattern in _MODE_PATTERNS)
+
+
+# Words that ask for a chart (English and Arabic), including "Draw it" after a table.
+_CHART = re.compile(
+    r"\b(chart|graph|plot|visuali[sz]e|visuali[sz]ation|draw)\b|رسم|مخطط|بياني|ارسم",
+    re.IGNORECASE,
+)
+
+
+def asks_for_chart(question: str) -> bool:
+    """Charts appear only when the person asks for one."""
+    return bool(question and _CHART.search(question))
 
 
 def answer_mode(question: str, requested: str) -> str:

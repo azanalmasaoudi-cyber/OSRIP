@@ -338,8 +338,13 @@ def claim_next() -> uuid.UUID | None:
 
 
 def run(job_id: uuid.UUID) -> None:
-    """Run the remaining steps of one claimed study."""
+    """Run the remaining steps of one claimed study (or a data update: data_update.py)."""
     job = _load(job_id)
+    if job.kind == "data_update":
+        from app.services.research import data_update
+
+        data_update.run(job_id)
+        return
     ctx = Context(job)
     try:
         for stage in STAGES:

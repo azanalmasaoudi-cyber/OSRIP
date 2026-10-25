@@ -154,6 +154,7 @@
     <Compile Include="app\services\assistant\service.py" />
     <Compile Include="app\services\assistant\study_events.py" />
     <Compile Include="app\services\assistant\tools.py" />
+    <Compile Include="app\services\assistant\datatable.py" />
     <Compile Include="app\services\audit.py" />
     <Compile Include="app\services\comparisons.py" />
     <Compile Include="app\services\conditions.py" />
@@ -180,13 +181,17 @@
     <Compile Include="app\services\reports.py" />
     <Compile Include="app\services\research\__init__.py" />
     <Compile Include="app\services\research\crawl.py" />
+    <Compile Include="app\services\research\data_update.py" />
+    <Compile Include="app\services\research\fetching.py" />
     <Compile Include="app\services\research\firecrawl.py" />
     <Compile Include="app\services\research\jobs.py" />
     <Compile Include="app\services\research\pages.py" />
     <Compile Include="app\services\research\robots.py" />
     <Compile Include="app\services\research\safe_fetch.py" />
+    <Compile Include="app\services\research\saving.py" />
     <Compile Include="app\services\research\schedules.py" />
     <Compile Include="app\services\research\search.py" />
+    <Compile Include="app\services\research\search_log.py" />
     <Compile Include="app\services\research\service.py" />
     <Compile Include="app\services\research\sources.py" />
     <Compile Include="app\services\scenarios.py" />
@@ -222,6 +227,7 @@
     <Compile Include="tests\test_assistant_profile.py" />
     <Compile Include="tests\test_assistant_selection_integration.py" />
     <Compile Include="tests\test_assistant_series_choice.py" />
+    <Compile Include="tests\test_assistant_datatable.py" />
     <Compile Include="tests\test_auth_integration.py" />
     <Compile Include="tests\test_balance.py" />
     <Compile Include="tests\test_balance_integration.py" />
@@ -269,6 +275,7 @@
     <Compile Include="tests\test_zy_research_assistant_integration.py" />
     <Compile Include="tests\test_zz_reference_pack_integration.py" />
     <Compile Include="tests\test_zzz_source_sync_integration.py" />
+    <Compile Include="tests\test_zzzz_research_saving_integration.py" />
     <Compile Include="tests\workflow_helpers.py" />
     <Compile Include="scripts\backup_restore_drill.py" />
     <Compile Include="scripts\devdb.py" />
@@ -305,6 +312,7 @@
     <Compile Include="alembic\versions\0020_balance_analysis.py" />
     <Compile Include="alembic\versions\0021_research_workflow.py" />
     <Compile Include="alembic\versions\0022_source_sync.py" />
+    <Compile Include="alembic\versions\0023_research_save.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="alembic\sql\0001_core_down.sql" />
@@ -351,6 +359,8 @@
     <Content Include="alembic\sql\0021_research_workflow_up.sql" />
     <Content Include="alembic\sql\0022_source_sync_down.sql" />
     <Content Include="alembic\sql\0022_source_sync_up.sql" />
+    <Content Include="alembic\sql\0023_research_save_down.sql" />
+    <Content Include="alembic\sql\0023_research_save_up.sql" />
     <Content Include="app\knowledge\assistant_profile_v1.json" />
     <Content Include="app\knowledge\assistant_profile_v2.json" />
     <Content Include="app\knowledge\assistant_profile_v3.json" />

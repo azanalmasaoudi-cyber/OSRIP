@@ -130,6 +130,25 @@ class ResearchCandidate(Base):
     reviewed_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("app_user.id"))
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Migration 0023: the figure mapped to platform codes, its validation and decisions.
+    job_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("research_job.id", ondelete="SET NULL")
+    )
+    document_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("research_document.id", ondelete="SET NULL")
+    )
+    area_code: Mapped[str | None] = mapped_column(ForeignKey("area.code"))
+    unit_code: Mapped[str | None] = mapped_column(ForeignKey("unit.code"))
+    period_kind: Mapped[str | None] = mapped_column(Text)
+    scale: Mapped[str | None] = mapped_column(Text)
+    validation: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
+    history: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, server_default=text("'[]'::jsonb"))
+    decided_by: Mapped[str | None] = mapped_column(Text)
+    import_job_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("import_job.id", ondelete="SET NULL")
+    )
+    dataset_version_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("dataset_version.id"))
+    observation_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("observation.id"))
 
 
 class StudyRun(Base):
@@ -179,6 +198,7 @@ class ReportSchedule(Base):
     max_credits_per_month: Mapped[int] = mapped_column(server_default=text("100"))
     allow_paid: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     enabled: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    kind: Mapped[str] = mapped_column(Text, server_default=text("'study'"))  # | data_update
     next_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_by: Mapped[uuid.UUID | None] = mapped_column(
@@ -226,6 +246,7 @@ class ResearchJob(Base):
     )
     result: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
     credits_used: Mapped[int] = mapped_column(server_default=text("0"))
+    kind: Mapped[str] = mapped_column(Text, server_default=text("'study'"))  # | data_update
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), **NOW)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -241,7 +262,10 @@ class ResearchDocument(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         primary_key=True, server_default=text("gen_random_uuid()")
     )
-    job_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("research_job.id", ondelete="CASCADE"))
+    # NULL for a document read in a conversation (migration 0023).
+    job_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("research_job.id", ondelete="CASCADE")
+    )
     url: Mapped[str] = mapped_column(Text)
     final_url: Mapped[str | None] = mapped_column(Text)
     host: Mapped[str] = mapped_column(Text)
@@ -259,9 +283,32 @@ class ResearchDocument(Base):
     credits: Mapped[int] = mapped_column(server_default=text("0"))
     sha256: Mapped[str | None] = mapped_column(Text)
     excerpt: Mapped[str | None] = mapped_column(Text)
+    # The text as read (bounded), to check a saved figure against it again (migration 0023).
+    text_content: Mapped[str | None] = mapped_column(Text)
     duplicate_of: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("research_document.id", ondelete="SET NULL")
     )
     revision_of: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("research_document.id", ondelete="SET NULL")
     )
+
+
+class ResearchSearch(Base):
+    """One web search with its results: the search log and the search cache (migration 0023)."""
+
+    __tablename__ = "research_search"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    provider: Mapped[str] = mapped_column(Text)
+    query: Mapped[str] = mapped_column(Text)
+    language: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text)
+    error: Mapped[str | None] = mapped_column(Text)
+    results: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, server_default=text("'[]'::jsonb"))
+    result_count: Mapped[int] = mapped_column(server_default=text("0"))
+    job_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("research_job.id", ondelete="SET NULL")
+    )
+    retrieved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), **NOW)

@@ -10,6 +10,10 @@
   (text, ``url_citation`` annotations, the Search Suggestions widget) is **display-only**: it is
   shown to the person verbatim beside the answer and never given to another model or mixed
   with other content, as the Gemini API terms require.
+* ``DeepSeekSearch``: the DeepSeek Search API (``POST https://api.deepseek.com/v1/tools/search``,
+  the DeepSeek key as a Bearer token). Results are the engine's snippet and its longer
+  query-related summary (labelled as the service's summary, not the page's own text), with
+  the engine's publication date and authority tier.
 * ``FakeSearch``, ``FakeOpenAISearch``, ``FakeGeminiGrounding``: scripted routes for tests;
   refused in production.
 Keys stay on the server. Results carry the date the engine associates with a page when it
@@ -31,6 +35,7 @@ from app.services import monitoring
 from app.services import providers as registry
 
 BRAVE_URL = "https://api.search.brave.com/res/v1/web/search"
+DEEPSEEK_SEARCH_URL = "https://api.deepseek.com/v1/tools/search"
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 GEMINI_INTERACTIONS_URL = "https://generativelanguage.googleapis.com/v1beta/interactions"
 SEARCH_INSTRUCTIONS = (
@@ -55,9 +60,11 @@ class SearchResult:
     extra: tuple[str, ...] = ()
     page_age: str | None = None  # date the engine associates with the page
     language: str | None = None
-    # engine_snippet: the search engine's own excerpt; provider_summary: an AI provider's
-    # cited statement about the source (not the source's text).
+    # engine_snippet: the search engine's own excerpt; engine_summary: the search service's
+    # longer summary of the page for the query (not verbatim page text); provider_summary: an
+    # AI provider's cited statement about the source (not the source's text).
     kind: str = "engine_snippet"
+    authority: int | None = None  # the engine's authority tier, when it gives one
 
 
 @dataclass(frozen=True)
@@ -195,6 +202,78 @@ class BraveSearch:
                 if str(r.get("url", "")).startswith(("http://", "https://"))
             ]
         raise SearchError("http_429")
+
+
+class DeepSeekSearch:
+    """DeepSeek Search API, checked 2026-10-25 against api-docs.deepseek.com/guides/search and
+    /api/search and with this deployment's key: ``query`` (1-128 characters; ``site:``,
+    quotes and ``after:`` operators), ``count`` (1-50), ``ori_question`` (1-128). Each result
+    has ``title``, ``url``, ``snippet`` (about 100-200 characters), ``summary`` (about 600-800
+    characters, written for models), ``date`` (RFC 3339 or null), ``authority`` (0-4, -1
+    unknown) and ``rerank_score``. HTTP 402 means no balance, 429 the account's rate limit;
+    only successful non-empty searches are billed."""
+
+    name = "deepseek"
+    model = "search-api"
+    cacheable = True
+
+    def __init__(self, api_key: str, timeout: float) -> None:
+        self._key = api_key
+        self._timeout = timeout
+
+    def search(
+        self, query: str, *, language: str, count: int, question: str | None = None
+    ) -> list[SearchResult]:
+        limit = get_settings().research_daily_search_limit
+        if registry.calls_today("deepseek", "search") >= limit:
+            raise SearchError("daily_limit")
+        return _metered(
+            "deepseek",
+            self.model,
+            lambda: self._search(query, count=count, question=question),
+            lambda results: 1 if results else None,
+        )
+
+    def _search(self, query: str, *, count: int, question: str | None) -> list[SearchResult]:
+        body: dict[str, Any] = {"query": _clip_words(query, 128), "count": max(1, min(count, 10))}
+        if question and question.strip():
+            body["ori_question"] = _clip_words(question, 128)
+        headers = {"Authorization": f"Bearer {self._key}", "Content-Type": "application/json"}
+        for attempt in (1, 2):
+            try:
+                result = _post(DEEPSEEK_SEARCH_URL, body, headers, self._timeout)
+            except SearchError as exc:
+                if attempt == 1 and str(exc) in ("timeout", "http_429", "http_500", "http_504"):
+                    time.sleep(1.0)
+                    continue
+                raise
+            out = []
+            for r in result.get("results") or []:
+                url = str(r.get("url", ""))
+                if not url.startswith(("http://", "https://")):
+                    continue
+                authority = r.get("authority")
+                out.append(
+                    SearchResult(
+                        title=str(r.get("title", ""))[:300],
+                        url=url,
+                        snippet=str(r.get("snippet", ""))[:800],
+                        extra=(str(r.get("summary", ""))[:1200],) if r.get("summary") else (),
+                        page_age=str(r["date"])[:40] if r.get("date") else None,
+                        kind="engine_summary",
+                        authority=authority if isinstance(authority, int) else None,
+                    )
+                )
+            return out
+        raise SearchError("http_429")  # pragma: no cover - the loop returns or raises
+
+
+def _clip_words(text: str, limit: int) -> str:
+    text = " ".join(text.split())
+    if len(text) <= limit:
+        return text
+    cut = text[:limit]
+    return cut.rsplit(" ", 1)[0] if " " in cut else cut
 
 
 def _strip_tags(text: str) -> str:
@@ -488,6 +567,8 @@ def build_search_provider(name: str) -> Any | None:
     timeout = s.research_timeout_seconds
     if name == "brave" and s.research_api_key:
         return BraveSearch(s.research_api_key.get_secret_value(), timeout)
+    if name == "deepseek" and s.deepseek_api_key and s.deepseek_billing_acknowledged:
+        return DeepSeekSearch(s.deepseek_api_key.get_secret_value(), max(timeout, 15.0))
     if name == "openai" and s.openai_api_key and s.openai_search_model:
         return OpenAIWebSearch(s.openai_api_key.get_secret_value(), s.openai_search_model, timeout)
     if name == "gemini" and s.gemini_api_key and s.gemini_search_model:

@@ -174,6 +174,9 @@ const scheduleSchema = z.object({
   max_pages: z.number(), max_credits_per_run: z.number(), max_credits_per_month: z.number(), allow_paid: z.boolean(),
   enabled: z.boolean(), paid: z.boolean(), next_run_at: z.string().nullable(), last_run_at: z.string().nullable(),
   credits_this_month: z.number().nullable(),
+  // study: a recurring study; data_update: research that reads official documents and saves
+  // the figures backend validation can check.
+  kind: z.enum(['study', 'data_update']).default('study'),
 });
 export type ReportSchedule = z.infer<typeof scheduleSchema>;
 

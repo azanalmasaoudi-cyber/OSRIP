@@ -27,6 +27,17 @@ for _name in [n for n in os.environ if n.startswith("OSRIP_")]:
 os.environ["OSRIP_ENV_FILE"] = "none"
 
 
+@pytest.fixture(autouse=True)
+def _research_records(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Documents read and searches made are recorded and cached only in tests that switch it
+    on (``fetching.persist``, ``search_log.enabled``): without a database the default address
+    may not answer at all, and a page cached by one test must not answer another's read."""
+    from app.services.research import fetching, search_log
+
+    monkeypatch.setattr(fetching, "persist", False)
+    monkeypatch.setattr(search_log, "enabled", False)
+
+
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     if RUN_DB:
         return

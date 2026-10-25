@@ -130,11 +130,15 @@ class Fetched:
     raw: bytes = b""  # the body as received (PDF text is extracted from it)
 
 
-def fetch(url: str, *, timeout: float, max_bytes: int) -> Fetched:
+def fetch(
+    url: str, *, timeout: float, max_bytes: int, types: tuple[str, ...] = ALLOWED_TYPES
+) -> Fetched:
+    """``types``: the content types accepted (pages by default; a caller reading a known JSON
+    API, such as NCSI's news articles, passes its own)."""
     current = url
     for _ in range(MAX_REDIRECTS + 1):
         target = check_url(current)
-        response = _request(target, timeout=timeout, max_bytes=max_bytes)
+        response = _request(target, timeout=timeout, max_bytes=max_bytes, types=types)
         if response[0] in (301, 302, 303, 307, 308):
             location = response[3]
             if not location:
@@ -159,7 +163,7 @@ def fetch(url: str, *, timeout: float, max_bytes: int) -> Fetched:
 
 
 def _request(
-    target: CheckedTarget, *, timeout: float, max_bytes: int
+    target: CheckedTarget, *, timeout: float, max_bytes: int, types: tuple[str, ...] = ALLOWED_TYPES
 ) -> tuple[int, str, bytes, str | None, bool]:
     address = f"[{target.address}]" if ":" in target.address else target.address
     pinned = f"{target.scheme}://{address}{target.path}"
@@ -184,7 +188,7 @@ def _request(
                 if response.status_code in (301, 302, 303, 307, 308):
                     return response.status_code, "", b"", response.headers.get("location"), False
                 content_type = response.headers.get("content-type", "").lower()
-                if response.status_code == 200 and not content_type.startswith(ALLOWED_TYPES):
+                if response.status_code == 200 and not content_type.startswith(types):
                     raise FetchFailed("unsupported_content_type")
                 chunks: list[bytes] = []
                 size, truncated = 0, False

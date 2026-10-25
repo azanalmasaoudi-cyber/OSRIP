@@ -1,5 +1,30 @@
 # Test results
 
+## 2026-10-25 (afternoon): research that reads sources and saves verified figures (branch `feature/research-crawl-series`)
+
+What changed (details in RESEARCH_AND_SAVING.md):
+- DeepSeek Search and Fetch as the research routes (`OSRIP_RESEARCH_PROVIDER=deepseek`, `OSRIP_RESEARCH_FETCH_PROVIDER=deepseek`), checked against api-docs.deepseek.com (guides/search, api/search, api/fetch) on 2026-10-25. Official Omani hosts are read directly first (DeepSeek Fetch returned 504 for ncsi.gov.om and data.gov.om); NCSI news articles are read from NCSI's own API. Searches and documents are logged and cached (`research_search`, `research_document` with the text read), with daily paid-call limits.
+- Tools `submit_observations` (signed-in users with the new `research.submit`; never guests), `research_status`, `make_table`, `make_chart` (only when the question asks for a chart). Backend validation saves a figure only when it is written in an official document read in full, maps to platform codes without ambiguity, and is neither a duplicate nor a conflict; saving goes through the import workflow, one source per document, all or nothing. Reviewers can approve pending or conflicting figures ("Approve and save"; a conflict is saved as a revision beside the published value).
+- Tables (one validated table per unit, CSV download with formula-safe cells) and charts (line, bars or grouped bars from the same rows, drawn by the study chart components) in the conversation. Data-update schedules by sector (`kind: data_update`), run by the research worker with no overlap.
+- Migration 0023 (search log, documents outside studies, candidate codes, validation and history, job and schedule kinds, `research.submit`).
+- Found by the live runs and fixed: the evidence check read the day of a written date ("31 December"), digits in web addresses, a saved record's id and a cited publication's title ("Issue 54") as figures; long paragraphs were cut to 600 characters in excerpts, losing later figures; research answers ran out of model rounds (now 12 rounds, 6 searches and 6 pages in Research mode); and the public observations API refused every year-to-date selection once totals to two different months existed (it now shows the latest end month and offers `ytd_end_month`).
+
+| Check | Result |
+|---|---|
+| `ruff`, backend `pytest` with database tests | Pass; **772 passed**. New: `test_assistant_datatable.py`, `test_zzzz_research_saving_integration.py` (save once, no duplicate on repeat, conflict kept, reviewer approval as a revision, refusals for viewers, snippets, invented values, secondary sources and mismatched periods, year-to-date selection), grounding cases from the live drafts |
+| `npm run lint`, `npm run build`; full-stack browser tests (Edge) | Pass; e2e-api assistant, chat-phone, research, research-workflow, research-brief: **45 passed** |
+| **Real** DeepSeek Search | HTTP 200 in 0.5 s with the documented fields; 35 searches logged today |
+| **Real** DeepSeek Fetch | Works for Wikipedia (4.4 s), nama.om, omandaily.om, timesofoman.com; **504 for ncsi.gov.om and data.gov.om** (read directly instead) |
+| **Real** data.gov.om raw-data API | Documented (`POST /api/1.1/data/details`, example dataset OMINF2016); **HTTP 403 for every anonymous data or metadata request**; its search returned datasets from 2016. Not used |
+| **Real** three-turn test, chat endpoint | Turn 1 (research): 2 searches, 3 documents read (OPWP PDF direct, two articles via DeepSeek Fetch), answered with periods and sources; turn 2: backend table of 16 rows in three unit groups, topic kept; turn 3: three line charts (one per unit) whose values are all table values; no chart before turn 3 |
+| **Real** three-turn test, website (Edge) | Same results on the page; CSV download UTF-8 with BOM; research summary in turn 1; dark theme and Arabic phone view (right to left, no sideways scrolling). One earlier run withheld turn 2's text (a figure repeated from the previous answer with a wrong citation); the table still showed. Screenshots `docs/evidence/research/` |
+| **Real** research and save (analyst account, real ask path) | NCSI release "Total Electricity Generation Rises 4.5%..." (published 2026-08-31) read from NCSI's API; January–July 2026 gross generation **31,732.5 GWh saved**: observation `cf501c1d-6e2d-4a69-8572-a64343b9e789`, candidate `85467db9-...`, source = the NCSI page. A figure taken from a news site was kept **pending** (`source_not_official:secondary`) |
+| Persistence | After restarting the API: the observations API returns it (`ytd_end_month=7`); a new guest conversation answered 31,732.5 GWh citing it; repeating the save created **no duplicate** (still one observation; reported as already published) |
+| **Real** data update (schedule `kind: data_update`, "Run now", research worker) | Succeeded in 33 s: 6 searches, the NCSI article read, **3 figures saved** (net generation Jan–Jul 2026 30,866.7; gross and net Jan–Jul 2025 30,354.6 and 29,421.5 GWh), 1 duplicate skipped; a second run of the schedule while one was queued was refused |
+| DeepSeek use today (provider log, all tests of the day) | answering 336 calls (3.34 M input, 85.5 k output tokens); search 35; fetch 3 successful and 8 failed (failed calls are not billed) |
+
+**Remaining:** data.gov.om needs portal credentials; DeepSeek Fetch cannot reach ncsi.gov.om or data.gov.om; answers vary between runs, and the evidence check still withholds a reply that cites a figure wrongly (by design).
+
 ## 2026-10-25: DeepSeek answers live after the top-up (branch `feature/research-crawl-series`)
 
 Every request reached DeepSeek (`deepseek-flash`) after the balance was topped up, but many answers were still lost. Each cause was traced in real DeepSeek output (the model's tool calls and draft, never the key) and fixed in OSRIP; the evidence policy was not loosened:

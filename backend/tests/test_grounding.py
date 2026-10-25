@@ -59,6 +59,19 @@ def test_list_numbers_are_not_figures() -> None:
     assert validate(reply, ["E1", "E2"], LEDGER).ok
 
 
+def test_the_day_of_a_written_date_is_not_a_figure() -> None:
+    # Seen live (DeepSeek, 2026-10-25): "31 December" made a correct answer "unverified".
+    for text in (
+        "Generation was 36,123.46 GWh in the year to 31 December 2023 [E1].",
+        "Generation was 36,123.46 GWh in the year to December 31, 2023 [E1].",
+        "Generation was 36,123.46 GWh for 1–31 December 2023 [E1].",
+        "بلغ التوليد 36,123.46 GWh حتى 31 ديسمبر 2023 [E1].",
+    ):
+        assert validate(text, ["E1"], LEDGER).ok, text
+    # A figure next to a month that is not a day is still checked.
+    assert not validate("Generation was 400 GWh in December 2023 [E1].", ["E1"], LEDGER).ok
+
+
 def test_an_iso_date_must_come_from_the_cited_evidence() -> None:
     sourced = {**OBS, "source": {"access_date": "2026-09-27"}}
     ledger = [sourced, PREV, CALC]
@@ -67,6 +80,9 @@ def test_an_iso_date_must_come_from_the_cited_evidence() -> None:
     verdict = validate(text.replace("2026-09-27", "2026-10-30"), ["E1"], ledger)
     assert not verdict.ok and "2026-10-30" in verdict.problems[0]
     assert not validate("Records checked up to 2026-09-27.", [], ledger).ok
+    # The first or last day of a month labels a period whose year the evidence supports.
+    assert validate("Generation was 36,123.46 GWh to 2023-12-31 [E1].", ["E1"], ledger).ok
+    assert not validate("Generation was 36,123.46 GWh to 2019-12-31 [E1].", ["E1"], ledger).ok
 
 
 def test_the_cited_publication_can_be_named() -> None:
@@ -77,6 +93,39 @@ def test_the_cited_publication_can_be_named() -> None:
     assert validate(text, ["E1"], [titled]).ok
     assert not validate(text.replace("Issue 54", "Issue 55"), ["E1"], [titled]).ok
     assert not validate(text, ["E1"], [OBS]).ok  # not in an untitled record
+
+
+def test_naming_a_cited_publication_is_not_a_figure() -> None:
+    # Seen live: "all from the Statistical Year Book 2026, Issue 54 (S02)." without a marker.
+    titled = {**OBS, "source": {"title": "Statistical Year Book 2026, Issue 54 (S02)"}}
+    text = (
+        "The figures come from the Statistical Year Book 2026, Issue 54 (S02).\n\n"
+        "Generation was 36,123.46 GWh in 2023 [E1]."
+    )
+    assert validate(text, ["E1"], [titled]).ok
+    assert validate(text.replace(" (S02)", ""), ["E1"], [titled]).ok
+    # Not cited (no citation and no marker): its title gives no cover.
+    alone = "The figures come from the Statistical Year Book 2026, Issue 54 (S02)."
+    assert not validate(alone, [], [titled]).ok
+
+
+def test_digits_in_a_web_address_are_not_figures() -> None:
+    # Seen live: "https://ncsi.gov.om/ar/newsPage/newsDetail?id=366" made "366" a figure.
+    text = "Generation was 36,123.46 GWh in 2023 [E1] (https://ncsi.gov.om/ar/newsPage/newsDetail?id=366)."
+    assert validate(text, ["E1"], LEDGER).ok
+    assert validate(
+        "Source: [NCSI](https://ncsi.gov.om/x?id=366) reports 36,123.46 GWh [E1].", ["E1"], LEDGER
+    ).ok
+    assert validate(
+        "See ncsi.gov.om/ar/newsPage/newsDetail?id=366: 36,123.46 GWh [E1].", ["E1"], LEDGER
+    ).ok
+    assert not validate("The page id 366 reports 36,123.46 GWh [E1].", ["E1"], LEDGER).ok
+    # A saved record's identifier is not a figure either (seen live: "...-8572-...").
+    saved = "Saved as observation cf501c1d-6e2d-4a69-8572-a64343b9e789: 36,123.46 GWh [E1]."
+    assert validate(saved, ["E1"], LEDGER).ok
+    assert not validate(
+        "Generation was 4.5 GWh in 2023 [E1].", ["E1"], LEDGER
+    ).ok  # 4.5 is no address
 
 
 def test_a_real_arabic_draft_is_accepted() -> None:

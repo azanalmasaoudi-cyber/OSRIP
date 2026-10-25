@@ -26,19 +26,20 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import delete, func, select, text
+from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.errors import ApiError, not_found, unprocessable
 from app.db.session import session_factory
-from app.domain.enums import DataMode
+from app.domain.enums import DataMode, Permission
 from app.models import (
     AssistantConversation,
     AssistantMessage,
     AssistantRequest,
     AssistantUsage,
     ReferencePack,
+    ResearchCandidate,
 )
 from app.services import accounts
 from app.services.assistant import data_report, grounding, lookup, profile, routing
@@ -93,6 +94,9 @@ Rules you must follow:
 - Say what each figure is: an observed published value, a platform calculation, a model forecast or a hypothetical scenario. Name the indicator, the area (e.g. national) and the exact period; a year-to-date total covers only the months stated, and a value with an operator such as '>' must keep it ('more than 95%').
 - The verified-source records were checked against their sources up to {cutoff}. Do not describe them as live data or as checked more recently.
 - You cannot change data, accounts or permissions; refuse such requests.
+- Tables: when the person asks for a table or a comparison table, call make_table. The backend builds it from published observations and shows it under your reply with a CSV download; never write figures into a Markdown table yourself.
+- Charts appear only when the person asks for one (make_chart exists only then). Never offer or describe a chart otherwise. If only one comparable value exists, explain that limitation instead of drawing a series. If a table or chart needs a period you cannot determine, ask one short question.
+- When results are asked for, give the main findings, the relevant numerical changes (platform calculations only), the limitations and missing data, and practical options only where evidence supports them. Keep observations, forecasts, assumptions and recommendations apart; a trend alone never shows a cause.
 {web_rules}Finish by calling final_answer exactly once."""
 
 WEB_RULES = """- Web research is available (web_search, read_web_page). Prefer the platform's published data; search the web when it does not answer the question or the user asks about publications. Prefer official sources.
@@ -100,7 +104,10 @@ WEB_RULES = """- Web research is available (web_search, read_web_page). Prefer t
 - For every web figure say who published it, whether it is official data (source_class official or international) or secondary reporting (secondary), the period it refers to, its unit and the geography it covers, that it is unreviewed external evidence (not approved OSRIP data), and the publication date if known (say 'publication date not stated' otherwise; a date given by the search engine is only an indication). Cite its evidence id.
 - A source whose freshness is 'stale' (published more than three years ago) or 'undated' may be out of date: say so beside the figure, and prefer a newer source that states the same thing. When sources disagree, report each value with its source instead of choosing one silently. Give the locator (for example the PDF page) when the evidence has one.
 - If web_search returns search_failed, not_configured, rate_limited or no_results, say plainly that the web search failed or found nothing. Never describe a search that did not succeed, and never invent links, titles or figures.
-- Web figures are not part of the platform's dataset. List each numerical web observation from 2022 onward in web_records (value_text copied exactly from the evidence text) so a data manager can review it.
+- "Latest" means the most recent verified observation you found: state its exact period and the date it was retrieved, and never imply that the whole internet was searched. For a "latest" request find the latest available period yourself; do not ask the person to guess it.
+- Read the original document (read_web_page) before relying on a figure; a search snippet or summary alone never supports a figure you report as found. Give the publication date and the period the figure covers separately.
+- Results marked cached_results or cached were retrieved earlier: give their retrieval date, and never call them newly retrieved.
+- Web figures are not part of the platform's dataset until saved. If the person asked to research, update or save statistics and submit_observations is available, submit each figure you read in an OFFICIAL document (source_class official: the publisher's own page or file, never a news report of it), with value_text exactly as written, platform codes, the kind of period and its dates, then report exactly what the tool returned: saved (with its observation id), duplicate, conflict, pending or rejected, with the reasons. Say "saved" only for saved=true. Otherwise list each numerical web observation from 2022 onward in web_records (value_text copied exactly from the evidence text) so a data manager can review it.
 - A result with content_kind 'provider_summary' is another AI model's statement about a source, not the source's own text: attribute it as a summary ("according to a web-search summary of <publisher>"), and read the page (read_web_page) before relying on a figure from it.
 - Two search services or two models saying the same thing is NOT independent confirmation; independence comes only from different original publishers. For national statistics prefer the original Omani statistical publication.
 - If web_search returns 'shown_separately', the person sees Google Search results apart from your answer; you cannot use them. If it returns 'data_first', look up the platform's published data before searching.
@@ -128,6 +135,20 @@ def selection_rule(selection: dict[str, Any] | None) -> str:
         "keep to them. If you also use another period (for example the same period a year "
         "earlier), say that it is an additional comparison period and name it. Do not widen the "
         "period, the area or the breakdown unless the question asks for it.\n"
+    )
+
+
+def tables_rule(previous: list[dict[str, Any]], question: str) -> str:
+    """Tell the model that an earlier answer built a table, so "Draw it" draws the same rows."""
+    if not previous or not routing.asks_for_chart(question):
+        return ""
+    series = "; ".join(
+        f"{x.get('indicator')} {x.get('area', 'OM')} {x.get('period_kind')}"
+        for x in previous[-1].get("series", [])
+    )
+    return (
+        f"- The previous answer built a table of: {series}. A chart of 'those figures' or 'it' "
+        "uses that table: call make_chart with table 'previous'.\n"
     )
 
 
@@ -584,6 +605,26 @@ def _history(session: Session, conv: AssistantConversation) -> list[dict[str, An
 _OLD_EVIDENCE_ID = re.compile(r" ?\[E\d+\]")
 
 
+def previous_tables(session: Session, conv: AssistantConversation) -> list[dict[str, Any]]:
+    """The parameters of tables built in the conversation's recent answers, oldest first, so a
+    follow-up such as "Draw it" can draw the same verified rows."""
+    rows = session.scalars(
+        select(AssistantMessage.structured)
+        .where(
+            AssistantMessage.conversation_id == conv.id,
+            AssistantMessage.role == "assistant",
+        )
+        .order_by(AssistantMessage.id.desc())
+        .limit(HISTORY_MESSAGES)
+    ).all()
+    out = []
+    for structured in reversed(rows):
+        for t in (structured or {}).get("data_tables") or []:
+            if isinstance(t, dict) and isinstance(t.get("params"), dict):
+                out.append(t["params"])
+    return out[-3:]
+
+
 def _turns(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Alternating turns starting with the user, as the APIs require. A question whose reply
     was not kept is followed by UNANSWERED instead of being joined to the next question.
@@ -618,6 +659,9 @@ def _run_model(
     persona: str | None = None,
     cross_check: bool = False,
     selection: dict[str, Any] | None = None,
+    submitter: Any = None,
+    previous_tables: list[dict[str, Any]] | None = None,
+    job_id: uuid.UUID | None = None,
 ) -> tuple[dict[str, Any], Ledger, str]:
     tracker = tracker or Tracker(None)
     s = get_settings()
@@ -651,6 +695,13 @@ def _run_model(
         "fallback": switched,
         "route": route.as_dict(),
     }
+    ledger.question = question
+    ledger.submitter = submitter if web else None
+    ledger.previous_tables = list(previous_tables or [])
+    ledger.job_id = job_id
+    if mode == "research":
+        ledger.max_searches = s.research_max_searches_research
+        ledger.max_pages = s.research_max_pages_research
     if tracker.stream is not None:
         ledger.on_add = tracker.stream.on_evidence  # sources appear as they are retrieved
     if wanted_web and not web and mode == "research":
@@ -664,7 +715,13 @@ def _run_model(
                 "provider": None,
             }
         )
-    specs = tool_specs(web, mode)
+    specs = tool_specs(
+        web,
+        mode,
+        can_submit=ledger.submitter is not None,
+        chart=routing.asks_for_chart(question),
+    )
+    rounds = s.research_max_rounds if mode == "research" else MAX_ROUNDS
     if history and history[-1]["role"] == "user":
         history = [*history, {"role": "assistant", "content": UNANSWERED}]  # see _turns
     messages: list[dict[str, Any]] = [
@@ -685,15 +742,18 @@ def _run_model(
         cutoff=research_cutoff() or "the dates shown with each record",
         web_rules=WEB_RULES if web else NO_WEB_RULES,
         mode_rules=MODE_RULES.get(mode, MODE_RULES["ask"]),
-        selection_rule=selection_rule(selection),
+        selection_rule=selection_rule(selection) + tables_rule(ledger.previous_tables, question),
     )
-    deadline = time.monotonic() + get_settings().assistant_timeout_seconds * 2
+    seconds = get_settings().assistant_timeout_seconds * 2
+    if mode == "research":
+        seconds = max(seconds, s.research_answer_seconds)
+    deadline = time.monotonic() + seconds
     with session_factory()() as reader:
         reader.begin()
         reader.execute(text("SET TRANSACTION READ ONLY"))  # the assistant cannot write
         tools = Tools(reader, ledger)
         try:
-            for round_ in range(MAX_ROUNDS):
+            for round_ in range(rounds):
                 if time.monotonic() > deadline:
                     raise ProviderError("deadline")
                 tracker.check()  # stopped by the person: no further model call
@@ -702,7 +762,7 @@ def _run_model(
                 # while it looks the same figures up again.
                 offered = (
                     specs
-                    if round_ < MAX_ROUNDS - 1
+                    if round_ < rounds - 1
                     else [t for t in specs if t["name"] == "final_answer"]
                 )
                 try:
@@ -765,7 +825,7 @@ def _run_model(
                             "content": json.dumps(output, ensure_ascii=False, default=str),
                         }
                     )
-                if round_ == MAX_ROUNDS - 2:
+                if round_ == rounds - 2:
                     results.append({"type": "text", "text": LAST_ROUND})
                 messages.append({"role": "user", "content": results})
             raise ProviderError("too_many_rounds")
@@ -811,6 +871,8 @@ class Reply:
     studies: list[tuple[str, dict[str, Any]]] = field(default_factory=list)
     # The persona that gives this reply (stored with the message).
     persona: str | None = None
+    # Figures submitted for validation in this answer (research_candidate ids).
+    research_ids: list[str] = field(default_factory=list)
 
     def store_studies(
         self,
@@ -835,7 +897,17 @@ class Reply:
     def queue_research(
         self, session: Session, message_id: int, proposed_by: uuid.UUID | None, language: str
     ) -> int:
-        """Send the reply's numerical web findings to the review queue (never the dataset)."""
+        """Link the figures submitted in this answer to its message, and send the reply's other
+        numerical web findings to the review queue (never the dataset)."""
+        if self.research_ids:
+            session.execute(
+                update(ResearchCandidate)
+                .where(
+                    ResearchCandidate.id.in_([uuid.UUID(i) for i in self.research_ids]),
+                    ResearchCandidate.message_id.is_(None),
+                )
+                .values(message_id=message_id)
+            )
         if not self.web_records or self.status not in ("answered", "no_evidence"):
             return 0
         return research.queue_candidates(
@@ -959,6 +1031,9 @@ def generate_reply(
     persona: str | None = None,
     cross_check: bool = False,
     selection: dict[str, Any] | None = None,
+    submitter: Any = None,
+    previous_tables: list[dict[str, Any]] | None = None,
+    job_id: uuid.UUID | None = None,
 ) -> Reply:
     """The grounded answer, the labelled non-AI lookup when no provider is configured,
     a retryable 'unavailable' reply, or 'cancelled' when the person stopped the question.
@@ -994,6 +1069,9 @@ def generate_reply(
             persona=persona,
             cross_check=cross_check,
             selection=selection,
+            submitter=submitter,
+            previous_tables=previous_tables,
+            job_id=job_id,
         )
     except Cancelled:
         return Reply(
@@ -1088,6 +1166,14 @@ def generate_reply(
     notice = web_failure_notice(ledger.items)
     if notice is not None:
         structured["web_notice"] = notice
+    # Built by the backend from published data, valid whatever happens to the text.
+    if ledger.tables:
+        structured["data_tables"] = ledger.tables
+    if ledger.charts and routing.asks_for_chart(question):
+        structured["data_charts"] = ledger.charts
+    summary = research_summary(ledger)
+    if summary is not None:
+        structured["research"] = summary
     records = final.get("web_records") if isinstance(final.get("web_records"), list) else []
     searches = [i for i in ledger.items if i.get("kind") == "search"]
     search_failed = (
@@ -1111,7 +1197,56 @@ def generate_reply(
         structured=structured,
         studies=[(i["study_id"], i["study"]) for i in cited_studies],
         persona=persona,
+        research_ids=[r["candidate_id"] for r in ledger.submissions if r.get("candidate_id")],
     )
+
+
+def research_summary(ledger: Ledger) -> dict[str, Any] | None:
+    """What this answer's research did, from the records themselves: the documents read, and
+    for submitted figures what was saved (only after the database transaction committed),
+    skipped as duplicate, kept as a conflict or pending, or refused."""
+    read = [
+        i
+        for i in ledger.items
+        if i.get("kind") == "web" and i.get("content_kind") in ("page_excerpt", "pdf_excerpt")
+    ]
+    if not read and not ledger.submissions:
+        return None
+    sources_read = []
+    seen: set[str] = set()
+    for i in read:
+        if i["url"] in seen:
+            continue
+        seen.add(i["url"])
+        sources_read.append(
+            {
+                "evidence_id": i["id"],
+                "title": i.get("title"),
+                "url": i["url"],
+                "publisher": (i.get("publisher") or {}).get("en"),
+                "source_class": i.get("source_class"),
+                "published": i.get("published"),
+                "retrieved_at": i.get("retrieved_at"),
+                "read_by": i.get("retriever"),
+                "cached": bool(i.get("cached")),
+            }
+        )
+    counts: dict[str, int] = {}
+    for r in ledger.submissions:
+        counts[r["status"]] = counts.get(r["status"], 0) + 1
+    saved = [r for r in ledger.submissions if r.get("saved")]
+    latest = max((r.get("period") or "" for r in saved), default=None) if saved else None
+    return {
+        "searched_at": next(
+            (i.get("retrieved_at") for i in ledger.items if i.get("kind") == "search"), None
+        ),
+        "sources_read": sources_read,
+        "submitted": len(ledger.submissions),
+        "counts": counts,
+        "saved": saved,
+        "not_saved": [r for r in ledger.submissions if not r.get("saved")],
+        "latest_saved_period": latest,
+    }
 
 
 def degraded_reply(
@@ -1286,6 +1421,7 @@ def ask(
             return _message_out(message)
         _check_limits(session, principal)
         history = _history(session, conv)
+        tables = previous_tables(session, conv)
         data_mode = conv.data_mode
         retry = request is not None
         if retry and history and history[-1]["role"] == "user":
@@ -1330,6 +1466,9 @@ def ask(
         tracker=tracker,
         persona=persona,
         cross_check=cross_check,
+        # Only a person allowed to submit figures gets the tool; validation decides the rest.
+        submitter=principal if principal.has(Permission.RESEARCH_SUBMIT) else None,
+        previous_tables=tables,
         selection=selection,
     )
     with_study(reply, tracker, request_id)

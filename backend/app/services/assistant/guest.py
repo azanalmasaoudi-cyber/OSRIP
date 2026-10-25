@@ -398,6 +398,7 @@ def ask(
             session.add(AssistantMessage(conversation_id=conv.id, role="user", content=question))
         conv.updated_at = accounts.now()
         session.flush()
+        tables = service.previous_tables(session, conv)
         request_pk, conv_id, conv_data_mode, guest_id, attempt = (
             request.id,
             conv.id,
@@ -421,6 +422,10 @@ def ask(
         persona=persona,
         cross_check=cross_check,
         selection=selection,
+        # Guests never submit figures: shared statistics change only through validated saves
+        # by signed-in research users or reviewers.
+        submitter=None,
+        previous_tables=tables,
     )
     service.with_study(reply, tracker, request_id)
 

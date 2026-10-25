@@ -14,6 +14,7 @@ import type { ChatVoice } from './AssistantPanel';
 import {
   EvidenceItem, GroundedContext, pick, SAVEABLE, SaveResearchButton, SearchLog, STATUS_BADGE, WebEvidenceItem,
 } from './Evidence';
+import { ChatDataCharts, ChatDataTables, ResearchSummary } from './ChatData';
 import { asksForChart, chartPoints, InlineChart } from './InlineChart';
 import { IntroPlayer } from './IntroPlayer';
 import { Markdown } from './Markdown';
@@ -269,7 +270,9 @@ function ChatMessage({ message, question, chat, onAsk }: {
   const failed = message.status === 'unavailable' || message.status === 'data_report';
   // A chart only when this question asked for one, from the cited published values.
   const wantsChart = asksForChart(question) && message.status !== 'clarification';
-  const points = wantsChart ? chartPoints(shown) : null;
+  // The server's chart of the table's own rows when it built one; otherwise the cited values.
+  const dataCharts = wantsChart ? message.structured.data_charts ?? [] : [];
+  const points = wantsChart && !dataCharts.length ? chartPoints(shown) : null;
   const sourceNames = [...new Set(shown.map((e) => e.source?.title ?? (typeof e.title === 'string' ? e.title : pick(e.title, language))).filter(Boolean))];
   const copy = () => {
     const text = [message.content, ...(sourceNames.length ? ['', `${t('assistant.sources')}: ${sourceNames.join(' · ')}`] : [])].join('\n');
@@ -301,9 +304,12 @@ function ChatMessage({ message, question, chat, onAsk }: {
       <div className="flex flex-col gap-3" data-testid="assistant-text">
         <Markdown text={message.content} cite={(id) => <CitationChip messageId={message.id} id={id} known={known.has(id)} />} />
       </div>
-      {points ? <InlineChart points={points} messageId={message.id} /> : wantsChart && message.status === 'answered' ? (
+      {message.structured.data_tables?.length ? <ChatDataTables blocks={message.structured.data_tables} messageId={message.id} /> : null}
+      {dataCharts.length ? <ChatDataCharts charts={dataCharts} messageId={message.id} /> : null}
+      {dataCharts.length ? null : points ? <InlineChart points={points} messageId={message.id} /> : wantsChart && message.status === 'answered' ? (
         <p className="text-xs text-muted-foreground" data-testid="chart-unavailable">{t('chat.chartUnavailable')}</p>
       ) : null}
+      {message.structured.research ? <ResearchSummary summary={message.structured.research} /> : null}
       {message.structured.data_report ? <DataReportNotice report={message.structured.data_report} /> : null}
       {message.structured.web_notice ? <WebNotice notice={message.structured.web_notice} /> : null}
       {message.structured && Object.keys(message.structured).length ? (

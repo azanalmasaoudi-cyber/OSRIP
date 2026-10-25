@@ -136,6 +136,7 @@ class Permission(StrEnum):
     ANALYSIS_RUN = "analysis.run"
     ASSISTANT_USE = "assistant.use"
     RESEARCH_REVIEW = "research.review"
+    RESEARCH_SUBMIT = "research.submit"  # migration 0023
     REPORT_CREATE = "report.create"
     RECOMMENDATION_REVIEW = "recommendation.review"
     USER_MANAGE = "user.manage"

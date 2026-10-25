@@ -110,7 +110,109 @@ export const DRIVERS = [
 ] as const;
 
 const cited = z.object({ statement: z.string(), citations: z.array(z.string()) });
+// Tables and charts the server built from published observations (never written by the model).
+const tableUnit = z.object({ code: z.string(), label_en: z.string(), label_ar: z.string() });
+const studyColumn = z.object({
+  key: z.string(),
+  label: bilingual,
+  kind: z.enum(['text', 'period', 'number', 'status']),
+  unit: tableUnit.nullable().optional(),
+});
+const dataRow = z.object({
+  evidence_id: z.string(),
+  indicator_code: z.string(),
+  indicator_name: z.object({ en: z.string().nullable().optional(), ar: z.string().nullable().optional() }).nullable(),
+  area: z.string(),
+  area_name: z.object({ en: z.string().nullable().optional(), ar: z.string().nullable().optional() }).nullable(),
+  period_kind: z.string().nullable(),
+  period_start: z.string(),
+  period_end: z.string(),
+  value: z.string().nullable(),
+  value_operator: z.string().nullable().optional(),
+  unit: z.string(),
+  unit_label: z.object({ en: z.string().nullable().optional(), ar: z.string().nullable().optional() }).nullable(),
+  revision_status: z.string().nullable().optional(),
+  source: z.object({
+    title: z.string(),
+    publisher: z.string().nullable().optional(),
+    url: z.string().nullable().optional(),
+    dataset_version: z.string().nullable().optional(),
+  }),
+}).passthrough();
+export type DataRow = z.infer<typeof dataRow>;
+const dataTable = z.object({
+  id: z.string(),
+  params: z.record(z.string(), z.unknown()).optional(),
+  tables: z.array(z.object({
+    unit: tableUnit,
+    kinds: z.array(z.string()),
+    rows: z.array(dataRow),
+  }).passthrough()),
+}).passthrough();
+export type DataTableBlock = z.infer<typeof dataTable>;
+const dataChart = z.object({
+  status: z.literal('ok'),
+  type: z.string(),
+  title: bilingual,
+  chart: z.object({
+    type: z.enum(['line', 'bar', 'heatmap']),
+    title: bilingual,
+    x: z.string(),
+    series: z.array(z.object({ column: z.string(), label: bilingual, nature: z.enum(['observed', 'calculated', 'forecast', 'scenario']) })).default([]),
+    y: z.string().nullable().optional(),
+    value: z.string().nullable().optional(),
+    unit: tableUnit.nullable().optional(),
+  }),
+  table: z.object({ columns: z.array(studyColumn), rows: z.array(z.record(z.string(), z.string().nullable())) }),
+  points: z.number(),
+  period_kind: z.string(),
+  sources: z.array(z.string()),
+  evidence_ids: z.array(z.string()),
+  table_id: z.string().optional(),
+}).passthrough();
+export type DataChartBlock = z.infer<typeof dataChart>;
+const researchFigure = z.object({
+  status: z.string(),
+  saved: z.boolean(),
+  reasons: z.array(z.string()).default([]),
+  candidate_id: z.string().nullable().optional(),
+  observation_id: z.string().nullable().optional(),
+  indicator_code: z.string().nullable().optional(),
+  area_code: z.string().nullable().optional(),
+  period: z.string().nullable().optional(),
+  value: z.string().nullable().optional(),
+  unit: z.string().nullable().optional(),
+  source_url: z.string().nullable().optional(),
+  source_title: z.string().nullable().optional(),
+  publisher: z.string().nullable().optional(),
+  already_submitted: z.boolean().optional(),
+}).passthrough();
+export type ResearchFigure = z.infer<typeof researchFigure>;
+const researchSummary = z.object({
+  searched_at: z.string().nullable().optional(),
+  sources_read: z.array(z.object({
+    evidence_id: z.string(),
+    title: z.string().nullable().optional(),
+    url: z.string(),
+    publisher: z.string().nullable().optional(),
+    source_class: z.string().nullable().optional(),
+    published: z.string().nullable().optional(),
+    retrieved_at: z.string().nullable().optional(),
+    read_by: z.string().nullable().optional(),
+    cached: z.boolean().optional(),
+  }).passthrough()).default([]),
+  submitted: z.number().default(0),
+  counts: z.record(z.string(), z.number()).default({}),
+  saved: z.array(researchFigure).default([]),
+  not_saved: z.array(researchFigure).default([]),
+  latest_saved_period: z.string().nullable().optional(),
+}).passthrough();
+export type ResearchSummaryBlock = z.infer<typeof researchSummary>;
+
 const structuredSchema = z.object({
+  data_tables: z.array(dataTable).optional(),
+  data_charts: z.array(dataChart).optional(),
+  research: researchSummary.optional(),
   recommendations: z.array(z.object({
     finding: z.string(),
     evidence: z.string(),
@@ -641,7 +743,7 @@ export async function speakSegment(messageId: number, segmentId: string, languag
 
 const candidateSchema = z.object({
   id: z.string(),
-  status: z.enum(['pending', 'accepted', 'rejected', 'duplicate']),
+  status: z.enum(['pending', 'conflict', 'approved', 'accepted', 'rejected', 'duplicate']),
   domain: z.string(),
   indicator: z.string(),
   indicator_code: z.string().nullable(),
@@ -665,6 +767,14 @@ const candidateSchema = z.object({
   review_note: z.string().nullable(),
   reviewed_at: z.string().nullable(),
   created_at: z.string(),
+  // Migration 0023: platform codes, the validation's reasons, the saved record, the decisions.
+  area_code: z.string().nullable().optional(),
+  unit_code: z.string().nullable().optional(),
+  period_kind: z.string().nullable().optional(),
+  decided_by: z.enum(['validation', 'reviewer']).nullable().optional(),
+  validation_reasons: z.array(z.string()).default([]),
+  observation_id: z.string().nullable().optional(),
+  can_save: z.boolean().default(false),
 });
 export type ResearchCandidate = z.infer<typeof candidateSchema>;
 export type CandidateStatus = ResearchCandidate['status'];

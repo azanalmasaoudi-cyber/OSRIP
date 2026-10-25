@@ -29,6 +29,29 @@ _NUMBER = re.compile(r"(?<![\dA-Za-z_.])(\d{1,3}(?:[,٬]\d{3})+|\d+)(?:[.٫](\d+
 # The number of a list item or section ("1.", "**2. Full year**", "3)", "١-") at the start of a
 # line counts the reply's own parts; it is not a figure.
 _LIST_MARKER = re.compile(r"^([\s>#*_-]*)\d{1,2}[.)-](?=\s)", re.MULTILINE)
+# The day in a written date ("31 December 2025", "December 31, 2025", "1–31 August", "31 ديسمبر
+# 2025") names a day, not a figure; the year stays and is checked like any year.
+_MONTH = (
+    r"(?:January|February|March|April|May|June|July|August|September|October|November|December"
+    r"|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept|Sep|Oct|Nov|Dec"
+    r"|يناير|فبراير|مارس|أبريل|ابريل|مايو|يونيو|يوليو|أغسطس|اغسطس|سبتمبر|أكتوبر|اكتوبر|نوفمبر|ديسمبر)"
+)
+_DAY_BEFORE_MONTH = re.compile(
+    rf"(?<![\d.,])(?:[0-3]?\d)(?:st|nd|rd|th)?(?:\s*[–-]\s*[0-3]?\d(?:st|nd|rd|th)?)?\s+(?={_MONTH}\b)",
+    re.IGNORECASE,
+)
+_DAY_AFTER_MONTH = re.compile(
+    rf"(\b{_MONTH})\s+[0-3]?\d(?:st|nd|rd|th)?(?=\s*,?\s*\d{{4}}\b)", re.IGNORECASE
+)
+# A web address names a document; its digits ("newsDetail?id=366") are not figures.
+_URL = re.compile(
+    r"https?://[^\s)\]>]+|(?<![\w@])(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}[/?][^\s)\]>]*",
+    re.IGNORECASE,
+)
+# A record identifier (a saved observation's id) names a record; its digit groups are not figures.
+_UUID = re.compile(
+    r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b", re.IGNORECASE
+)
 # One date, not three numbers.
 _ISO_DATE = re.compile(r"(?<!\d)\d{4}-\d{2}-\d{2}(?!\d)")
 _EVIDENCE_ID = re.compile(r"\[?E\d+\]?")
@@ -211,6 +234,33 @@ def _evidence_dates(ids: list[str], ledger: dict[str, dict[str, Any]]) -> set[st
     return found
 
 
+def _boundary(iso: str, years: set[Decimal]) -> bool:
+    import calendar
+
+    y, m, d = (int(x) for x in iso.split("-"))
+    if not 1 <= m <= 12:
+        return False
+    last = calendar.monthrange(y, m)[1]
+    return d in (1, last) and Decimal(y) in years
+
+
+def _cited_titles(ids: list[str], ledger: dict[str, dict[str, Any]]) -> list[str]:
+    titles: set[str] = set()
+    for c in ids:
+        item = ledger.get(c) or {}
+        source = item.get("source") if isinstance(item.get("source"), dict) else {}
+        for title in (
+            source.get("title"),
+            item.get("title") if item.get("kind") == "web" else None,
+        ):
+            if isinstance(title, str) and len(title) >= 12:
+                full = title.translate(_ARABIC_DIGITS)
+                titles.add(full)
+                # Also without a trailing reference code: "... Issue 54 (S02)" -> "... Issue 54".
+                titles.add(re.sub(r"\s*\([A-Z0-9-]{1,12}\)\s*$", "", full))
+    return sorted(titles, key=len, reverse=True)
+
+
 def _allowed(ids: list[str] | set[str], ledger: dict[str, dict[str, Any]]) -> set[Decimal]:
     allowed: set[Decimal] = set()
     for c in ids:
@@ -231,16 +281,24 @@ def validate(text: str, citations: list[str], ledger_items: list[dict[str, Any]]
     unknown = [c for c in cited if c not in ledger]
     if unknown:
         problems.append(f"unknown citations: {', '.join(unknown)}")
-    plain = text.translate(_ARABIC_DIGITS)
+    plain = _UUID.sub(" ", _URL.sub(" ", text.translate(_ARABIC_DIGITS)))
     dates = list(dict.fromkeys(_ISO_DATE.findall(plain)))
     if dates:
         known = _evidence_dates(cited, ledger)
-        missing = [d for d in dates if d not in known]
+        years = _allowed(cited, ledger)
+        # A period's first or last day ("2026-07-31" for "the end of July 2026") labels the
+        # period; it needs its year in the cited evidence. Any other date must be in it.
+        missing = [d for d in dates if d not in known and not _boundary(d, years)]
         if missing:
             problems.append(f"dates not in cited evidence: {', '.join(missing[:5])}")
         plain = _ISO_DATE.sub(" ", plain)
+    # The title of a cited publication ("Statistical Year Book 2026, Issue 54") names it; its
+    # numbers are not figures. Only titles of the reply's own cited evidence are set aside.
+    for title in _cited_titles(cited, ledger):
+        plain = plain.replace(title, " ")
     # Whole lines: the sentence split below would cut "**1." off from its line.
     text = _LIST_MARKER.sub(r"\1 ", plain)
+    text = _DAY_AFTER_MONTH.sub(r"\1 ", _DAY_BEFORE_MONTH.sub(" ", text))
     numbers = numbers_in(text)
     if numbers and not cited:
         problems.append("numbers without citations")

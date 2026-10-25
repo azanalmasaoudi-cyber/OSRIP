@@ -334,6 +334,16 @@ Production refuses to start if a scripted test route (`fake`, `fake-openai` or `
   or two tools per round and does not always follow `tool_choice`, so the last of the five rounds
   offers only `final_answer`, names it, and says so in words; a tool call with arguments that are
   not JSON is sent back to the model as a tool error.
+- **DeepSeek Search and Fetch, live (2026-10-25):** `POST https://api.deepseek.com/v1/tools/search`
+  (`query` 1-128 characters with `site:` and other operators, `count` 1-50, `ori_question`) returns
+  `title`, `url`, `snippet`, `summary`, `date`, `authority` and `rerank_score`;
+  `POST https://api.deepseek.com/v1/tools/fetch` (`url`) returns `title` and Markdown `content`. Both
+  use the DeepSeek key; $0.75 per 1,000 successful calls from 2026-11-01; failed calls and empty
+  results are not billed; 100 and 25 requests per second. Search worked with this key; Fetch worked
+  for most sites but returned 504 for ncsi.gov.om and data.gov.om, which OSRIP therefore reads
+  directly. OSRIP undoes Fetch's Markdown escapes (`4\.5`) before checking figures. Settings:
+  `OSRIP_RESEARCH_PROVIDER=deepseek`, `OSRIP_RESEARCH_FETCH_PROVIDER=deepseek` and the limits in
+  `.env.example`. See RESEARCH_AND_SAVING.md.
 - **Not verified live.** No working OpenAI, Gemini, Anthropic or Brave API key is available here (the earlier Anthropic and Brave keys were rejected). Live behaviour is therefore **pending**:
   - real response shapes;
   - how often each model calls the tools;

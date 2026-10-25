@@ -12,7 +12,7 @@ import { formatPeriod } from '@/lib/format';
 import { useAppLanguage } from '@/lib/useAppLanguage';
 import { cn } from '@/lib/utils';
 
-const STATUSES = ['pending', 'accepted', 'rejected', 'duplicate'] as const;
+const STATUSES = ['pending', 'conflict', 'approved', 'accepted', 'rejected', 'duplicate'] as const;
 
 function CheckRow({ ok, label }: { ok: boolean | null; label: string }) {
   return (
@@ -66,7 +66,19 @@ function Candidate({ item }: { item: ResearchCandidate }) {
         <summary className="cursor-pointer text-muted-foreground">{t('web.excerpt')}</summary>
         <p className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap" dir="auto">{item.excerpt}</p>
       </details>
-      {item.status === 'pending' ? (
+      {item.validation_reasons.length ? (
+        <p className="text-xs" data-testid="research-reasons">
+          <span className="font-semibold">{t('research.reasons')}: </span>
+          <span dir="ltr" className="font-mono">{item.validation_reasons.join(' · ')}</span>
+        </p>
+      ) : null}
+      {item.status === 'approved' && item.observation_id ? (
+        <p className="text-xs text-muted-foreground" data-testid="research-saved-record">
+          {t(item.decided_by === 'reviewer' ? 'research.savedByReviewer' : 'research.savedByValidation')}
+          {' · '}{t('research.record')}: <span dir="ltr" className="font-mono">{item.observation_id}</span>
+        </p>
+      ) : null}
+      {item.status === 'pending' || item.status === 'conflict' ? (
         <>
           <div>
             <p className="mb-1 text-xs font-semibold">{t('research.checks')}</p>
@@ -88,7 +100,12 @@ function Candidate({ item }: { item: ResearchCandidate }) {
           </div>
           {review.error ? <p role="alert" className="text-xs text-destructive">{review.error.message}</p> : null}
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" onClick={() => decide('accepted')} disabled={review.isPending || !note.trim()} data-testid="research-accept">
+            {item.can_save ? (
+              <Button size="sm" onClick={() => decide('approved')} disabled={review.isPending || !note.trim()} data-testid="research-approve-save">
+                <Check aria-hidden="true" />{t(item.status === 'conflict' ? 'research.approveRevision' : 'research.approveSave')}
+              </Button>
+            ) : null}
+            <Button size="sm" variant={item.can_save ? 'outline' : 'default'} onClick={() => decide('accepted')} disabled={review.isPending || !note.trim()} data-testid="research-accept">
               <Check aria-hidden="true" />{t('research.accept')}
             </Button>
             <Button size="sm" variant="outline" onClick={() => decide('duplicate')} disabled={review.isPending}>

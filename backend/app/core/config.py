@@ -111,8 +111,9 @@ class Settings(BaseSettings):
     # The search route: brave (Brave Search API, research_api_key), openai (Responses API
     # web_search, openai_search_model), gemini (Grounding with Google Search,
     # gemini_search_model; shown to the person verbatim with its Search Suggestions and never
-    # given to another model, as the Gemini API terms require); fake / fake-openai /
-    # fake-gemini: scripted routes for tests (refused in production); "" or disabled.
+    # given to another model, as the Gemini API terms require); deepseek (DeepSeek Search API
+    # with the DeepSeek key, only with OSRIP_DEEPSEEK_BILLING_ACKNOWLEDGED); fake / fake-openai
+    # / fake-gemini: scripted routes for tests (refused in production); "" or disabled.
     # The fallback route is used only when the primary fails, or for a cross-check the
     # person asks for.
     research_provider: str = "brave"
@@ -123,6 +124,30 @@ class Settings(BaseSettings):
     research_max_pages_per_answer: int = 3
     research_fetch_max_bytes: int = 2 * 1024 * 1024
     research_per_client_hour: int = 60  # web searches per client address per hour
+    # How pages are read: direct (OSRIP's SSRF-safe fetcher, HTML and PDF) or deepseek (the
+    # DeepSeek Fetch API, Markdown; the direct fetcher when it fails). Hosts ending in one of
+    # research_fetch_direct_hosts are read directly first: DeepSeek Fetch timed out (HTTP 504)
+    # on ncsi.gov.om and data.gov.om when checked on 2026-10-25, while direct reads worked.
+    research_fetch_provider: str = "direct"
+    research_fetch_direct_hosts: str = "gov.om"
+    research_fetch_timeout_seconds: float = 40.0
+    # Searches and pages are reused for this many hours (research_search, research_document);
+    # when a search fails, the last successful results are shown with their own date.
+    research_cache_hours: int = 24
+    # Paid search and fetch calls per UTC day, across all users and jobs (provider_call rows).
+    research_daily_search_limit: int = 200
+    research_daily_fetch_limit: int = 200
+    # Figures one answer may submit for validation, and whether validation may save a figure
+    # that passes every check (an official document read in full, unambiguous codes, no
+    # duplicate or conflict). Off: every figure waits for a reviewer.
+    research_max_candidates_per_answer: int = 10
+    research_auto_save: bool = True
+    # A research answer may take more model rounds (search, read, look up codes, submit,
+    # answer) and more time than an ordinary question; the last round must still answer.
+    research_max_rounds: int = 12
+    research_answer_seconds: float = 240.0
+    research_max_searches_research: int = 6
+    research_max_pages_research: int = 6
 
     # ------------------------------------------------------------ studies and page retrieval
     # Background studies (research jobs): a repeated study with the same parameters and the

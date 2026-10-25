@@ -17,7 +17,7 @@ export function safeCell(value: string | null | undefined): string {
   return FORMULA_START.has(value.charAt(0)) ? `'${value}` : value;
 }
 
-function csvField(value: string): string {
+export function csvField(value: string): string {
   return /[",\n\r]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
 }
 
