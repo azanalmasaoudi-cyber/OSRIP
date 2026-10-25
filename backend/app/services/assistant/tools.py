@@ -10,6 +10,7 @@ only periods from January 2022 onward are used (build brief).
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
@@ -445,22 +446,16 @@ class Tools:
                 "status": "invalid_request",
                 "message": "Periods must be ISO dates (YYYY-MM-DD).",
             }
-        series = self._series(indicator, area, frequency, None, None)
-        if len(series) != 1:
-            return {
-                "status": "not_comparable" if series else "no_data",
-                "message": "No single published series matches; ask the user which one."
-                if series
-                else "No published observations match.",
-            }
-        s = series[0]
+        wanted = [a_start.isoformat(), b_start.isoformat()]
+        s = self._holding(
+            self._series(indicator, area, frequency, None, None),
+            wanted,
+            lambda o: o["period_start"],
+        )
+        if isinstance(s, dict):
+            return s
         by_start = {o["period_start"]: o for o in s.observations}
-        a, b = by_start.get(a_start.isoformat()), by_start.get(b_start.isoformat())
-        if a is None or b is None:
-            return {
-                "status": "no_data",
-                "message": "One of the two periods has no published observation.",
-            }
+        a, b = by_start[wanted[0]], by_start[wanted[1]]
         ea, eb = self.ledger.add(_observation_item(s, a)), self.ledger.add(_observation_item(s, b))
         unit = Unit(s.meta["unit"]["code"], PhysicalDimension(s.meta["unit"]["dimension"]))
 
@@ -532,6 +527,73 @@ class Tools:
             else "No published observations match. Report the data as unavailable.",
         }
 
+    def _holding(
+        self,
+        series: list[SeriesOut],
+        wanted: list[str],
+        key: Callable[[dict[str, Any]], str],
+    ) -> SeriesOut | dict[str, Any]:
+        """The one series that has every wanted period (``key`` of an observation). An indicator
+        can be published in more than one series (a year book up to 2024, a monthly bulletin
+        from 2025): the series holding all the periods is used, and a calculation never mixes
+        two. Periods found only in different series are recorded, so each value can be given
+        with its publication, and no change is calculated across them."""
+        if not series:
+            return {
+                "status": "no_data",
+                "message": "No published observations match. Report the data as unavailable.",
+            }
+
+        def find(s: SeriesOut, k: str) -> dict[str, Any] | None:
+            return next((o for o in s.observations if key(o) == k), None)
+
+        holding = [s for s in series if all(find(s, k) is not None for k in wanted)]
+        if len(holding) == 1:
+            return holding[0]
+        if holding:
+            return {
+                "status": "not_comparable",
+                "message": "More than one published series has these periods; ask which one "
+                "(flow, commodity, source).",
+            }
+        found = [(s, o) for k in wanted for s in series if (o := find(s, k)) is not None]
+        if {key(o) for _, o in found} != set(wanted):
+            return {
+                "status": "no_data",
+                "message": "One of the periods has no published observation. Report it as "
+                "unavailable.",
+            }
+        values = []
+        for s, o in found:
+            item = self.ledger.add(_observation_item(s, o))
+            values.append(
+                {
+                    **{
+                        k: item[k]
+                        for k in (
+                            "id",
+                            "period_kind",
+                            "period_start",
+                            "period_end",
+                            "period_complete",
+                            "value",
+                            "value_operator",
+                            "unit",
+                            "revision_status",
+                        )
+                    },
+                    "source": item["source"]["title"],
+                }
+            )
+        return {
+            "status": "different_series",
+            "message": "These periods are published in different series (different "
+            "publications), so the platform calculates no change between them. Give each value "
+            "with its period and publication, say that no change is calculated across "
+            "publications, and do not calculate it yourself.",
+            "observations": values,
+        }
+
     def _calc_item(self, kind: str, inputs: list[str], r: Any, unit: str | None) -> dict[str, Any]:
         item = self.ledger.add(
             {
@@ -558,16 +620,19 @@ class Tools:
         frequency: str = "annual",
     ) -> dict[str, Any]:
         """Compound annual growth between two comparable periods of one series."""
-        s = self._single(indicator, area, frequency)
+        s = self._holding(
+            [
+                x
+                for x in self._series(indicator, area, frequency, None, None)
+                if not x.meta["partner"]
+            ],
+            [str(int(from_year)), str(int(to_year))],
+            lambda o: str(int(o["period_start"][:4])),
+        )
         if isinstance(s, dict):
             return s
         by_year = {int(o["period_start"][:4]): o for o in s.observations}
-        a, b = by_year.get(int(from_year)), by_year.get(int(to_year))
-        if a is None or b is None:
-            return {
-                "status": "no_data",
-                "message": "One of the two years has no published observation.",
-            }
+        a, b = by_year[int(from_year)], by_year[int(to_year)]
         ea, eb = self.ledger.add(_observation_item(s, a)), self.ledger.add(_observation_item(s, b))
         r = calc.compound_annual_growth(
             self._measure(s, a), self._measure(s, b), int(to_year) - int(from_year)

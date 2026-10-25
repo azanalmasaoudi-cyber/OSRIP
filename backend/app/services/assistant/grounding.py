@@ -4,9 +4,12 @@ A reply is accepted only if
 * every citation names evidence gathered for this message;
 * a reply that states any number cites evidence;
 * every number in the text matches a number in the cited evidence (values,
-  calculation results and their inputs, the components of cited periods, or a number
-  written in the text of a cited web result or page excerpt), allowing only rounding of
-  the evidence value to the digits shown.
+  calculation results and their inputs, the components of cited periods, a number in the
+  cited publication's title, reference period or table locator, or a number written in the
+  text of a cited web result or page excerpt), allowing only rounding of
+  the evidence value to the digits shown;
+* every ISO date (2026-09-27) appears in the cited evidence (a period, a source's access
+  date, a publication date, a date written in a cited text).
 Otherwise the reply is withheld and the reader sees the evidence instead. This does
 not prove the wording is correct; it prevents invented or unsupported figures.
 """
@@ -20,7 +23,14 @@ from typing import Any
 
 # Latin and Arabic-Indic digits, thousands separators (",", "٬") and decimal points (".", "٫").
 _ARABIC_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")
-_NUMBER = re.compile(r"(?<![\w.])(\d{1,3}(?:[,٬]\d{3})+|\d+)(?:[.٫](\d+))?(?![\w])")
+# Arabic writes some words onto a number ("و49,132.0", and 49,132.0), so only Latin letters,
+# digits, underscores and points around it mean it is part of a code (CO2, Q3), not a figure.
+_NUMBER = re.compile(r"(?<![\dA-Za-z_.])(\d{1,3}(?:[,٬]\d{3})+|\d+)(?:[.٫](\d+))?(?![\dA-Za-z_])")
+# The number of a list item or section ("1.", "**2. Full year**", "3)", "١-") at the start of a
+# line counts the reply's own parts; it is not a figure.
+_LIST_MARKER = re.compile(r"^([\s>#*_-]*)\d{1,2}[.)-](?=\s)", re.MULTILINE)
+# One date, not three numbers.
+_ISO_DATE = re.compile(r"(?<!\d)\d{4}-\d{2}-\d{2}(?!\d)")
 _EVIDENCE_ID = re.compile(r"\[?E\d+\]?")
 
 
@@ -31,8 +41,10 @@ class Verdict:
 
 
 def numbers_in(text: str) -> list[tuple[Decimal, int]]:
-    """(value, decimals shown) for every number in the text, evidence ids excluded."""
+    """(value, decimals shown) for every number in the text, evidence ids and list numbers
+    excluded."""
     cleaned = _EVIDENCE_ID.sub(" ", text.translate(_ARABIC_DIGITS))
+    cleaned = _LIST_MARKER.sub(r"\1 ", cleaned)
     out = []
     for whole, frac in _NUMBER.findall(cleaned):
         raw = whole.replace(",", "").replace("٬", "") + (f".{frac}" if frac else "")
@@ -61,6 +73,12 @@ def _evidence_numbers(item: dict[str, Any], ledger: dict[str, dict[str, Any]]) -
             y, m, d = item[key].split("-")
             for part in (y, m, d):
                 add(part)
+    source = item.get("source")
+    if isinstance(source, dict):
+        # The publication named with the figure ("Statistical Year Book 2026, Issue 54").
+        for key in ("title", "reference_period", "locator"):
+            for number, _ in numbers_in(str(source.get(key) or "")):
+                add(number)
     for output in item.get("outputs", []) or []:
         for key in ("estimate", "lower80", "upper80", "lower95", "upper95"):
             add(output.get(key))
@@ -169,6 +187,30 @@ def _is_year(number: Decimal, decimals: int) -> bool:
     return decimals == 0 and 1990 <= number <= 2100
 
 
+def _dates_in(value: Any, found: set[str]) -> None:
+    if isinstance(value, str):
+        found.update(_ISO_DATE.findall(value.translate(_ARABIC_DIGITS)))
+    elif isinstance(value, dict):
+        for v in value.values():
+            _dates_in(v, found)
+    elif isinstance(value, list | tuple):
+        for v in value:
+            _dates_in(v, found)
+
+
+def _evidence_dates(ids: list[str], ledger: dict[str, dict[str, Any]]) -> set[str]:
+    """ISO dates anywhere in the cited evidence, and in the inputs of a cited calculation."""
+    found: set[str] = set()
+    for c in ids:
+        item = ledger.get(c)
+        if item is None:
+            continue
+        _dates_in(item, found)
+        if item.get("kind") in ("calculation", "scenario"):
+            found |= _evidence_dates(list(item.get("inputs", []) or []), ledger)
+    return found
+
+
 def _allowed(ids: list[str] | set[str], ledger: dict[str, dict[str, Any]]) -> set[Decimal]:
     allowed: set[Decimal] = set()
     for c in ids:
@@ -180,8 +222,8 @@ def _allowed(ids: list[str] | set[str], ledger: dict[str, dict[str, Any]]) -> se
 def validate(text: str, citations: list[str], ledger_items: list[dict[str, Any]]) -> Verdict:
     """Every cited id must exist; every number must match cited evidence; and statistical
     numbers must be cited next to the claim: by an ``[E#]`` marker in the same sentence or,
-    failing that, in the same paragraph. Plain years (labels of periods) only need support
-    somewhere in the reply's citations."""
+    failing that, in the same paragraph. Plain years (labels of periods) and ISO dates only
+    need support somewhere in the reply's citations."""
     ledger = {i["id"]: i for i in ledger_items}
     problems: list[str] = []
     markers = inline_markers(text)
@@ -189,6 +231,16 @@ def validate(text: str, citations: list[str], ledger_items: list[dict[str, Any]]
     unknown = [c for c in cited if c not in ledger]
     if unknown:
         problems.append(f"unknown citations: {', '.join(unknown)}")
+    plain = text.translate(_ARABIC_DIGITS)
+    dates = list(dict.fromkeys(_ISO_DATE.findall(plain)))
+    if dates:
+        known = _evidence_dates(cited, ledger)
+        missing = [d for d in dates if d not in known]
+        if missing:
+            problems.append(f"dates not in cited evidence: {', '.join(missing[:5])}")
+        plain = _ISO_DATE.sub(" ", plain)
+    # Whole lines: the sentence split below would cut "**1." off from its line.
+    text = _LIST_MARKER.sub(r"\1 ", plain)
     numbers = numbers_in(text)
     if numbers and not cited:
         problems.append("numbers without citations")

@@ -113,6 +113,9 @@ def test_deepseek_request_requires_a_tool_call_with_thinking_off_and_replays_the
         "tool_call_id": "call_1",
         "content": json.dumps({"value": "5402.9"}),
     }
+    # The last round offers only final_answer, and names it.
+    last = p._request("System rules.", messages, TOOLS[1:])
+    assert last["tool_choice"] == {"type": "function", "function": {"name": "final_answer"}}
 
 
 def test_deepseek_response_becomes_tool_calls_and_usage_is_recorded(monkeypatch, _memory) -> None:  # noqa: ANN001
@@ -169,20 +172,22 @@ def test_deepseek_response_becomes_tool_calls_and_usage_is_recorded(monkeypatch,
         210,
         40,
     )
-    with pytest.raises(answer.ProviderError, match="invalid_arguments"):
-        answer.DeepSeekProvider.parse(
-            {
-                "choices": [
-                    {
-                        "message": {
-                            "tool_calls": [
-                                {"id": "c", "function": {"name": "x", "arguments": "{not json"}}
-                            ]
-                        }
+    # Seen live: DeepSeek's own markup inside the arguments. The call is flagged, not fatal.
+    broken = '{"indicator": "ELEC", "year_to">2026</\uff5c\uff5cDSML\uff5c\uff5c: '
+    malformed, _ = answer.DeepSeekProvider.parse(
+        {
+            "choices": [
+                {
+                    "message": {
+                        "tool_calls": [{"id": "c", "function": {"name": "x", "arguments": broken}}]
                     }
-                ]
-            }
-        )
+                }
+            ]
+        }
+    )
+    assert malformed["content"] == [
+        {"type": "tool_use", "id": "c", "name": "x", "input": {}, "invalid_arguments": True}
+    ]
     with pytest.raises(answer.ProviderError, match="status_content_filter"):
         answer.DeepSeekProvider.parse(
             {"choices": [{"finish_reason": "content_filter", "message": {}}]}
@@ -191,9 +196,13 @@ def test_deepseek_response_becomes_tool_calls_and_usage_is_recorded(monkeypatch,
         answer.DeepSeekProvider.parse({"choices": []})
 
 
-def test_insufficient_balance_is_not_retried_and_is_a_budget_failure(monkeypatch) -> None:  # noqa: ANN001
+def test_insufficient_balance_is_not_retried_and_has_its_own_category(monkeypatch) -> None:  # noqa: ANN001
+    # As documented: 402 "Insufficient Balance" (the message is recognised, never kept).
     seen = _transport(
-        monkeypatch, lambda r: httpx.Response(402, json={"error": {"type": "insufficient_balance"}})
+        monkeypatch,
+        lambda r: httpx.Response(
+            402, json={"error": {"message": "Insufficient Balance", "type": "unknown_error"}}
+        ),
     )
     with pytest.raises(answer.ProviderError, match="http_402") as err:
         answer.DeepSeekProvider("ds", "m", 1).complete(
@@ -201,7 +210,99 @@ def test_insufficient_balance_is_not_retried_and_is_a_budget_failure(monkeypatch
         )
     assert len(seen) == 1
     assert err.value.detail == "insufficient_balance"
-    assert answer.failure_category("http_402", "insufficient_balance") == "budget"
+    assert answer.failure_category("http_402", err.value.detail) == "insufficient_balance"
+    # OSRIP's own daily limit is a different thing, with a different message.
+    assert answer.failure_category("budget_exhausted") == "budget"
+
+
+@pytest.mark.parametrize(
+    ("status", "body", "category"),
+    [
+        (401, {"error": {"message": "Authentication Fails, Your api key: ****abcd is invalid",
+                         "type": "authentication_error"}}, "authentication"),
+        (400, {"error": {"message": "Model Not Exist", "type": "invalid_request_error"}},
+         "model_unavailable"),
+        (422, {"error": {"message": "The model `deepseek-x` does not exist",
+                         "type": "invalid_request_error"}}, "model_unavailable"),
+        (402, {"error": {"message": "Insufficient Balance", "type": "unknown_error"}},
+         "insufficient_balance"),
+        (429, {"error": {"message": "Rate Limit Reached", "type": "rate_limit_error"}},
+         "rate_limited"),
+        (503, {"error": {"message": "Server Overloaded", "type": "server_error"}}, "server_error"),
+    ],
+)  # fmt: skip
+def test_each_documented_error_has_a_distinct_category_and_no_message_is_kept(
+    monkeypatch,
+    status: int,
+    body: dict[str, Any],
+    category: str,  # noqa: ANN001
+) -> None:
+    monkeypatch.setattr(answer, "MAX_RETRY_AFTER_SECONDS", 0)
+    _transport(monkeypatch, lambda r: httpx.Response(status, json=body))
+    with pytest.raises(answer.ProviderError) as err:
+        answer.DeepSeekProvider("ds", "m", 1).complete(
+            "S", [{"role": "user", "content": "q"}], TOOLS
+        )
+    assert answer.failure_category(str(err.value), err.value.detail) == category
+    assert "abcd" not in str(err.value.detail) and " " not in str(err.value.detail)
+
+
+def test_a_timeout_is_its_own_failure(monkeypatch) -> None:  # noqa: ANN001
+    def slow(request: httpx.Request) -> httpx.Response:
+        raise httpx.ReadTimeout("timed out", request=request)
+
+    _transport(monkeypatch, slow)
+    with pytest.raises(answer.ProviderError, match="timeout") as err:
+        answer.DeepSeekProvider("ds", "m", 1).complete(
+            "S", [{"role": "user", "content": "q"}], TOOLS
+        )
+    assert answer.failure_category(str(err.value), err.value.detail) == "timeout"
+
+
+def test_the_check_lists_the_models_and_refuses_one_the_key_cannot_use(monkeypatch, capsys) -> None:  # noqa: ANN001
+    from app import cli
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.headers["Authorization"] == "Bearer ds-test-only-not-real-0000"
+        if request.url.path == "/models":
+            return httpx.Response(200, json={"object": "list", "data": [
+                {"id": "deepseek-flash", "object": "model", "owned_by": "deepseek"},
+                {"id": "deepseek-v4-pro", "object": "model", "owned_by": "deepseek"},
+            ]})  # fmt: skip
+        call = {
+            "id": "c1",
+            "type": "function",
+            "function": {
+                "name": "final_answer",
+                "arguments": json.dumps({"status": "answered", "text": "OK"}),
+            },
+        }
+        message = {"role": "assistant", "content": None, "tool_calls": [call]}
+        return httpx.Response(200, json={
+            "choices": [{"finish_reason": "tool_calls", "message": message}],
+            "usage": {"prompt_tokens": 50, "completion_tokens": 9},
+        })  # fmt: skip
+
+    seen = _transport(monkeypatch, handler)
+    s = get_settings()
+    monkeypatch.setattr(s, "deepseek_model", "deepseek-flash")
+    monkeypatch.setattr(s, "assistant_provider", "deepseek")
+    result = providers.check_answering("deepseek")
+    assert result["models"] == ["deepseek-flash", "deepseek-v4-pro"]
+    assert result["status"] == "ok" and result["step"] == "chat"
+    assert [r.url.path for r in seen] == ["/models", "/chat/completions"]
+
+    cli.main(["provider-check", "deepseek"])
+    out = capsys.readouterr().out
+    assert "Configured model listed: yes" in out and "Live check: ok" in out
+    assert "ds-test-only" not in out  # the key is never printed
+
+    monkeypatch.setattr(s, "deepseek_model", "deepseek-retired")
+    refused = providers.check_answering("deepseek")
+    assert refused["status"] == "model_not_listed" and refused["category"] == "model_unavailable"
+    with pytest.raises(SystemExit):
+        cli.main(["provider-check", "deepseek"])
+    assert "Configured model listed: NO" in capsys.readouterr().out
 
 
 def test_deepseek_is_built_only_when_billing_is_acknowledged(monkeypatch) -> None:  # noqa: ANN001

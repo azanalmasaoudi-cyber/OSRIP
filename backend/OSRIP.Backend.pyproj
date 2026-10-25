@@ -221,6 +221,7 @@
     <Compile Include="tests\test_assistant_integration.py" />
     <Compile Include="tests\test_assistant_profile.py" />
     <Compile Include="tests\test_assistant_selection_integration.py" />
+    <Compile Include="tests\test_assistant_series_choice.py" />
     <Compile Include="tests\test_auth_integration.py" />
     <Compile Include="tests\test_balance.py" />
     <Compile Include="tests\test_balance_integration.py" />
@@ -271,6 +272,7 @@
     <Compile Include="tests\workflow_helpers.py" />
     <Compile Include="scripts\backup_restore_drill.py" />
     <Compile Include="scripts\devdb.py" />
+    <Compile Include="scripts\live_assistant_check.py" />
     <Compile Include="scripts\ncsi_import.py" />
     <Compile Include="scripts\perf_workload.py" />
     <Compile Include="scripts\serve_dev.py" />

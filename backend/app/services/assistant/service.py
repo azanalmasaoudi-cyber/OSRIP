@@ -18,6 +18,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 import time
 import uuid
 from collections import Counter
@@ -58,6 +59,16 @@ log = logging.getLogger("osrip.assistant")
 
 MAX_ROUNDS = 5
 HISTORY_MESSAGES = 6
+# Stands in the history for a reply that was not kept (withheld, failed, a data report), so an
+# unanswered question is not joined to the next one: the model would take both as one request.
+UNANSWERED = "(No answer was given to this question.)"
+# Sent with the tool results before the last round, which offers only final_answer: a tool
+# choice alone is not always followed (DeepSeek called data tools again, seen live 2026-10-25).
+INVALID_ARGUMENTS = "The arguments were not valid JSON. Call the tool again with valid JSON."
+LAST_ROUND = (
+    "No more data lookups are possible. Call final_answer now and answer from the evidence "
+    "above, or say what is missing."
+)
 # Reply statuses that count as a successful answer (booklet 3.35).
 CHARGEABLE = frozenset({"answered", "clarification", "no_evidence"})
 
@@ -65,7 +76,7 @@ SYSTEM_PROMPT = """{identity}
 Context: an academic prototype about Oman's electricity, water, food security and trade statistics.
 
 Rules you must follow:
-- Use ONLY the tools to obtain facts. Never state a number, source, date or unit that is not in a tool result. Put the evidence id in square brackets directly after each statement it supports (e.g. "41,234 GWh in 2023 [E3].") and list every id in `citations`.
+- Use ONLY the tools to obtain facts. Never state a number, source, date or unit that is not in a tool result. Put the evidence id in square brackets directly after each statement it supports (e.g. "41,234 GWh in 2023 [E3].") and list every id in `citations`. Every sentence, bullet or note that states a number carries its own id, also when it repeats a number given earlier; a number without one withholds the whole reply.
 - Copy numbers exactly as the tools give them (you may round, and add thousands separators). Write counts and ordinals in words. Do not do arithmetic yourself: growth rates, changes, shares and comparisons come only from the platform's tools (compare_periods, growth_rate, share_of_total, compare_areas), which apply its comparability checks.
 - Do not state causes as facts and do not speculate beyond the evidence; a plausible explanation is a hypothesis and must be labelled so. You may suggest questions that need further investigation.
 - If the question rests on an incorrect premise (a figure, trend, period or fact that the evidence contradicts or does not show), say so first, then give what the evidence shows.
@@ -567,12 +578,28 @@ def _history(session: Session, conv: AssistantConversation) -> list[dict[str, An
         ):
             continue
         out.append({"role": m.role, "content": m.content})
-    # The API requires alternating turns starting with the user.
+    return _turns(out)
+
+
+_OLD_EVIDENCE_ID = re.compile(r" ?\[E\d+\]")
+
+
+def _turns(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Alternating turns starting with the user, as the APIs require. A question whose reply
+    was not kept is followed by UNANSWERED instead of being joined to the next question.
+    Earlier replies lose their evidence ids: each question has its own evidence, numbered from
+    E1, so an old "[E85]" names another record now (a figure repeated with it was withheld)."""
+    out = [
+        {**m, "content": _OLD_EVIDENCE_ID.sub("", m["content"])} if m["role"] == "assistant" else m
+        for m in messages
+    ]
     while out and out[0]["role"] != "user":
         out.pop(0)
     merged: list[dict[str, Any]] = []
     for m in out:
-        if merged and merged[-1]["role"] == m["role"]:
+        if merged and merged[-1]["role"] == m["role"] == "user":
+            merged += [{"role": "assistant", "content": UNANSWERED}, dict(m)]
+        elif merged and merged[-1]["role"] == m["role"]:
             merged[-1]["content"] += "\n" + m["content"]
         else:
             merged.append(dict(m))
@@ -638,18 +665,12 @@ def _run_model(
             }
         )
     specs = tool_specs(web, mode)
+    if history and history[-1]["role"] == "user":
+        history = [*history, {"role": "assistant", "content": UNANSWERED}]  # see _turns
     messages: list[dict[str, Any]] = [
         *history,
         {"role": "user", "content": [{"type": "text", "text": question}]},
     ]
-    if history and history[-1]["role"] == "user":
-        messages = [
-            *history[:-1],
-            {
-                "role": "user",
-                "content": [{"type": "text", "text": history[-1]["content"] + "\n" + question}],
-            },
-        ]
     current = profile.active_now()
     who = None
     if current is not None:
@@ -676,8 +697,16 @@ def _run_model(
                 if time.monotonic() > deadline:
                     raise ProviderError("deadline")
                 tracker.check()  # stopped by the person: no further model call
+                # The last round can only answer: the model gives its answer from the evidence
+                # gathered so far (checked as every answer is) instead of running out of rounds
+                # while it looks the same figures up again.
+                offered = (
+                    specs
+                    if round_ < MAX_ROUNDS - 1
+                    else [t for t in specs if t["name"] == "final_answer"]
+                )
                 try:
-                    reply = provider.complete(system, messages, specs)
+                    reply = provider.complete(system, messages, offered)
                 except ProviderError as exc:
                     # One provider per question: the fallback takes over only when the primary
                     # fails before its first answer, never alongside it or mid-way.
@@ -685,7 +714,10 @@ def _run_model(
                     if (
                         round_ > 0
                         or fallback is None
-                        or not (transient(code) or code in ("daily_limit", "budget_exhausted"))
+                        or not (
+                            transient(code)
+                            or code in ("daily_limit", "budget_exhausted", "http_402")
+                        )
                     ):
                         raise
                     switched = {"from": provider.vendor, "to": fallback.vendor, "reason": code}
@@ -695,10 +727,17 @@ def _run_model(
                         answer_model=provider.name,
                         fallback=switched,
                     )
-                    reply = provider.complete(system, messages, specs)
+                    reply = provider.complete(system, messages, offered)
                 blocks = [b for b in reply.get("content", []) if isinstance(b, dict)]
                 calls = [b for b in blocks if b.get("type") == "tool_use"]
-                final = next((c for c in calls if c.get("name") == "final_answer"), None)
+                final = next(
+                    (
+                        c
+                        for c in calls
+                        if c.get("name") == "final_answer" and not c.get("invalid_arguments")
+                    ),
+                    None,
+                )
                 if final is not None:
                     return final.get("input") or {}, ledger, provider.name
                 if not calls:
@@ -708,11 +747,17 @@ def _run_model(
                 for c in calls:
                     name = str(c.get("name"))
                     tracker.check()
-                    tracker.tool(name)  # a stage is shown only for a step really taken
-                    output = run_tool(tools, name, dict(c.get("input") or {}))
-                    if tracker.stream is not None:
-                        # Validated tables from OSRIP's own tools, or a partial failure.
-                        tracker.stream.on_tool(name, output, ledger.by_id(), tracker)
+                    if c.get("invalid_arguments"):  # flagged by the adapter: the model may retry
+                        output: dict[str, Any] = {
+                            "error": "invalid_arguments",
+                            "message": INVALID_ARGUMENTS,
+                        }
+                    else:
+                        tracker.tool(name)  # a stage is shown only for a step really taken
+                        output = run_tool(tools, name, dict(c.get("input") or {}))
+                        if tracker.stream is not None:
+                            # Validated tables from OSRIP's own tools, or a partial failure.
+                            tracker.stream.on_tool(name, output, ledger.by_id(), tracker)
                     results.append(
                         {
                             "type": "tool_result",
@@ -720,6 +765,8 @@ def _run_model(
                             "content": json.dumps(output, ensure_ascii=False, default=str),
                         }
                     )
+                if round_ == MAX_ROUNDS - 2:
+                    results.append({"type": "text", "text": LAST_ROUND})
                 messages.append({"role": "user", "content": results})
             raise ProviderError("too_many_rounds")
         except ProviderError as exc:
@@ -976,6 +1023,14 @@ def generate_reply(
     verdict = grounding.validate(reply_text, citations, visible)
     structured: dict[str, Any] = {}
     if status_ not in CHARGEABLE or not reply_text or not verdict.ok:
+        # For the operator: why it was withheld (the check's findings, never the answer text).
+        log.warning(
+            "assistant answer withheld provider=%s model=%s status=%s problems=%s",
+            ledger.meta.get("answer_provider"),
+            model,
+            status_ or "-",
+            "; ".join(verdict.problems) or ("empty text" if not reply_text else "-"),
+        )
         status_, reply_text, citations = "unverified", MESSAGES["unverified"][language], []
     else:
         structured = grounding.validate_structured(final, visible, question=question, mode=mode)

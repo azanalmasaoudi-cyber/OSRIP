@@ -44,6 +44,7 @@ ANTHROPIC_VERSION = "2023-06-01"
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 GEMINI_INTERACTIONS_URL = "https://generativelanguage.googleapis.com/v1beta/interactions"
 DEEPSEEK_CHAT_URL = "https://api.deepseek.com/chat/completions"
+DEEPSEEK_MODELS_URL = "https://api.deepseek.com/models"  # the models this key can use
 RETRY_PAUSE_SECONDS = 1.0
 # A rate-limited call is retried once after the service's Retry-After, when it asks for at
 # most this long; a longer wait fails at once (and the fallback provider, if any, answers).
@@ -71,6 +72,15 @@ class ProviderError(Exception):
 
 
 _SAFE_TOKEN = re.compile(r"[A-Za-z0-9_.-]{1,40}")
+# Error messages are never kept; these two are recognised in them and kept as fixed tokens
+# (DeepSeek reports an unknown model as a 400/422 "invalid_request_error", and an empty
+# balance as 402 "Insufficient Balance").
+_MODEL_MISSING = re.compile(
+    r"model\W.*(not\s+exist|does\s+not\s+exist|not\s+found|unknown|not\s+supported)"
+    r"|(unknown|invalid|unsupported)\s+model",
+    re.IGNORECASE,
+)
+_NO_BALANCE = re.compile(r"insufficient\s+balance", re.IGNORECASE)
 
 
 def error_type(response_body: Any) -> str | None:
@@ -81,6 +91,12 @@ def error_type(response_body: Any) -> str | None:
     error = response_body.get("error") if isinstance(response_body, dict) else None
     if not isinstance(error, dict):
         return None
+    message = error.get("message")
+    if isinstance(message, str):
+        if _MODEL_MISSING.search(message):
+            return "model_not_found"
+        if _NO_BALANCE.search(message):
+            return "insufficient_balance"
     for key in ("type", "code", "status"):
         value = error.get(key)
         if isinstance(value, str) and _SAFE_TOKEN.fullmatch(value):
@@ -93,6 +109,8 @@ def failure_category(code: str, detail: str | None = None) -> str:
     detail = (detail or "").lower()
     if code == "not_configured":
         return "not_configured"
+    if code == "http_402" or "insufficient_balance" in detail:
+        return "insufficient_balance"  # the provider account's balance is used up (DeepSeek)
     if code in ("http_401", "http_403") or "auth" in detail or "permission" in detail:
         return "authentication"
     if code == "http_404" or "not_found" in detail or "model" in detail:
@@ -105,8 +123,8 @@ def failure_category(code: str, detail: str | None = None) -> str:
         return "network"
     if code.startswith("http_5"):
         return "server_error"
-    if code in ("daily_limit", "budget_exhausted", "http_402") or code.startswith("limit"):
-        return "budget"  # 402: a usage-billed provider's balance is used up (DeepSeek)
+    if code in ("daily_limit", "budget_exhausted") or code.startswith("limit"):
+        return "budget"  # OSRIP's own daily call limit or budget
     if code in ("invalid_json", "no_tool_call", "invalid_arguments", "too_many_rounds") or (
         code.startswith("status_")
     ):
@@ -597,12 +615,43 @@ class DeepSeekProvider(_HttpProvider):
                 }
                 for t in tools
             ],
-            "tool_choice": "required",  # every turn is a tool call; the last is final_answer
+            # Every turn is a tool call; the last is final_answer. One tool offered (the last
+            # round) is named: with "required" alone, DeepSeek also calls tools it only saw
+            # earlier in the conversation (seen live, 2026-10-25).
+            "tool_choice": {"type": "function", "function": {"name": tools[0]["name"]}}
+            if len(tools) == 1
+            else "required",
             "thinking": {"type": "disabled"},
             "max_tokens": MAX_OUTPUT_TOKENS,
             "temperature": 0,
             "stream": False,
         }
+
+    def models(self) -> list[str]:
+        """The model ids this key can use (GET /models): to check the configured model before
+        relying on it. Errors map as for chat (401 key, 402 balance, ...)."""
+        try:
+            with http_client_factory(self._timeout) as client:
+                response = client.get(
+                    DEEPSEEK_MODELS_URL, headers={"Authorization": f"Bearer {self._key}"}
+                )
+        except httpx.TimeoutException as exc:
+            raise ProviderError("timeout") from exc
+        except httpx.HTTPError as exc:
+            raise ProviderError("network") from exc
+        if response.status_code != 200:
+            try:
+                detail = error_type(response.json())
+            except ValueError:
+                detail = None
+            raise ProviderError(f"http_{response.status_code}", detail)
+        try:
+            data = response.json().get("data")
+        except (ValueError, AttributeError) as exc:
+            raise ProviderError("invalid_json") from exc
+        if not isinstance(data, list):
+            raise ProviderError("invalid_json")
+        return [str(m["id"]) for m in data if isinstance(m, dict) and m.get("id")]
 
     def _call(self, body: dict[str, Any]) -> dict[str, Any]:
         return _post_json(
@@ -628,18 +677,20 @@ class DeepSeekProvider(_HttpProvider):
             function = (call or {}).get("function") or {}
             try:
                 arguments = json.loads(function.get("arguments") or "{}")
-            except ValueError as exc:
-                raise ProviderError("invalid_arguments") from exc
+            except ValueError:
+                arguments = None
+            block: dict[str, Any] = {
+                "type": "tool_use",
+                "id": str(call.get("id")),
+                "name": str(function.get("name")),
+                "input": arguments if isinstance(arguments, dict) else {},
+            }
             if not isinstance(arguments, dict):
-                raise ProviderError("invalid_arguments")
-            blocks.append(
-                {
-                    "type": "tool_use",
-                    "id": str(call.get("id")),
-                    "name": str(function.get("name")),
-                    "input": arguments,
-                }
-            )
+                # Arguments that are not a JSON object (seen live, 2026-10-25: DeepSeek's own
+                # markup inside the JSON) go back to the model as a tool error, so it can call
+                # again: one broken call does not end the answer.
+                block["invalid_arguments"] = True
+            blocks.append(block)
         usage = body.get("usage") or {}
         return {"content": blocks}, {
             "input_tokens": usage.get("prompt_tokens"),

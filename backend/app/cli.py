@@ -16,6 +16,12 @@ import-reference-pack [FILE] [--publish]
     Register the pack's sources and load each source's records through the import
     workflow. Without --publish the imports stop after validation, for a data manager
     to review and approve in Data Management. Repeatable: nothing is duplicated.
+provider-check [NAME]
+    Check an answering provider (default: OSRIP_ASSISTANT_PROVIDER) with this server's
+    settings (backend/.env): missing setting names, for DeepSeek the models the key can use,
+    then one minimal live call (it may cost a little). Never prints a key. Exit code 1 if the
+    provider does not work, with the kind of failure (authentication, insufficient_balance,
+    model_unavailable, timeout ...).
 """
 
 from __future__ import annotations
@@ -155,6 +161,39 @@ def purge_grounded_command(args: argparse.Namespace) -> None:
     print(f"Removed {removed} expired grounded results.")
 
 
+def provider_check_command(args: argparse.Namespace) -> None:
+    from app.core.config import get_settings
+    from app.services import providers
+
+    name = args.name or get_settings().assistant_provider
+    if name not in ("anthropic", "openai", "gemini", "deepseek"):
+        raise SystemExit(f"error: unknown answering provider {name!r}")
+    # The check needs no database: its one call is counted in memory (it does not appear in
+    # the readiness view; Settings > AI providers > Test records there).
+    providers.meter = providers.MemoryMeter()
+    result = providers.check_answering(name)
+    chosen = "chosen" if result["chosen"] else "not chosen"
+    model = result["model"] or "-"
+    print(f"Provider: {name} ({chosen} as OSRIP_ASSISTANT_PROVIDER), model: {model}")
+    if result["missing"]:
+        print(f"Missing settings in backend/.env: {', '.join(result['missing'])}")
+    if "models" in result:
+        listed = "yes" if result["model"] in result["models"] else "NO"
+        print(f"Models this key can use: {', '.join(result['models']) or '(none)'}")
+        print(f"Configured model listed: {listed}")
+    ok = result["status"] == "ok"
+    if ok:
+        outcome = "ok"
+    else:
+        reason = ", ".join(x for x in (result["status"], result.get("detail")) if x)
+        outcome = f"failed at {result['step']}: {result['category']} ({reason})"
+    if result.get("duration_ms") is not None:
+        outcome += f" in {result['duration_ms']} ms"
+    print(f"Live check: {outcome}")
+    if not ok:
+        raise SystemExit(1)
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="python -m app.cli")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -189,6 +228,10 @@ def main(argv: list[str] | None = None) -> None:
     p.set_defaults(func=assistant_profile_command)
 
     commands.add_parser("purge-grounded").set_defaults(func=purge_grounded_command)
+
+    p = commands.add_parser("provider-check")
+    p.add_argument("name", nargs="?", help="anthropic, openai, gemini or deepseek")
+    p.set_defaults(func=provider_check_command)
 
     args = parser.parse_args(argv)
     try:

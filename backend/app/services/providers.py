@@ -454,6 +454,47 @@ def run_test(name: str, capability: str) -> dict[str, Any]:
     }
 
 
+def check_answering(name: str) -> dict[str, Any]:
+    """The command line's check of one answering provider with the server's own settings
+    (``python -m app.cli provider-check``): which settings are missing (names only); for
+    DeepSeek, whether the configured model is among the models this key can use; then one
+    minimal live call through ``run_test`` (recorded like the administrators' Test button).
+    Never a key, a message text or an answer."""
+    from app.services.assistant.provider import (
+        DeepSeekProvider,
+        ProviderError,
+        build_provider,
+        failure_category,
+    )
+
+    s = get_settings()
+    out: dict[str, Any] = {
+        "provider": name,
+        "chosen": s.assistant_provider == name,
+        "model": model_for(name, "answer"),
+        "missing": missing(name, "answer"),
+    }
+    if out["missing"]:
+        return {**out, "status": "not_configured", "category": "not_configured", "step": "settings"}
+    provider = build_provider(name)
+    if isinstance(provider, DeepSeekProvider):
+        try:
+            out["models"] = provider.models()
+        except ProviderError as exc:
+            return {
+                **out, "status": str(exc), "category": failure_category(str(exc), exc.detail),
+                "detail": exc.detail, "step": "models",
+            }  # fmt: skip
+        if out["model"] not in out["models"]:
+            return {
+                **out, "status": "model_not_listed", "category": "model_unavailable",
+                "step": "models",
+            }  # fmt: skip
+    test = run_test(name, "answer")
+    outcome = {k: test.get(k) for k in ("status", "category", "detail", "duration_ms")}
+    return {**out, **outcome, "step": "chat"}
+
+
 # ------------------------------------------------------------------ readiness
 
 

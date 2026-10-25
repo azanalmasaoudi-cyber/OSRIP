@@ -55,7 +55,32 @@ AI Studio. On the free tier Google may use the content to improve its products. 
 bills per input and output token, deducted from a topped-up (or granted) balance; there is no
 general free tier. The adapter is built only when `OSRIP_DEEPSEEK_BILLING_ACKNOWLEDGED=true` is set
 as well as the key and model: a key alone never starts paid use, as the primary or as the fallback.
-An exhausted balance (HTTP 402) is reported as a budget failure and is not retried.
+
+*Model (checked 2026-10-24 on api-docs.deepseek.com):* `deepseek-flash`, served by
+DeepSeek-V4.1-Flash (tool calls supported; thinking on by default, so OSRIP switches it off: in
+thinking mode `tool_choice: required` is refused). `deepseek-v4-pro` is the other listed model.
+`python -m app.cli provider-check deepseek` asks DeepSeek which models the key can use
+(`GET /models`) and refuses a configured model that is not among them.
+
+*Errors, each with its own category (and message to the person):* 401 → authentication (the key
+is wrong), 402 → insufficient_balance (top up the DeepSeek balance; a configured fallback provider
+takes over), 400/422 "model does not exist" → model_unavailable, 429 → rate_limited (one wait of
+up to 10 s), 500/503 → server_error, no reply within `OSRIP_ASSISTANT_TIMEOUT_SECONDS` → timeout.
+Only DeepSeek's error type, or a fixed token for these two messages, is kept: never the message
+itself, which may echo part of a key. A failed answer is never counted against a guest's answers:
+the person gets the labelled data-based report and can retry.
+
+*Setup:* in `backend\.env` (git-ignored; the API reads it from the `backend` folder) set
+
+```
+OSRIP_ASSISTANT_PROVIDER=deepseek
+OSRIP_DEEPSEEK_API_KEY=<your key>
+OSRIP_DEEPSEEK_MODEL=deepseek-flash
+OSRIP_DEEPSEEK_BILLING_ACKNOWLEDGED=true
+```
+
+then restart the API and run `python -m app.cli provider-check deepseek` in `backend\` (it
+prints setting names, the models and the outcome, never the key).
 
 **Never switched silently.** The fallback provider is used only when an administrator sets
 `OSRIP_ASSISTANT_FALLBACK_PROVIDER`; Settings marks a usage-billed fallback. Settings shows each
@@ -291,14 +316,24 @@ Production refuses to start if a scripted test route (`fake`, `fake-openai` or `
     - cross-check off by default and labelled;
     - readiness view without keys.
   - Also `e2e-api/upgrade.spec.ts`: both routes failing, both shown, not charged.
-  - **DeepSeek and Retry-After** (2026-10-24): `tests/test_ai_providers_deepseek.py` (7, mocked
-    transport): request format, tool calls, usage, the billing acknowledgement, 402 as budget,
-    one wait of up to 10 s on `Retry-After`, longer waits refused.
+  - **DeepSeek and Retry-After** (2026-10-24): `tests/test_ai_providers_deepseek.py` (15, mocked
+    transport built from the documented shapes, not live responses): request format, tool calls,
+    usage, the billing acknowledgement, each documented error to its own category with no message
+    kept, a timeout, one wait of up to 10 s on `Retry-After`, the model list check and
+    `provider-check` never printing the key.
   - **Sector selection** (2026-10-24): `tests/test_assistant_selection_integration.py` (3): the
     rule reaches the model; malformed selections are refused before any provider call; the
     scripted model looks up exactly the selected indicator, area, frequency and years and cites
     only the periods inside the range. In the browser: `e2e-api/interface.spec.ts` and the
     evaluation scenario (`e2e-demo`, test 9).
+- **DeepSeek, live (2026-10-24 and 2026-10-25):** before the top-up every chat call returned HTTP
+  402 Insufficient Balance, and the failure path was verified end to end (labelled data-based
+  report, not charged, follow-up topic kept, no key in the logs). After the top-up, `deepseek-flash`
+  answers in the backend, through the chat endpoint and on the website, in English and Arabic,
+  with follow-ups that keep the conversation (see TEST_RESULTS.md, 2026-10-25). DeepSeek calls one
+  or two tools per round and does not always follow `tool_choice`, so the last of the five rounds
+  offers only `final_answer`, names it, and says so in words; a tool call with arguments that are
+  not JSON is sent back to the model as a tool error.
 - **Not verified live.** No working OpenAI, Gemini, Anthropic or Brave API key is available here (the earlier Anthropic and Brave keys were rejected). Live behaviour is therefore **pending**:
   - real response shapes;
   - how often each model calls the tools;

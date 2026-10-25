@@ -102,6 +102,10 @@ CATEGORY_TEXT: dict[str, dict[str, str]] = {
         "en": "today's request limit or budget is used up",
         "ar": "نفد حدّ الطلبات أو الميزانية لليوم",
     },
+    "insufficient_balance": {
+        "en": "the AI service account has no balance left",
+        "ar": "نفد رصيد حساب خدمة الذكاء الاصطناعي",
+    },
     "not_configured": {
         "en": "no answer service is configured",
         "ar": "لا توجد خدمة إجابات مُعدّة",
@@ -343,7 +347,9 @@ def _next_steps(category: str, has_topic: bool, has_data: bool) -> list[dict[str
         "en": "Ask again later for an AI-written answer.",
         "ar": "اسأل مرة أخرى لاحقاً للحصول على إجابة مكتوبة بالذكاء الاصطناعي.",
     })  # fmt: skip
-    if category in ("authentication", "model_unavailable", "not_configured", "budget"):
+    if category in (
+        "authentication", "model_unavailable", "not_configured", "budget", "insufficient_balance",
+    ):  # fmt: skip
         steps.append({
             "en": "An administrator should check the answer service in Settings › Services.",
             "ar": "على المسؤول مراجعة خدمة الإجابات في الإعدادات › الخدمات.",
