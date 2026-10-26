@@ -5,6 +5,7 @@ Secrets are never committed; see ``backend/.env.example``.
 
 import os
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -82,6 +83,18 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr | None = None
     openai_model: str | None = None  # answering model (Responses API, function tools)
     openai_search_model: str | None = None  # web search route (Responses API web_search tool)
+    # Reasoning models may need longer than other providers: each OpenAI call may run this long.
+    openai_timeout_seconds: float = 60.0
+    # Reasoning effort (none, minimal, low, medium, high, xhigh; the model's default when unset):
+    # lower is faster and cheaper. Which values a model accepts is in its model page.
+    openai_reasoning_effort: Literal["none", "minimal", "low", "medium", "high", "xhigh"] | None = (
+        None
+    )
+    # Web search route: how much context the search gathers, and optionally only these domains
+    # (at most 100, without https://; subdomains included). Empty: the whole web, with official
+    # Omani sources preferred by the instructions.
+    openai_search_context_size: Literal["low", "medium", "high"] = "medium"
+    openai_search_allowed_domains: list[str] = Field(default_factory=list)
     gemini_api_key: SecretStr | None = None
     gemini_model: str | None = None  # answering model (Interactions API, function tools)
     gemini_search_model: str | None = None  # Grounding with Google Search route

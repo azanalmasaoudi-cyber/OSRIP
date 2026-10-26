@@ -15,6 +15,7 @@ dependencies = [
     "python-multipart>=0.0.20",     # multipart CSV upload parsing for POST /imports
     "httpx>=0.28,<0.29",             # OpenID Connect and the assistant's model API (server side only)
     "pyjwt[crypto]>=2.10,<3",        # ID-token signature and claim validation
+    "openai>=2.54,<3",               # official OpenAI SDK: Responses API (server side only)
 ]
 
 [project.optional-dependencies]

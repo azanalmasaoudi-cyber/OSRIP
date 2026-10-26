@@ -335,12 +335,15 @@ def _route(
         summary = r.kind == "provider_summary"
         # provider_summary: an AI provider's cited statement about the source (not the
         # source's own text); search_summary: the search service's summary of the page for
-        # the query (not verbatim); search_snippet: the search engine's excerpt.
+        # the query (not verbatim); search_snippet: the search engine's excerpt;
+        # consulted_source: a source the provider's search consulted (an address, no text).
         content_kind = (
             "provider_summary"
             if summary
             else "search_summary"
             if r.kind == "engine_summary"
+            else "consulted_source"
+            if r.kind == "provider_source"
             else "search_snippet"
         )
         item = ledger.add(
@@ -356,7 +359,11 @@ def _route(
                 "published": published,
                 "published_basis": "search_engine" if r.page_age else None,
                 **sources.freshness(published, date.today()),
-                "locator": "provider_citation" if summary else "search_result_snippet",
+                "locator": "provider_citation"
+                if summary
+                else "provider_consulted"
+                if r.kind == "provider_source"
+                else "search_result_snippet",
                 "authority": r.authority,
                 "retrieved_at": retrieved,
                 "cached": cached_at is not None,

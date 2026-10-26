@@ -3,9 +3,12 @@
 * ``BraveSearch``: the Brave Search API (``GET https://api.search.brave.com/res/v1/web/search``,
   header ``X-Subscription-Token``; parameters ``q``, ``count``, ``search_lang``,
   ``extra_snippets``). Results are the engine's own snippets.
-* ``OpenAIWebSearch``: the Responses API with the ``web_search`` tool. Results are the model's
-  cited statements (``url_citation`` annotations): a provider summary of a source, not the
-  source's own text, labelled as such; every citation keeps its clickable URL.
+* ``OpenAIWebSearch``: the Responses API with the ``web_search`` tool, through the official
+  ``openai`` SDK (``app.services.openai_api``). Results are the model's cited statements
+  (``url_citation`` annotations): a provider summary of a source, not the source's own text,
+  labelled as such; every citation keeps its clickable URL. The other sources the search
+  consulted (``web_search_call.action.sources``) follow as addresses without text, so they can
+  be read in full; nothing is said about them until they are read.
 * ``GeminiGroundedSearch``: the Interactions API with Grounding with Google Search. Its result
   (text, ``url_citation`` annotations, the Search Suggestions widget) is **display-only**: it is
   shown to the person verbatim beside the answer and never given to another model or mixed
@@ -31,7 +34,7 @@ from typing import Any, Protocol
 import httpx
 
 from app.core.config import get_settings
-from app.services import monitoring
+from app.services import monitoring, openai_api
 from app.services import providers as registry
 
 BRAVE_URL = "https://api.search.brave.com/res/v1/web/search"
@@ -62,7 +65,8 @@ class SearchResult:
     language: str | None = None
     # engine_snippet: the search engine's own excerpt; engine_summary: the search service's
     # longer summary of the page for the query (not verbatim page text); provider_summary: an
-    # AI provider's cited statement about the source (not the source's text).
+    # AI provider's cited statement about the source (not the source's text); provider_source:
+    # a source the provider's search consulted but did not cite (an address, no text).
     kind: str = "engine_snippet"
     authority: int | None = None  # the engine's authority tier, when it gives one
 
@@ -339,7 +343,11 @@ def openai_results(body: dict[str, Any], model: str) -> _Results:
     """Cited statements from a Responses API web search (documented response shape)."""
     out = _Results()
     output = [i for i in body.get("output") or [] if isinstance(i, dict)]
-    out.searches = sum(1 for i in output if i.get("type") == "web_search_call")
+    calls = [i for i in output if i.get("type") == "web_search_call"]
+    # Each search action is billed as a tool call; opening or searching within a page is not.
+    out.searches = sum(
+        1 for i in calls if (i.get("action") or {}).get("type") in (None, "search")
+    ) or len(calls)
     for item in output:
         if item.get("type") != "message":
             continue
@@ -361,6 +369,15 @@ def openai_results(body: dict[str, Any], model: str) -> _Results:
                         kind="provider_summary",
                     )
                 )
+    cited = {r.url for r in out}
+    for item in calls:
+        for source in (item.get("action") or {}).get("sources") or []:
+            url = str(source.get("url", "")) if isinstance(source, dict) else ""
+            if url.startswith(("http://", "https://")) and url not in cited:
+                cited.add(url)
+                out.append(
+                    SearchResult(title=url[:300], url=url, snippet="", kind="provider_source")
+                )
     usage = body.get("usage") or {}
     out.usage = {
         "input_tokens": usage.get("input_tokens"),
@@ -370,40 +387,61 @@ def openai_results(body: dict[str, Any], model: str) -> _Results:
 
 
 class OpenAIWebSearch:
-    """Responses API ``web_search`` tool: cited statements become provider-summary results."""
+    """Responses API ``web_search`` tool: cited statements become provider-summary results,
+    followed by the other sources the search consulted."""
 
     name = "openai"
 
-    def __init__(self, api_key: str, model: str, timeout: float) -> None:
+    def __init__(
+        self, api_key: str, model: str, timeout: float, *, context_size: str = "medium",
+        allowed_domains: list[str] | None = None,
+    ) -> None:  # fmt: skip
         self._key = api_key
         self.model = model
         self._timeout = timeout
+        self._context_size = context_size
+        self._domains = [d.strip().removeprefix("https://").removeprefix("http://").strip("/")
+                         for d in allowed_domains or [] if d.strip()][:100]  # fmt: skip
+
+    def request(self, query: str, language: str) -> dict[str, Any]:
+        tool: dict[str, Any] = {
+            "type": "web_search",
+            "user_location": {"type": "approximate", "country": "OM", "timezone": "Asia/Muscat"},
+            "search_context_size": self._context_size,
+        }
+        if self._domains:
+            tool["filters"] = {"allowed_domains": self._domains}
+        return {
+            "model": self.model,
+            "instructions": SEARCH_INSTRUCTIONS
+            + (" Search in Arabic and in English." if language == "ar" else ""),
+            "input": query[:400],
+            "tools": [tool],
+            "tool_choice": "required",  # a search is made; the reply is never from memory alone
+            "include": ["web_search_call.action.sources"],
+            "store": False,
+            "max_output_tokens": 1200,
+        }
 
     def search(self, query: str, *, language: str, count: int) -> list[SearchResult]:
         def call() -> _Results:
-            body = _post(
-                OPENAI_RESPONSES_URL,
-                {
-                    "model": self.model,
-                    "instructions": SEARCH_INSTRUCTIONS,
-                    "input": query[:400],
-                    "tools": [
-                        {
-                            "type": "web_search",
-                            "user_location": {"type": "approximate", "country": "OM"},
-                        }
-                    ],
-                    "include": ["web_search_call.action.sources"],
-                    "store": False,
-                    "max_output_tokens": 1200,
-                },
-                {"Authorization": f"Bearer {self._key}", "Content-Type": "application/json"},
-                self._timeout,
-            )
+            try:
+                body = openai_api.create(
+                    self._key,
+                    self.request(query, language),
+                    self._timeout,
+                    lambda timeout: http_client_factory(timeout),
+                )
+            except openai_api.OpenAIFailure as exc:
+                raise SearchError(str(exc)) from exc
+            if body.get("status") not in (None, "completed"):
+                raise SearchError(f"status_{body.get('status')}"[:40])
             return openai_results(body, self.model)
 
         results = _metered("openai", self.model, call, lambda r: r.searches or 1)
-        return list(results)[:count]
+        cited = [r for r in results if r.kind != "provider_source"]
+        consulted = [r for r in results if r.kind == "provider_source"]
+        return (cited + consulted)[: max(count, len(cited))]
 
 
 def gemini_grounded(body: dict[str, Any], model: str) -> Grounded:
@@ -570,7 +608,13 @@ def build_search_provider(name: str) -> Any | None:
     if name == "deepseek" and s.deepseek_api_key and s.deepseek_billing_acknowledged:
         return DeepSeekSearch(s.deepseek_api_key.get_secret_value(), max(timeout, 15.0))
     if name == "openai" and s.openai_api_key and s.openai_search_model:
-        return OpenAIWebSearch(s.openai_api_key.get_secret_value(), s.openai_search_model, timeout)
+        return OpenAIWebSearch(
+            s.openai_api_key.get_secret_value(),
+            s.openai_search_model,
+            max(timeout, s.openai_timeout_seconds),  # a search by a reasoning model takes longer
+            context_size=s.openai_search_context_size,
+            allowed_domains=s.openai_search_allowed_domains,
+        )
     if name == "gemini" and s.gemini_api_key and s.gemini_search_model:
         return GeminiGroundedSearch(
             s.gemini_api_key.get_secret_value(), s.gemini_search_model, timeout
