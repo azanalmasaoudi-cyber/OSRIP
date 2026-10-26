@@ -6,7 +6,7 @@ identifying questions that need investigation. It does **not** operate utilities
 make government, investment or business decisions. Specification: the OSRIP academic
 booklet (design-stage edition).
 
-> **Status (11 Oct 2026, migration 0019): a local academic prototype. It is not
+> **Status (26 Oct 2026, migration 0023): a local academic prototype. It is not
 > production-ready and not deployed.** Built so far:
 >
 > - the entrance (the Omani character carries OSRIP in and places it in the centre; bilingual
@@ -14,6 +14,9 @@ booklet (design-stage edition).
 > - two assistant personas, **Al Mulhim** (male voice) and **Ilham** (female voice);
 > - five free guest answers, counted on the server;
 > - governed AI and research providers;
+> - **research that reads sources and saves verified figures** (DeepSeek answering, searching and
+>   reading pages, verified live on 25 Oct 2026): figures read in official documents are saved
+>   only when backend validation can check them ([`docs/RESEARCH_AND_SAVING.md`](docs/RESEARCH_AND_SAVING.md));
 > - **period-first sector pages**: on Electricity, Water, Food Security and Trade the reader
 >   chooses an indicator, its geography and frequency and a start and end period from those
 >   actually published, then presses *Show results*; the summary and table follow, and the
@@ -35,13 +38,11 @@ booklet (design-stage edition).
 >
 > The prototype is **not complete**:
 >
-> - the AI models (Anthropic, OpenAI, Gemini), web search (Brave, or Gemini/OpenAI search)
->   and server speech (Azure AI Speech) are implemented and tested only with scripted
->   providers;
-> - the Anthropic key and Brave token in `backend/.env` are **rejected** by those services
->   (checked 11 Oct 2026: HTTP 401 and 422), and there are no OpenAI, Gemini or Azure keys.
->   So **no provider has been tested live**, the personas' real voices have not been heard,
->   and without valid keys the interface says each service is unavailable;
+> - **DeepSeek** (answers, DeepSeek Search and DeepSeek Fetch) is the only AI provider tested
+>   live (24-25 Oct 2026, [`docs/TEST_RESULTS.md`](docs/TEST_RESULTS.md)). Anthropic, OpenAI,
+>   Gemini, Brave and server speech (Azure AI Speech) are implemented and tested only with
+>   scripted providers: there are no working keys for them, the personas' real voices have not
+>   been heard, and without a key the interface says each service is unavailable;
 > - real-time voice (LiveKit Agents) is wired but **not configured or run**: no LiveKit
 >   project, speech models or avatar provider exist, and the browser's LiveKit client is not
 >   installed. Talk to Al Mulhim therefore uses push-to-talk with a labelled **static**
@@ -58,6 +59,95 @@ booklet (design-stage edition).
 > - **nothing has been deployed and there is no public URL**. The requested hostname
 >   `osrip.project.com` needs a DNS record from whoever manages `project.com`
 >   ([`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)).
+
+## Overview
+
+OSRIP is a bilingual (English / Arabic) web platform for Oman's electricity, water, food
+security and trade statistics. It keeps official published data apart from everything else,
+lets readers choose periods and compare like with like, and adds an AI assistant that answers
+from that data, searches the web for official sources, reads the original documents, and saves
+new figures only when the backend can check them against the document. Tables, charts,
+calculations and exports are built by the server from validated data; the AI never writes the
+numbers itself, and every figure carries its source.
+
+## Technologies
+
+| Layer | Technologies |
+| --- | --- |
+| Frontend | React 19, TypeScript 6, Vite 8, Tailwind CSS 4, React Router 8, TanStack Query 5, i18next / react-i18next (English and Arabic, right to left), zod, MapLibre GL JS; charts are the project's own SVG components |
+| Backend | Python 3.11+ (tested with 3.13), FastAPI, Pydantic 2, SQLAlchemy 2.0, Alembic (reviewed SQL migrations), psycopg 3, httpx, argon2-cffi; optional pypdf for reading PDF sources |
+| Database | PostgreSQL 15+ (tested with 17); a local development cluster is managed by `backend/scripts/devdb.py` |
+| AI and research | Pluggable answer providers: DeepSeek (live-tested), Anthropic, OpenAI, Gemini; search routes: DeepSeek Search, Brave, OpenAI or Gemini search; page reading through DeepSeek Fetch or OSRIP's SSRF-safe reader; optional Firecrawl |
+| Speech | Azure AI Speech (Omani Arabic and British English voices; not configured here) |
+| Tests and tooling | pytest, ruff, ESLint, Playwright (mock, full-stack and demonstration suites); Visual Studio solution (`OSRIP.sln`, F5) and VS Code tasks; Docker Compose files for deployment (prepared, not deployed) |
+
+## Features
+
+- **Sector pages** (Electricity, Water, Food Security, Trade): choose an indicator, area,
+  frequency and period from what is actually published; summary, table, and a chart only on request.
+- **AI assistant** (Al Mulhim and Ilham) in Ask, Analyze, Research, Compare and Scenario modes,
+  in English and Arabic; every number in an answer is checked against the evidence it cites, or
+  the answer is withheld.
+- **Real-time research**: web search with official Omani sources first, original documents read
+  and stored with their provenance, publication and retrieval dates kept apart.
+- **Saving verified figures**: signed-in research users can submit figures read in official
+  documents; backend validation saves only what it can check (no duplicates, conflicts kept for
+  a reviewer); scheduled data updates by sector.
+- **Tables and charts in the conversation**, built by the server from published rows (line,
+  bar or grouped charts, one unit per chart), with CSV download.
+- **Analysis**: platform calculations (changes, growth, shares, comparisons), shortage and
+  surplus analysis, studies with cards, tables and charts, forecasts kept apart from scenarios.
+- **Exports**: CSV (observations, tables, studies, analyses), JSON study results, HTML and
+  Markdown research briefs. PDF and Excel report exports are not implemented yet.
+- **Sources and citations**: a source library, citation chips on answers, and an official
+  statistics feed (NCSI Monthly Statistical Bulletin) with validation and revision history.
+- **Accounts and roles** (viewer, analyst, data manager, administrator), a five-answer guest
+  allowance, and an import workflow with approval and publication.
+
+## Architecture
+
+```text
+Browser (React SPA, /frontend)
+   │  /api/v1 (JSON, cookies + CSRF)
+   ▼
+FastAPI backend (/backend/app)
+   ├─ api/routes ........ HTTP endpoints (sectors, observations, assistant, research, studies, admin)
+   ├─ services/assistant  answer pipeline: model tool loop, evidence check, tables and charts
+   ├─ services/research . search, page reading, validation and saving, jobs and schedules
+   ├─ services/imports .. upload → validate → approve → publish (one source per version)
+   ├─ services/sync ..... official statistics feeds (separate worker process)
+   └─ domain ............ pure calculations, forecasting, explanations (no I/O)
+   │
+   ├──► PostgreSQL (observations, sources, versions, accounts, research records)
+   └──► External services, keys on the server only (AI providers, search, page reading, speech)
+```
+
+`tools/start_osrip.py` (Visual Studio F5, the VS Code task or `start-osrip.cmd`) starts
+PostgreSQL, applies migrations, and runs the API and the interface together.
+
+## Environment configuration
+
+Settings are read by the backend from `backend/.env`. Copy the template and fill in only what
+you use; `.env` files are git-ignored and must never be committed:
+
+```powershell
+Copy-Item backend\.env.example backend\.env
+```
+
+| Purpose | Settings (see `backend/.env.example` for every option) |
+| --- | --- |
+| Database | `OSRIP_DATABASE_URL` (the launcher and `serve_dev.py` use the local cluster automatically) |
+| AI answers | `OSRIP_ASSISTANT_PROVIDER` and that provider's key and model, e.g. `OSRIP_DEEPSEEK_API_KEY`, `OSRIP_DEEPSEEK_MODEL`, `OSRIP_DEEPSEEK_BILLING_ACKNOWLEDGED=true` |
+| Web research | `OSRIP_RESEARCH_PROVIDER` (`deepseek`, `brave`, ...), `OSRIP_RESEARCH_FETCH_PROVIDER`, limits and `OSRIP_RESEARCH_AUTO_SAVE` |
+| Voice | `OSRIP_SPEECH_PROVIDER`, `OSRIP_SPEECH_KEY`, `OSRIP_SPEECH_REGION` |
+| Sign-in and e-mail | `OSRIP_GOOGLE_CLIENT_ID/SECRET`, `OSRIP_MICROSOFT_CLIENT_ID/SECRET`, `OSRIP_EMAIL_BACKEND`, SMTP settings |
+| Scheduled reports and data updates | `OSRIP_SCHEDULED_REPORTS_ENABLED` |
+
+The frontend needs no secrets: `frontend/.env` may set only public build options
+(`VITE_API_BASE_URL`, `VITE_DATA_ADAPTER`), because anything named `VITE_*` is compiled into the
+public JavaScript. Production settings for the containers are in `deploy/.env.example`.
+Keys are read only by the API and never reach the browser. Settings › Services in the running
+site shows what is configured, without values.
 
 ## Scope
 
@@ -169,6 +259,7 @@ government branding.
 | [docs/API.md](docs/API.md), [docs/api/openapi.json](docs/api/openapi.json) | API reference |
 | [docs/WINDOWS_STARTUP.md](docs/WINDOWS_STARTUP.md) | One-time Windows setup; Visual Studio (F5), VS Code and one-click startup; what was verified |
 | [docs/WORKSPACE.md](docs/WORKSPACE.md) | The analytical workspace (`/workspace`): filters, cards with stale flags, one validated dataset per chart and table, governorate view only with valid coverage, study panel; live study events (protocol, consistency rules), narration and highlighting, phone tabs |
+| [docs/RESEARCH_AND_SAVING.md](docs/RESEARCH_AND_SAVING.md) | Research that reads original sources and saves verified figures: tools, validation rules, saving through the import workflow, reviewer approval, scheduled data updates, sources |
 | [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md) | Governed AI and research providers (Anthropic, OpenAI, Gemini with Google Search grounding, Brave): official APIs only, routing policy, data status labels, citations and attribution, limits and spending, provider readiness, setup and verification status |
 | [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md) | Evaluation of every connected service; settings for e-mail, Google, Microsoft, assistant (Claude), web research (Brave Search API, source classes, safe retrieval, review queue), guest allowance, voice (Azure AI Speech, Omani Arabic voices), Canva, map and NCSI data |
 | [docs/ACADEMIC_EVALUATION.md](docs/ACADEMIC_EVALUATION.md) | Academic evaluation: problem, objectives, architecture, data mapping, update and validation, AI grounding, limitations, reproducible tests, demonstration scenario and measured outcomes (no invented participants or scores) |
@@ -513,8 +604,11 @@ frontend/   React 19 + TypeScript + Vite 8 + Tailwind 4, React Router 8, TanStac
             react-i18next, zod, MapLibre GL JS (lazy); e2e/ (mock), e2e-api/ (full stack) and
             e2e-demo/ (the integrated demonstrations)
 backend/    FastAPI + Pydantic 2 + SQLAlchemy 2.0 + Alembic + psycopg 3 + argon2-cffi
+  app/api/           HTTP routes
   app/domain/        pure calculations, forecasting and explanations (no I/O)
-  app/services/      accounts, imports, observations, analysis, reports, geography, forecasting
+  app/services/      accounts, imports, observations, analysis, reports, geography, forecasting,
+                     assistant (answers, evidence check, tables), research (search, reading,
+                     saving, jobs), sync (official feeds)
   alembic/sql/       reviewed SQL executed verbatim by the Alembic revisions
   db_checks/         SQL checks of database integrity rules (run by pytest)
   fixtures/          the booklet's SYNTHETIC fixtures
@@ -522,7 +616,9 @@ backend/    FastAPI + Pydantic 2 + SQLAlchemy 2.0 + Alembic + psycopg 3 + argon2
   requirements.lock  exact Python versions of the tested environment
 deploy/     Dockerfiles, Caddyfile, docker-compose.yml (db, migrate, api, web, backup), backup.sh,
             .env.example, predeploy_check.py (prepared, not yet run on a server)
+tools/      the launcher (start_osrip.py) and project tools
 docs/       see the table above
+OSRIP.sln   Visual Studio solution (startup project: tools/OSRIP.Launcher.pyproj)
 ```
 
 ## Data rules (enforced in code)
