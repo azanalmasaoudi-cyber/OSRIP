@@ -86,4 +86,5 @@ ignore = ["S101"]
 "tests/test_research.py" = ["E501"]  # literal WAV headers and evidence fixtures
 "tests/test_documents.py" = ["E501"]  # report fixtures in both languages
 "tests/test_sms_twilio.py" = ["E501"]  # provider payloads as in Twilio's documentation
+"tests/test_whatsapp.py" = ["E501"]  # provider payloads as in Meta's documentation
 "tests/test_mail_templates.py" = ["E501"]

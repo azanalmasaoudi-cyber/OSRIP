@@ -23,6 +23,12 @@ Implemented adapters:
   verification once it is approved, expires (10 minutes) or reaches its check limit; a
   check then answers 404, which is reported as expired. Twilio's error codes are mapped to
   the three errors below; the number and the code are never logged.
+* ``whatsapp``: the Meta WhatsApp Cloud API (``POST /{version}/{phone-number-id}/messages``,
+  bearer token), checked against Meta's documentation on 2026-10-27. WhatsApp only
+  delivers: OSRIP makes the code, sends it with an authentication template (Meta's preset
+  text in Arabic or English, copy-code button) and keeps only a keyed digest of it. In
+  ``test`` mode it sends only to the approved test recipients (Meta's free test sender);
+  ``production`` is charged per delivered code and stays off until set explicitly.
 * ``test``: scripted delivery for automated tests and local development. Codes are
   kept in process memory and shown only by the development endpoint
   ``GET /dev/sms-outbox``. The API refuses to start with it in production.
@@ -62,8 +68,9 @@ class DeliveryError(Exception):
     """The provider could not deliver or check a code.
 
     ``code`` is one of: ``invalid_number`` (the provider rejects the number),
-    ``undeliverable`` (accepted but cannot be delivered to this destination) or
-    ``provider_unavailable`` (outage, timeout, authentication failure).
+    ``undeliverable`` (accepted but cannot be delivered to this destination),
+    ``not_test_recipient`` (a test sender asked to message a number outside its approved
+    list) or ``provider_unavailable`` (outage, timeout, authentication failure).
     """
 
     def __init__(self, code: str) -> None:
@@ -261,6 +268,169 @@ def _twilio() -> TwilioVerifyProvider | None:
     )
 
 
+# ------------------------------------------------------------------ WhatsApp (Meta Cloud API)
+
+WHATSAPP_URL = "https://graph.facebook.com/{version}/{phone_number_id}/messages"
+WHATSAPP_LANGUAGES = {"ar": "ar", "en": "en"}  # template languages created by the setup script
+WHATSAPP_CODE_LENGTH = 6
+# Meta error codes (https://developers.facebook.com/documentation/business-messaging/whatsapp/
+# support/error-codes). 131030: the recipient is not on the test number's allowed list.
+# 131021: sender and recipient are the same number. Not deliverable now: 131026 (not on
+# WhatsApp, terms not accepted, old client), 131056 (too many messages to this person),
+# 131049 (withheld for ecosystem engagement). Anything else (token 190, permissions 10/200,
+# template 132000/132001, payment 131042, registration 133010, limits 130429/80007) is a
+# configuration or service problem, reported as unavailable with the code in the log.
+WHATSAPP_NOT_TEST_RECIPIENT = frozenset({131030})
+WHATSAPP_INVALID_NUMBER = frozenset({131021})
+WHATSAPP_UNDELIVERABLE = frozenset({131026, 131049, 131056})
+
+
+def parse_recipients(value: str) -> frozenset[str]:
+    """The approved test recipients: comma-separated E.164 numbers (spaces and dashes are
+    ignored, anything else that is not ``+`` and 8 to 15 digits is dropped)."""
+    numbers = set()
+    for raw in value.split(","):
+        number = raw.strip().replace(" ", "").replace("-", "")
+        if number.startswith("+") and number[1:].isdigit() and 8 <= len(number) - 1 <= 15:
+            numbers.add(number)
+    return frozenset(numbers)
+
+
+class WhatsAppProvider:
+    """Meta WhatsApp Cloud API with an authentication template (copy-code button).
+
+    WhatsApp only delivers the message, so OSRIP makes the code: six random digits, of which
+    only a keyed digest (HMAC with the server's secret key and a per-challenge nonce) is kept
+    in the challenge's ``provider_ref``. Expiry, attempts and single use are enforced by
+    ``app.services.phone`` as for every provider. In ``test`` mode the code is sent only to
+    the approved test recipients, so the free test sender is never asked to message anyone
+    else and nothing can be charged; ``production`` mode sends to any number.
+    """
+
+    name = "whatsapp"
+
+    def __init__(
+        self,
+        *,
+        token: str,
+        phone_number_id: str,
+        template: str,
+        version: str,
+        key: str,
+        timeout: float,
+        test_recipients: frozenset[str] | None,
+    ) -> None:
+        self._token = token
+        self._url = WHATSAPP_URL.format(version=version, phone_number_id=phone_number_id)
+        self._template = template
+        self._key = key
+        self._timeout = timeout
+        self._test_recipients = test_recipients  # None in production mode
+
+    def _digest(self, nonce: str, code: str) -> str:
+        return hmac.new(
+            self._key.encode(), f"whatsapp-otp:{nonce}:{code}".encode(), hashlib.sha256
+        ).hexdigest()
+
+    def request_verification(self, phone_e164: str, locale: str | None = None) -> Started:
+        if self._test_recipients is not None and phone_e164 not in self._test_recipients:
+            raise DeliveryError("not_test_recipient")
+        code = f"{secrets.randbelow(10**WHATSAPP_CODE_LENGTH):0{WHATSAPP_CODE_LENGTH}d}"
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": phone_e164.lstrip("+"),
+            "type": "template",
+            "template": {
+                "name": self._template,
+                "language": {"code": WHATSAPP_LANGUAGES.get(locale or "", "en")},
+                # The code appears twice: in the preset body and in the copy-code button.
+                "components": [
+                    {"type": "body", "parameters": [{"type": "text", "text": code}]},
+                    {
+                        "type": "button",
+                        "sub_type": "url",
+                        "index": "0",
+                        "parameters": [{"type": "text", "text": code}],
+                    },
+                ],
+            },
+        }
+        try:
+            with http_client_factory(self._timeout) as client:
+                response = client.post(
+                    self._url, json=payload, headers={"Authorization": f"Bearer {self._token}"}
+                )
+        except httpx.HTTPError as exc:
+            logger.warning("whatsapp send failed: %s", type(exc).__name__)
+            raise DeliveryError("provider_unavailable") from exc
+        try:
+            body = response.json()
+        except ValueError:
+            body = {}
+        body = body if isinstance(body, dict) else {}
+        messages = body.get("messages")
+        if response.status_code == 200 and isinstance(messages, list) and messages:
+            nonce = secrets.token_urlsafe(12)
+            return Started(f"wa1.{nonce}.{self._digest(nonce, code)}")
+        error = body.get("error") if isinstance(body.get("error"), dict) else {}
+        meta_code = error.get("code")
+        # The status and Meta's error code only: never the number, the code or the message.
+        logger.warning(
+            "whatsapp send refused: http %s, code %s, subcode %s",
+            response.status_code,
+            meta_code,
+            error.get("error_subcode"),
+        )
+        if meta_code in WHATSAPP_NOT_TEST_RECIPIENT:
+            raise DeliveryError("not_test_recipient")
+        if meta_code in WHATSAPP_INVALID_NUMBER:
+            raise DeliveryError("invalid_number")
+        if meta_code in WHATSAPP_UNDELIVERABLE:
+            raise DeliveryError("undeliverable")
+        raise DeliveryError("provider_unavailable")
+
+    def check_verification(self, provider_ref: str, code: str) -> CheckStatus:
+        version, _, rest = provider_ref.partition(".")
+        nonce, _, digest = rest.partition(".")
+        if version != "wa1" or not nonce or not digest:
+            return CheckStatus.EXPIRED
+        if hmac.compare_digest(digest, self._digest(nonce, code)):
+            return CheckStatus.APPROVED
+        return CheckStatus.DENIED
+
+
+def whatsapp_missing() -> list[str]:
+    """Names (never values) of the settings the WhatsApp adapter still needs."""
+    s = get_settings()
+    missing = [] if s.whatsapp_access_token else ["OSRIP_WHATSAPP_ACCESS_TOKEN"]
+    if not s.whatsapp_phone_number_id:
+        missing.append("OSRIP_WHATSAPP_PHONE_NUMBER_ID")
+    if s.whatsapp_mode not in ("test", "production"):
+        missing.append("OSRIP_WHATSAPP_MODE (test or production)")
+    elif s.whatsapp_mode == "test" and not parse_recipients(s.whatsapp_test_recipients):
+        missing.append("OSRIP_WHATSAPP_TEST_RECIPIENTS")
+    return missing
+
+
+def _whatsapp() -> WhatsAppProvider | None:
+    s = get_settings()
+    if whatsapp_missing():
+        return None
+    assert s.whatsapp_access_token and s.whatsapp_phone_number_id
+    return WhatsAppProvider(
+        token=s.whatsapp_access_token.get_secret_value(),
+        phone_number_id=s.whatsapp_phone_number_id,
+        template=s.whatsapp_template_name,
+        version=s.whatsapp_api_version,
+        key=s.client_hash_key.get_secret_value(),
+        timeout=s.sms_provider_timeout_seconds,
+        test_recipients=(
+            parse_recipients(s.whatsapp_test_recipients) if s.whatsapp_mode == "test" else None
+        ),
+    )
+
+
 # ------------------------------------------------------------------ selection and status
 
 
@@ -270,6 +440,8 @@ def get_provider() -> SmsProvider | None:
         return None
     if s.sms_provider == "twilio_verify":
         return _twilio()
+    if s.sms_provider == "whatsapp":
+        return _whatsapp()
     return _ADAPTERS.get(s.sms_provider)
 
 
@@ -280,6 +452,19 @@ def status(*, admin: bool = False) -> dict[str, Any]:
     missing: list[str] = []
     if not s.sms_enabled:
         state, note = "disabled", "SMS verification is switched off on this server."
+    elif s.sms_provider == "whatsapp":
+        missing = whatsapp_missing()
+        if missing:
+            state, note = (
+                "not_configured",
+                "WhatsApp verification needs its settings on the server.",
+            )
+        elif s.whatsapp_mode == "test":
+            # Real WhatsApp messages, but only to the approved test numbers.
+            state = "sandbox"
+            note = "WhatsApp test sender: codes reach only the approved test numbers."
+        else:
+            state, note = "configured", None
     elif s.sms_provider == "twilio_verify":
         missing = twilio_missing()
         if missing:
@@ -298,8 +483,9 @@ def status(*, admin: bool = False) -> dict[str, Any]:
     else:
         state, note = "configured", None
     return {
-        "available": state in ("test", "configured"),
+        "available": state in ("test", "sandbox", "configured"),
         "status": state,
+        "channel": "whatsapp" if s.sms_provider == "whatsapp" else "sms",
         "provider": s.sms_provider or None,
         "note": note,
         **({"missing_settings": missing} if admin else {}),

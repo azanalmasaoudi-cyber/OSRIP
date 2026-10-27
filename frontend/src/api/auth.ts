@@ -88,7 +88,9 @@ const providersSchema = z.object({
   oidc: z.object({ google: z.boolean(), microsoft: z.boolean() }),
   sms: z.object({
     available: z.boolean(),
-    status: z.enum(['disabled', 'not_configured', 'test', 'configured']),
+    // sandbox: real WhatsApp messages from Meta's test sender, to approved test numbers only.
+    status: z.enum(['disabled', 'not_configured', 'test', 'sandbox', 'configured']),
+    channel: z.enum(['sms', 'whatsapp']).default('sms'),
     provider: z.string().nullable(),
     note: z.string().nullable(),
     default_country: z.string(),

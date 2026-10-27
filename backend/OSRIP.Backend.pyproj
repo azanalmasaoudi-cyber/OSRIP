@@ -301,6 +301,8 @@
     <Compile Include="tests\test_verification_change_integration.py" />
     <Compile Include="tests\test_voice_bridge.py" />
     <Compile Include="tests\test_voice_gender.py" />
+    <Compile Include="tests\test_whatsapp.py" />
+    <Compile Include="tests\test_whatsapp_integration.py" />
     <Compile Include="tests\test_zy_research_assistant_integration.py" />
     <Compile Include="tests\test_zz_reference_pack_integration.py" />
     <Compile Include="tests\test_zzz_source_sync_integration.py" />
@@ -318,6 +320,7 @@
     <Compile Include="scripts\sms_acceptance.py" />
     <Compile Include="scripts\sync_worker_dev.py" />
     <Compile Include="scripts\voice_acceptance.py" />
+    <Compile Include="scripts\whatsapp_setup.py" />
     <Compile Include="alembic\env.py" />
     <Compile Include="alembic\versions\0001_core_schema.py" />
     <Compile Include="alembic\versions\0002_reference_seed.py" />
