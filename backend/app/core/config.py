@@ -60,6 +60,10 @@ class Settings(BaseSettings):
     reset_password_minutes: int = 30
     magic_link_minutes: int = 15
     email_requests_per_hour: int = 5
+    # Changing a verified e-mail address or phone number needs the current password, or,
+    # for an account without one (phone or Google/Microsoft sign-in), a session opened
+    # within this many minutes.
+    reauth_minutes: int = 10
 
     # ------------------------------------------------------------ external identity (OIDC)
     google_client_id: str | None = None
@@ -240,14 +244,18 @@ class Settings(BaseSettings):
     guest_sessions_per_client_hour: int = 30
 
     # ------------------------------------------------------------ SMS verification (phone accounts)
-    # Off unless explicitly enabled AND a provider is configured. No production SMS
-    # provider has been selected for this project yet, so the only implemented adapter
-    # is "test" (scripted delivery for automated tests; refused in production). A real
-    # adapter must be written against the chosen provider's official documentation.
+    # Off unless explicitly enabled AND a provider is configured. Adapters: "twilio_verify"
+    # (Twilio Verify API v2; the provider generates, sends and checks the code) and "test"
+    # (scripted delivery for automated tests; refused in production). Twilio credentials:
+    # the Account SID with either an API key (SID and secret, preferred) or the Auth Token,
+    # and the Verify Service SID. Server side only; never in the frontend.
     sms_enabled: bool = False
     sms_provider: str = ""
-    sms_provider_api_key: SecretStr | None = None
-    sms_provider_service_id: str | None = None
+    twilio_account_sid: str | None = None  # AC...
+    twilio_api_key_sid: str | None = None  # SK... (with the secret below; preferred)
+    twilio_api_key_secret: SecretStr | None = None
+    twilio_auth_token: SecretStr | None = None  # used only when no API key is set
+    twilio_verify_service_sid: str | None = None  # VA...
     sms_code_minutes: int = 10  # challenge lifetime
     sms_max_attempts: int = 5  # wrong codes allowed per challenge
     sms_resend_seconds: int = 60  # cooldown before another code to the same number

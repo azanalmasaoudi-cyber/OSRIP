@@ -518,3 +518,38 @@ def revoke_all_sessions(session: Session, user_id: uuid.UUID) -> None:
         .where(UserSession.user_id == user_id, UserSession.revoked_at.is_(None))
         .values(revoked_at=now())
     )
+
+
+def has_password(user: AppUser) -> bool:
+    return user.password_hash != security.UNUSABLE_PASSWORD
+
+
+def confirm_identity(
+    session: Session, principal: Principal, user: AppUser, password: str | None, *, action: str
+) -> None:
+    """Step-up check before changing a confirmed e-mail address or phone number: the current
+    password, or, for an account that has none (phone, Google or Microsoft sign-in), a session
+    opened within ``reauth_minutes``. A refusal is audited in its own transaction."""
+    if has_password(user):
+        if password and security.verify_password(user.password_hash, password):
+            return
+        audit.record_separately(
+            principal, f"auth.{action}", "denied", metadata={"reason": "wrong_current_password"}
+        )
+        raise ApiError(403, "wrong_current_password", "The current password is not correct.")
+    minutes = get_settings().reauth_minutes
+    opened = (
+        session.scalar(select(UserSession.created_at).where(UserSession.id == principal.session_id))
+        if principal.session_id
+        else None
+    )
+    if opened is None or now() - opened > timedelta(minutes=minutes):
+        audit.record_separately(
+            principal, f"auth.{action}", "denied", metadata={"reason": "reauthentication_required"}
+        )
+        raise ApiError(
+            403,
+            "reauthentication_required",
+            f"For your security, sign in again and make this change within {minutes} minutes.",
+            {"minutes": minutes},
+        )

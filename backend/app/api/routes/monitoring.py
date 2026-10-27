@@ -9,7 +9,7 @@ from app.api.deps import DbSession, require
 from app.core import ratelimit, security
 from app.core.config import get_settings
 from app.domain.enums import Permission
-from app.services import monitoring, providers
+from app.services import monitoring, providers, sms
 from app.services.principal import Principal
 
 router = APIRouter(tags=["monitoring"])
@@ -48,7 +48,10 @@ def monitoring_view(
     session: DbSession, _: Annotated[Principal, Depends(require(Permission.AUDIT_READ))]
 ) -> dict[str, Any]:
     with session.begin():
-        return {**monitoring.readiness(session), "errors": monitoring.recent_errors(session)}
+        report = {**monitoring.readiness(session), "errors": monitoring.recent_errors(session)}
+    # Administrators also see which SMS settings are missing (names only, never values).
+    report["integrations"]["sms"]["missing_settings"] = sms.status(admin=True)["missing_settings"]
+    return report
 
 
 @router.get("/admin/providers")
