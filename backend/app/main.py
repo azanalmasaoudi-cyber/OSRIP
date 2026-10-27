@@ -15,6 +15,7 @@ from app.api.deps import CSRF_HEADER
 from app.api.routes import (
     admin,
     analysis,
+    analysis_reports,
     assistant,
     auth,
     balance,
@@ -194,6 +195,7 @@ def create_app() -> FastAPI:
         assistant.router,
         reports.router,
         datasets.router,
+        analysis_reports.router,  # after reports: GET /reports/{id}/export.csv stays there
         research.router,
         research_jobs.router,
         source_sync.router,

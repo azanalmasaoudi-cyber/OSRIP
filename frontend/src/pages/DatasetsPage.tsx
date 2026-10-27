@@ -17,6 +17,7 @@ import {
 import { PageHeader } from '@/components/common/PageHeader';
 import { StatePanel } from '@/components/common/StatePanel';
 import { DataTable } from '@/components/datasets/DataTable';
+import { DatasetExports } from '@/components/datasets/DatasetExports';
 import { ViewChart } from '@/components/datasets/ViewChart';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -357,7 +358,8 @@ function DatasetDetailView({ id }: { id: string }) {
             {d.file_type.toUpperCase()}{d.sheet ? ` · ${d.sheet}` : ''} · {formatDateTime(d.created_at, language)}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-start gap-2">
+          <DatasetExports dataset={d} />
           <Button variant="ghost" size="sm" onClick={onDelete} disabled={remove.isPending}>
             <Trash2 aria-hidden="true" />{t('datasets.delete')}
           </Button>

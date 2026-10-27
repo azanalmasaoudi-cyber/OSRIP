@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
 import { reportExportUrl, useReport, useReports, useSetReportVisibility, type ReportContent } from '@/api/analysis';
+import { platformReportExportUrl, useAnalysisReports } from '@/api/analysisReports';
+import { useMe } from '@/api/auth';
 import { adapterKind } from '@/api/config';
 import { CalculationCard } from '@/components/analysis/CalculationCard';
 import { ReviewCardView } from '@/components/analysis/ReviewCards';
@@ -12,7 +14,7 @@ import { StatePanel } from '@/components/common/StatePanel';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { formatDecimal, formatPeriod } from '@/lib/format';
+import { formatDateTime, formatDecimal, formatPeriod } from '@/lib/format';
 import { useAppLanguage } from '@/lib/useAppLanguage';
 import { useDocumentTitle } from '@/lib/useDocumentTitle';
 import { usePreservedSearch } from '@/state/usePreservedSearch';
@@ -89,7 +91,47 @@ export function ReportsPage() {
       <PageHeader title={t('pages.reports.title')} intro={t('pages.reports.intro')} />
       {reports.data && reports.data.length > 0 ? <p className="mb-4 text-sm text-muted-foreground">{t('pages.reports.createHint')}</p> : null}
       {body}
+      <AnalysisReportList />
     </>
+  );
+}
+
+/** The signed-in person's research and dataset reports (private, frozen). */
+function AnalysisReportList() {
+  const { t } = useTranslation();
+  const language = useAppLanguage();
+  const to = usePreservedSearch();
+  const me = useMe();
+  const signedIn = Boolean(me.data?.authenticated);
+  const reports = useAnalysisReports(signedIn);
+  if (!signedIn || adapterKind !== 'http') return null;
+  let body;
+  if (reports.isPending) body = <StatePanel kind="loading" skeleton="lines" />;
+  else if (reports.isError) body = <StatePanel kind="error" detail={reports.error.message} onRetry={() => void reports.refetch()} />;
+  else if (reports.data.length === 0) body = <p className="text-sm text-muted-foreground">{t('reportsAi.none')}</p>;
+  else {
+    body = (
+      <ul className="flex flex-col gap-3">
+        {reports.data.map((r) => (
+          <li key={r.id}>
+            <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
+              <div className="flex min-w-0 flex-col gap-1">
+                <Link to={to(`/reports/analysis/${r.id}`)} className="font-semibold text-primary underline underline-offset-2" dir="auto">{r.title}</Link>
+                <p className="text-xs text-muted-foreground">{formatDateTime(r.created_at, language)}</p>
+              </div>
+              <Badge variant="muted">{r.kind === 'dataset' ? t('reportsAi.kindDataset') : t('reportsAi.kindResearch')}</Badge>
+            </Card>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+  return (
+    <section className="mt-10 flex flex-col gap-3" data-testid="analysis-reports">
+      <h2 className="text-lg font-semibold">{t('reportsAi.listTitle')}</h2>
+      <p className="text-sm text-muted-foreground">{t('reportsAi.listIntro')}</p>
+      {body}
+    </section>
   );
 }
 
@@ -146,6 +188,7 @@ export function ReportPage() {
   const to = usePreservedSearch();
   const report = useReport(reportId);
   const visibility = useSetReportVisibility(reportId);
+  const language = useAppLanguage();
   useDocumentTitle(report.data?.content.title ?? t('pages.reports.title'));
 
   if (adapterKind !== 'http') {
@@ -174,6 +217,12 @@ export function ReportPage() {
           </Button>
           <a href={reportExportUrl(r.id)} download className={buttonVariants({ variant: 'outline', size: 'sm' })} data-testid="report-export">
             <Download aria-hidden="true" />{t('pages.reports.download')}
+          </a>
+          <a href={platformReportExportUrl(r.id, 'pdf', language)} download className={buttonVariants({ variant: 'outline', size: 'sm' })} data-testid="report-export-pdf">
+            <Download aria-hidden="true" />{t('reportsAi.download.pdf')}
+          </a>
+          <a href={platformReportExportUrl(r.id, 'xlsx', language)} download className={buttonVariants({ variant: 'outline', size: 'sm' })} data-testid="report-export-xlsx">
+            <Download aria-hidden="true" />{t('reportsAi.download.xlsx')}
           </a>
           {r.owned ? (
             <Button variant="ghost" size="sm" disabled={visibility.isPending}

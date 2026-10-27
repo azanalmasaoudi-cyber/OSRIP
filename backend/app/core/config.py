@@ -271,6 +271,12 @@ class Settings(BaseSettings):
     dataset_max_per_user: int = 50
     dataset_summaries_per_day: int = 20
 
+    # ------------------------------------------------------------ report exports (PDF, Excel)
+    # A TrueType font with Latin letters and Arabic presentation forms, embedded (as a subset)
+    # in PDF reports. Unset: Arial, Tahoma or Segoe UI (Windows), DejaVu Sans (Linux,
+    # package fonts-dejavu-core) or Arial (macOS), the first one found.
+    report_font_path: str | None = None
+
 
 @lru_cache
 def get_settings() -> Settings:

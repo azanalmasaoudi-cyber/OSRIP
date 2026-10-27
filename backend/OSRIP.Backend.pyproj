@@ -59,6 +59,7 @@
     <Folder Include="app\services\analysis\" />
     <Folder Include="app\services\assistant\" />
     <Folder Include="app\services\datasets\" />
+    <Folder Include="app\services\documents\" />
     <Folder Include="app\services\imports\" />
     <Folder Include="app\services\research\" />
     <Folder Include="app\services\sync\" />
@@ -76,6 +77,7 @@
     <Compile Include="app\api\routes\__init__.py" />
     <Compile Include="app\api\routes\admin.py" />
     <Compile Include="app\api\routes\analysis.py" />
+    <Compile Include="app\api\routes\analysis_reports.py" />
     <Compile Include="app\api\routes\assistant.py" />
     <Compile Include="app\api\routes\auth.py" />
     <Compile Include="app\api\routes\balance.py" />
@@ -139,6 +141,7 @@
     <Compile Include="app\services\accounts.py" />
     <Compile Include="app\services\alerts.py" />
     <Compile Include="app\services\analysis\__init__.py" />
+    <Compile Include="app\services\analysis_reports.py" />
     <Compile Include="app\services\analysis\balance.py" />
     <Compile Include="app\services\analysis\balance_export.py" />
     <Compile Include="app\services\analysis\evidence.py" />
@@ -163,6 +166,14 @@
     <Compile Include="app\services\datasets\parsing.py" />
     <Compile Include="app\services\datasets\store.py" />
     <Compile Include="app\services\datasets\summary.py" />
+    <Compile Include="app\services\documents\__init__.py" />
+    <Compile Include="app\services\documents\build.py" />
+    <Compile Include="app\services\documents\export.py" />
+    <Compile Include="app\services\documents\fonts.py" />
+    <Compile Include="app\services\documents\model.py" />
+    <Compile Include="app\services\documents\pdf.py" />
+    <Compile Include="app\services\documents\text.py" />
+    <Compile Include="app\services\documents\xlsx.py" />
     <Compile Include="app\services\audit.py" />
     <Compile Include="app\services\comparisons.py" />
     <Compile Include="app\services\conditions.py" />
@@ -239,7 +250,9 @@
     <Compile Include="tests\test_assistant_datatable.py" />
     <Compile Include="tests\test_datasets.py" />
     <Compile Include="tests\test_datasets_integration.py" />
+    <Compile Include="tests\test_documents.py" />
     <Compile Include="tests\test_openai_sdk.py" />
+    <Compile Include="tests\test_reports_export_integration.py" />
     <Compile Include="tests\test_auth_integration.py" />
     <Compile Include="tests\test_balance.py" />
     <Compile Include="tests\test_balance_integration.py" />
