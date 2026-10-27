@@ -6,7 +6,7 @@ identifying questions that need investigation. It does **not** operate utilities
 make government, investment or business decisions. Specification: the OSRIP academic
 booklet (design-stage edition).
 
-> **Status (26 Oct 2026, migration 0023): a local academic prototype. It is not
+> **Status (27 Oct 2026, migration 0024): a local academic prototype. It is not
 > production-ready and not deployed.** Built so far:
 >
 > - the entrance (the Omani character carries OSRIP in and places it in the centre; bilingual
@@ -17,6 +17,11 @@ booklet (design-stage edition).
 > - **research that reads sources and saves verified figures** (DeepSeek answering, searching and
 >   reading pages, verified live on 25 Oct 2026): figures read in official documents are saved
 >   only when backend validation can check them ([`docs/RESEARCH_AND_SAVING.md`](docs/RESEARCH_AND_SAVING.md));
+> - **datasets and research reports**: CSV, Excel or JSON files analysed by the server
+>   (statistics, trends, unusual values, comparisons, charts with a type switch, searchable
+>   tables), an AI summary whose every number is checked, and reports from datasets or verified
+>   answers exported as PDF, Excel and CSV in Arabic and English
+>   ([`docs/AI_RESEARCH_PLATFORM.md`](docs/AI_RESEARCH_PLATFORM.md));
 > - **period-first sector pages**: on Electricity, Water, Food Security and Trade the reader
 >   chooses an indicator, its geography and frequency and a start and end period from those
 >   actually published, then presses *Show results*; the summary and table follow, and the
@@ -39,10 +44,11 @@ booklet (design-stage edition).
 > The prototype is **not complete**:
 >
 > - **DeepSeek** (answers, DeepSeek Search and DeepSeek Fetch) is the only AI provider tested
->   live (24-25 Oct 2026, [`docs/TEST_RESULTS.md`](docs/TEST_RESULTS.md)). Anthropic, OpenAI,
->   Gemini, Brave and server speech (Azure AI Speech) are implemented and tested only with
->   scripted providers: there are no working keys for them, the personas' real voices have not
->   been heard, and without a key the interface says each service is unavailable;
+>   live (24-27 Oct 2026, [`docs/TEST_RESULTS.md`](docs/TEST_RESULTS.md)). OpenAI (now through
+>   the official SDK), Anthropic, Gemini, Brave and server speech (Azure AI Speech) are
+>   implemented and tested only with scripted providers: there are no working keys for them,
+>   the personas' real voices have not been heard, and without a key the interface says each
+>   service is unavailable;
 > - real-time voice (LiveKit Agents) is wired but **not configured or run**: no LiveKit
 >   project, speech models or avatar provider exist, and the browser's LiveKit client is not
 >   installed. Talk to Al Mulhim therefore uses push-to-talk with a labelled **static**
@@ -77,7 +83,7 @@ numbers itself, and every figure carries its source.
 | Frontend | React 19, TypeScript 6, Vite 8, Tailwind CSS 4, React Router 8, TanStack Query 5, i18next / react-i18next (English and Arabic, right to left), zod, MapLibre GL JS; charts are the project's own SVG components |
 | Backend | Python 3.11+ (tested with 3.13), FastAPI, Pydantic 2, SQLAlchemy 2.0, Alembic (reviewed SQL migrations), psycopg 3, httpx, argon2-cffi; optional pypdf for reading PDF sources |
 | Database | PostgreSQL 15+ (tested with 17); a local development cluster is managed by `backend/scripts/devdb.py` |
-| AI and research | Pluggable answer providers: DeepSeek (live-tested), Anthropic, OpenAI, Gemini; search routes: DeepSeek Search, Brave, OpenAI or Gemini search; page reading through DeepSeek Fetch or OSRIP's SSRF-safe reader; optional Firecrawl |
+| AI and research | Pluggable answer providers: DeepSeek (live-tested), Anthropic, OpenAI (official `openai` SDK, Responses API), Gemini; search routes: DeepSeek Search, Brave, OpenAI or Gemini search; page reading through DeepSeek Fetch or OSRIP's SSRF-safe reader; optional Firecrawl |
 | Speech | Azure AI Speech (Omani Arabic and British English voices; not configured here) |
 | Tests and tooling | pytest, ruff, ESLint, Playwright (mock, full-stack and demonstration suites); Visual Studio solution (`OSRIP.sln`, F5) and VS Code tasks; Docker Compose files for deployment (prepared, not deployed) |
 
@@ -95,10 +101,17 @@ numbers itself, and every figure carries its source.
   a reviewer); scheduled data updates by sector.
 - **Tables and charts in the conversation**, built by the server from published rows (line,
   bar or grouped charts, one unit per chart), with CSV download.
+- **Datasets**: upload CSV, Excel or JSON (private to the account) for statistics, trends,
+  unusual values, comparisons and correlations computed by the server, charts (line, bars,
+  columns, pie, scatter, histogram) with a type switch, a table with search, filter and sort,
+  and an AI summary in which every number is checked against the computed results.
 - **Analysis**: platform calculations (changes, growth, shares, comparisons), shortage and
   surplus analysis, studies with cards, tables and charts, forecasts kept apart from scenarios.
-- **Exports**: CSV (observations, tables, studies, analyses), JSON study results, HTML and
-  Markdown research briefs. PDF and Excel report exports are not implemented yet.
+- **Research reports and exports**: reports frozen from a dataset's analysis or from a
+  verified answer (question, summary, tables, charts, conclusions, numbered references), as
+  PDF (Arabic shaped, right to left, vector charts), Excel and CSV; platform reports as PDF and
+  Excel too. Also CSV (observations, tables, studies, analyses), JSON study results, HTML and
+  Markdown research briefs.
 - **Sources and citations**: a source library, citation chips on answers, and an official
   statistics feed (NCSI Monthly Statistical Bulletin) with validation and revision history.
 - **Accounts and roles** (viewer, analyst, data manager, administrator), a five-answer guest
@@ -260,6 +273,7 @@ government branding.
 | [docs/WINDOWS_STARTUP.md](docs/WINDOWS_STARTUP.md) | One-time Windows setup; Visual Studio (F5), VS Code and one-click startup; what was verified |
 | [docs/WORKSPACE.md](docs/WORKSPACE.md) | The analytical workspace (`/workspace`): filters, cards with stale flags, one validated dataset per chart and table, governorate view only with valid coverage, study panel; live study events (protocol, consistency rules), narration and highlighting, phone tabs |
 | [docs/RESEARCH_AND_SAVING.md](docs/RESEARCH_AND_SAVING.md) | Research that reads original sources and saves verified figures: tools, validation rules, saving through the import workflow, reviewer approval, scheduled data updates, sources |
+| [docs/AI_RESEARCH_PLATFORM.md](docs/AI_RESEARCH_PLATFORM.md) | OpenAI through the official SDK (settings, setup, cost), uploaded datasets and their analysis, chart types and tables, research reports and their PDF, Excel and CSV exports, security, what was tested live |
 | [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md) | Governed AI and research providers (Anthropic, OpenAI, Gemini with Google Search grounding, Brave): official APIs only, routing policy, data status labels, citations and attribution, limits and spending, provider readiness, setup and verification status |
 | [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md) | Evaluation of every connected service; settings for e-mail, Google, Microsoft, assistant (Claude), web research (Brave Search API, source classes, safe retrieval, review queue), guest allowance, voice (Azure AI Speech, Omani Arabic voices), Canva, map and NCSI data |
 | [docs/ACADEMIC_EVALUATION.md](docs/ACADEMIC_EVALUATION.md) | Academic evaluation: problem, objectives, architecture, data mapping, update and validation, AI grounding, limitations, reproducible tests, demonstration scenario and measured outcomes (no invented participants or scores) |
