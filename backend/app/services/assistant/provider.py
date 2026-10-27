@@ -1356,6 +1356,30 @@ def build_provider(name: str) -> Provider | None:
     return None
 
 
+def structured_reply(
+    provider: Any, system: str, prompt: str, schema: dict[str, Any], name: str
+) -> dict[str, Any]:
+    """A JSON object in ``schema``'s shape from any answering provider: OpenAI's structured
+    outputs (strict json_schema) where available, otherwise one required tool call whose
+    arguments are the object (each provider here must call the only tool it is offered).
+    The caller still validates the object; nothing here trusts it."""
+    native = getattr(provider, "structured", None)
+    if native is not None:
+        return native(system, prompt, schema, name)
+    tool = {"name": name, "description": "Give the reply in this shape.", "input_schema": schema}
+    reply = provider.complete(system, [{"role": "user", "content": prompt}], [tool])
+    for block in reply.get("content", []):
+        if (
+            isinstance(block, dict)
+            and block.get("type") == "tool_use"
+            and block.get("name") == name
+        ):
+            if block.get("invalid_arguments") or not isinstance(block.get("input"), dict):
+                raise ProviderError("invalid_arguments")
+            return block["input"]
+    raise ProviderError("no_tool_call")
+
+
 def get_provider() -> Provider | None:
     """The primary answering provider (one per question)."""
     return build_provider(get_settings().assistant_provider)

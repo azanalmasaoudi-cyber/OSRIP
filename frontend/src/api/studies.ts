@@ -11,7 +11,7 @@ import type { DataMode } from '@/domain/types';
  * exports, so they always agree; nothing is calculated here.
  */
 
-const bilingual = z.object({ en: z.string(), ar: z.string() });
+export const bilingual = z.object({ en: z.string(), ar: z.string() });
 const unit = z.object({ code: z.string(), label_en: z.string(), label_ar: z.string() });
 const nature = z.enum(['observed', 'calculated', 'forecast', 'scenario']);
 
@@ -29,7 +29,7 @@ export const STUDY_KINDS = [
 ] as const;
 export type StudyKind = (typeof STUDY_KINDS)[number];
 
-const columnSchema = z.object({
+export const columnSchema = z.object({
   key: z.string(),
   label: bilingual,
   kind: z.enum(['text', 'period', 'number', 'status']),
@@ -37,8 +37,9 @@ const columnSchema = z.object({
 });
 export type StudyColumn = z.infer<typeof columnSchema>;
 
-const chartSchema = z.object({
-  type: z.enum(['line', 'bar', 'heatmap']),
+// Studies draw line, bar and heatmap charts; pie and scatter come from uploaded datasets.
+export const chartSchema = z.object({
+  type: z.enum(['line', 'bar', 'heatmap', 'pie', 'scatter']),
   title: bilingual,
   x: z.string(),
   series: z.array(z.object({ column: z.string(), label: bilingual, nature })).default([]),

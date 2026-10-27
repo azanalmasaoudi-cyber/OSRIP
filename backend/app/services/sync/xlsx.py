@@ -10,6 +10,10 @@ as the shortest decimal that round-trips it (4811.0879999999997 is 4811.088), th
 number of decimals of the cell's own number format (a cell formatted
 ``#,##0.0`` holding 571.32553376831106 is published as 571.3). A cell in the General format,
 or a format the reader does not recognise, keeps the shortest round-trip decimal.
+
+With ``dates=True`` a number in a date format (built-in formats 14-17 and 22, or a custom
+format with a day or year part) is returned as an ISO date (``2026-07-31``, or
+``2026-07-31T08:30`` with a time), in the workbook's 1900 or 1904 date system.
 """
 
 from __future__ import annotations
@@ -19,6 +23,7 @@ import re
 import zipfile
 import zlib
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from xml.etree import ElementTree as ET
 
@@ -70,6 +75,33 @@ def format_decimals(code: str) -> int | None:
     return len(re.findall(r"[0#]", section.split(".", 1)[1]))
 
 
+# Built-in date and date-time formats (ECMA-376 18.8.30); times alone stay numbers.
+BUILTIN_DATES = {14, 15, 16, 17, 22}
+
+
+def format_is_date(code: str) -> bool:
+    """A custom number format that shows a date: a day or year part outside quoted text."""
+    section = re.sub(r'"[^"]*"|\\.|\[[^\]]*\]', "", code.split(";", 1)[0]).lower()
+    return "d" in section or "y" in section
+
+
+def serial_date(raw: str, date1904: bool = False) -> str:
+    """An ISO date (with minutes when the serial has a time) from a stored date serial."""
+    try:
+        serial = float(raw)
+    except ValueError as exc:
+        raise WorkbookError("number_unreadable") from exc
+    if not 0 <= serial < 2_958_466:  # up to 9999-12-31
+        raise WorkbookError("date_out_of_range")
+    # The 1900 system counts a 29 February 1900 that never existed (serial 60).
+    base = datetime(1904, 1, 1) if date1904 else datetime(1899, 12, 30 if serial >= 61 else 31)
+    moment = base + timedelta(days=serial)
+    moment = (moment + timedelta(seconds=30)).replace(second=0, microsecond=0)
+    if serial % 1 == 0 or (moment.hour, moment.minute) == (0, 0):
+        return moment.date().isoformat()
+    return moment.strftime("%Y-%m-%dT%H:%M")
+
+
 def displayed(text: str, decimals: int | None) -> str:
     if decimals is None:
         return text
@@ -110,7 +142,8 @@ class Sheet:
 
 
 class Workbook:
-    def __init__(self, data: bytes) -> None:
+    def __init__(self, data: bytes, *, dates: bool = False) -> None:
+        self._dates = dates
         if len(data) > MAX_ARCHIVE_BYTES:
             raise WorkbookError("file_too_large")
         try:
@@ -126,8 +159,13 @@ class Workbook:
         if "xl/workbook.xml" not in names:
             raise WorkbookError("not_an_xlsx_file")
         self._shared = self._shared_strings() if "xl/sharedStrings.xml" in names else []
-        self._decimals = self._style_decimals() if "xl/styles.xml" in names else []
+        self._decimals: list[int | None] = []
+        self._date_styles: list[bool] = []
+        if "xl/styles.xml" in names:
+            self._decimals, self._date_styles = self._styles()
         workbook = _xml(self._read("xl/workbook.xml"))
+        pr = workbook.find(f"{_M}workbookPr")
+        self._date1904 = pr is not None and (pr.get("date1904") or "").lower() in ("1", "true")
         rels = _xml(self._read("xl/_rels/workbook.xml.rels"))
         targets = {r.get("Id"): r.get("Target") or "" for r in rels}
         self.sheet_paths: dict[str, str] = {}
@@ -145,18 +183,23 @@ class Workbook:
         except (zipfile.BadZipFile, zlib.error, KeyError, EOFError) as exc:
             raise WorkbookError("file_damaged") from exc
 
-    def _style_decimals(self) -> list[int | None]:
+    def _styles(self) -> tuple[list[int | None], list[bool]]:
+        """Per cell style: the decimals its number format shows, and whether it is a date."""
         root = _xml(self._read("xl/styles.xml"))
         custom = {
             int(f.get("numFmtId") or -1): f.get("formatCode") or ""
             for f in root.iter(f"{_M}numFmt")
         }
         xfs = root.find(f"{_M}cellXfs")
-        out: list[int | None] = []
+        decimals: list[int | None] = []
+        dates: list[bool] = []
         for xf in xfs if xfs is not None else []:
             fid = int(xf.get("numFmtId") or 0)
-            out.append(format_decimals(custom[fid]) if fid in custom else BUILTIN_DECIMALS.get(fid))
-        return out
+            decimals.append(
+                format_decimals(custom[fid]) if fid in custom else BUILTIN_DECIMALS.get(fid)
+            )
+            dates.append(format_is_date(custom[fid]) if fid in custom else fid in BUILTIN_DATES)
+        return decimals, dates
 
     def _shared_strings(self) -> list[str]:
         root = _xml(self._read("xl/sharedStrings.xml"))
@@ -192,8 +235,12 @@ class Workbook:
                     text = v.text or ""
                 elif v is not None and v.text is not None:
                     style = int(c.get("s") or 0)
-                    decimals = self._decimals[style] if 0 <= style < len(self._decimals) else None
-                    text = displayed(number_text(v.text), decimals)
+                    known = 0 <= style < len(self._decimals)
+                    if self._dates and known and self._date_styles[style]:
+                        text = serial_date(v.text, self._date1904)
+                    else:
+                        decimals = self._decimals[style] if known else None
+                        text = displayed(number_text(v.text), decimals)
                 else:
                     continue
                 text = text.strip()

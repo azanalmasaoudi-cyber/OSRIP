@@ -261,6 +261,16 @@ class Settings(BaseSettings):
     upload_max_bytes: int = 5 * 1024 * 1024  # matches ck_import_job_file_size
     upload_max_rows: int = 50_000
 
+    # ------------------------------------------------------------ datasets for analysis
+    # Files people upload to analyse (CSV, Excel .xlsx, JSON): private to their owner, never
+    # part of the published statistics. Limits per file and per account; AI summaries of a
+    # dataset's computed results per account per UTC day (each is one model call).
+    dataset_max_bytes: int = 5 * 1024 * 1024  # at most 10 MB (ck_analysis_dataset_size)
+    dataset_max_rows: int = 20_000
+    dataset_max_columns: int = 60
+    dataset_max_per_user: int = 50
+    dataset_summaries_per_day: int = 20
+
 
 @lru_cache
 def get_settings() -> Settings:
