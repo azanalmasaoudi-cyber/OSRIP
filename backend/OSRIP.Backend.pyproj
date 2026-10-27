@@ -188,6 +188,7 @@
     <Compile Include="app\services\imports\workflow.py" />
     <Compile Include="app\services\library.py" />
     <Compile Include="app\services\mail.py" />
+    <Compile Include="app\services\mail_templates.py" />
     <Compile Include="app\services\monitoring.py" />
     <Compile Include="app\services\ncsi.py" />
     <Compile Include="app\services\observations.py" />
@@ -274,6 +275,7 @@
     <Compile Include="tests\test_import_workflow_integration.py" />
     <Compile Include="tests\test_live_study.py" />
     <Compile Include="tests\test_migrations_roundtrip_integration.py" />
+    <Compile Include="tests\test_mail_templates.py" />
     <Compile Include="tests\test_mulhim_identity.py" />
     <Compile Include="tests\test_ncsi.py" />
     <Compile Include="tests\test_oidc_integration.py" />
@@ -290,13 +292,17 @@
     <Compile Include="tests\test_series_integration.py" />
     <Compile Include="tests\test_series_speech.py" />
     <Compile Include="tests\test_settings_isolation.py" />
+    <Compile Include="tests\test_sms_twilio.py" />
     <Compile Include="tests\test_source_sync.py" />
     <Compile Include="tests\test_studies_integration.py" />
     <Compile Include="tests\test_study_schema.py" />
     <Compile Include="tests\test_timeline.py" />
     <Compile Include="tests\test_upgrade_integration.py" />
+    <Compile Include="tests\test_verification_change_integration.py" />
     <Compile Include="tests\test_voice_bridge.py" />
     <Compile Include="tests\test_voice_gender.py" />
+    <Compile Include="tests\test_whatsapp.py" />
+    <Compile Include="tests\test_whatsapp_integration.py" />
     <Compile Include="tests\test_zy_research_assistant_integration.py" />
     <Compile Include="tests\test_zz_reference_pack_integration.py" />
     <Compile Include="tests\test_zzz_source_sync_integration.py" />
@@ -314,6 +320,7 @@
     <Compile Include="scripts\sms_acceptance.py" />
     <Compile Include="scripts\sync_worker_dev.py" />
     <Compile Include="scripts\voice_acceptance.py" />
+    <Compile Include="scripts\whatsapp_setup.py" />
     <Compile Include="alembic\env.py" />
     <Compile Include="alembic\versions\0001_core_schema.py" />
     <Compile Include="alembic\versions\0002_reference_seed.py" />

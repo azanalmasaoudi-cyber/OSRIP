@@ -88,7 +88,9 @@ const providersSchema = z.object({
   oidc: z.object({ google: z.boolean(), microsoft: z.boolean() }),
   sms: z.object({
     available: z.boolean(),
-    status: z.enum(['disabled', 'not_configured', 'test', 'configured']),
+    // sandbox: real WhatsApp messages from Meta's test sender, to approved test numbers only.
+    status: z.enum(['disabled', 'not_configured', 'test', 'sandbox', 'configured']),
+    channel: z.enum(['sms', 'whatsapp']).default('sms'),
     provider: z.string().nullable(),
     note: z.string().nullable(),
     default_country: z.string(),
@@ -117,15 +119,21 @@ export function oidcStartUrl(provider: OidcProvider, intent: 'sign_in' | 'link' 
 
 const accepted = z.object({ status: z.string(), message: z.string().optional() });
 
+/** The page's language: account e-mails and SMS codes are sent in it first (both languages
+ * are always in an e-mail). */
+function pageLanguage(): 'en' | 'ar' {
+  return document.documentElement.lang === 'ar' ? 'ar' : 'en';
+}
+
 export function useRegister() {
   return useMutation({
     mutationFn: (body: { email: string; display_name: string; password: string }) =>
-      apiJson('/auth/register', accepted, jsonBody('POST', body)),
+      apiJson('/auth/register', accepted, jsonBody('POST', { ...body, language: pageLanguage() })),
   });
 }
 
 export function useEmailRequest(path: '/auth/password/forgot' | '/auth/magic-link' | '/auth/verify-email/resend') {
-  return useMutation({ mutationFn: (email: string) => apiJson(path, accepted, jsonBody('POST', { email })) });
+  return useMutation({ mutationFn: (email: string) => apiJson(path, accepted, jsonBody('POST', { email, language: pageLanguage() })) });
 }
 
 export function useVerifyEmail() {
@@ -183,18 +191,20 @@ export type PhoneChallenge = z.infer<typeof challengeSchema>;
 
 export function usePhoneRequest() {
   return useMutation({
-    mutationFn: (body: { country_code: string; number: string; purpose: 'sign_in' | 'link' }) =>
-      apiJson('/auth/phone/request', challengeSchema, jsonBody('POST', body)),
+    // password: needed to replace a verified number on an account that has one.
+    mutationFn: (body: { country_code: string; number: string; purpose: 'sign_in' | 'link'; password?: string }) =>
+      apiJson('/auth/phone/request', challengeSchema, jsonBody('POST', { ...body, language: pageLanguage() })),
   });
 }
 
-const verifiedSchema = z.object({ status: z.enum(['registered', 'signed_in', 'linked']), me: meSchema });
+const verifiedSchema = z.object({ status: z.enum(['registered', 'signed_in', 'linked', 'changed']), me: meSchema });
+export type PhoneOutcome = z.infer<typeof verifiedSchema>['status'];
 
 export function usePhoneVerify() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (body: { challenge_id: string; code: string; display_name?: string }) =>
-      apiJson('/auth/phone/verify', verifiedSchema, jsonBody('POST', body)),
+      apiJson('/auth/phone/verify', verifiedSchema, jsonBody('POST', { ...body, language: pageLanguage() })),
     onSuccess: (result) => {
       client.setQueryData(ME_KEY, result.me);
       void client.invalidateQueries({ queryKey: ['imports'] });
@@ -202,14 +212,18 @@ export function usePhoneVerify() {
   });
 }
 
+/** Add an e-mail address, or change a confirmed one (password needed for accounts that have one). */
 export function useLinkEmail() {
-  return useMutation({ mutationFn: (email: string) => apiJson('/auth/email/link', accepted, jsonBody('POST', { email })) });
+  return useMutation({
+    mutationFn: (vars: { email: string; password?: string }) =>
+      apiJson('/auth/email/link', accepted, jsonBody('POST', { ...vars, language: pageLanguage() })),
+  });
 }
 
 export function useConfirmEmailLink() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (token: string) => apiJson('/auth/email/link/confirm', accepted, jsonBody('POST', { token })),
+    mutationFn: (token: string) => apiJson('/auth/email/link/confirm', accepted, jsonBody('POST', { token, language: pageLanguage() })),
     onSuccess: () => void client.invalidateQueries({ queryKey: ME_KEY }),
   });
 }

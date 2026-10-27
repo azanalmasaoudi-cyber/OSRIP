@@ -26,6 +26,7 @@ import {
   useUnlinkIdentity,
   useVerifyEmail,
   type OidcProvider,
+  type PhoneOutcome,
 } from '@/api/auth';
 import { ApiRequestError } from '@/api/client';
 import { adapterKind } from '@/api/config';
@@ -55,9 +56,21 @@ function Field({ label, hint, ...props }: { label: string; hint?: string } & Inp
   );
 }
 
+// Server error codes with a translation; anything else shows the server's own message.
+const ERROR_CODES = [
+  'wrong_current_password', 'reauthentication_required', 'email_unchanged', 'email_taken', 'invalid_email',
+  'invalid_name', 'invalid_or_expired_token', 'weak_password', 'password_unchanged', 'email_not_configured',
+  'email_delivery_failed', 'too_many_requests',
+] as const;
+
 function ErrorText({ error }: { error: unknown }) {
+  const { t } = useTranslation();
   if (!error) return null;
-  const message = error instanceof Error ? error.message : 'Request failed.';
+  let message = error instanceof Error ? error.message : 'Request failed.';
+  if (error instanceof ApiRequestError && (ERROR_CODES as readonly string[]).includes(error.code)) {
+    const details = (error.details ?? {}) as { minutes?: number };
+    message = t(`auth.errors.${error.code as (typeof ERROR_CODES)[number]}`, { minutes: details.minutes ?? 10 });
+  }
   return <p role="alert" className="text-sm text-destructive">{message}</p>;
 }
 
@@ -456,8 +469,10 @@ export function AccountPage() {
           <p className="mt-3 text-xs text-muted-foreground">{t('account.rolesNote')}</p>
         </Card>
         {/* Stays mounted just after linking so its confirmation is shown. */}
-        {!me.data.phone || phoneLinkedNow ? <AddPhone onLinked={() => setPhoneLinkedNow(true)} /> : null}
-        {!me.data.email || !me.data.email_verified ? <AddEmail /> : null}
+        {!me.data.phone || phoneLinkedNow ? <AddPhone onLinked={() => setPhoneLinkedNow(true)} /> : <ChangePhone hasPassword={me.data.has_password === true} />}
+        {!me.data.email || !me.data.email_verified
+          ? <AddEmail unconfirmed={me.data.email ?? null} />
+          : <ChangeEmail hasPassword={me.data.has_password === true} />}
         {me.data.has_password ? <ChangePassword /> : null}
         <section aria-labelledby="linked-heading" className="flex flex-col gap-3">
           <h2 id="linked-heading" className="text-lg font-semibold">{t('account.linkedHeading')}</h2>
@@ -515,12 +530,13 @@ function ChangePassword({ required = false }: { required?: boolean }) {
 
 function AddPhone({ onLinked }: { onLinked: () => void }) {
   const { t } = useTranslation();
+  const providers = useProviders();
   const [open, setOpen] = useState(false);
   const [done, setDone] = useState(false);
   return (
     <section aria-labelledby="add-phone-heading" className="surface-card flex flex-col gap-3 p-5" data-testid="add-phone">
       <h2 id="add-phone-heading" className="text-lg font-semibold">{t('phone.addTitle')}</h2>
-      <p className="text-sm text-muted-foreground">{t('phone.addIntro')}</p>
+      <p className="text-sm text-muted-foreground">{providers.data?.sms.channel === 'whatsapp' ? t('phone.whatsapp.addIntro') : t('phone.addIntro')}</p>
       {done ? <Notice tone="success">{t('phone.linked')}</Notice> : open ? (
         <PhoneVerification purpose="link" onDone={() => { setDone(true); onLinked(); }} />
       ) : (
@@ -530,22 +546,86 @@ function AddPhone({ onLinked }: { onLinked: () => void }) {
   );
 }
 
-function AddEmail() {
+function ChangePhone({ hasPassword }: { hasPassword: boolean }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [outcome, setOutcome] = useState<PhoneOutcome | null>(null);
+  return (
+    <section aria-labelledby="change-phone-heading" className="surface-card flex flex-col gap-3 p-5" data-testid="change-phone">
+      <h2 id="change-phone-heading" className="text-lg font-semibold">{t('phone.changeTitle')}</h2>
+      <p className="text-sm text-muted-foreground">{t('phone.changeIntro')}</p>
+      {!hasPassword ? <p className="text-xs text-muted-foreground">{t('account.reauthNote')}</p> : null}
+      {outcome ? <Notice tone="success">{outcome === 'changed' ? t('phone.changed') : t('phone.linked')}</Notice> : open ? (
+        <PhoneVerification purpose="link" askPassword={hasPassword} onDone={setOutcome} />
+      ) : (
+        <Button variant="outline" className="w-fit" onClick={() => setOpen(true)} data-testid="change-phone-open">{t('phone.changeButton')}</Button>
+      )}
+    </section>
+  );
+}
+
+/** Add an address, or confirm the unconfirmed one the account already shows (prefilled). */
+function AddEmail({ unconfirmed }: { unconfirmed: string | null }) {
   const { t } = useTranslation();
   const link = useLinkEmail();
   const providers = useProviders();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(unconfirmed ?? '');
+  const again = unconfirmed !== null && email.trim().toLowerCase() === unconfirmed.toLowerCase();
   return (
     <section aria-labelledby="add-email-heading" className="surface-card flex flex-col gap-3 p-5" data-testid="add-email">
       <h2 id="add-email-heading" className="text-lg font-semibold">{t('account.addEmailTitle')}</h2>
       <p className="text-sm text-muted-foreground">{t('account.addEmailIntro')}</p>
       {providers.data?.email_delivery === 'disabled' ? <Notice>{t('account.emailDisabled')}</Notice> : link.isSuccess ? (
-        <Notice tone="success">{t('account.checkInbox')}</Notice>
+        <Notice tone="success">{again ? t('account.confirmationSent') : t('account.checkInbox')}</Notice>
       ) : (
-        <form onSubmit={(e) => { e.preventDefault(); link.mutate(email); }} noValidate className="flex flex-col gap-3">
+        <form onSubmit={(e) => { e.preventDefault(); link.mutate({ email }); }} noValidate className="flex flex-col gap-3">
           <Field label={t('auth.email')} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" />
           <ErrorText error={link.error} />
-          <Button type="submit" variant="outline" className="w-fit" disabled={link.isPending || !email}><Mail aria-hidden="true" />{t('account.sendConfirmLink')}</Button>
+          <Button type="submit" variant="outline" className="w-fit" disabled={link.isPending || !email} data-testid="add-email-submit">
+            <Mail aria-hidden="true" />{again ? t('account.resendConfirmation') : t('account.sendConfirmLink')}
+          </Button>
+        </form>
+      )}
+    </section>
+  );
+}
+
+/** Replace a confirmed address: the change happens only when the link sent to the new one is opened. */
+function ChangeEmail({ hasPassword }: { hasPassword: boolean }) {
+  const { t } = useTranslation();
+  const link = useLinkEmail();
+  const providers = useProviders();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  return (
+    <section aria-labelledby="change-email-heading" className="surface-card flex flex-col gap-3 p-5" data-testid="change-email">
+      <h2 id="change-email-heading" className="text-lg font-semibold">{t('account.changeEmailTitle')}</h2>
+      <p className="text-sm text-muted-foreground">{t('account.changeEmailIntro')}</p>
+      {providers.data?.email_delivery === 'disabled' ? <Notice>{t('account.emailDisabled')}</Notice> : sentTo ? (
+        <Notice tone="success"><span>{t('account.changeEmailSent', { email: sentTo })}</span></Notice>
+      ) : (
+        <form
+          noValidate
+          className="flex flex-col gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            link.mutate({ email, password: hasPassword ? password : undefined }, {
+              onSuccess: () => { setSentTo(email.trim()); setPassword(''); },
+            });
+          }}
+        >
+          <Field label={t('account.newEmail')} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)}
+            dir="ltr" data-testid="change-email-address" />
+          {hasPassword ? (
+            <Field label={t('account.currentPassword')} type="password" autoComplete="current-password" value={password}
+              onChange={(e) => setPassword(e.target.value)} dir="ltr" data-testid="change-email-password" />
+          ) : <p className="text-xs text-muted-foreground">{t('account.reauthNote')}</p>}
+          <ErrorText error={link.error} />
+          <Button type="submit" variant="outline" className="w-fit" disabled={link.isPending || !email || (hasPassword && !password)}
+            data-testid="change-email-submit">
+            <Mail aria-hidden="true" />{t('account.sendChangeLink')}
+          </Button>
         </form>
       )}
     </section>
@@ -563,7 +643,7 @@ export function LinkEmailPage() {
       <PageHeader title={t('account.linkEmailTitle')} intro={t('account.linkEmailIntro')} />
       {!token ? <Notice>{t('account.missingToken')}</Notice> : (
         <div className="flex max-w-md flex-col gap-3" data-testid="link-email">
-          {confirm.isSuccess ? <Notice tone="success">{t('account.emailLinked')}</Notice> : (
+          {confirm.isSuccess ? <Notice tone="success">{confirm.data.status === 'changed' ? t('account.emailChanged') : t('account.emailLinked')}</Notice> : (
             <Button onClick={() => confirm.mutate(token)} disabled={confirm.isPending} className="w-fit" data-testid="link-email-confirm">
               <CheckCircle2 aria-hidden="true" />{t('account.confirmEmail')}
             </Button>

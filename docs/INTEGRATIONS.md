@@ -19,8 +19,9 @@ mocked counterpart unless "live" is stated); **configured** = real credentials i
 | OpenFreeMap (MapLibre style and tiles) | Basemap on Geography | OpenStreetMap-derived. No administrative boundaries are used or claimed | Free, no key; terms at openfreemap.org/tos | The browser requests tiles directly and sends its IP address to OpenFreeMap. No OSRIP data is sent | Loaded lazily. If the style fails, the page shows "map unavailable" and the area table still works. `VITE_MAP_STYLE_URL=none` switches it off | Style URL only; the CSP must list the tile host | Implemented and tested (the failure path only; e2e makes no external calls) |
 | Directions links to facilities | Open a directions app at a verified facility location | **No verified facility coordinates exist** in the project | — | — | — | — | **Pending, deliberately not built**: a link to an invented location would be misleading. Build it only after coordinates are sourced and reviewed |
 | Anthropic Messages API (Claude) | Assistant that explains published figures and stored forecasts | Answers are restricted to tool results; unmatched numbers are withheld. **It never produces forecasts** | Pay per token; per-user limits of 5 per minute and 30 per hour cap the spend | Questions and the retrieved published statistics are sent to Anthropic. No uploads or account data are sent. The key stays on the server | 30 s timeout; **one retry** after 1 s on 429, 5xx and network errors; then an explained "temporarily unavailable" message. Failures appear on Service health | Model name in `OSRIP_ASSISTANT_MODEL`; review when models are retired | Implemented and tested (mocked HTTP, including retry). **Not configured**: no key |
-| SMTP relay | Confirmation, recovery and sign-in-link e-mails | — | Depends on the relay; the institution's relay is usually free | Recipient address and one link per message | Sent only when a user asks. A failure is logged, reported on Service health and shown to the user as "could not send". It is not retried automatically, because repeated sends would repeat the token | Credentials and sender address | Implemented and tested (outbox; SMTP code path unit-tested). **Not configured** |
-| SMS verification (phone registration and sign-in) | Register and sign in with a mobile number, with no e-mail needed; add a verified number to an account | The provider generates, sends and checks the code; OSRIP never stores it. OSRIP also enforces expiry, attempt limits, single use and cooldowns itself | Per message; the limits (per number, per client, per hour in total) bound the cost | Each phone number goes to the provider. Numbers are stored only after verification and appear only masked in the interface, audit log and acceptance records | Provider errors become explained messages with an e-mail alternative. The provider call has a 10 s timeout and is **not retried** (a retry could send two codes). Failures appear on Service health | Provider credentials; the number-plan rule for Oman | **Application side implemented and tested** with a scripted test provider (36 backend and 18 browser tests). **No production provider selected, so no real adapter and no live delivery.** Disabled by default and shown as unavailable |
+| SMTP relay | Confirmation, recovery, sign-in-link and change-of-address e-mails (Arabic and English in every message, HTML with a plain-text part) | — | Depends on the relay; the institution's relay is usually free; Amazon SES lists $0.10 per 1,000 e-mails | Recipient address, the account name and one link per message; notices show other addresses and numbers masked | Sent only when a user asks. A failure is logged, reported on Service health and shown to the user as "could not send". It is not retried automatically, because repeated sends would repeat the token | Credentials and sender address | Implemented and tested (outbox; SMTP path tested against a fake server, including the HTML part). **Not configured; no real e-mail has been sent** |
+| SMS verification (phone registration and sign-in) | Register and sign in with a mobile number, with no e-mail needed; add a verified number to an account | The provider generates, sends and checks the code; OSRIP never stores it. OSRIP also enforces expiry, attempt limits, single use and cooldowns itself | Per message; the limits (per number, per client, per hour in total) bound the cost | Each phone number goes to the provider. Numbers are stored only after verification and appear only masked in the interface, audit log and acceptance records | Provider errors become explained messages with an e-mail alternative. The provider call has a 10 s timeout and is **not retried** (a retry could send two codes). Failures appear on Service health | Provider credentials; the number-plan rule for Oman | **Twilio Verify adapter implemented and tested against mocked HTTP**; the application side is tested with the scripted provider. **No Twilio account exists, so nothing has been sent to a real phone and SMS must not be reported as working.** Disabled by default and shown as unavailable |
+| WhatsApp verification (Meta WhatsApp Cloud API) | The same phone registration, sign-in and linking, with the code delivered by WhatsApp | OSRIP makes the code and keeps only a keyed digest; WhatsApp delivers it with an authentication template (Meta's preset text, Arabic and English) | **Test mode: free** (Meta's test sender, up to 5 approved recipients). Production: charged per delivered code, Oman rates raised on 2026-10-01 | Each number goes to Meta. Test mode sends only to the numbers listed on the server | Errors become explained messages with an e-mail alternative; 10 s timeout, **no retry**. Delivery failures after Meta accepts a message (for example a number without WhatsApp) are not reported back, because no webhook is set up | Access token, phone number ID, template | **Adapter implemented and tested against a simulated Meta API.** No Meta app exists yet, so no WhatsApp message has been sent. **Production mode is off** and needs billing and business setup |
 | Google / Microsoft OpenID Connect | Optional sign-in | Accounts are **not** merged on a matching e-mail | Free | Name, e-mail, subject ID | Discovery and keys are cached. **One retry** on metadata fetch. The token exchange is not retried (single-use code). Failures redirect with an explained error and appear on Service health | Register redirect URIs; rotate client secrets | Implemented and tested (scripted provider with real RSA keys). **Not configured** |
 | Error monitoring (built-in) | Record server and browser errors to fix defects | E-mails, 24+ character tokens and query strings are removed before storage. Errors are grouped by fingerprint | Free (own database) | No cookies are sent with browser reports. At most 10 reports per page session, and 30 per hour per client on the server | Recording never breaks a request. Every 500 response carries a `request_id` | Review `/admin/health`; prune `app_error` rows as needed | Implemented and tested |
 | Health checks | Container orchestration and uptime checks | `/health` (process), `/health/db`, `/health/ready` (database + migration at head) | — | No data returned | Used by the compose `api` healthcheck; `web` waits for it | — | Implemented and tested; the compose file has **not been run** |
@@ -43,6 +44,35 @@ checks need a public address, which does not exist yet.
 | `OSRIP_EMAIL_BACKEND` | `outbox` (development only: stored in the database and shown at `/dev/mail`, never sent; refused in production), `smtp`, or `disabled` (registration, magic links and recovery are then switched off and labelled) |
 | `OSRIP_SMTP_HOST`, `OSRIP_SMTP_PORT` (587), `OSRIP_SMTP_USERNAME`, `OSRIP_SMTP_PASSWORD`, `OSRIP_SMTP_FROM`, `OSRIP_SMTP_STARTTLS` (true) | Any SMTP relay the institution provides. Messages are sent only when a user asks (register, resend, forgot password, magic link). The SMTP path has not been tested against a real server (see TEST_RESULTS) |
 | `OSRIP_VERIFY_EMAIL_HOURS` (24), `OSRIP_RESET_PASSWORD_MINUTES` (30), `OSRIP_MAGIC_LINK_MINUTES` (15), `OSRIP_EMAIL_REQUESTS_PER_HOUR` (5 per account and purpose) | Token lifetimes and limits. Tokens are single-use. Only their SHA-256 digests are stored |
+| `OSRIP_REAUTH_MINUTES` (10) | Changing a confirmed address or a verified phone number needs the current password. An account without a password (phone or Google/Microsoft sign-in) needs a session opened within this many minutes instead |
+
+Messages (`backend/app/services/mail_templates.py`): every message carries Arabic and
+English, the language of the page that asked first, the Arabic part right to left. It
+is sent as HTML (inline styles, no images, scripts or tracking) with a plain-text part.
+Values are escaped, and other people's addresses and numbers appear masked.
+
+Changing a confirmed address: the link goes to the new address, and the account changes
+only when it is opened. The previous address is then told (with the new one masked and
+a link to password recovery). An address that belongs to another account is never
+taken; its owner is told instead, and the requester sees the same answer as for a free
+address. Changing a verified phone number tells the confirmed address too.
+
+**Setting up delivery (not done; needs an account the team owns):**
+
+1. Use the institution's SMTP relay, or a transactional service such as Amazon SES
+   (https://aws.amazon.com/ses/; pricing https://aws.amazon.com/ses/pricing/). New SES
+   accounts start in a sandbox that only sends to verified addresses: request
+   production access in the SES console.
+2. Verify the sending domain and publish its DNS records: DKIM (the service gives the
+   records), SPF, and a DMARC policy. Without them, messages go to spam or are refused.
+3. Create SMTP credentials (for SES, in the SES console; they are not the AWS console
+   password) and put them in `deploy/.env`: `OSRIP_EMAIL_BACKEND=smtp`,
+   `OSRIP_SMTP_HOST` (SES: `email-smtp.<region>.amazonaws.com`), `OSRIP_SMTP_PORT=587`,
+   `OSRIP_SMTP_USERNAME`, `OSRIP_SMTP_PASSWORD`, `OSRIP_SMTP_FROM` (an address on the
+   verified domain), and `OSRIP_PUBLIC_BASE_URL` (the `https://` address used in links).
+4. Test with real inboxes before announcing it: register, confirm, request a password
+   reset and change an address, in Arabic and in English, and check that links open
+   the deployment and that the messages are not marked as spam.
 
 ## Google sign-in
 
@@ -238,30 +268,149 @@ The electricity, water and foreign-trade datasets on data.gov.om need a signed-i
 4. **Register the source:** publisher National Centre for Statistics and Information, the statistical-table URL, the access date, and the Open Government License – Sultanate of Oman.
 5. **Upload in Data Management,** then validate, approve and publish.
 
+## WhatsApp verification (Meta WhatsApp Cloud API)
+
+**Status: adapter written and tested against a simulated Meta API only. No Meta developer
+app exists yet, so no code has been sent by WhatsApp and the demonstration has not been
+run.** Production messaging is off and stays off until it is set explicitly
+(`OSRIP_WHATSAPP_MODE=production`) after the requirements below are met.
+
+### Evaluation: WhatsApp instead of Twilio SMS (checked 2026-10-27)
+
+| | WhatsApp, test mode | WhatsApp, production | Twilio Verify (SMS) |
+|---|---|---|---|
+| Free demonstration | **Yes.** Meta's test sender messages up to 5 recipients you verify, free of charge | No | Trial credit only, to verified numbers. Oman delivery needs a registered sender ID (about 18 days); unregistered is best effort |
+| Cost per code | None | Charged per delivered authentication message. Oman became its own market with higher rates from 2026-10-01 (amounts on Meta's rate card); vendors listed about US$0.01 under the old "Rest of Middle East" rate | About US$0.27 |
+| Accounts | Facebook account, Meta developer account, business portfolio (free) | Also a payment method, a business phone number, an approved display name, and business verification to pass 250 business-started conversations per day | Twilio account, paid upgrade, sender ID registration |
+| The person needs | WhatsApp on the phone | WhatsApp | Any mobile phone |
+
+**Recommendation for the graduation project: WhatsApp test mode.** It is the only option
+with real delivery and no payment. Twilio stays in the code as the SMS option, and the
+provider is chosen in one setting. Neither is removed.
+
+Sources: Meta's Cloud API getting-started guide, authentication-template and copy-code
+pages, supported languages, error codes, pricing and messaging-limit pages on
+developers.facebook.com (2026-10-27). Meta's search-indexed guide states the test number
+can send free messages to up to 5 recipients; the current page no longer repeats the
+sentence, so check WhatsApp Manager's billing page shows no charges after the first test.
+
+### How it works
+
+- `OSRIP_SMS_PROVIDER=whatsapp` uses the same phone flow, limits and rules as SMS (see the
+  next section): expiry, wrong-code limit, single use, cooldowns, accounts created only
+  after verification, numbers never moved between accounts.
+- OSRIP makes a 6-digit code with a secure random generator and sends it with
+  `POST https://graph.facebook.com/v23.0/{phone-number-id}/messages`, as an authentication
+  template (`osrip_verification_code`, languages `en` and `ar`) with a copy-code button.
+  The code goes in the body parameter and in the button parameter, as Meta requires.
+- Only an HMAC of the code (the server's secret key and a per-challenge nonce) is stored,
+  in `phone_challenge.provider_ref`. The code is never stored, logged or sent to the browser.
+- The message language follows the page (Arabic or English). Meta writes the text; only
+  the code is OSRIP's.
+- **Test and production are separate:**
+  - `test` (the default): OSRIP sends only to the numbers in
+    `OSRIP_WHATSAPP_TEST_RECIPIENTS`, and refuses others before calling Meta. The
+    interface shows "WhatsApp demonstration" and the public status is `sandbox`.
+  - `production`: any number, charged by Meta, and the status is `configured`. Never set by
+    the setup script; `deploy/predeploy_check.py` warns about it.
+
+| Setting | Meaning |
+|---|---|
+| `OSRIP_SMS_ENABLED`, `OSRIP_SMS_PROVIDER=whatsapp` | Switch phone verification on, with WhatsApp |
+| `OSRIP_WHATSAPP_MODE` | `test` (default) or `production` |
+| `OSRIP_WHATSAPP_ACCESS_TOKEN` | A system user access token (secret; server only) |
+| `OSRIP_WHATSAPP_PHONE_NUMBER_ID` | The sender's phone number ID from API Setup (not the phone number) |
+| `OSRIP_WHATSAPP_BUSINESS_ACCOUNT_ID` | The WhatsApp Business Account ID, used by the setup script for the template |
+| `OSRIP_WHATSAPP_TEST_RECIPIENTS` | The approved test numbers, comma-separated, e.g. `+96891234567` (at most 5 at Meta) |
+| `OSRIP_WHATSAPP_TEMPLATE_NAME` (`osrip_verification_code`), `OSRIP_WHATSAPP_API_VERSION` (`v23.0`) | Template name and Graph API version |
+
+### Setting up the free demonstration
+
+You do these steps yourself; never paste the token into a chat or commit it.
+
+1. **Meta developer account.** Sign in at https://developers.facebook.com/ with your own
+   Facebook account and choose **Get Started** to register as a developer (Meta may ask
+   you to confirm a phone number or e-mail address). Meta's terms apply as written.
+2. **Create the app.** At https://developers.facebook.com/apps choose **Create app**,
+   pick the **Connect with customers through WhatsApp** use case, and select or create a
+   business portfolio (free). Do not add a payment method.
+3. **Test sender.** In the app, open **WhatsApp → API Setup**. Meta creates a test
+   WhatsApp Business Account and a test phone number. Note the **Phone number ID** and the
+   **WhatsApp Business Account ID** shown there.
+4. **Approved recipients.** In the **To** field choose **Manage phone number list**, add
+   your WhatsApp number (+968 …) and enter the code WhatsApp sends to it. Up to 5 numbers.
+5. **First message.** Send the ready-made `hello_world` template from the same page to
+   check that your phone receives it.
+6. **Permanent token.** In Meta Business Suite settings (https://business.facebook.com/settings)
+   open **Users → System users**, add a system user, assign it the app and the WhatsApp
+   account, and generate a token with `whatsapp_business_messaging` and
+   `whatsapp_business_management` (and `business_management`). The temporary token on
+   the API Setup page also works but expires within about a day.
+7. **Store the settings.** In a terminal, from `backend\`:
+   `.venv\Scripts\python.exe scripts\whatsapp_setup.py configure`. Paste the token at the
+   hidden prompt, then the two IDs and your approved numbers. This writes `backend/.env`
+   in test mode.
+8. **Create the template.** `.venv\Scripts\python.exe scripts\whatsapp_setup.py create-template`,
+   then `... status` until both languages show `APPROVED`. Meta's documentation does not
+   say whether its test account accepts authentication templates; if it refuses, the
+   demonstration cannot be done for free and the reason is shown.
+9. **Run it.** Set `OSRIP_SMS_ENABLED=true` in `backend/.env`, restart the API, open
+   **Register → Phone**, enter an approved number, and enter the code that arrives in
+   WhatsApp. A number that is not approved is refused with an explanation.
+
+### Before production (left disabled)
+
+- A business phone number of your own, not in use on the WhatsApp apps, registered
+  to the account, with an approved display name.
+- A payment method in WhatsApp Manager: every delivered authentication message is
+  charged, with Oman's own rate from 2026-10-01 (check
+  https://business.whatsapp.com/products/platform-pricing#rates).
+- Business verification in Meta Business Suite, to raise the limit of 250
+  business-started conversations per day and to get the display name approved.
+- The template created again on the production account (templates do not move from
+  the test account), and opt-in wording in the interface as Meta's policy requires.
+- Optionally, a webhook (public HTTPS address) to learn of messages that fail after
+  Meta accepts them.
+- Then, and only with explicit approval, `OSRIP_WHATSAPP_MODE=production`.
+
 ## SMS verification (registration and sign-in by phone)
 
-**Status: application side complete and tested; no production provider.** No SMS
-provider has been chosen for the project, so no real adapter exists. OSRIP does not
-guess any vendor's endpoints, SDK calls or credential names. Phone registration stays
-**disabled** (`OSRIP_SMS_ENABLED=false`), and the interface marks it unavailable with
-e-mail offered instead.
+**Status: Twilio Verify adapter written and tested with mocked HTTP only. No Twilio
+account exists, no code has been sent to a real phone, and SMS is not operational.**
+Phone registration stays **disabled** (`OSRIP_SMS_ENABLED=false`), and the interface
+marks it unavailable with e-mail offered instead.
 
 What exists:
 
 - Provider interface in `backend/app/services/sms.py`:
-  - `request_verification(phone_e164) -> provider_ref`;
+  - `request_verification(phone_e164, locale) -> provider_ref`;
   - `check_verification(provider_ref, code) -> approved | denied | expired`;
   - errors: `invalid_number`, `undeliverable`, `provider_unavailable`.
+- `twilio_verify` adapter (Twilio Verify v2 REST API, no SDK):
+  - `POST https://verify.twilio.com/v2/Services/{VA...}/Verifications` with `To`,
+    `Channel=sms` and `Locale` (`ar` or `en`, the page's language);
+  - `POST .../VerificationCheck` with the verification SID and the code;
+  - HTTP Basic authentication with an API key (preferred) or the account SID and auth
+    token; one request, the configured timeout, **no retry** (a retry could send a
+    second code);
+  - Twilio's error codes are mapped: 21211, 21614, 60200, 60205 → invalid number;
+    21408, 21610, 60203, 60410, 60605 → undeliverable; 60202 (too many checks) and a
+    404 on a check (expired or already used) → expired; anything else → provider
+    unavailable;
+  - logs carry the HTTP status and Twilio's error code only, never the number or code.
 - Routes `POST /auth/phone/request` and `POST /auth/phone/verify` (API.md).
 - Rules enforced by OSRIP whatever the provider does:
   - E.164 normalization, with Oman (+968) as the default and the Omani mobile rule
     (8 digits beginning with 7 or 9);
-  - a resend cooldown, and limits per number, per client and in total;
+  - a resend cooldown, and limits per number, per client address and in total (the
+    total caps the spend), plus a per-address limit on code checks;
   - expiring, single-use challenges with a wrong-code limit, a row lock and a
     database trigger against replay;
   - accounts created only after verification, with the Viewer role only;
   - linking only from a signed-in session, and numbers never moved or merged
-    between accounts.
+    between accounts;
+  - replacing a verified number needs the current password (or a recent sign-in) and
+    the code sent to the new number, and the confirmed e-mail address is told.
 - `test` provider: scripted delivery for automated tests and local development.
   - Codes live in process memory and are shown only by `GET /dev/sms-outbox` and the
     `/dev/mail` page.
@@ -270,35 +419,68 @@ What exists:
   - The API refuses to start with this provider in production, and the dev endpoint
     answers 404 there.
 
-Settings (`backend/.env`, `deploy/.env`; never in the frontend, never committed):
+Settings (`backend/.env`, `deploy/.env`; server-side only, never in the frontend, never
+committed). Missing Twilio setting names (never values) are listed on the
+administrators' Service health page.
 
 | Setting | Meaning |
 |---|---|
-| `OSRIP_SMS_ENABLED` | `false` by default. Phone sign-in is offered only when `true` and a known provider is set |
-| `OSRIP_SMS_PROVIDER` | Adapter name. Only `test` exists today, and it is for tests only |
-| `OSRIP_SMS_PROVIDER_API_KEY`, `OSRIP_SMS_PROVIDER_SERVICE_ID` | Placeholders. **Rename or extend them to the chosen provider's real fields** when the adapter is written |
-| `OSRIP_SMS_CODE_MINUTES` (10), `OSRIP_SMS_MAX_ATTEMPTS` (5), `OSRIP_SMS_RESEND_SECONDS` (60), `OSRIP_SMS_PER_NUMBER_HOUR` (5), `OSRIP_SMS_PER_CLIENT_HOUR` (10), `OSRIP_SMS_GLOBAL_HOUR` (200), `OSRIP_SMS_DEFAULT_COUNTRY` (+968), `OSRIP_SMS_PROVIDER_TIMEOUT_SECONDS` (10) | Limits enforced by OSRIP |
+| `OSRIP_SMS_ENABLED` | `false` by default. Phone sign-in is offered only when `true` and a provider is completely configured |
+| `OSRIP_SMS_PROVIDER` | `twilio_verify`, or `test` (tests and local development only) |
+| `OSRIP_TWILIO_VERIFY_SERVICE_SID` | The Verify service (`VA...`) |
+| `OSRIP_TWILIO_API_KEY_SID`, `OSRIP_TWILIO_API_KEY_SECRET` | A Twilio API key (`SK...`) and its secret. Preferred: it can be revoked without changing the account's auth token |
+| `OSRIP_TWILIO_ACCOUNT_SID`, `OSRIP_TWILIO_AUTH_TOKEN` | Instead of an API key: the account SID (`AC...`) and auth token |
+| `OSRIP_SMS_CODE_MINUTES` (10), `OSRIP_SMS_MAX_ATTEMPTS` (5), `OSRIP_SMS_RESEND_SECONDS` (60), `OSRIP_SMS_PER_NUMBER_HOUR` (5), `OSRIP_SMS_PER_CLIENT_HOUR` (10), `OSRIP_SMS_GLOBAL_HOUR` (200), `OSRIP_SMS_DEFAULT_COUNTRY` (+968), `OSRIP_SMS_PROVIDER_TIMEOUT_SECONDS` (10) | Limits enforced by OSRIP. Twilio Verify's own code lifetime is 10 minutes, so keep `OSRIP_SMS_CODE_MINUTES` at 10 or less |
 
-(The brief names these `SMS_ENABLED`, `SMS_PROVIDER`, `SMS_PROVIDER_API_KEY` and
-`SMS_PROVIDER_SERVICE_ID`; every OSRIP setting carries the `OSRIP_` prefix.)
+### Oman: delivery requirements and costs (Twilio's public pages, checked 2026-10-27)
 
-**What remains before SMS can be switched on:**
+Sources: Oman SMS guidelines https://www.twilio.com/en-us/guidelines/om/sms, SMS
+pricing https://www.twilio.com/en-us/sms/pricing/om, Verify pricing
+https://www.twilio.com/en-us/verify/pricing. Twilio states its guidelines can change
+without notice; check them again when the account is opened.
 
-1. **Choose a provider** that can deliver to Omani mobile networks. Record its terms,
-   price per message and data-processing terms for phone numbers.
-2. **Create the provider account.** The team does this; it cannot be done from the
-   code. Keep the credentials out of chat and out of the repository.
-3. **Write the adapter** from the provider's official documentation. Implement the two
-   operations above, map the provider's error responses to the three error codes, use
-   the timeout setting with no automatic retry, and register it in `_ADAPTERS`.
-4. **Replace the placeholder settings** with the provider's real credential fields,
-   and put the values in `deploy/.env` only.
-5. **Register a sender ID** if the provider or Omani regulations require one.
-6. **Run the live acceptance test** against a test deployment, with the owner of one
-   authorized number present:
+- **Sender ID:** Omani operators require a **pre-registered alphanumeric sender ID**.
+  International pre-registration is supported by Twilio, with a provisioning time of
+  about **18 days**; domestic pre-registration (about 14 days) appeared as temporarily
+  suspended. Messages from unregistered sender IDs are attempted on a best-effort basis
+  only and may not arrive.
+- **Numbers:** local and international long codes and short codes are not supported
+  by the operators. Two-way SMS is not supported (users cannot reply).
+- **Content and timing:** Arabic (UCS-2) is supported. Verification codes are
+  requested by the user, but the guidelines ask for messages during the recipient's
+  daytime hours unless urgent.
+- **Cost:** about **US$0.27 per successful verification**: Verify's $0.05 per successful
+  verification plus the SMS rate to Oman of $0.2158 per message segment (each resend is
+  another segment). With the default global limit of 200 codes per hour, the worst case
+  is about US$43 per hour, so set `OSRIP_SMS_GLOBAL_HOUR` to what the budget allows.
+  A trial account sends only to verified numbers and adds a trial notice; real use
+  needs an upgraded (paid) account, which only the account owner can authorize.
+
+### What remains before SMS can be switched on
+
+1. **Create a Twilio account** (https://www.twilio.com/try-twilio). The team does this,
+   including identity and billing checks; nothing in the code bypasses them. Keep all
+   credentials out of chat and out of the repository.
+2. **Create a Verify service** (Console → Verify → Services) with a friendly name such
+   as "OSRIP". Note its SID (`VA...`).
+3. **Limit the countries** in Verify's Geo permissions to the ones needed (Oman, plus
+   any others the project serves), and keep Fraud Guard on, to limit SMS pumping fraud.
+4. **Register an alphanumeric sender ID for Oman** through the Twilio Console (Oman
+   guidelines page above), and wait for provisioning (about 18 days).
+5. **Create an API key** (Console → Account → API keys, standard key) and put the
+   values in `deploy/.env` only: `OSRIP_SMS_PROVIDER=twilio_verify`,
+   `OSRIP_TWILIO_VERIFY_SERVICE_SID`, `OSRIP_TWILIO_API_KEY_SID`,
+   `OSRIP_TWILIO_API_KEY_SECRET` (and `OSRIP_TWILIO_ACCOUNT_SID`). Keep
+   `OSRIP_SMS_ENABLED=false` for now. `deploy/predeploy_check.py` warns when a value is
+   missing.
+6. **Upgrade the account** (paid; needs the owner's explicit authorization) once the
+   sender ID is approved.
+7. **Run the live acceptance test** against a test deployment, with
+   `OSRIP_SMS_ENABLED=true` there and the owner of one authorized number present:
    `python backend\scripts\sms_acceptance.py --url https://<test-deployment>`.
    - It refuses to run unless the provider status is `configured`.
    - It checks delivery, a wrong code, the right code and a replayed code.
    - It writes `docs/sms/acceptance-*.json` with the number masked and without the code.
-7. **Enable SMS only after that test passes.** Until then, phone registration must not
-   be reported as active.
+8. **Enable SMS in production only after that test passes**, and test each Omani
+   operator (Omantel, Ooredoo, Vodafone Oman) if possible. Until then, phone
+   registration must not be reported as active.

@@ -154,10 +154,36 @@ def check_env(env: dict[str, str], r: Report) -> None:
     r.check(sms_provider != "test", "OSRIP_SMS_PROVIDER is not the scripted test provider")
     if env.get("OSRIP_SMS_ENABLED", "false").lower() in {"1", "true", "yes"}:
         r.check(
-            bool(sms_provider) and bool(env.get("OSRIP_SMS_PROVIDER_API_KEY")),
-            "SMS is enabled with a provider and its credentials (otherwise phone sign-in shows 'unavailable')",
+            sms_provider in {"twilio_verify", "whatsapp"},
+            "SMS is enabled with a provider (twilio_verify or whatsapp; otherwise phone sign-in shows 'unavailable')",
             warn=True,
         )
+        if sms_provider == "whatsapp":
+            mode = env.get("OSRIP_WHATSAPP_MODE", "test")
+            r.check(
+                bool(env.get("OSRIP_WHATSAPP_ACCESS_TOKEN")) and bool(env.get("OSRIP_WHATSAPP_PHONE_NUMBER_ID")),
+                "WhatsApp: access token and phone number ID are set",
+                warn=True,
+            )
+            r.check(
+                mode == "test",
+                "OSRIP_WHATSAPP_MODE is test (production sends to anyone and Meta charges each delivered code)",
+                warn=True,
+            )
+            if mode == "test":
+                r.check(
+                    bool(env.get("OSRIP_WHATSAPP_TEST_RECIPIENTS", "").strip()),
+                    "WhatsApp test mode: OSRIP_WHATSAPP_TEST_RECIPIENTS lists the approved numbers",
+                    warn=True,
+                )
+        if sms_provider == "twilio_verify":
+            key = env.get("OSRIP_TWILIO_API_KEY_SID") and env.get("OSRIP_TWILIO_API_KEY_SECRET")
+            token = env.get("OSRIP_TWILIO_ACCOUNT_SID") and env.get("OSRIP_TWILIO_AUTH_TOKEN")
+            r.check(
+                bool(env.get("OSRIP_TWILIO_VERIFY_SERVICE_SID")) and bool(key or token),
+                "Twilio Verify: service SID and an API key (or account SID and auth token) are set",
+                warn=True,
+            )
     for name in ("GOOGLE", "MICROSOFT"):
         cid, secret = env.get(f"OSRIP_{name}_CLIENT_ID", ""), env.get(f"OSRIP_{name}_CLIENT_SECRET", "")
         r.check(
