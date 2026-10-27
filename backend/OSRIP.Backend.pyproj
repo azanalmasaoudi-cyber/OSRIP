@@ -58,6 +58,8 @@
     <Folder Include="app\services\" />
     <Folder Include="app\services\analysis\" />
     <Folder Include="app\services\assistant\" />
+    <Folder Include="app\services\datasets\" />
+    <Folder Include="app\services\documents\" />
     <Folder Include="app\services\imports\" />
     <Folder Include="app\services\research\" />
     <Folder Include="app\services\sync\" />
@@ -75,9 +77,11 @@
     <Compile Include="app\api\routes\__init__.py" />
     <Compile Include="app\api\routes\admin.py" />
     <Compile Include="app\api\routes\analysis.py" />
+    <Compile Include="app\api\routes\analysis_reports.py" />
     <Compile Include="app\api\routes\assistant.py" />
     <Compile Include="app\api\routes\auth.py" />
     <Compile Include="app\api\routes\balance.py" />
+    <Compile Include="app\api\routes\datasets.py" />
     <Compile Include="app\api\routes\forecasting.py" />
     <Compile Include="app\api\routes\geography.py" />
     <Compile Include="app\api\routes\health.py" />
@@ -120,6 +124,7 @@
     <Compile Include="app\models\accounts.py" />
     <Compile Include="app\models\assistant.py" />
     <Compile Include="app\models\audit.py" />
+    <Compile Include="app\models\datasets.py" />
     <Compile Include="app\models\imports.py" />
     <Compile Include="app\models\observations.py" />
     <Compile Include="app\models\outputs.py" />
@@ -136,6 +141,7 @@
     <Compile Include="app\services\accounts.py" />
     <Compile Include="app\services\alerts.py" />
     <Compile Include="app\services\analysis\__init__.py" />
+    <Compile Include="app\services\analysis_reports.py" />
     <Compile Include="app\services\analysis\balance.py" />
     <Compile Include="app\services\analysis\balance_export.py" />
     <Compile Include="app\services\analysis\evidence.py" />
@@ -155,6 +161,19 @@
     <Compile Include="app\services\assistant\study_events.py" />
     <Compile Include="app\services\assistant\tools.py" />
     <Compile Include="app\services\assistant\datatable.py" />
+    <Compile Include="app\services\datasets\__init__.py" />
+    <Compile Include="app\services\datasets\analysis.py" />
+    <Compile Include="app\services\datasets\parsing.py" />
+    <Compile Include="app\services\datasets\store.py" />
+    <Compile Include="app\services\datasets\summary.py" />
+    <Compile Include="app\services\documents\__init__.py" />
+    <Compile Include="app\services\documents\build.py" />
+    <Compile Include="app\services\documents\export.py" />
+    <Compile Include="app\services\documents\fonts.py" />
+    <Compile Include="app\services\documents\model.py" />
+    <Compile Include="app\services\documents\pdf.py" />
+    <Compile Include="app\services\documents\text.py" />
+    <Compile Include="app\services\documents\xlsx.py" />
     <Compile Include="app\services\audit.py" />
     <Compile Include="app\services\comparisons.py" />
     <Compile Include="app\services\conditions.py" />
@@ -172,6 +191,7 @@
     <Compile Include="app\services\monitoring.py" />
     <Compile Include="app\services\ncsi.py" />
     <Compile Include="app\services\observations.py" />
+    <Compile Include="app\services\openai_api.py" />
     <Compile Include="app\services\oidc.py" />
     <Compile Include="app\services\phone.py" />
     <Compile Include="app\services\phone_numbers.py" />
@@ -228,6 +248,11 @@
     <Compile Include="tests\test_assistant_selection_integration.py" />
     <Compile Include="tests\test_assistant_series_choice.py" />
     <Compile Include="tests\test_assistant_datatable.py" />
+    <Compile Include="tests\test_datasets.py" />
+    <Compile Include="tests\test_datasets_integration.py" />
+    <Compile Include="tests\test_documents.py" />
+    <Compile Include="tests\test_openai_sdk.py" />
+    <Compile Include="tests\test_reports_export_integration.py" />
     <Compile Include="tests\test_auth_integration.py" />
     <Compile Include="tests\test_balance.py" />
     <Compile Include="tests\test_balance_integration.py" />
@@ -313,6 +338,7 @@
     <Compile Include="alembic\versions\0021_research_workflow.py" />
     <Compile Include="alembic\versions\0022_source_sync.py" />
     <Compile Include="alembic\versions\0023_research_save.py" />
+    <Compile Include="alembic\versions\0024_datasets_reports.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="alembic\sql\0001_core_down.sql" />
@@ -361,6 +387,8 @@
     <Content Include="alembic\sql\0022_source_sync_up.sql" />
     <Content Include="alembic\sql\0023_research_save_down.sql" />
     <Content Include="alembic\sql\0023_research_save_up.sql" />
+    <Content Include="alembic\sql\0024_datasets_reports_down.sql" />
+    <Content Include="alembic\sql\0024_datasets_reports_up.sql" />
     <Content Include="app\knowledge\assistant_profile_v1.json" />
     <Content Include="app\knowledge\assistant_profile_v2.json" />
     <Content Include="app\knowledge\assistant_profile_v3.json" />

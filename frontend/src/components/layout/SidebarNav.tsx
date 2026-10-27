@@ -13,6 +13,7 @@ import {
   Lock,
   Map,
   Settings,
+  Sheet,
   Ship,
   UserRound,
   Users,
@@ -29,6 +30,7 @@ import { usePreservedSearch } from '@/state/usePreservedSearch';
 export type NavKey =
   | 'nav.overview'
   | 'nav.workspace'
+  | 'nav.datasets'
   | 'nav.electricity'
   | 'nav.water'
   | 'nav.foodSecurity'
@@ -81,6 +83,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     items: [
       { path: '/assistant', key: 'nav.aiAssistant', icon: Bot },
       { path: '/workspace', key: 'nav.workspace', icon: LayoutDashboard },
+      { path: '/datasets', key: 'nav.datasets', icon: Sheet },
       { path: '/geography', key: 'nav.map', icon: Map },
       { path: '/forecasts', key: 'nav.scenarios', icon: LineChart },
       { path: '/reports', key: 'nav.reports', icon: FileText },

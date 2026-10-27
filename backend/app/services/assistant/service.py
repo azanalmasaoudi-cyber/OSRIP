@@ -50,6 +50,7 @@ from app.services.assistant.provider import (
     failure_category,
     get_fallback_provider,
     get_provider,
+    stop_check,
     transient,
 )
 from app.services.assistant.tools import MODES, Ledger, Tools, run_tool, tool_specs
@@ -108,7 +109,7 @@ WEB_RULES = """- Web research is available (web_search, read_web_page). Prefer t
 - Read the original document (read_web_page) before relying on a figure; a search snippet or summary alone never supports a figure you report as found. Give the publication date and the period the figure covers separately.
 - Results marked cached_results or cached were retrieved earlier: give their retrieval date, and never call them newly retrieved.
 - Web figures are not part of the platform's dataset until saved. If the person asked to research, update or save statistics and submit_observations is available, submit each figure you read in an OFFICIAL document (source_class official: the publisher's own page or file, never a news report of it), with value_text exactly as written, platform codes, the kind of period and its dates, then report exactly what the tool returned: saved (with its observation id), duplicate, conflict, pending or rejected, with the reasons. Say "saved" only for saved=true. Otherwise list each numerical web observation from 2022 onward in web_records (value_text copied exactly from the evidence text) so a data manager can review it.
-- A result with content_kind 'provider_summary' is another AI model's statement about a source, not the source's own text: attribute it as a summary ("according to a web-search summary of <publisher>"), and read the page (read_web_page) before relying on a figure from it.
+- A result with content_kind 'provider_summary' is another AI model's statement about a source, not the source's own text: attribute it as a summary ("according to a web-search summary of <publisher>"), and read the page (read_web_page) before relying on a figure from it. A result with content_kind 'consulted_source' is only an address the search consulted, with no text: read it before saying anything about it.
 - Two search services or two models saying the same thing is NOT independent confirmation; independence comes only from different original publishers. For national statistics prefer the original Omani statistical publication.
 - If web_search returns 'shown_separately', the person sees Google Search results apart from your answer; you cannot use them. If it returns 'data_first', look up the platform's published data before searching.
 """
@@ -752,6 +753,8 @@ def _run_model(
         reader.begin()
         reader.execute(text("SET TRANSACTION READ ONLY"))  # the assistant cannot write
         tools = Tools(reader, ledger)
+        # A provider that streams can end its call as soon as the person stops the question.
+        stopping = stop_check.set(tracker.check)
         try:
             for round_ in range(rounds):
                 if time.monotonic() > deadline:
@@ -836,6 +839,7 @@ def _run_model(
             exc.ledger = ledger
             raise
         finally:
+            stop_check.reset(stopping)
             reader.rollback()
 
 

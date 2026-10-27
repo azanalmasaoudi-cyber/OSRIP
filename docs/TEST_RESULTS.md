@@ -1,5 +1,27 @@
 # Test results
 
+## 2026-10-27: OpenAI SDK, datasets, charts and research reports (branch `feature/openai-research-platform`)
+
+What changed (details in AI_RESEARCH_PLATFORM.md):
+- OpenAI through the official `openai` SDK (answers and web search): streaming closed when the person stops a question, strict structured outputs, quota errors reported as a balance problem and not retried, consulted search sources, reasoning effort and timeout settings. Checked against developers.openai.com on 2026-10-26.
+- Datasets (CSV, Excel, JSON) analysed by the server; an AI summary whose numbers are checked; pie, scatter, grouped-column and histogram charts with a type switch; a table with search, filter, sort and pages.
+- Research and dataset reports (migration 0024), exported as PDF (embedded font subset, Arabic shaping and right-to-left order, vector charts), Excel and CSV; platform reports as PDF and Excel.
+
+| Check | Result |
+|---|---|
+| `ruff`, backend `pytest` with database tests | Pass; **849 passed**. New: `test_openai_sdk.py` (16), `test_datasets.py` (34), `test_datasets_integration.py` (5), `test_documents.py` (19), `test_reports_export_integration.py` (3) |
+| `npm run lint`, `npm run build`; full-stack browser tests (Edge) | Pass; full run of all **181** tests: **175 passed**, 3 skipped, 3 failed (two mobile-view timeouts, and missing trace files after a second run started meanwhile and cleared the shared `test-results` folder); the 3 **passed** when rerun on their own (`quality.spec.ts:121`, `research-brief.spec.ts:37`, `interface.spec.ts:137`). New: `e2e-api/datasets.spec.ts` (sign-in required; upload, findings, pie switch, statistics, search, report, PDF and Excel downloads) |
+| OpenAI, missing credentials | `python -m app.cli provider-check openai`: names `OSRIP_OPENAI_API_KEY` and `OSRIP_OPENAI_MODEL` as missing and makes no call |
+| OpenAI, live | **Not tested**: no OpenAI key is configured here |
+| **Real** dataset summary (DeepSeek `deepseek-flash`, Arabic) | Every number in the summary matched the computed results; no sentence removed; the 25,000 value was named as a possible data error |
+| **Real** research report (local site, analyst test account) | A live DeepSeek answer about gross generation (verified; 7 sources from NCSI) became a report: question, answer with reference numbers, platform calculations C1 and C2 with their method; PDF, Excel and CSV downloads (HTTP 200, correct types) |
+| PDF check | Arabic and English PDFs rendered to images with the Windows PDF renderer and checked page by page (joined letters, right-to-left lines and tables, mixed Arabic and English lines, charts, footers) |
+| Browser (local preview, Edge) | Upload, findings, every chart type, Arabic and light mode, search and sort, report creation, report list |
+| DeepSeek use for these checks (provider log, 2026-10-27) | 6 answering calls: 51,444 input and 1,751 output tokens |
+| Secret scan (every commit on every branch) | No key or `.env` file in history; only setting names, placeholders and fake test keys |
+
+**Remaining:** a live OpenAI test needs an API key with billing on the account; the Docker image (with the PDF font) is prepared but not built here.
+
 ## 2026-10-25 (afternoon): research that reads sources and saves verified figures (branch `feature/research-crawl-series`)
 
 What changed (details in RESEARCH_AND_SAVING.md):

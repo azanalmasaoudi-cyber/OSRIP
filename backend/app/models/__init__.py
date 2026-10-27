@@ -30,6 +30,7 @@ from app.models.assistant import (
     StudyEvent,
 )
 from app.models.audit import AppError, AuditEvent
+from app.models.datasets import AnalysisDataset, AnalysisReport
 from app.models.imports import ImportJob, ImportRow
 from app.models.observations import Observation
 from app.models.outputs import (
@@ -76,6 +77,8 @@ from app.models.research import (
 from app.models.sync import SourceFeed, SourceRelease, SourceSyncRun
 
 __all__ = [
+    "AnalysisDataset",
+    "AnalysisReport",
     "SourceFeed",
     "SourceRelease",
     "SourceSyncRun",

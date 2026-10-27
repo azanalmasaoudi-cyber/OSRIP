@@ -15,6 +15,7 @@ dependencies = [
     "python-multipart>=0.0.20",     # multipart CSV upload parsing for POST /imports
     "httpx>=0.28,<0.29",             # OpenID Connect and the assistant's model API (server side only)
     "pyjwt[crypto]>=2.10,<3",        # ID-token signature and claim validation
+    "openai>=2.54,<3",               # official OpenAI SDK: Responses API (server side only)
 ]
 
 [project.optional-dependencies]
@@ -75,8 +76,11 @@ ignore = ["S101"]
 "app/services/identity.py" = ["E501"]
 "app/services/assistant/*.py" = ["E501"]
 "app/services/research/*.py" = ["E501"]  # bilingual publisher names and model-facing notes
+"app/services/datasets/*.py" = ["E501"]  # bilingual findings and model instructions
+"app/services/documents/*.py" = ["E501"]  # bilingual report text and PDF drawing operators
 "app/services/speech.py" = ["E501"]
 "app/api/routes/assistant.py" = ["E501"]
 # Integration tests keep request/response lines whole for readability.
 "tests/*_integration.py" = ["E501", "S106"]  # throwaway test passwords
 "tests/test_research.py" = ["E501"]  # literal WAV headers and evidence fixtures
+"tests/test_documents.py" = ["E501"]  # report fixtures in both languages

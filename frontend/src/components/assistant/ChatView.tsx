@@ -14,6 +14,7 @@ import type { ChatVoice } from './AssistantPanel';
 import {
   EvidenceItem, GroundedContext, pick, SAVEABLE, SaveResearchButton, SearchLog, STATUS_BADGE, WebEvidenceItem,
 } from './Evidence';
+import { AnswerReportButton } from './AnswerReportButton';
 import { ChatDataCharts, ChatDataTables, ResearchSummary } from './ChatData';
 import { asksForChart, chartPoints, InlineChart } from './InlineChart';
 import { IntroPlayer } from './IntroPlayer';
@@ -364,6 +365,7 @@ function ChatMessage({ message, question, chat, onAsk }: {
           </Button>
         ) : null}
         {chat.signedIn && message.status && SAVEABLE.has(message.status) ? <SaveResearchButton messageId={message.id} /> : null}
+        {chat.signedIn && message.status === 'answered' ? <AnswerReportButton messageId={message.id} /> : null}
         {message.structured.study_id ? (
           <Button type="button" variant="ghost" size="sm" onClick={() => chat.openStudy(message.structured.study_id ?? '')} data-testid="open-study">
             {chat.activeStudyId === message.structured.study_id ? t('workspace.study.shown') : t('workspace.study.open')}

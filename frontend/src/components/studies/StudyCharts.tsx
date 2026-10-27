@@ -260,3 +260,176 @@ export function StudyHeatmap({ chart, rows, labelFor }: { chart: StudyChart; row
     </figure>
   );
 }
+
+/** Fills for pie slices: the three chart colours, then lighter mixes of them. Each slice is
+ * also named in the legend with its value and share, so colour is never the only signal. */
+const SLICE_FILLS = [100, 60, 32].flatMap((pct) =>
+  PALETTE.map((c) => (pct === 100 ? c : `color-mix(in oklab, ${c} ${pct}%, var(--card))`)),
+);
+
+function arc(cx: number, cy: number, outer: number, inner: number, from: number, to: number): string {
+  const point = (r: number, a: number) => `${(cx + r * Math.cos(a)).toFixed(2)},${(cy + r * Math.sin(a)).toFixed(2)}`;
+  const large = to - from > Math.PI ? 1 : 0;
+  return `M${point(outer, from)}A${outer},${outer} 0 ${large} 1 ${point(outer, to)}L${point(inner, to)}A${inner},${inner} 0 ${large} 0 ${point(inner, from)}Z`;
+}
+
+/** Shares of one series across categories (a ring). The server offers it only for values that
+ * are all zero or positive and add up to a meaningful total; the share shown is the slice's
+ * part of the values drawn, and every value is printed from its original decimal string. */
+export function StudyPieChart({ chart, rows, labelFor }: { chart: StudyChart; rows: Row[]; labelFor: LabelFor }) {
+  const language = useAppLanguage();
+  const series = chart.series[0];
+  if (!series) return null;
+  const values = rows.map((r) => toNumber(r[series.column]));
+  const total = values.reduce<number>((sum, v) => sum + (v !== null && v > 0 ? v : 0), 0);
+  if (total <= 0) return null;
+  const cx = 110;
+  const cy = 110;
+  let angle = -Math.PI / 2;
+  const slices = [];
+  for (const [i, r] of rows.entries()) {
+    const v = values[i] ?? null;
+    if (v === null || v <= 0) continue;
+    const share = v / total;
+    const from = angle;
+    angle += share * Math.PI * 2;
+    slices.push({ i, from, to: angle, share, fill: SLICE_FILLS[i % SLICE_FILLS.length] ?? 'var(--chart-1)', label: labelFor(r, chart.x), raw: r[series.column] ?? null });
+  }
+  return (
+    <figure className="m-0" data-testid="study-pie-chart">
+      <figcaption className="text-sm font-medium">{chart.title[language]}{chart.unit ? ` (${chart.unit[language === 'ar' ? 'label_ar' : 'label_en']})` : ''}</figcaption>
+      <div className="mt-2 flex flex-wrap items-center gap-6">
+        <svg viewBox="0 0 220 220" className="h-auto w-48 shrink-0" aria-hidden="true">
+          {slices.map((s) => (s.share > 0.9999
+            ? <circle key={s.i} cx={cx} cy={cy} r={71} fill="none" stroke={s.fill} strokeWidth={38} />
+            : <path key={s.i} d={arc(cx, cy, 90, 52, s.from, s.to)} fill={s.fill} stroke="var(--card)" strokeWidth="2" data-point={s.i} />))}
+        </svg>
+        <ul className="flex min-w-0 flex-col gap-1.5 text-sm">
+          {slices.map((s) => (
+            <li key={s.i} className="flex items-center gap-2" data-point={s.i}>
+              <span aria-hidden="true" className="size-3 shrink-0 rounded-sm" style={{ background: s.fill }} />
+              <span className="truncate" dir="auto">{s.label}</span>
+              <span className="tabular-nums text-muted-foreground" dir="ltr">
+                {formatDecimal(s.raw, language, 3)} · {formatDecimal(String(s.share * 100), language, 1)}%
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </figure>
+  );
+}
+
+/** A rounded axis over the data's own range (not forced through zero), about four steps. */
+function rangeScale(values: number[]): { lo: number; hi: number; ticks: number[] } {
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || Math.abs(max) || 1;
+  const rough = span / 4;
+  const magnitude = 10 ** Math.floor(Math.log10(rough));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * magnitude).find((s) => s >= rough) ?? rough;
+  const lo = Math.floor(min / step) * step;
+  const top = Math.ceil(max / step) * step;
+  const hi = top === lo ? lo + step : top;
+  const ticks: number[] = [];
+  for (let v = lo; v <= hi + step / 2; v += step) ticks.push(Number(v.toPrecision(12)));
+  return { lo, hi, ticks };
+}
+
+/** One measure against another, a point per row. Both axes are numbers and read from left to
+ * right in both languages, as in a printed graph. */
+export function StudyScatterChart({ chart, rows, xLabel }: { chart: StudyChart; rows: Row[]; xLabel: string }) {
+  const language = useAppLanguage();
+  const series = chart.series[0];
+  if (!series) return null;
+  const points = rows
+    .map((r, i) => ({ i, x: toNumber(r[chart.x]), y: toNumber(r[series.column]) }))
+    .filter((p): p is { i: number; x: number; y: number } => p.x !== null && p.y !== null);
+  if (points.length === 0) return null;
+  const W = 640;
+  const H = 280;
+  const pad = { left: 56, right: 16, top: 16, bottom: 40 };
+  const xs = rangeScale(points.map((p) => p.x));
+  const ys = rangeScale(points.map((p) => p.y));
+  const xAt = (v: number) => pad.left + ((v - xs.lo) / (xs.hi - xs.lo || 1)) * (W - pad.left - pad.right);
+  const yAt = (v: number) => pad.top + (H - pad.top - pad.bottom) * (1 - (v - ys.lo) / (ys.hi - ys.lo || 1));
+  return (
+    <figure className="m-0" data-testid="study-scatter-chart">
+      <figcaption className="text-sm font-medium">{chart.title[language]}</figcaption>
+      <svg viewBox={`0 0 ${W} ${H}`} className="mt-2 h-auto w-full" aria-hidden="true" direction="ltr">
+        {ys.ticks.map((tick) => (
+          <g key={`y${tick}`}>
+            <line x1={pad.left} x2={W - pad.right} y1={yAt(tick)} y2={yAt(tick)} stroke="var(--chart-grid)" />
+            <text x={pad.left - 6} y={yAt(tick) + 4} fontSize="11" textAnchor="end" fill="var(--muted-foreground)">{formatCompact(tick, language)}</text>
+          </g>
+        ))}
+        {xs.ticks.map((tick) => (
+          <text key={`x${tick}`} x={xAt(tick)} y={H - 22} fontSize="11" textAnchor="middle" fill="var(--muted-foreground)">{formatCompact(tick, language)}</text>
+        ))}
+        <text x={(pad.left + W - pad.right) / 2} y={H - 4} fontSize="11" textAnchor="middle" fill="var(--muted-foreground)">{xLabel}</text>
+        {points.map((p) => (
+          <circle key={p.i} cx={xAt(p.x)} cy={yAt(p.y)} r="4" fill="color-mix(in oklab, var(--chart-2) 55%, transparent)" stroke="var(--chart-2)" strokeWidth="1.5" data-point={p.i} />
+        ))}
+      </svg>
+      <p className="mt-1 text-xs text-muted-foreground">{series.label[language]}{chart.unit ? ` (${chart.unit[language === 'ar' ? 'label_ar' : 'label_en']})` : ''}</p>
+    </figure>
+  );
+}
+
+/** Vertical bars by period (or category), one bar per series side by side. The axis mirrors
+ * with the text direction like the line chart, and a missing value leaves its place empty. */
+export function StudyColumnChart({ chart, rows, labelFor }: { chart: StudyChart; rows: Row[]; labelFor: LabelFor }) {
+  const language = useAppLanguage();
+  const rtl = language === 'ar';
+  const W = 640;
+  const H = 240;
+  const pad = { side: 52, end: 16, top: 16, bottom: 30 };
+  const plotW = W - pad.side - pad.end;
+  const plotH = H - pad.top - pad.bottom;
+  const all = chart.series.flatMap((s) => rows.map((r) => toNumber(r[s.column]))).filter((v): v is number => v !== null);
+  const { lo, hi, ticks } = scale(all);
+  const n = Math.max(1, rows.length);
+  const slot = plotW / n;
+  const barW = Math.max(2, (slot * 0.72) / Math.max(1, chart.series.length));
+  const xAt = (i: number, si: number) => {
+    const offset = i * slot + slot * 0.14 + si * barW;
+    return rtl ? W - pad.side - offset - barW : pad.side + offset;
+  };
+  const centre = (i: number) => (rtl ? W - pad.side - (i + 0.5) * slot : pad.side + (i + 0.5) * slot);
+  const yAt = (v: number) => pad.top + plotH - ((v - lo) / (hi - lo || 1)) * plotH;
+  const labelEvery = Math.max(1, Math.ceil(n / 10));
+  const axisX = rtl ? W - pad.side + 6 : pad.side - 6;
+  return (
+    <figure className="m-0" data-testid="study-column-chart">
+      <figcaption className="text-sm font-medium">{chart.title[language]}{chart.unit ? ` (${chart.unit[language === 'ar' ? 'label_ar' : 'label_en']})` : ''}</figcaption>
+      <svg viewBox={`0 0 ${W} ${H}`} className="mt-2 h-auto w-full" aria-hidden="true">
+        {ticks.map((tick) => (
+          <g key={tick}>
+            <line x1={rtl ? pad.end : pad.side} x2={rtl ? W - pad.side : W - pad.end} y1={yAt(tick)} y2={yAt(tick)}
+              stroke="var(--chart-grid)" strokeWidth={tick === 0 ? 1.5 : 1} />
+            <text x={axisX} y={yAt(tick) + 4} fontSize="11" textAnchor={rtl ? 'start' : 'end'} fill="var(--muted-foreground)">{formatCompact(tick, language)}</text>
+          </g>
+        ))}
+        {rows.map((r, i) => (i % labelEvery === 0 || i === n - 1 ? (
+          <text key={i} x={centre(i)} y={H - 8} fontSize="11" textAnchor="middle" fill="var(--muted-foreground)">{labelFor(r, chart.x)}</text>
+        ) : null))}
+        {chart.series.map((s, si) => {
+          const style = seriesStyle(chart, si);
+          return (
+            <g key={s.column} data-nature={s.nature}>
+              {rows.map((r, i) => {
+                const v = toNumber(r[s.column]);
+                if (v === null) return null;
+                return (
+                  <rect key={i} data-point={i} x={xAt(i, si)} y={Math.min(yAt(v), yAt(0))} width={barW}
+                    height={Math.max(1, Math.abs(yAt(v) - yAt(0)))} fill={v < 0 ? 'var(--copper)' : style.stroke} rx="1.5" />
+                );
+              })}
+            </g>
+          );
+        })}
+      </svg>
+      <Legend chart={chart} />
+    </figure>
+  );
+}

@@ -6,9 +6,11 @@ evidence check are the same whichever provider answers:
 
 * ``AnthropicProvider``: Claude, Messages API (``OSRIP_ANTHROPIC_API_KEY``).
 * ``OpenAIProvider``: Responses API with function tools (``OSRIP_OPENAI_API_KEY``,
-  ``OSRIP_OPENAI_MODEL``); stateless (``store: false``): the output items of each turn
-  (reasoning items included) are passed back with the tool results, as the function-calling
-  guide requires. No built-in tool (code interpreter, file search, web search) is enabled here.
+  ``OSRIP_OPENAI_MODEL``) through the official ``openai`` SDK (``app.services.openai_api``);
+  stateless (``store: false``): the output items of each turn (reasoning items included) are
+  passed back with the tool results, as the function-calling guide requires. While a question
+  can be stopped, the call is streamed and closed when the person stops it. No built-in tool
+  (code interpreter, file search, web search) is enabled here.
 * ``GeminiProvider``: Interactions API with function tools (``OSRIP_GEMINI_API_KEY``,
   ``OSRIP_GEMINI_MODEL``); stateless: the model's steps (thoughts with their signatures,
   function calls) are sent back exactly as received. No code execution is enabled.
@@ -27,6 +29,7 @@ same provider reads.
 
 from __future__ import annotations
 
+import contextvars
 import json
 import re
 import time
@@ -36,8 +39,9 @@ from typing import Any, Protocol
 import httpx
 
 from app.core.config import get_settings
-from app.services import monitoring
+from app.services import monitoring, openai_api
 from app.services import providers as registry
+from app.services.assistant.progress import Cancelled
 
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_VERSION = "2023-06-01"
@@ -109,8 +113,10 @@ def failure_category(code: str, detail: str | None = None) -> str:
     detail = (detail or "").lower()
     if code == "not_configured":
         return "not_configured"
-    if code == "http_402" or "insufficient_balance" in detail:
-        return "insufficient_balance"  # the provider account's balance is used up (DeepSeek)
+    if code == "http_402" or "insufficient_balance" in detail or detail == "insufficient_quota":
+        # The provider account's balance, quota or spending limit is used up (DeepSeek 402,
+        # OpenAI 429 insufficient_quota): not a rate limit, retrying cannot help.
+        return "insufficient_balance"
     if code in ("http_401", "http_403") or "auth" in detail or "permission" in detail:
         return "authentication"
     if code == "http_404" or "not_found" in detail or "model" in detail:
@@ -144,6 +150,12 @@ class Provider(Protocol):
 # Injectable for tests (httpx.MockTransport, no waiting).
 http_client_factory: Callable[[float], httpx.Client] = lambda timeout: httpx.Client(timeout=timeout)  # noqa: E731
 sleep: Callable[[float], None] = time.sleep
+# Set by the answer loop while a question can be stopped: raises ``Cancelled`` once the person
+# has stopped it. Providers that stream (OpenAI) call it during a model call, so a stopped
+# question ends the call at once instead of after it.
+stop_check: contextvars.ContextVar[Callable[[], None] | None] = contextvars.ContextVar(
+    "stop_check", default=None
+)
 
 
 def retry_after(response: httpx.Response) -> float | None:
@@ -155,8 +167,11 @@ def retry_after(response: httpx.Response) -> float | None:
         return None
 
 
-def transient(code: str) -> bool:
-    """Failures worth a retry, or a fallback provider: not configuration or request errors."""
+def transient(code: str, detail: str | None = None) -> bool:
+    """Failures worth a retry, or a fallback provider: not configuration or request errors.
+    A used-up quota (429 insufficient_quota) is not retried, but a fallback may answer."""
+    if detail == "insufficient_quota":
+        return False
     return code in ("timeout", "network", "http_429") or code.startswith("http_5")
 
 
@@ -214,12 +229,17 @@ class _HttpProvider:
             started = time.monotonic()
             try:
                 result, usage = self._parse(self._call(body))
+            except Cancelled:
+                # Stopped by the person during the call (streamed providers): the tokens used
+                # until then are not reported by the service, so no cost is recorded.
+                registry.record(self.vendor, capability, self.name, "cancelled", started)
+                raise
             except ProviderError as exc:
                 code = str(exc)
                 monitoring.external_failure("assistant", code)
                 registry.record(self.vendor, capability, self.name, code, started)
                 wait = exc.retry_after if exc.retry_after is not None else RETRY_PAUSE_SECONDS
-                if attempt == 1 and transient(code) and wait <= MAX_RETRY_AFTER_SECONDS:
+                if attempt == 1 and transient(code, exc.detail) and wait <= MAX_RETRY_AFTER_SECONDS:
                     sleep(wait)
                     continue
                 raise
@@ -296,15 +316,24 @@ def _result_text(content: Any) -> str:
     )
 
 
+def _openai_error(exc: openai_api.OpenAIFailure) -> ProviderError:
+    error = ProviderError(str(exc), exc.detail)
+    error.retry_after = exc.retry_after
+    return error
+
+
 class OpenAIProvider(_HttpProvider):
-    """Responses API (POST /v1/responses) with function tools only."""
+    """Responses API (POST /v1/responses) with function tools only, through the official SDK."""
 
     vendor = "openai"
 
-    def __init__(self, api_key: str, model: str, timeout: float) -> None:
+    def __init__(
+        self, api_key: str, model: str, timeout: float, reasoning_effort: str | None = None
+    ) -> None:
         self.name = model
         self._key = api_key
         self._timeout = timeout
+        self._effort = reasoning_effort
 
     @staticmethod
     def input_items(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -344,7 +373,7 @@ class OpenAIProvider(_HttpProvider):
     def _request(
         self, system: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]]
     ) -> dict[str, Any]:
-        return {
+        body: dict[str, Any] = {
             "model": self.name,
             "instructions": system,
             "input": self.input_items(messages),
@@ -358,21 +387,75 @@ class OpenAIProvider(_HttpProvider):
                 }
                 for t in tools
             ],  # fmt: skip
-            "tool_choice": "required",  # every turn is a tool call; the last is final_answer
+            # Every turn is a tool call; the last is final_answer. One tool offered (the last
+            # round, or a structured reply) is named, so no other tool can be called.
+            "tool_choice": {"type": "function", "name": tools[0]["name"]}
+            if len(tools) == 1
+            else "required",
             "max_output_tokens": MAX_OUTPUT_TOKENS,
             # Nothing is kept by the provider for later turns; reasoning comes back encrypted
             # so it can be passed back with the tool results.
             "store": False,
             "include": ["reasoning.encrypted_content"],
         }
+        if self._effort:
+            body["reasoning"] = {"effort": self._effort}
+        return body
 
     def _call(self, body: dict[str, Any]) -> dict[str, Any]:
-        return _post_json(
-            OPENAI_RESPONSES_URL,
-            body,
-            {"Authorization": f"Bearer {self._key}", "Content-Type": "application/json"},
-            self._timeout,
-        )
+        try:
+            return openai_api.create(
+                self._key,
+                body,
+                self._timeout,
+                lambda timeout: http_client_factory(timeout),
+                stop=stop_check.get(),
+            )
+        except openai_api.OpenAIFailure as exc:
+            raise _openai_error(exc) from exc
+
+    def structured(
+        self, system: str, prompt: str, schema: dict[str, Any], name: str,
+        capability: str = "answer",
+    ) -> dict[str, Any]:  # fmt: skip
+        """A JSON object that follows ``schema`` (structured outputs, strict), checked against
+        the daily limits and recorded like every call; retried once on transient failures."""
+        try:
+            registry.check(self.vendor, capability, self.name)
+        except registry.LimitReached as exc:
+            raise ProviderError(str(exc)) from exc
+        body: dict[str, Any] = {
+            "model": self.name,
+            "instructions": system,
+            "input": prompt,
+            "text": openai_api.json_format(name, schema),
+            "max_output_tokens": MAX_OUTPUT_TOKENS,
+            "store": False,
+        }
+        if self._effort:
+            body["reasoning"] = {"effort": self._effort}
+        for attempt in (1, 2):
+            started = time.monotonic()
+            try:
+                reply = openai_api.create(
+                    self._key, body, self._timeout, lambda t: http_client_factory(t)
+                )
+                value = openai_api.output_json(reply)
+            except openai_api.OpenAIFailure as exc:
+                code = str(exc)
+                monitoring.external_failure("assistant", code)
+                registry.record(self.vendor, capability, self.name, code, started)
+                wait = exc.retry_after if exc.retry_after is not None else RETRY_PAUSE_SECONDS
+                if attempt == 1 and transient(code, exc.detail) and wait <= MAX_RETRY_AFTER_SECONDS:
+                    sleep(wait)
+                    continue
+                raise _openai_error(exc) from exc
+            monitoring.external_success("assistant")
+            registry.record(
+                self.vendor, capability, self.name, "ok", started, **openai_api.usage(reply)
+            )
+            return value
+        raise ProviderError("unreachable")  # pragma: no cover
 
     @staticmethod
     def parse(body: dict[str, Any]) -> tuple[dict[str, Any], dict[str, int | None]]:
@@ -1255,7 +1338,12 @@ def build_provider(name: str) -> Provider | None:
     if name == "anthropic" and s.anthropic_api_key:
         return AnthropicProvider(s.anthropic_api_key.get_secret_value(), s.assistant_model, timeout)
     if name == "openai" and s.openai_api_key and s.openai_model:
-        return OpenAIProvider(s.openai_api_key.get_secret_value(), s.openai_model, timeout)
+        return OpenAIProvider(
+            s.openai_api_key.get_secret_value(),
+            s.openai_model,
+            max(timeout, s.openai_timeout_seconds),
+            s.openai_reasoning_effort,
+        )
     if name == "gemini" and s.gemini_api_key and s.gemini_model:
         return GeminiProvider(s.gemini_api_key.get_secret_value(), s.gemini_model, timeout)
     if (
@@ -1266,6 +1354,30 @@ def build_provider(name: str) -> Provider | None:
     ):
         return DeepSeekProvider(s.deepseek_api_key.get_secret_value(), s.deepseek_model, timeout)
     return None
+
+
+def structured_reply(
+    provider: Any, system: str, prompt: str, schema: dict[str, Any], name: str
+) -> dict[str, Any]:
+    """A JSON object in ``schema``'s shape from any answering provider: OpenAI's structured
+    outputs (strict json_schema) where available, otherwise one required tool call whose
+    arguments are the object (each provider here must call the only tool it is offered).
+    The caller still validates the object; nothing here trusts it."""
+    native = getattr(provider, "structured", None)
+    if native is not None:
+        return native(system, prompt, schema, name)
+    tool = {"name": name, "description": "Give the reply in this shape.", "input_schema": schema}
+    reply = provider.complete(system, [{"role": "user", "content": prompt}], [tool])
+    for block in reply.get("content", []):
+        if (
+            isinstance(block, dict)
+            and block.get("type") == "tool_use"
+            and block.get("name") == name
+        ):
+            if block.get("invalid_arguments") or not isinstance(block.get("input"), dict):
+                raise ProviderError("invalid_arguments")
+            return block["input"]
+    raise ProviderError("no_tool_call")
 
 
 def get_provider() -> Provider | None:

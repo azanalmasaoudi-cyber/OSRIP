@@ -18,7 +18,7 @@ This arrived with migration `0018_provider_calls`. The vendor documentation was 
 |---|---|---|---|
 | OSRIP data and sources | OSRIP's own database, through deterministic backend tools | Answering every numerical question first | – |
 | Anthropic | Messages API `POST https://api.anthropic.com/v1/messages` (existing adapter) | Answering | `OSRIP_ANTHROPIC_API_KEY`, `OSRIP_ASSISTANT_MODEL` |
-| OpenAI | Responses API `POST https://api.openai.com/v1/responses` | Answering (function tools); web search (`web_search` tool) | `OSRIP_OPENAI_API_KEY`, `OSRIP_OPENAI_MODEL`, `OSRIP_OPENAI_SEARCH_MODEL` |
+| OpenAI | Responses API `POST https://api.openai.com/v1/responses`, through the official `openai` Python SDK (`app/services/openai_api.py`) | Answering (function tools; streamed and closed when the person stops the question; strict structured outputs); web search (`web_search` tool, consulted sources included). See [AI_RESEARCH_PLATFORM.md](AI_RESEARCH_PLATFORM.md) | `OSRIP_OPENAI_API_KEY`, `OSRIP_OPENAI_MODEL`, `OSRIP_OPENAI_SEARCH_MODEL` |
 | Google Gemini | Interactions API `POST https://generativelanguage.googleapis.com/v1beta/interactions` | Answering (function tools); Grounding with Google Search (`google_search` tool) | `OSRIP_GEMINI_API_KEY`, `OSRIP_GEMINI_MODEL`, `OSRIP_GEMINI_SEARCH_MODEL` |
 | Brave Search | Search API `GET https://api.search.brave.com/res/v1/web/search` (existing adapter) | Web search | `OSRIP_RESEARCH_API_KEY` |
 | DeepSeek (optional, **usage-billed**) | Chat Completions API `POST https://api.deepseek.com/chat/completions` (OpenAI-compatible) | Answering (function tools; thinking switched off so a tool call can be required) | `OSRIP_DEEPSEEK_API_KEY`, `OSRIP_DEEPSEEK_MODEL`, `OSRIP_DEEPSEEK_BILLING_ACKNOWLEDGED=true` |

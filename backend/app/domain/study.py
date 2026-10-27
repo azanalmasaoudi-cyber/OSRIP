@@ -63,11 +63,16 @@ class ChartSeries(_Model):
     nature: Literal["observed", "calculated", "forecast", "scenario"]
 
 
+STUDY_CHART_TYPES = ("line", "bar", "heatmap")
+
+
 class Chart(_Model):
-    type: Literal["line", "bar", "heatmap"]
+    # pie: shares of one series across the x categories; scatter: x is a numeric column and
+    # the one series is plotted against it.
+    type: Literal["line", "bar", "heatmap", "pie", "scatter"]
     title: Text
     x: str
-    series: list[ChartSeries] = Field(default_factory=list)  # line and bar
+    series: list[ChartSeries] = Field(default_factory=list)  # line, bar, pie and scatter
     y: str | None = None  # heatmap rows
     value: str | None = None  # heatmap cell values
     unit: Unit | None = None
@@ -104,6 +109,14 @@ def check_table_and_charts(table: Table, charts: list[Chart]) -> None:
             raise ValueError("a heatmap needs y and value columns")
         if chart.type != "heatmap" and not chart.series:
             raise ValueError("a line or bar chart needs at least one series")
+        if chart.type in ("pie", "scatter") and len(chart.series) != 1:
+            raise ValueError(f"a {chart.type} chart shows exactly one series")
+        if chart.type == "scatter" and chart.x not in numeric:
+            raise ValueError("a scatter chart needs a numeric x column")
+        if chart.type == "pie":
+            values = [row.get(chart.series[0].column) for row in table.rows]
+            if any(v is not None and Decimal(v) < 0 for v in values):
+                raise ValueError("a pie chart cannot show negative values")
 
 
 class Card(_Model):
@@ -158,6 +171,11 @@ class StudyResult(_Model):
     @model_validator(mode="after")
     def _consistent(self) -> StudyResult:
         check_table_and_charts(self.table, self.charts)
+        for chart in self.charts:
+            # osrip.study/1 draws lines, bars and heatmaps only (pie and scatter are for
+            # uploaded datasets); a new chart type for studies needs a new schema version.
+            if chart.type not in STUDY_CHART_TYPES:
+                raise ValueError(f"a study chart is line, bar or heatmap, not {chart.type}")
         ids = [e.id for e in self.evidence]
         if len(ids) != len(set(ids)):
             raise ValueError("duplicate evidence ids")

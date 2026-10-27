@@ -5,6 +5,8 @@ import { DesignReferencePage } from '@/pages/DesignReferencePage';
 import { EnergyIndexRedirect, EnergyLayout } from '@/pages/EnergyLayout';
 import { HomePage } from '@/pages/HomePage';
 import { DataManagementPage } from '@/pages/DataManagementPage';
+import { DatasetsPage } from '@/pages/DatasetsPage';
+import { AnalysisReportPage } from '@/pages/AnalysisReportPage';
 import { AssistantPage } from '@/pages/AssistantPage';
 import { ForecastPage } from '@/pages/ForecastPage';
 import { HealthPage } from '@/pages/HealthPage';
@@ -70,8 +72,11 @@ export const router = createBrowserRouter([
       { path: 'library', element: <LibraryPage /> },
       { path: 'studies', element: <StudiesPage /> },
       { path: 'studies/:studyId', element: <StudiesPage /> },
+      { path: 'datasets', element: <DatasetsPage /> },
+      { path: 'datasets/:datasetId', element: <DatasetsPage /> },
       { path: 'reports', element: <ReportsPage /> },
       { path: 'reports/:reportId', element: <ReportPage /> },
+      { path: 'reports/analysis/:reportId', element: <AnalysisReportPage /> },
       { path: 'sources', element: <SourcesPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'methodology', element: <MethodologyRedirect /> },

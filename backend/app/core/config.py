@@ -5,6 +5,7 @@ Secrets are never committed; see ``backend/.env.example``.
 
 import os
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -82,6 +83,18 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr | None = None
     openai_model: str | None = None  # answering model (Responses API, function tools)
     openai_search_model: str | None = None  # web search route (Responses API web_search tool)
+    # Reasoning models may need longer than other providers: each OpenAI call may run this long.
+    openai_timeout_seconds: float = 60.0
+    # Reasoning effort (none, minimal, low, medium, high, xhigh; the model's default when unset):
+    # lower is faster and cheaper. Which values a model accepts is in its model page.
+    openai_reasoning_effort: Literal["none", "minimal", "low", "medium", "high", "xhigh"] | None = (
+        None
+    )
+    # Web search route: how much context the search gathers, and optionally only these domains
+    # (at most 100, without https://; subdomains included). Empty: the whole web, with official
+    # Omani sources preferred by the instructions.
+    openai_search_context_size: Literal["low", "medium", "high"] = "medium"
+    openai_search_allowed_domains: list[str] = Field(default_factory=list)
     gemini_api_key: SecretStr | None = None
     gemini_model: str | None = None  # answering model (Interactions API, function tools)
     gemini_search_model: str | None = None  # Grounding with Google Search route
@@ -247,6 +260,22 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------ uploads (untrusted input)
     upload_max_bytes: int = 5 * 1024 * 1024  # matches ck_import_job_file_size
     upload_max_rows: int = 50_000
+
+    # ------------------------------------------------------------ datasets for analysis
+    # Files people upload to analyse (CSV, Excel .xlsx, JSON): private to their owner, never
+    # part of the published statistics. Limits per file and per account; AI summaries of a
+    # dataset's computed results per account per UTC day (each is one model call).
+    dataset_max_bytes: int = 5 * 1024 * 1024  # at most 10 MB (ck_analysis_dataset_size)
+    dataset_max_rows: int = 20_000
+    dataset_max_columns: int = 60
+    dataset_max_per_user: int = 50
+    dataset_summaries_per_day: int = 20
+
+    # ------------------------------------------------------------ report exports (PDF, Excel)
+    # A TrueType font with Latin letters and Arabic presentation forms, embedded (as a subset)
+    # in PDF reports. Unset: Arial, Tahoma or Segoe UI (Windows), DejaVu Sans (Linux,
+    # package fonts-dejavu-core) or Arial (macOS), the first one found.
+    report_font_path: str | None = None
 
 
 @lru_cache
