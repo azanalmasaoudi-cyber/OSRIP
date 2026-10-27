@@ -2,7 +2,7 @@ import { MessageSquareText, RotateCcw, ShieldCheck, Smartphone } from 'lucide-re
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { usePhoneRequest, usePhoneVerify, useProviders, type PhoneChallenge } from '@/api/auth';
+import { usePhoneRequest, usePhoneVerify, useProviders, type PhoneChallenge, type PhoneOutcome } from '@/api/auth';
 import { ApiRequestError } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { SelectField } from '@/components/ui/select';
@@ -18,7 +18,7 @@ const ERROR_CODES = [
   'sms_unavailable', 'invalid_phone', 'invalid_country_code', 'sms_resend_cooldown', 'sms_number_limit', 'sms_client_limit',
   'sms_busy', 'sms_invalid_number', 'sms_undeliverable', 'sms_provider_unavailable', 'sms_code_incorrect', 'sms_code_expired',
   'sms_too_many_attempts', 'sms_challenge_invalid', 'invalid_code_format', 'phone_taken', 'phone_already_linked',
-  'account_unavailable', 'too_many_requests',
+  'account_unavailable', 'too_many_requests', 'wrong_current_password', 'reauthentication_required',
 ] as const;
 type ErrorCode = (typeof ERROR_CODES)[number];
 /** After these, the only way forward is a new code or another method. */
@@ -39,13 +39,15 @@ function useCountdown(): [number, (seconds: number) => void] {
 /**
  * Phone number → SMS code → verified. Used for registration and sign-in (purpose
  * "sign_in": an account is created only after the code is verified) and for adding a
- * number to the signed-in account (purpose "link"). The code never passes through
+ * number to the signed-in account (purpose "link"), including replacing a verified one
+ * (`askPassword`: the current password is needed first). The code never passes through
  * anything but this form and the server.
  */
-export function PhoneVerification({ purpose, askName = false, onDone, onUseEmail }: {
+export function PhoneVerification({ purpose, askName = false, askPassword = false, onDone, onUseEmail }: {
   purpose: 'sign_in' | 'link';
   askName?: boolean;
-  onDone: (status: 'registered' | 'signed_in' | 'linked') => void;
+  askPassword?: boolean;
+  onDone: (status: PhoneOutcome) => void;
   onUseEmail?: () => void;
 }) {
   const { t } = useTranslation();
@@ -57,11 +59,12 @@ export function PhoneVerification({ purpose, askName = false, onDone, onUseEmail
   const [country, setCountry] = useState(sms?.default_country ?? '+968');
   const [number, setNumber] = useState('');
   const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [challenge, setChallenge] = useState<PhoneChallenge | null>(null);
   const [remaining, startCountdown] = useCountdown();
   const codeRef = useRef<HTMLInputElement>(null);
-  const ids = { number: useId(), code: useId(), name: useId(), hint: useId(), codeHint: useId() };
+  const ids = { number: useId(), code: useId(), name: useId(), hint: useId(), codeHint: useId(), password: useId() };
 
   const regions = useMemo(() => {
     let names: Intl.DisplayNames | null = null;
@@ -87,12 +90,12 @@ export function PhoneVerification({ purpose, askName = false, onDone, onUseEmail
   const error = (verify.error ?? request.error) as unknown;
   const apiError = error instanceof ApiRequestError ? error : null;
   const errorCode: ErrorCode | 'other' | null = apiError ? (ERROR_CODES.find((c) => c === apiError.code) ?? 'other') : error ? 'other' : null;
-  const details = (apiError?.details ?? {}) as { attempts_left?: number; retry_after?: number };
+  const details = (apiError?.details ?? {}) as { attempts_left?: number; retry_after?: number; minutes?: number };
 
   const send = (event?: FormEvent) => {
     event?.preventDefault();
     verify.reset();
-    request.mutate({ country_code: country, number, purpose }, {
+    request.mutate({ country_code: country, number, purpose, password: askPassword ? password : undefined }, {
       onSuccess: (c) => { setChallenge(c); setCode(''); startCountdown(c.resend_after); },
       onError: (e) => {
         if (e instanceof ApiRequestError && e.code === 'sms_resend_cooldown') {
@@ -112,7 +115,7 @@ export function PhoneVerification({ purpose, askName = false, onDone, onUseEmail
 
   const message = errorCode === null ? null
     : errorCode === 'other' ? (error instanceof Error ? error.message : t('phone.error.other'))
-    : t(`phone.error.${errorCode}`, { n: details.attempts_left ?? details.retry_after ?? 0 });
+    : t(`phone.error.${errorCode}`, { n: details.attempts_left ?? details.retry_after ?? details.minutes ?? 0 });
 
   return (
     <div className="flex flex-col gap-4" data-testid="phone-verification" data-step={challenge ? 'code' : 'number'}>
@@ -141,12 +144,20 @@ export function PhoneVerification({ purpose, askName = false, onDone, onUseEmail
             </div>
           </div>
           <p id={ids.hint} className="text-xs text-muted-foreground">{country === '+968' ? t('phone.omanHint') : t('phone.hint')}</p>
+          {askPassword ? (
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor={ids.password} className="text-sm font-medium">{t('account.currentPassword')}</label>
+              <input id={ids.password} type="password" autoComplete="current-password" dir="ltr" value={password}
+                onChange={(e) => setPassword(e.target.value)} data-testid="phone-password"
+                className="h-10 rounded-md border border-border-strong bg-card px-3 text-sm" />
+            </div>
+          ) : null}
           {message ? <p role="alert" className="text-sm text-destructive" data-testid="phone-error" data-code={errorCode}>{message}</p> : null}
           {errorCode && OFFER_EMAIL.has(errorCode) && onUseEmail ? (
             <Button type="button" variant="outline" size="sm" className="w-fit" onClick={onUseEmail}>{t('phone.useEmail')}</Button>
           ) : null}
           {purpose === 'sign_in' ? <p className="text-xs text-muted-foreground">{t('phone.ordinaryAccess')}</p> : null}
-          <Button type="submit" disabled={request.isPending || number.replace(/\D/g, '').length < 4 || remaining > 0} data-testid="phone-send">
+          <Button type="submit" disabled={request.isPending || number.replace(/\D/g, '').length < 4 || remaining > 0 || (askPassword && !password)} data-testid="phone-send">
             <MessageSquareText aria-hidden="true" />
             {remaining > 0 ? t('phone.resendIn', { n: remaining }) : request.isPending ? t('phone.sending') : t('phone.sendCode')}
           </Button>
