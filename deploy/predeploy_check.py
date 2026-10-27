@@ -154,10 +154,18 @@ def check_env(env: dict[str, str], r: Report) -> None:
     r.check(sms_provider != "test", "OSRIP_SMS_PROVIDER is not the scripted test provider")
     if env.get("OSRIP_SMS_ENABLED", "false").lower() in {"1", "true", "yes"}:
         r.check(
-            bool(sms_provider) and bool(env.get("OSRIP_SMS_PROVIDER_API_KEY")),
-            "SMS is enabled with a provider and its credentials (otherwise phone sign-in shows 'unavailable')",
+            sms_provider == "twilio_verify",
+            "SMS is enabled with a provider (twilio_verify; otherwise phone sign-in shows 'unavailable')",
             warn=True,
         )
+        if sms_provider == "twilio_verify":
+            key = env.get("OSRIP_TWILIO_API_KEY_SID") and env.get("OSRIP_TWILIO_API_KEY_SECRET")
+            token = env.get("OSRIP_TWILIO_ACCOUNT_SID") and env.get("OSRIP_TWILIO_AUTH_TOKEN")
+            r.check(
+                bool(env.get("OSRIP_TWILIO_VERIFY_SERVICE_SID")) and bool(key or token),
+                "Twilio Verify: service SID and an API key (or account SID and auth token) are set",
+                warn=True,
+            )
     for name in ("GOOGLE", "MICROSOFT"):
         cid, secret = env.get(f"OSRIP_{name}_CLIENT_ID", ""), env.get(f"OSRIP_{name}_CLIENT_SECRET", "")
         r.check(

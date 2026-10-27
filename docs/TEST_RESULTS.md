@@ -1,5 +1,24 @@
 # Test results
 
+## 2026-10-27 (later): e-mail and phone verification (branch `feature/email-phone-verification`)
+
+What changed (details in INTEGRATIONS.md, "E-mail" and "SMS verification"):
+- Twilio Verify adapter (`OSRIP_SMS_PROVIDER=twilio_verify`; REST API, no SDK), with Twilio's error codes mapped, no retry, the code sent in the page's language, and logs without numbers or codes. Missing setting names (never values) are shown to administrators on Service health.
+- Account e-mails in Arabic and English (the reader's language first), as HTML with a plain-text part.
+- Changing a confirmed e-mail address or a verified phone number: current password (or a sign-in within `OSRIP_REAUTH_MINUTES` for accounts without one), proof of the new address or number, and a notice to the confirmed address. Account page: change forms, re-sending a confirmation, and translated errors.
+- A per-address limit on phone code checks; the per-address limit on code requests now follows `OSRIP_SMS_PER_CLIENT_HOUR` when it is set higher (production default unchanged at 20 per hour).
+
+| Check | Result |
+|---|---|
+| `ruff`, backend `pytest` with database tests | Pass; **890 passed**. New: `test_sms_twilio.py` (Twilio requests, authentication, error mapping, timeouts, no number or code in logs), `test_mail_templates.py` (both languages, right to left, escaping, no scripts or images), `test_verification_change_integration.py` (address and number changes, re-authentication, notices, other accounts' addresses never taken, SMTP HTML part via a fake server, per-address limit) |
+| `npm run typecheck`, `npm run lint`, `npm run build` | Pass |
+| Full-stack browser tests (Edge): `accounts.spec.ts`, `phone.spec.ts`, new `verification-change.spec.ts` | **29 passed**: registration and confirmation, links used once, password reset, magic link, phone registration, wrong and expired codes, resend countdown, delivery failure, linking, changing an address (wrong password refused, old address told), changing a number, Arabic |
+| Browser (local preview, Edge) | Account page on a phone-sized screen; change-number form in Arabic (right to left, number and password left to right) with the translated wrong-password error. A throwaway account `ui-check-…@test.invalid` was created in the local development database for this |
+| Twilio Verify, live | **Not tested**: no Twilio account. Every Twilio test uses mocked HTTP, so SMS delivery must not be reported as working |
+| E-mail, live | **Not tested**: no SMTP relay or e-mail service configured; messages go to the development outbox |
+
+**Remaining:** a Twilio account, Verify service, Oman sender ID registration and the live acceptance test (`backend/scripts/sms_acceptance.py`); an SMTP relay or e-mail service with SPF, DKIM and DMARC, then a real-inbox test in both languages.
+
 ## 2026-10-27: OpenAI SDK, datasets, charts and research reports (branch `feature/openai-research-platform`)
 
 What changed (details in AI_RESEARCH_PLATFORM.md):

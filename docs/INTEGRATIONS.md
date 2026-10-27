@@ -19,8 +19,8 @@ mocked counterpart unless "live" is stated); **configured** = real credentials i
 | OpenFreeMap (MapLibre style and tiles) | Basemap on Geography | OpenStreetMap-derived. No administrative boundaries are used or claimed | Free, no key; terms at openfreemap.org/tos | The browser requests tiles directly and sends its IP address to OpenFreeMap. No OSRIP data is sent | Loaded lazily. If the style fails, the page shows "map unavailable" and the area table still works. `VITE_MAP_STYLE_URL=none` switches it off | Style URL only; the CSP must list the tile host | Implemented and tested (the failure path only; e2e makes no external calls) |
 | Directions links to facilities | Open a directions app at a verified facility location | **No verified facility coordinates exist** in the project | — | — | — | — | **Pending, deliberately not built**: a link to an invented location would be misleading. Build it only after coordinates are sourced and reviewed |
 | Anthropic Messages API (Claude) | Assistant that explains published figures and stored forecasts | Answers are restricted to tool results; unmatched numbers are withheld. **It never produces forecasts** | Pay per token; per-user limits of 5 per minute and 30 per hour cap the spend | Questions and the retrieved published statistics are sent to Anthropic. No uploads or account data are sent. The key stays on the server | 30 s timeout; **one retry** after 1 s on 429, 5xx and network errors; then an explained "temporarily unavailable" message. Failures appear on Service health | Model name in `OSRIP_ASSISTANT_MODEL`; review when models are retired | Implemented and tested (mocked HTTP, including retry). **Not configured**: no key |
-| SMTP relay | Confirmation, recovery and sign-in-link e-mails | — | Depends on the relay; the institution's relay is usually free | Recipient address and one link per message | Sent only when a user asks. A failure is logged, reported on Service health and shown to the user as "could not send". It is not retried automatically, because repeated sends would repeat the token | Credentials and sender address | Implemented and tested (outbox; SMTP code path unit-tested). **Not configured** |
-| SMS verification (phone registration and sign-in) | Register and sign in with a mobile number, with no e-mail needed; add a verified number to an account | The provider generates, sends and checks the code; OSRIP never stores it. OSRIP also enforces expiry, attempt limits, single use and cooldowns itself | Per message; the limits (per number, per client, per hour in total) bound the cost | Each phone number goes to the provider. Numbers are stored only after verification and appear only masked in the interface, audit log and acceptance records | Provider errors become explained messages with an e-mail alternative. The provider call has a 10 s timeout and is **not retried** (a retry could send two codes). Failures appear on Service health | Provider credentials; the number-plan rule for Oman | **Application side implemented and tested** with a scripted test provider (36 backend and 18 browser tests). **No production provider selected, so no real adapter and no live delivery.** Disabled by default and shown as unavailable |
+| SMTP relay | Confirmation, recovery, sign-in-link and change-of-address e-mails (Arabic and English in every message, HTML with a plain-text part) | — | Depends on the relay; the institution's relay is usually free; Amazon SES lists $0.10 per 1,000 e-mails | Recipient address, the account name and one link per message; notices show other addresses and numbers masked | Sent only when a user asks. A failure is logged, reported on Service health and shown to the user as "could not send". It is not retried automatically, because repeated sends would repeat the token | Credentials and sender address | Implemented and tested (outbox; SMTP path tested against a fake server, including the HTML part). **Not configured; no real e-mail has been sent** |
+| SMS verification (phone registration and sign-in) | Register and sign in with a mobile number, with no e-mail needed; add a verified number to an account | The provider generates, sends and checks the code; OSRIP never stores it. OSRIP also enforces expiry, attempt limits, single use and cooldowns itself | Per message; the limits (per number, per client, per hour in total) bound the cost | Each phone number goes to the provider. Numbers are stored only after verification and appear only masked in the interface, audit log and acceptance records | Provider errors become explained messages with an e-mail alternative. The provider call has a 10 s timeout and is **not retried** (a retry could send two codes). Failures appear on Service health | Provider credentials; the number-plan rule for Oman | **Twilio Verify adapter implemented and tested against mocked HTTP**; the application side is tested with the scripted provider. **No Twilio account exists, so nothing has been sent to a real phone and SMS must not be reported as working.** Disabled by default and shown as unavailable |
 | Google / Microsoft OpenID Connect | Optional sign-in | Accounts are **not** merged on a matching e-mail | Free | Name, e-mail, subject ID | Discovery and keys are cached. **One retry** on metadata fetch. The token exchange is not retried (single-use code). Failures redirect with an explained error and appear on Service health | Register redirect URIs; rotate client secrets | Implemented and tested (scripted provider with real RSA keys). **Not configured** |
 | Error monitoring (built-in) | Record server and browser errors to fix defects | E-mails, 24+ character tokens and query strings are removed before storage. Errors are grouped by fingerprint | Free (own database) | No cookies are sent with browser reports. At most 10 reports per page session, and 30 per hour per client on the server | Recording never breaks a request. Every 500 response carries a `request_id` | Review `/admin/health`; prune `app_error` rows as needed | Implemented and tested |
 | Health checks | Container orchestration and uptime checks | `/health` (process), `/health/db`, `/health/ready` (database + migration at head) | — | No data returned | Used by the compose `api` healthcheck; `web` waits for it | — | Implemented and tested; the compose file has **not been run** |
@@ -43,6 +43,35 @@ checks need a public address, which does not exist yet.
 | `OSRIP_EMAIL_BACKEND` | `outbox` (development only: stored in the database and shown at `/dev/mail`, never sent; refused in production), `smtp`, or `disabled` (registration, magic links and recovery are then switched off and labelled) |
 | `OSRIP_SMTP_HOST`, `OSRIP_SMTP_PORT` (587), `OSRIP_SMTP_USERNAME`, `OSRIP_SMTP_PASSWORD`, `OSRIP_SMTP_FROM`, `OSRIP_SMTP_STARTTLS` (true) | Any SMTP relay the institution provides. Messages are sent only when a user asks (register, resend, forgot password, magic link). The SMTP path has not been tested against a real server (see TEST_RESULTS) |
 | `OSRIP_VERIFY_EMAIL_HOURS` (24), `OSRIP_RESET_PASSWORD_MINUTES` (30), `OSRIP_MAGIC_LINK_MINUTES` (15), `OSRIP_EMAIL_REQUESTS_PER_HOUR` (5 per account and purpose) | Token lifetimes and limits. Tokens are single-use. Only their SHA-256 digests are stored |
+| `OSRIP_REAUTH_MINUTES` (10) | Changing a confirmed address or a verified phone number needs the current password. An account without a password (phone or Google/Microsoft sign-in) needs a session opened within this many minutes instead |
+
+Messages (`backend/app/services/mail_templates.py`): every message carries Arabic and
+English, the language of the page that asked first, the Arabic part right to left. It
+is sent as HTML (inline styles, no images, scripts or tracking) with a plain-text part.
+Values are escaped, and other people's addresses and numbers appear masked.
+
+Changing a confirmed address: the link goes to the new address, and the account changes
+only when it is opened. The previous address is then told (with the new one masked and
+a link to password recovery). An address that belongs to another account is never
+taken; its owner is told instead, and the requester sees the same answer as for a free
+address. Changing a verified phone number tells the confirmed address too.
+
+**Setting up delivery (not done; needs an account the team owns):**
+
+1. Use the institution's SMTP relay, or a transactional service such as Amazon SES
+   (https://aws.amazon.com/ses/; pricing https://aws.amazon.com/ses/pricing/). New SES
+   accounts start in a sandbox that only sends to verified addresses: request
+   production access in the SES console.
+2. Verify the sending domain and publish its DNS records: DKIM (the service gives the
+   records), SPF, and a DMARC policy. Without them, messages go to spam or are refused.
+3. Create SMTP credentials (for SES, in the SES console; they are not the AWS console
+   password) and put them in `deploy/.env`: `OSRIP_EMAIL_BACKEND=smtp`,
+   `OSRIP_SMTP_HOST` (SES: `email-smtp.<region>.amazonaws.com`), `OSRIP_SMTP_PORT=587`,
+   `OSRIP_SMTP_USERNAME`, `OSRIP_SMTP_PASSWORD`, `OSRIP_SMTP_FROM` (an address on the
+   verified domain), and `OSRIP_PUBLIC_BASE_URL` (the `https://` address used in links).
+4. Test with real inboxes before announcing it: register, confirm, request a password
+   reset and change an address, in Arabic and in English, and check that links open
+   the deployment and that the messages are not marked as spam.
 
 ## Google sign-in
 
@@ -240,28 +269,42 @@ The electricity, water and foreign-trade datasets on data.gov.om need a signed-i
 
 ## SMS verification (registration and sign-in by phone)
 
-**Status: application side complete and tested; no production provider.** No SMS
-provider has been chosen for the project, so no real adapter exists. OSRIP does not
-guess any vendor's endpoints, SDK calls or credential names. Phone registration stays
-**disabled** (`OSRIP_SMS_ENABLED=false`), and the interface marks it unavailable with
-e-mail offered instead.
+**Status: Twilio Verify adapter written and tested with mocked HTTP only. No Twilio
+account exists, no code has been sent to a real phone, and SMS is not operational.**
+Phone registration stays **disabled** (`OSRIP_SMS_ENABLED=false`), and the interface
+marks it unavailable with e-mail offered instead.
 
 What exists:
 
 - Provider interface in `backend/app/services/sms.py`:
-  - `request_verification(phone_e164) -> provider_ref`;
+  - `request_verification(phone_e164, locale) -> provider_ref`;
   - `check_verification(provider_ref, code) -> approved | denied | expired`;
   - errors: `invalid_number`, `undeliverable`, `provider_unavailable`.
+- `twilio_verify` adapter (Twilio Verify v2 REST API, no SDK):
+  - `POST https://verify.twilio.com/v2/Services/{VA...}/Verifications` with `To`,
+    `Channel=sms` and `Locale` (`ar` or `en`, the page's language);
+  - `POST .../VerificationCheck` with the verification SID and the code;
+  - HTTP Basic authentication with an API key (preferred) or the account SID and auth
+    token; one request, the configured timeout, **no retry** (a retry could send a
+    second code);
+  - Twilio's error codes are mapped: 21211, 21614, 60200, 60205 → invalid number;
+    21408, 21610, 60203, 60410, 60605 → undeliverable; 60202 (too many checks) and a
+    404 on a check (expired or already used) → expired; anything else → provider
+    unavailable;
+  - logs carry the HTTP status and Twilio's error code only, never the number or code.
 - Routes `POST /auth/phone/request` and `POST /auth/phone/verify` (API.md).
 - Rules enforced by OSRIP whatever the provider does:
   - E.164 normalization, with Oman (+968) as the default and the Omani mobile rule
     (8 digits beginning with 7 or 9);
-  - a resend cooldown, and limits per number, per client and in total;
+  - a resend cooldown, and limits per number, per client address and in total (the
+    total caps the spend), plus a per-address limit on code checks;
   - expiring, single-use challenges with a wrong-code limit, a row lock and a
     database trigger against replay;
   - accounts created only after verification, with the Viewer role only;
   - linking only from a signed-in session, and numbers never moved or merged
-    between accounts.
+    between accounts;
+  - replacing a verified number needs the current password (or a recent sign-in) and
+    the code sent to the new number, and the confirmed e-mail address is told.
 - `test` provider: scripted delivery for automated tests and local development.
   - Codes live in process memory and are shown only by `GET /dev/sms-outbox` and the
     `/dev/mail` page.
@@ -270,35 +313,68 @@ What exists:
   - The API refuses to start with this provider in production, and the dev endpoint
     answers 404 there.
 
-Settings (`backend/.env`, `deploy/.env`; never in the frontend, never committed):
+Settings (`backend/.env`, `deploy/.env`; server-side only, never in the frontend, never
+committed). Missing Twilio setting names (never values) are listed on the
+administrators' Service health page.
 
 | Setting | Meaning |
 |---|---|
-| `OSRIP_SMS_ENABLED` | `false` by default. Phone sign-in is offered only when `true` and a known provider is set |
-| `OSRIP_SMS_PROVIDER` | Adapter name. Only `test` exists today, and it is for tests only |
-| `OSRIP_SMS_PROVIDER_API_KEY`, `OSRIP_SMS_PROVIDER_SERVICE_ID` | Placeholders. **Rename or extend them to the chosen provider's real fields** when the adapter is written |
-| `OSRIP_SMS_CODE_MINUTES` (10), `OSRIP_SMS_MAX_ATTEMPTS` (5), `OSRIP_SMS_RESEND_SECONDS` (60), `OSRIP_SMS_PER_NUMBER_HOUR` (5), `OSRIP_SMS_PER_CLIENT_HOUR` (10), `OSRIP_SMS_GLOBAL_HOUR` (200), `OSRIP_SMS_DEFAULT_COUNTRY` (+968), `OSRIP_SMS_PROVIDER_TIMEOUT_SECONDS` (10) | Limits enforced by OSRIP |
+| `OSRIP_SMS_ENABLED` | `false` by default. Phone sign-in is offered only when `true` and a provider is completely configured |
+| `OSRIP_SMS_PROVIDER` | `twilio_verify`, or `test` (tests and local development only) |
+| `OSRIP_TWILIO_VERIFY_SERVICE_SID` | The Verify service (`VA...`) |
+| `OSRIP_TWILIO_API_KEY_SID`, `OSRIP_TWILIO_API_KEY_SECRET` | A Twilio API key (`SK...`) and its secret. Preferred: it can be revoked without changing the account's auth token |
+| `OSRIP_TWILIO_ACCOUNT_SID`, `OSRIP_TWILIO_AUTH_TOKEN` | Instead of an API key: the account SID (`AC...`) and auth token |
+| `OSRIP_SMS_CODE_MINUTES` (10), `OSRIP_SMS_MAX_ATTEMPTS` (5), `OSRIP_SMS_RESEND_SECONDS` (60), `OSRIP_SMS_PER_NUMBER_HOUR` (5), `OSRIP_SMS_PER_CLIENT_HOUR` (10), `OSRIP_SMS_GLOBAL_HOUR` (200), `OSRIP_SMS_DEFAULT_COUNTRY` (+968), `OSRIP_SMS_PROVIDER_TIMEOUT_SECONDS` (10) | Limits enforced by OSRIP. Twilio Verify's own code lifetime is 10 minutes, so keep `OSRIP_SMS_CODE_MINUTES` at 10 or less |
 
-(The brief names these `SMS_ENABLED`, `SMS_PROVIDER`, `SMS_PROVIDER_API_KEY` and
-`SMS_PROVIDER_SERVICE_ID`; every OSRIP setting carries the `OSRIP_` prefix.)
+### Oman: delivery requirements and costs (Twilio's public pages, checked 2026-10-27)
 
-**What remains before SMS can be switched on:**
+Sources: Oman SMS guidelines https://www.twilio.com/en-us/guidelines/om/sms, SMS
+pricing https://www.twilio.com/en-us/sms/pricing/om, Verify pricing
+https://www.twilio.com/en-us/verify/pricing. Twilio states its guidelines can change
+without notice; check them again when the account is opened.
 
-1. **Choose a provider** that can deliver to Omani mobile networks. Record its terms,
-   price per message and data-processing terms for phone numbers.
-2. **Create the provider account.** The team does this; it cannot be done from the
-   code. Keep the credentials out of chat and out of the repository.
-3. **Write the adapter** from the provider's official documentation. Implement the two
-   operations above, map the provider's error responses to the three error codes, use
-   the timeout setting with no automatic retry, and register it in `_ADAPTERS`.
-4. **Replace the placeholder settings** with the provider's real credential fields,
-   and put the values in `deploy/.env` only.
-5. **Register a sender ID** if the provider or Omani regulations require one.
-6. **Run the live acceptance test** against a test deployment, with the owner of one
-   authorized number present:
+- **Sender ID:** Omani operators require a **pre-registered alphanumeric sender ID**.
+  International pre-registration is supported by Twilio, with a provisioning time of
+  about **18 days**; domestic pre-registration (about 14 days) appeared as temporarily
+  suspended. Messages from unregistered sender IDs are attempted on a best-effort basis
+  only and may not arrive.
+- **Numbers:** local and international long codes and short codes are not supported
+  by the operators. Two-way SMS is not supported (users cannot reply).
+- **Content and timing:** Arabic (UCS-2) is supported. Verification codes are
+  requested by the user, but the guidelines ask for messages during the recipient's
+  daytime hours unless urgent.
+- **Cost:** about **US$0.27 per successful verification**: Verify's $0.05 per successful
+  verification plus the SMS rate to Oman of $0.2158 per message segment (each resend is
+  another segment). With the default global limit of 200 codes per hour, the worst case
+  is about US$43 per hour, so set `OSRIP_SMS_GLOBAL_HOUR` to what the budget allows.
+  A trial account sends only to verified numbers and adds a trial notice; real use
+  needs an upgraded (paid) account, which only the account owner can authorize.
+
+### What remains before SMS can be switched on
+
+1. **Create a Twilio account** (https://www.twilio.com/try-twilio). The team does this,
+   including identity and billing checks; nothing in the code bypasses them. Keep all
+   credentials out of chat and out of the repository.
+2. **Create a Verify service** (Console → Verify → Services) with a friendly name such
+   as "OSRIP". Note its SID (`VA...`).
+3. **Limit the countries** in Verify's Geo permissions to the ones needed (Oman, plus
+   any others the project serves), and keep Fraud Guard on, to limit SMS pumping fraud.
+4. **Register an alphanumeric sender ID for Oman** through the Twilio Console (Oman
+   guidelines page above), and wait for provisioning (about 18 days).
+5. **Create an API key** (Console → Account → API keys, standard key) and put the
+   values in `deploy/.env` only: `OSRIP_SMS_PROVIDER=twilio_verify`,
+   `OSRIP_TWILIO_VERIFY_SERVICE_SID`, `OSRIP_TWILIO_API_KEY_SID`,
+   `OSRIP_TWILIO_API_KEY_SECRET` (and `OSRIP_TWILIO_ACCOUNT_SID`). Keep
+   `OSRIP_SMS_ENABLED=false` for now. `deploy/predeploy_check.py` warns when a value is
+   missing.
+6. **Upgrade the account** (paid; needs the owner's explicit authorization) once the
+   sender ID is approved.
+7. **Run the live acceptance test** against a test deployment, with
+   `OSRIP_SMS_ENABLED=true` there and the owner of one authorized number present:
    `python backend\scripts\sms_acceptance.py --url https://<test-deployment>`.
    - It refuses to run unless the provider status is `configured`.
    - It checks delivery, a wrong code, the right code and a replayed code.
    - It writes `docs/sms/acceptance-*.json` with the number masked and without the code.
-7. **Enable SMS only after that test passes.** Until then, phone registration must not
-   be reported as active.
+8. **Enable SMS in production only after that test passes**, and test each Omani
+   operator (Omantel, Ooredoo, Vodafone Oman) if possible. Until then, phone
+   registration must not be reported as active.
