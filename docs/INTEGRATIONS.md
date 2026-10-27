@@ -21,6 +21,7 @@ mocked counterpart unless "live" is stated); **configured** = real credentials i
 | Anthropic Messages API (Claude) | Assistant that explains published figures and stored forecasts | Answers are restricted to tool results; unmatched numbers are withheld. **It never produces forecasts** | Pay per token; per-user limits of 5 per minute and 30 per hour cap the spend | Questions and the retrieved published statistics are sent to Anthropic. No uploads or account data are sent. The key stays on the server | 30 s timeout; **one retry** after 1 s on 429, 5xx and network errors; then an explained "temporarily unavailable" message. Failures appear on Service health | Model name in `OSRIP_ASSISTANT_MODEL`; review when models are retired | Implemented and tested (mocked HTTP, including retry). **Not configured**: no key |
 | SMTP relay | Confirmation, recovery, sign-in-link and change-of-address e-mails (Arabic and English in every message, HTML with a plain-text part) | — | Depends on the relay; the institution's relay is usually free; Amazon SES lists $0.10 per 1,000 e-mails | Recipient address, the account name and one link per message; notices show other addresses and numbers masked | Sent only when a user asks. A failure is logged, reported on Service health and shown to the user as "could not send". It is not retried automatically, because repeated sends would repeat the token | Credentials and sender address | Implemented and tested (outbox; SMTP path tested against a fake server, including the HTML part). **Not configured; no real e-mail has been sent** |
 | SMS verification (phone registration and sign-in) | Register and sign in with a mobile number, with no e-mail needed; add a verified number to an account | The provider generates, sends and checks the code; OSRIP never stores it. OSRIP also enforces expiry, attempt limits, single use and cooldowns itself | Per message; the limits (per number, per client, per hour in total) bound the cost | Each phone number goes to the provider. Numbers are stored only after verification and appear only masked in the interface, audit log and acceptance records | Provider errors become explained messages with an e-mail alternative. The provider call has a 10 s timeout and is **not retried** (a retry could send two codes). Failures appear on Service health | Provider credentials; the number-plan rule for Oman | **Twilio Verify adapter implemented and tested against mocked HTTP**; the application side is tested with the scripted provider. **No Twilio account exists, so nothing has been sent to a real phone and SMS must not be reported as working.** Disabled by default and shown as unavailable |
+| WhatsApp verification (Meta WhatsApp Cloud API) | The same phone registration, sign-in and linking, with the code delivered by WhatsApp | OSRIP makes the code and keeps only a keyed digest; WhatsApp delivers it with an authentication template (Meta's preset text, Arabic and English) | **Test mode: free** (Meta's test sender, up to 5 approved recipients). Production: charged per delivered code, Oman rates raised on 2026-10-01 | Each number goes to Meta. Test mode sends only to the numbers listed on the server | Errors become explained messages with an e-mail alternative; 10 s timeout, **no retry**. Delivery failures after Meta accepts a message (for example a number without WhatsApp) are not reported back, because no webhook is set up | Access token, phone number ID, template | **Adapter implemented and tested against a simulated Meta API.** No Meta app exists yet, so no WhatsApp message has been sent. **Production mode is off** and needs billing and business setup |
 | Google / Microsoft OpenID Connect | Optional sign-in | Accounts are **not** merged on a matching e-mail | Free | Name, e-mail, subject ID | Discovery and keys are cached. **One retry** on metadata fetch. The token exchange is not retried (single-use code). Failures redirect with an explained error and appear on Service health | Register redirect URIs; rotate client secrets | Implemented and tested (scripted provider with real RSA keys). **Not configured** |
 | Error monitoring (built-in) | Record server and browser errors to fix defects | E-mails, 24+ character tokens and query strings are removed before storage. Errors are grouped by fingerprint | Free (own database) | No cookies are sent with browser reports. At most 10 reports per page session, and 30 per hour per client on the server | Recording never breaks a request. Every 500 response carries a `request_id` | Review `/admin/health`; prune `app_error` rows as needed | Implemented and tested |
 | Health checks | Container orchestration and uptime checks | `/health` (process), `/health/db`, `/health/ready` (database + migration at head) | — | No data returned | Used by the compose `api` healthcheck; `web` waits for it | — | Implemented and tested; the compose file has **not been run** |
@@ -266,6 +267,111 @@ The electricity, water and foreign-trade datasets on data.gov.om need a signed-i
 3. **convert:** only January 2022 onward, no partial years, regions matched by exact NCSI spelling.
 4. **Register the source:** publisher National Centre for Statistics and Information, the statistical-table URL, the access date, and the Open Government License – Sultanate of Oman.
 5. **Upload in Data Management,** then validate, approve and publish.
+
+## WhatsApp verification (Meta WhatsApp Cloud API)
+
+**Status: adapter written and tested against a simulated Meta API only. No Meta developer
+app exists yet, so no code has been sent by WhatsApp and the demonstration has not been
+run.** Production messaging is off and stays off until it is set explicitly
+(`OSRIP_WHATSAPP_MODE=production`) after the requirements below are met.
+
+### Evaluation: WhatsApp instead of Twilio SMS (checked 2026-10-27)
+
+| | WhatsApp, test mode | WhatsApp, production | Twilio Verify (SMS) |
+|---|---|---|---|
+| Free demonstration | **Yes.** Meta's test sender messages up to 5 recipients you verify, free of charge | No | Trial credit only, to verified numbers. Oman delivery needs a registered sender ID (about 18 days); unregistered is best effort |
+| Cost per code | None | Charged per delivered authentication message. Oman became its own market with higher rates from 2026-10-01 (amounts on Meta's rate card); vendors listed about US$0.01 under the old "Rest of Middle East" rate | About US$0.27 |
+| Accounts | Facebook account, Meta developer account, business portfolio (free) | Also a payment method, a business phone number, an approved display name, and business verification to pass 250 business-started conversations per day | Twilio account, paid upgrade, sender ID registration |
+| The person needs | WhatsApp on the phone | WhatsApp | Any mobile phone |
+
+**Recommendation for the graduation project: WhatsApp test mode.** It is the only option
+with real delivery and no payment. Twilio stays in the code as the SMS option, and the
+provider is chosen in one setting. Neither is removed.
+
+Sources: Meta's Cloud API getting-started guide, authentication-template and copy-code
+pages, supported languages, error codes, pricing and messaging-limit pages on
+developers.facebook.com (2026-10-27). Meta's search-indexed guide states the test number
+can send free messages to up to 5 recipients; the current page no longer repeats the
+sentence, so check WhatsApp Manager's billing page shows no charges after the first test.
+
+### How it works
+
+- `OSRIP_SMS_PROVIDER=whatsapp` uses the same phone flow, limits and rules as SMS (see the
+  next section): expiry, wrong-code limit, single use, cooldowns, accounts created only
+  after verification, numbers never moved between accounts.
+- OSRIP makes a 6-digit code with a secure random generator and sends it with
+  `POST https://graph.facebook.com/v23.0/{phone-number-id}/messages`, as an authentication
+  template (`osrip_verification_code`, languages `en` and `ar`) with a copy-code button.
+  The code goes in the body parameter and in the button parameter, as Meta requires.
+- Only an HMAC of the code (the server's secret key and a per-challenge nonce) is stored,
+  in `phone_challenge.provider_ref`. The code is never stored, logged or sent to the browser.
+- The message language follows the page (Arabic or English). Meta writes the text; only
+  the code is OSRIP's.
+- **Test and production are separate:**
+  - `test` (the default): OSRIP sends only to the numbers in
+    `OSRIP_WHATSAPP_TEST_RECIPIENTS`, and refuses others before calling Meta. The
+    interface shows "WhatsApp demonstration" and the public status is `sandbox`.
+  - `production`: any number, charged by Meta, and the status is `configured`. Never set by
+    the setup script; `deploy/predeploy_check.py` warns about it.
+
+| Setting | Meaning |
+|---|---|
+| `OSRIP_SMS_ENABLED`, `OSRIP_SMS_PROVIDER=whatsapp` | Switch phone verification on, with WhatsApp |
+| `OSRIP_WHATSAPP_MODE` | `test` (default) or `production` |
+| `OSRIP_WHATSAPP_ACCESS_TOKEN` | A system user access token (secret; server only) |
+| `OSRIP_WHATSAPP_PHONE_NUMBER_ID` | The sender's phone number ID from API Setup (not the phone number) |
+| `OSRIP_WHATSAPP_BUSINESS_ACCOUNT_ID` | The WhatsApp Business Account ID, used by the setup script for the template |
+| `OSRIP_WHATSAPP_TEST_RECIPIENTS` | The approved test numbers, comma-separated, e.g. `+96891234567` (at most 5 at Meta) |
+| `OSRIP_WHATSAPP_TEMPLATE_NAME` (`osrip_verification_code`), `OSRIP_WHATSAPP_API_VERSION` (`v23.0`) | Template name and Graph API version |
+
+### Setting up the free demonstration
+
+You do these steps yourself; never paste the token into a chat or commit it.
+
+1. **Meta developer account.** Sign in at https://developers.facebook.com/ with your own
+   Facebook account and choose **Get Started** to register as a developer (Meta may ask
+   you to confirm a phone number or e-mail address). Meta's terms apply as written.
+2. **Create the app.** At https://developers.facebook.com/apps choose **Create app**,
+   pick the **Connect with customers through WhatsApp** use case, and select or create a
+   business portfolio (free). Do not add a payment method.
+3. **Test sender.** In the app, open **WhatsApp → API Setup**. Meta creates a test
+   WhatsApp Business Account and a test phone number. Note the **Phone number ID** and the
+   **WhatsApp Business Account ID** shown there.
+4. **Approved recipients.** In the **To** field choose **Manage phone number list**, add
+   your WhatsApp number (+968 …) and enter the code WhatsApp sends to it. Up to 5 numbers.
+5. **First message.** Send the ready-made `hello_world` template from the same page to
+   check that your phone receives it.
+6. **Permanent token.** In Meta Business Suite settings (https://business.facebook.com/settings)
+   open **Users → System users**, add a system user, assign it the app and the WhatsApp
+   account, and generate a token with `whatsapp_business_messaging` and
+   `whatsapp_business_management` (and `business_management`). The temporary token on
+   the API Setup page also works but expires within about a day.
+7. **Store the settings.** In a terminal, from `backend\`:
+   `.venv\Scripts\python.exe scripts\whatsapp_setup.py configure`. Paste the token at the
+   hidden prompt, then the two IDs and your approved numbers. This writes `backend/.env`
+   in test mode.
+8. **Create the template.** `.venv\Scripts\python.exe scripts\whatsapp_setup.py create-template`,
+   then `... status` until both languages show `APPROVED`. Meta's documentation does not
+   say whether its test account accepts authentication templates; if it refuses, the
+   demonstration cannot be done for free and the reason is shown.
+9. **Run it.** Set `OSRIP_SMS_ENABLED=true` in `backend/.env`, restart the API, open
+   **Register → Phone**, enter an approved number, and enter the code that arrives in
+   WhatsApp. A number that is not approved is refused with an explanation.
+
+### Before production (left disabled)
+
+- A business phone number of your own, not in use on the WhatsApp apps, registered
+  to the account, with an approved display name.
+- A payment method in WhatsApp Manager: every delivered authentication message is
+  charged, with Oman's own rate from 2026-10-01 (check
+  https://business.whatsapp.com/products/platform-pricing#rates).
+- Business verification in Meta Business Suite, to raise the limit of 250
+  business-started conversations per day and to get the display name approved.
+- The template created again on the production account (templates do not move from
+  the test account), and opt-in wording in the interface as Meta's policy requires.
+- Optionally, a webhook (public HTTPS address) to learn of messages that fail after
+  Meta accepts them.
+- Then, and only with explicit approval, `OSRIP_WHATSAPP_MODE=production`.
 
 ## SMS verification (registration and sign-in by phone)
 
