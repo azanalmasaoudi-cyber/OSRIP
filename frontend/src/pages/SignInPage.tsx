@@ -530,12 +530,13 @@ function ChangePassword({ required = false }: { required?: boolean }) {
 
 function AddPhone({ onLinked }: { onLinked: () => void }) {
   const { t } = useTranslation();
+  const providers = useProviders();
   const [open, setOpen] = useState(false);
   const [done, setDone] = useState(false);
   return (
     <section aria-labelledby="add-phone-heading" className="surface-card flex flex-col gap-3 p-5" data-testid="add-phone">
       <h2 id="add-phone-heading" className="text-lg font-semibold">{t('phone.addTitle')}</h2>
-      <p className="text-sm text-muted-foreground">{t('phone.addIntro')}</p>
+      <p className="text-sm text-muted-foreground">{providers.data?.sms.channel === 'whatsapp' ? t('phone.whatsapp.addIntro') : t('phone.addIntro')}</p>
       {done ? <Notice tone="success">{t('phone.linked')}</Notice> : open ? (
         <PhoneVerification purpose="link" onDone={() => { setDone(true); onLinked(); }} />
       ) : (

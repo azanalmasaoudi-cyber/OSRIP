@@ -245,10 +245,12 @@ class Settings(BaseSettings):
 
     # ------------------------------------------------------------ SMS verification (phone accounts)
     # Off unless explicitly enabled AND a provider is configured. Adapters: "twilio_verify"
-    # (Twilio Verify API v2; the provider generates, sends and checks the code) and "test"
-    # (scripted delivery for automated tests; refused in production). Twilio credentials:
-    # the Account SID with either an API key (SID and secret, preferred) or the Auth Token,
-    # and the Verify Service SID. Server side only; never in the frontend.
+    # (Twilio Verify API v2; the provider generates, sends and checks the code), "whatsapp"
+    # (Meta WhatsApp Cloud API; OSRIP generates and checks the code, WhatsApp delivers it
+    # with an authentication template) and "test" (scripted delivery for automated tests;
+    # refused in production). Twilio credentials: the Account SID with either an API key
+    # (SID and secret, preferred) or the Auth Token, and the Verify Service SID. Server side
+    # only; never in the frontend. The OSRIP_SMS_* limits apply to every channel.
     sms_enabled: bool = False
     sms_provider: str = ""
     twilio_account_sid: str | None = None  # AC...
@@ -256,6 +258,17 @@ class Settings(BaseSettings):
     twilio_api_key_secret: SecretStr | None = None
     twilio_auth_token: SecretStr | None = None  # used only when no API key is set
     twilio_verify_service_sid: str | None = None  # VA...
+    # WhatsApp: "test" sends only to the numbers in whatsapp_test_recipients (Meta's free test
+    # sender accepts up to 5 verified recipients); "production" sends to anyone and every
+    # delivered code is charged by Meta. Production stays off until billing and business
+    # verification are in place (docs/INTEGRATIONS.md).
+    whatsapp_mode: str = "test"
+    whatsapp_access_token: SecretStr | None = None  # a system user token (or the temporary one)
+    whatsapp_phone_number_id: str | None = None  # the sender's phone number ID, not the number
+    whatsapp_business_account_id: str | None = None  # WABA ID: template setup script only
+    whatsapp_template_name: str = "osrip_verification_code"  # authentication template, en and ar
+    whatsapp_test_recipients: str = ""  # comma-separated E.164 numbers, e.g. +96891234567
+    whatsapp_api_version: str = "v23.0"
     sms_code_minutes: int = 10  # challenge lifetime
     sms_max_attempts: int = 5  # wrong codes allowed per challenge
     sms_resend_seconds: int = 60  # cooldown before another code to the same number

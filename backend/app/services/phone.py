@@ -54,6 +54,10 @@ DELIVERY_MESSAGES = {
         503,
         "The SMS service is not responding. Try again in a few minutes, or use e-mail instead.",
     ),
+    "not_test_recipient": (
+        422,
+        "This is a WhatsApp demonstration: codes are sent only to the approved test numbers. Use e-mail instead.",
+    ),
 }
 
 

@@ -19,11 +19,16 @@ const ERROR_CODES = [
   'sms_busy', 'sms_invalid_number', 'sms_undeliverable', 'sms_provider_unavailable', 'sms_code_incorrect', 'sms_code_expired',
   'sms_too_many_attempts', 'sms_challenge_invalid', 'invalid_code_format', 'phone_taken', 'phone_already_linked',
   'account_unavailable', 'too_many_requests', 'wrong_current_password', 'reauthentication_required',
+  'sms_not_test_recipient',
 ] as const;
 type ErrorCode = (typeof ERROR_CODES)[number];
+/** Errors worded for the channel: "WhatsApp" instead of "SMS". */
+const WHATSAPP_ERRORS = ['sms_busy', 'sms_invalid_number', 'sms_undeliverable', 'sms_provider_unavailable', 'invalid_code_format'] as const;
+type WhatsAppError = (typeof WHATSAPP_ERRORS)[number];
+const isWhatsAppError = (code: string): code is WhatsAppError => (WHATSAPP_ERRORS as readonly string[]).includes(code);
 /** After these, the only way forward is a new code or another method. */
 const NEEDS_NEW_CODE = new Set<string>(['sms_code_expired', 'sms_too_many_attempts', 'sms_challenge_invalid']);
-const OFFER_EMAIL = new Set<string>(['sms_unavailable', 'sms_undeliverable', 'sms_invalid_number', 'sms_provider_unavailable', 'sms_busy', 'sms_number_limit']);
+const OFFER_EMAIL = new Set<string>(['sms_unavailable', 'sms_undeliverable', 'sms_invalid_number', 'sms_provider_unavailable', 'sms_busy', 'sms_number_limit', 'sms_not_test_recipient']);
 
 function useCountdown(): [number, (seconds: number) => void] {
   const [until, setUntil] = useState(0);
@@ -37,7 +42,8 @@ function useCountdown(): [number, (seconds: number) => void] {
 }
 
 /**
- * Phone number → SMS code → verified. Used for registration and sign-in (purpose
+ * Phone number → code (by SMS or WhatsApp, as the server is set up) → verified. Used for
+ * registration and sign-in (purpose
  * "sign_in": an account is created only after the code is verified) and for adding a
  * number to the signed-in account (purpose "link"), including replacing a verified one
  * (`askPassword`: the current password is needed first). The code never passes through
@@ -56,6 +62,7 @@ export function PhoneVerification({ purpose, askName = false, askPassword = fals
   const request = usePhoneRequest();
   const verify = usePhoneVerify();
   const sms = providers.data?.sms;
+  const whatsapp = sms?.channel === 'whatsapp';
   const [country, setCountry] = useState(sms?.default_country ?? '+968');
   const [number, setNumber] = useState('');
   const [name, setName] = useState('');
@@ -81,7 +88,7 @@ export function PhoneVerification({ purpose, askName = false, askPassword = fals
     return (
       <div className="flex flex-col gap-3 rounded-lg border border-dashed border-border-strong/60 bg-card p-5" data-testid="phone-unavailable">
         <p className="flex items-start gap-2 text-sm font-semibold"><Smartphone aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />{t('phone.unavailableTitle')}</p>
-        <p className="text-sm text-muted-foreground">{t('phone.unavailable')}</p>
+        <p className="text-sm text-muted-foreground">{whatsapp ? t('phone.whatsapp.unavailable') : t('phone.unavailable')}</p>
         {onUseEmail ? <Button type="button" variant="outline" className="w-fit" onClick={onUseEmail}>{t('phone.useEmail')}</Button> : null}
       </div>
     );
@@ -115,6 +122,7 @@ export function PhoneVerification({ purpose, askName = false, askPassword = fals
 
   const message = errorCode === null ? null
     : errorCode === 'other' ? (error instanceof Error ? error.message : t('phone.error.other'))
+    : whatsapp && isWhatsAppError(errorCode) ? t(`phone.whatsapp.error.${errorCode}`)
     : t(`phone.error.${errorCode}`, { n: details.attempts_left ?? details.retry_after ?? details.minutes ?? 0 });
 
   return (
@@ -122,6 +130,10 @@ export function PhoneVerification({ purpose, askName = false, askPassword = fals
       {sms.status === 'test' ? (
         <p className="rounded-md border border-dashed border-synthetic-border bg-synthetic px-3 py-2 text-xs text-synthetic-foreground" data-testid="sms-test-mode">
           {t('phone.testMode')}
+        </p>
+      ) : sms.status === 'sandbox' ? (
+        <p className="rounded-md border border-dashed border-synthetic-border bg-synthetic px-3 py-2 text-xs text-synthetic-foreground" data-testid="whatsapp-sandbox">
+          {t('phone.sandbox')}
         </p>
       ) : null}
       {!challenge ? (
@@ -165,10 +177,10 @@ export function PhoneVerification({ purpose, askName = false, askPassword = fals
       ) : (
         <form onSubmit={check} className="flex flex-col gap-4" noValidate data-testid="phone-code-form">
           <p role="status" className="text-sm" data-testid="phone-sent">
-            {t('phone.sentTo', { phone: challenge.phone_masked, minutes: Math.round(challenge.expires_in / 60) })}
+            {t(whatsapp ? 'phone.whatsapp.sentTo' : 'phone.sentTo', { phone: challenge.phone_masked, minutes: Math.round(challenge.expires_in / 60) })}
           </p>
           <div className="flex flex-col gap-1.5">
-            <label htmlFor={ids.code} className="text-sm font-medium">{t('phone.code')}</label>
+            <label htmlFor={ids.code} className="text-sm font-medium">{whatsapp ? t('phone.whatsapp.code') : t('phone.code')}</label>
             <input id={ids.code} ref={codeRef} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" dir="ltr"
               maxLength={10} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} aria-describedby={ids.codeHint}
               data-testid="phone-code"
