@@ -32,11 +32,12 @@
   perspective: 900px;
 }
 
-/* A soft, slowly widening glow behind the name: the "depth" of the scene. */
+/* A soft, slowly widening glow behind the name: the "depth" of the scene. Drawn inside the
+ * screen (inset 0, the gradient scaled to match) so nothing ever extends past its edges. */
 .opening-light {
   position: absolute;
-  inset: -20%;
-  background: radial-gradient(30% 22% at 50% 46%, rgb(225 189 120 / 0.18), transparent 70%);
+  inset: 0;
+  background: radial-gradient(42% 31% at 50% 44.4%, rgb(225 189 120 / 0.18), transparent 70%);
   pointer-events: none;
 }
 
