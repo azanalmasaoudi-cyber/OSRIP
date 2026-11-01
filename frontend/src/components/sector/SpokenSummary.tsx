@@ -125,9 +125,9 @@ export function SpokenSummary({ selection }: { selection: SeriesSpeech }) {
         ) : null}
         <VoiceVolume testId="sector-listen-volume" />
       </div>
-      {error ? <p role="alert" className="text-xs text-destructive" data-testid="sector-listen-error">{error}</p> : null}
+      {error ? <p role="alert" className="text-sm text-destructive" data-testid="sector-listen-error">{error}</p> : null}
       {transcript ? (
-        <p className="rounded-md bg-muted/60 p-2 text-xs" dir="auto" lang={language} data-testid="sector-listen-transcript">
+        <p className="rounded-md bg-muted/60 p-2 text-base" dir="auto" lang={language} data-testid="sector-listen-transcript">
           <span className="font-semibold">{browserVoice ? t('sectorFlow.transcriptBrowser') : t('voicePanel.transcript')}: </span>{transcript}
         </p>
       ) : null}

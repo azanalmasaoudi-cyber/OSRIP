@@ -60,7 +60,7 @@ function Chips({ ids, messageId, known }: { ids: string[]; messageId: number; kn
 
 function Section({ title, icon, children, testId }: { title: string; icon?: ReactNode; children: ReactNode; testId: string }) {
   return (
-    <section className="rounded-md border border-border p-2 text-xs" data-testid={testId}>
+    <section className="rounded-md border border-border p-2 text-sm" data-testid={testId}>
       <h4 className="mb-1.5 flex items-center gap-1 font-semibold">{icon}{title}</h4>
       {children}
     </section>
@@ -73,7 +73,7 @@ export function DataReportNotice({ report }: { report: NonNullable<Structured['d
   const { t } = useTranslation();
   const language = useAppLanguage();
   return (
-    <section className="rounded-md border border-sand/60 bg-sand/10 p-2 text-xs" data-testid="data-report-notice" data-category={report.category}>
+    <section className="rounded-md border border-sand/60 bg-sand/10 p-2 text-sm" data-testid="data-report-notice" data-category={report.category}>
       <h4 className="mb-1 flex items-center gap-1 font-semibold"><Database aria-hidden="true" className="size-3.5" />{report.label[language]}</h4>
       <p>{t('assistant.dataReport.why', { reason: report.reason[language] })}</p>
       {report.sufficient ? (
@@ -104,7 +104,7 @@ export function WebNotice({ notice }: { notice: NonNullable<Structured['web_noti
   const { t } = useTranslation();
   const language = useAppLanguage();
   return (
-    <p className="flex items-start gap-1 rounded-md border border-border bg-muted/40 p-2 text-xs" data-testid="web-notice" data-web={notice.web_search}>
+    <p className="flex items-start gap-1 rounded-md border border-border bg-muted/40 p-2 text-sm" data-testid="web-notice" data-web={notice.web_search}>
       <AlertTriangle aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
       <span>
         {t(`assistant.webNotice.${notice.web_search}`)}{' '}
@@ -208,7 +208,7 @@ export function StructuredParts({ structured, messageId, known }: { structured: 
         </Section>
       ) : null))}
       {withheldCount > 0 ? (
-        <p className="flex items-start gap-1 text-xs text-muted-foreground" data-testid="reply-withheld">
+        <p className="flex items-start gap-1 text-sm text-muted-foreground" data-testid="reply-withheld">
           <AlertTriangle aria-hidden="true" className="mt-0.5 size-3 shrink-0" />{t('assistant.withheld', { count: withheldCount })}
         </p>
       ) : null}

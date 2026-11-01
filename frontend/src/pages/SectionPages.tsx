@@ -25,7 +25,7 @@ function SectorPage({ section, page, image, registry = false }: {
       <header className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
         <div className="grid md:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
           <div className="gold-rule flex flex-col justify-center gap-2 p-5 sm:p-6 lg:p-8">
-            <p className="text-xs font-semibold text-primary ltr:tracking-wider ltr:uppercase">{t('sectorFlow.eyebrow')}</p>
+            <p className="text-sm font-semibold text-primary ltr:tracking-wider ltr:uppercase">{t('sectorFlow.eyebrow')}</p>
             <h1 className="text-2xl leading-tight font-semibold sm:text-3xl 3xl:text-4xl">{title}</h1>
             <p className="max-w-2xl text-base text-muted-foreground">{t(`pages.${page}.lead`)}</p>
           </div>
@@ -36,7 +36,7 @@ function SectorPage({ section, page, image, registry = false }: {
       <SectorWorkflow section={section} title={title} />
       {registry ? (
         <details className="rounded-lg border border-border bg-card p-4 shadow-card" data-testid="commodity-registry-details">
-          <summary className="cursor-pointer text-sm font-semibold">{t('pages.food.commoditiesHeading')}</summary>
+          <summary className="cursor-pointer text-base font-semibold">{t('pages.food.commoditiesHeading')}</summary>
           <div className="mt-3"><CommodityRegistry /></div>
         </details>
       ) : null}

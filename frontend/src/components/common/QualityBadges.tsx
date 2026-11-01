@@ -108,7 +108,7 @@ export function QualityLegend({ className }: { className?: string }) {
       {items.map(({ variant, icon: Icon, label, body }) => (
         <div key={variant} className="flex flex-col gap-1.5 rounded-lg border border-border bg-card p-4">
           <dt><Badge variant={variant}><Icon aria-hidden="true" />{label}</Badge></dt>
-          <dd className="text-sm text-muted-foreground">{body}</dd>
+          <dd className="text-base text-muted-foreground">{body}</dd>
         </div>
       ))}
     </dl>

@@ -16,9 +16,11 @@
  * before the first paint by public/theme-init.js and then by lib/theme.ts (Light, Dark or
  * System, remembered locally). The --sidebar and --nav tokens are navy in both themes.
  *
- * Type: body copy is 1rem (12pt); dense data (tables, badges, metadata) is 0.75rem (12px);
- * headings step up from 1.125rem to 2.25rem. On very wide screens (2560 px and up, e.g. a 4K
- * display at 100 % scaling) the root size grows, so every rem-based size and width scales.
+ * Type: normal reading text is 1rem = 12pt = 16 CSS px (`text-base`) and never smaller; labels,
+ * notes, tables and metadata are 0.875rem (14px, `text-sm`); only badges, chips, step numbers
+ * and photo credits are 0.75rem (12px, `text-xs`). Headings step up from 1.125rem to 2.25rem.
+ * On very wide screens (2200 px and up, e.g. a 4K display at 100 % scaling) the root size
+ * grows, so every rem-based size and width scales.
  *
  * `npm run check:contrast` (scripts/check-contrast.mjs) reads both blocks from this file and
  * checks every text/control pairing for WCAG contrast. Mode colours always accompany text

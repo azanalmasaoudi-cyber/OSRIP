@@ -88,8 +88,11 @@ control borders, focus rings and chart marks). All 92 pass (2026-11-01). The scr
 each block by its selector; before, it matched the selector's first mention in the header
 comment, so its "dark" results repeated the light ones.
 
-**Type sizes.** Body copy is 1 rem (12 pt); dense data (tables, badges, metadata) is 0.75 rem
-(12 px); headings step up from 1.125 rem to 2.25 rem (3.75 rem on the landing hero).
+**Type sizes.** Normal reading text (sentences, descriptions, answers, notices) is 1 rem =
+12 pt = 16 CSS px (`text-base`) and is never set smaller. Labels, helper notes, tables and
+metadata are 0.875 rem (14 px, `text-sm`). Only badges, chips, step numbers and photo credits
+are 0.75 rem (12 px, `text-xs`). Headings step up from 1.125 rem to 2.25 rem (3.75 rem on the
+landing hero), so the hierarchy stays clear.
 **Type.** IBM Plex Sans with IBM Plex Sans Arabic (OFL 1.1), self-hosted, in
 weights 400, 500 and 600. Arabic gets an Arabic-first font stack and a taller
 line height. Letter-spacing and uppercase apply only in LTR, because

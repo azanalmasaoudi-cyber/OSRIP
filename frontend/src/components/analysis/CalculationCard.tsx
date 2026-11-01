@@ -32,7 +32,7 @@ export function ResultValue({ value, unitCode, unitLabel }: { value: string; uni
         {suffix}
       </span>
       {exact !== shown ? (
-        <span className="text-xs text-muted-foreground" dir="ltr" data-testid="calc-exact">
+        <span className="text-sm text-muted-foreground" dir="ltr" data-testid="calc-exact">
           = {exact}
         </span>
       ) : null}
@@ -47,7 +47,7 @@ export function InputsTable({ inputs }: { inputs: CalcInput[] }) {
   if (inputs.length === 0) return null;
   return (
     <div className="relative overflow-x-auto">
-      <table className="w-full text-xs" data-testid="calc-inputs">
+      <table className="w-full text-sm" data-testid="calc-inputs">
         <caption className="sr-only">{t('analysis.inputs')}</caption>
         <thead>
           <tr className="border-b border-border-strong/40 text-muted-foreground">
@@ -114,8 +114,8 @@ export function Limitations({ items }: { items: Array<{ code?: string; en: strin
   if (items.length === 0) return null;
   return (
     <div>
-      <p className="mb-1 text-xs font-semibold text-sand-foreground">{t('analysis.caveats')}</p>
-      <ul className="flex flex-col gap-1 text-xs" data-testid="calc-caveats">
+      <p className="mb-1 text-sm font-semibold text-sand-foreground">{t('analysis.caveats')}</p>
+      <ul className="flex flex-col gap-1 text-sm" data-testid="calc-caveats">
         {items.map((c, n) => (
           <li key={`${c.code ?? n}`} className="flex gap-1.5" data-code={c.code}>
             <Info aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-sand-foreground" />
@@ -151,7 +151,7 @@ export function CalculationCard({ calc }: { calc: Calculation }) {
             ? 'border-border bg-muted/40' : 'border-accent/40 bg-card')} data-testid="calc-reason">
           <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-accent" />
           <div>
-            <p className="text-xs font-semibold">{t('analysis.reason')}</p>
+            <p className="text-sm font-semibold">{t('analysis.reason')}</p>
             <p>{l(calc.reason)}</p>
           </div>
         </div>
@@ -167,7 +167,7 @@ export function CalculationCard({ calc }: { calc: Calculation }) {
 
       {calc.breakdown.length > 0 ? (
         <div>
-          <p className="mb-1 text-xs font-semibold">{t('analysis.partnerShares')}</p>
+          <p className="mb-1 text-sm font-semibold">{t('analysis.partnerShares')}</p>
           <ul className="grid gap-1 text-sm sm:grid-cols-3" data-testid="calc-breakdown">
             {calc.breakdown.map((b) => (
               <li key={b.partner} className="flex justify-between gap-2 rounded-md border border-border px-2 py-1">
@@ -183,7 +183,7 @@ export function CalculationCard({ calc }: { calc: Calculation }) {
 
       {calc.notes.length > 0 ? (
         <div className="rounded-md bg-sand-subtle/60 p-3 text-sm" data-testid="calc-notes">
-          <p className="mb-1 text-xs font-semibold text-sand-foreground">{t('analysis.notes')}</p>
+          <p className="mb-1 text-sm font-semibold text-sand-foreground">{t('analysis.notes')}</p>
           {calc.notes.map((n, i) => <p key={i}>{l(n)}</p>)}
         </div>
       ) : null}

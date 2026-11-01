@@ -59,14 +59,14 @@ export function ConversationSources({ messages, className }: { messages: readonl
       data-testid="conversation-sources">
       <h2 id="conversation-sources-h" className="flex items-center gap-2 text-base font-semibold">
         <BookOpen aria-hidden="true" className="size-4 text-primary" />{t('chat.sourcesPanel')}
-        {sources.length ? <span className="text-xs font-normal text-muted-foreground">({sources.length})</span> : null}
+        {sources.length ? <span className="text-sm font-normal text-muted-foreground">({sources.length})</span> : null}
       </h2>
       {sources.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t('chat.sourcesPanelEmpty')}</p>
+        <p className="text-base text-muted-foreground">{t('chat.sourcesPanelEmpty')}</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {sources.map((s) => (
-            <li key={s.key} className="flex flex-col gap-1 rounded-md border border-border bg-background p-2.5 text-xs" data-class={s.cls}>
+            <li key={s.key} className="flex flex-col gap-1 rounded-md border border-border bg-background p-2.5 text-sm" data-class={s.cls}>
               <p className="flex flex-wrap items-center gap-1">
                 <Badge variant={s.cls === 'official' ? 'verified' : s.cls === 'record' || s.cls === 'international' ? 'outline' : 'sand'}>
                   {t(`chat.sourceClass.${s.cls}`)}

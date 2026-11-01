@@ -68,20 +68,20 @@ function LatestFigures() {
             <li key={section} className="surface-card flex flex-col gap-1 p-5" data-testid="latest-card" data-section={section}
               data-indicator={found?.series.indicatorCode ?? indicators[0]}>
               <p className="text-sm text-muted-foreground">{found ? found.series.name[language] : t(`pages.home.headline.${section}`)}</p>
-              {qs.some((q) => q.isPending) ? <p className="text-sm text-muted-foreground">{t('states.loading')}</p> : found && shown ? (
+              {qs.some((q) => q.isPending) ? <p className="text-base text-muted-foreground">{t('states.loading')}</p> : found && shown ? (
                 <>
                   <p className="text-3xl font-semibold tabular-nums" dir="ltr">{shown.text}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     {found.series.unit.label[language]} · {formatPeriod(found.obs.periodStart, found.obs.periodEnd, language)}
                     {ytd ? ` · ${t('frequency.year_to_date')}` : found.obs.periodComplete ? '' : ` · ${t('table.incompletePeriod')}`}
                     {found.obs.revisionStatus ? ` · ${t(REVISION_STATUS_KEY[found.obs.revisionStatus])}` : ''}
                   </p>
-                  <p className="truncate text-xs text-muted-foreground" title={found.series.source.title}>
+                  <p className="truncate text-sm text-muted-foreground" title={found.series.source.title}>
                     <bdi>{sourceTitle(found.series)}</bdi>
                   </p>
                 </>
               ) : (
-                <p className="text-sm font-medium text-muted-foreground" data-state="data-unavailable">{t('states.dataUnavailable')}</p>
+                <p className="text-base font-medium text-muted-foreground" data-state="data-unavailable">{t('states.dataUnavailable')}</p>
               )}
             </li>
           );
@@ -97,9 +97,9 @@ function StatusText() {
   const language = useAppLanguage();
   const pack = useReferencePack();
   const loaded = pack.data?.pack && pack.data.pack.published_records > 0 ? pack.data.pack : null;
-  if (!loaded) return <p className="text-sm text-nav-muted">{t('pages.home.status')}</p>;
+  if (!loaded) return <p className="text-base text-nav-muted">{t('pages.home.status')}</p>;
   return (
-    <p className="text-sm text-nav-muted" data-testid="pack-status">
+    <p className="text-base text-nav-muted" data-testid="pack-status">
       {t('pages.home.statusPack', {
         count: loaded.published_records,
         cutoff: formatPeriod(loaded.research_cutoff, loaded.research_cutoff, language),
@@ -128,7 +128,7 @@ export function HomePage() {
           className="absolute inset-0 -z-10 size-full object-cover object-[50%_70%]" data-testid="home-hero-image" />
         <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-r from-nav via-nav/75 to-nav/5 rtl:bg-gradient-to-l" />
         <div className={cn(container, 'flex min-h-[26rem] flex-col justify-center gap-6 py-14 sm:min-h-[30rem] lg:py-20 3xl:min-h-[36rem]')}>
-          <p className="w-fit rounded-md border border-nav-ring/60 px-2.5 py-1 text-xs font-semibold text-nav-ring ltr:tracking-wide ltr:uppercase">
+          <p className="w-fit rounded-md border border-nav-ring/60 px-2.5 py-1 text-sm font-semibold text-nav-ring ltr:tracking-wide ltr:uppercase">
             {t('pages.home.eyebrow')}
           </p>
           <h1 id="home-title" className="max-w-3xl text-4xl leading-tight font-semibold sm:text-5xl 3xl:text-6xl">
@@ -146,7 +146,7 @@ export function HomePage() {
           </div>
         </div>
         <PhotoCaption standalone photo={hero}
-          className="absolute end-0 bottom-0 max-w-full rounded-ss-md bg-black/65 px-3 py-1.5 text-[0.6875rem] text-white [&_a]:text-white" />
+          className="absolute end-0 bottom-0 max-w-full rounded-ss-md bg-black/65 px-3 py-1.5 text-xs text-white [&_a]:text-white" />
       </section>
 
       <div className={cn(container, 'flex flex-col gap-12 py-12 lg:gap-16 lg:py-16')}>
@@ -162,7 +162,7 @@ export function HomePage() {
                 <div className="flex flex-1 flex-col gap-2 p-5">
                   <h3 className="text-lg font-semibold">{t(s.title)}</h3>
                   <Link to={to(s.path)}
-                    className="mt-auto inline-flex w-fit items-center gap-1.5 pt-2 text-sm font-medium text-primary underline-offset-4 hover:underline">
+                    className="mt-auto inline-flex w-fit items-center gap-1.5 pt-2 text-base font-medium text-primary underline-offset-4 hover:underline">
                     {t('pages.home.explore', { domain: t(s.title) })}
                     <ArrowRight aria-hidden="true" className="size-4 rtl:-scale-x-100" />
                   </Link>
@@ -187,7 +187,7 @@ export function HomePage() {
                     className="flex size-7 shrink-0 items-center justify-center rounded-full border border-nav-ring/60 text-xs font-semibold text-nav-ring">
                     {i + 1}
                   </span>
-                  <p className="text-sm">{t(key)}</p>
+                  <p className="text-base">{t(key)}</p>
                 </li>
               ))}
             </ol>

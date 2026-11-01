@@ -111,10 +111,10 @@ export function OverviewPage() {
       <section aria-labelledby="ov-title" className="on-nav overflow-hidden rounded-xl bg-nav text-nav-foreground shadow-raised">
         <div className="grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
           <div className="flex flex-col gap-5 p-6 sm:p-8 lg:p-10 3xl:p-14">
-            <p className="text-xs font-semibold text-nav-ring ltr:tracking-wider ltr:uppercase">{t('overviewIntro.eyebrow')}</p>
+            <p className="text-sm font-semibold text-nav-ring ltr:tracking-wider ltr:uppercase">{t('overviewIntro.eyebrow')}</p>
             <h1 id="ov-title" className="max-w-3xl text-3xl leading-tight font-semibold sm:text-4xl 3xl:text-5xl">{t('overviewIntro.title')}</h1>
             <p className="max-w-2xl text-base text-nav-muted sm:text-lg">{t('overviewIntro.lead')}</p>
-            <p className="flex flex-wrap items-center gap-2 text-sm" data-testid="overview-status">
+            <p className="flex flex-wrap items-center gap-2 text-base" data-testid="overview-status">
               <Badge variant="sand"><GraduationCap aria-hidden="true" />{t('overviewIntro.academic')}</Badge>
               <span className="text-nav-muted">{t('overviewIntro.notOfficial')}</span>
             </p>
@@ -132,7 +132,7 @@ export function OverviewPage() {
             <img src={hero.src} width={hero.width} height={hero.height} alt={hero.alt[language]} sizes="(min-width: 1024px) 45vw, 100vw"
               className="absolute inset-0 size-full object-cover" decoding="async" />
             <PhotoCaption photo={hero}
-              className="absolute end-0 bottom-0 max-w-full rounded-ss-md bg-black/65 px-2.5 py-1 text-[0.6875rem] text-white [&_a]:text-white" />
+              className="absolute end-0 bottom-0 max-w-full rounded-ss-md bg-black/65 px-2.5 py-1 text-xs text-white [&_a]:text-white" />
           </figure>
         </div>
       </section>
@@ -161,7 +161,7 @@ export function OverviewPage() {
             <li key={key} className="surface-card flex flex-col gap-2 p-5">
               <span className="flex size-10 items-center justify-center rounded-lg bg-muted text-foreground"><Icon aria-hidden="true" className="size-5" /></span>
               <h3 className="text-base font-semibold">{t(`overviewIntro.users.${key}.title`)}</h3>
-              <p className="text-sm text-muted-foreground">{t(`overviewIntro.users.${key}.body`)}</p>
+              <p className="text-base text-muted-foreground">{t(`overviewIntro.users.${key}.body`)}</p>
             </li>
           ))}
         </ul>
@@ -176,7 +176,7 @@ export function OverviewPage() {
               <SectorImage sector={s.image} />
               <div className="flex flex-1 flex-col gap-3 p-5">
                 <h3 className="text-lg font-semibold">{t(`pages.${s.key}.title`)}</h3>
-                <p className="flex-1 text-sm text-muted-foreground">{t(`overviewIntro.sectors.${s.key}`)}</p>
+                <p className="flex-1 text-base text-muted-foreground">{t(`overviewIntro.sectors.${s.key}`)}</p>
                 <Link to={to(s.path)} className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'w-fit')} data-testid="overview-sector-link">
                   {t('overviewIntro.openSector', { name: t(`pages.${s.key}.title`) })}
                   <ArrowRight aria-hidden="true" className="rtl:rotate-180" />
@@ -199,8 +199,8 @@ export function OverviewPage() {
                   {i + 1}
                 </span>
                 <div className="flex min-w-0 flex-col gap-1">
-                  <p className="flex items-center gap-1.5 text-sm font-semibold"><Icon aria-hidden="true" className="size-4 text-primary" />{t(`overviewIntro.steps.${step.key}.title`)}</p>
-                  <p className="text-xs text-muted-foreground">{t(`overviewIntro.steps.${step.key}.body`)}</p>
+                  <p className="flex items-center gap-1.5 text-base font-semibold"><Icon aria-hidden="true" className="size-4 text-primary" />{t(`overviewIntro.steps.${step.key}.title`)}</p>
+                  <p className="text-base text-muted-foreground">{t(`overviewIntro.steps.${step.key}.body`)}</p>
                 </div>
               </li>
             );
@@ -216,11 +216,11 @@ export function OverviewPage() {
           <p className="max-w-2xl text-base text-muted-foreground">{t('overviewIntro.aiLead')}</p>
           <ol className="grid gap-3 sm:grid-cols-2" data-testid="overview-ai-steps">
             {AI_STEPS.map(({ key, icon: Icon }, i) => (
-              <li key={key} className="flex items-start gap-2.5 text-sm">
+              <li key={key} className="flex items-start gap-2.5 text-base">
                 <span aria-hidden="true" className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border border-copper text-xs font-semibold text-accent">{i + 1}</span>
                 <span className="flex min-w-0 flex-col">
                   <span className="flex items-center gap-1.5 font-semibold"><Icon aria-hidden="true" className="size-4 text-primary" />{t(`overviewIntro.aiSteps.${key}.title`)}</span>
-                  <span className="text-xs text-muted-foreground">{t(`overviewIntro.aiSteps.${key}.body`)}</span>
+                  <span className="text-base text-muted-foreground">{t(`overviewIntro.aiSteps.${key}.body`)}</span>
                 </span>
               </li>
             ))}
@@ -231,7 +231,7 @@ export function OverviewPage() {
         </div>
         <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/60 p-5">
           <h3 className="text-base font-semibold">{t('overviewIntro.aiRulesHeading')}</h3>
-          <ul className="flex list-disc flex-col gap-2 ps-5 text-sm text-muted-foreground">
+          <ul className="flex list-disc flex-col gap-2 ps-5 text-base text-muted-foreground">
             {(['noInvent', 'missing', 'unreviewed', 'web', 'optional'] as const).map((k) => (
               <li key={k}>{t(`overviewIntro.aiRules.${k}`)}</li>
             ))}
@@ -245,8 +245,8 @@ export function OverviewPage() {
         <div className="grid gap-4 xl:grid-cols-3">
           <div className="surface-card flex flex-col gap-3 p-5" data-testid="overview-official-first">
             <h3 className="flex items-center gap-2 text-base font-semibold"><Building2 aria-hidden="true" className="size-5 text-primary" />{t('overviewIntro.officialHeading')}</h3>
-            <p className="text-sm text-muted-foreground">{t('overviewIntro.officialLead')}</p>
-            <ol className="flex flex-col gap-1.5 text-sm">
+            <p className="text-base text-muted-foreground">{t('overviewIntro.officialLead')}</p>
+            <ol className="flex flex-col gap-1.5 text-base">
               {OFFICIAL.map((k, i) => (
                 <li key={k} className="flex items-baseline gap-2">
                   <span aria-hidden="true" className="w-4 shrink-0 text-xs font-semibold text-accent tabular-nums">{i + 1}</span>
@@ -257,13 +257,13 @@ export function OverviewPage() {
           </div>
           <div className="surface-card flex flex-col gap-2 p-5">
             <h3 className="text-base font-semibold">{t('overviewIntro.updatesHeading')}</h3>
-            <p className="text-sm text-muted-foreground">{t('overviewIntro.updates')}</p>
+            <p className="text-base text-muted-foreground">{t('overviewIntro.updates')}</p>
             <h3 className="mt-2 text-base font-semibold">{t('overviewIntro.sourcesHeading')}</h3>
-            <p className="text-sm text-muted-foreground">{t('overviewIntro.sources')}</p>
+            <p className="text-base text-muted-foreground">{t('overviewIntro.sources')}</p>
           </div>
           <div className="surface-card flex flex-col gap-2 p-5">
             <h3 className="text-base font-semibold">{t('overviewIntro.limitsHeading')}</h3>
-            <ul className="flex list-disc flex-col gap-1 ps-4 text-sm text-muted-foreground">
+            <ul className="flex list-disc flex-col gap-1 ps-4 text-base text-muted-foreground">
               {(['coverage', 'missing', 'frequency', 'ai', 'official'] as const).map((k) => (
                 <li key={k}>{t(`overviewIntro.limits.${k}`)}</li>
               ))}
@@ -285,7 +285,7 @@ export function OverviewPage() {
               <Icon aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
               <div className="flex flex-col gap-1">
                 <h3 className="text-base font-semibold">{t(`overviewIntro.benefits.${key}.title`)}</h3>
-                <p className="text-sm text-muted-foreground">{t(`overviewIntro.benefits.${key}.body`)}</p>
+                <p className="text-base text-muted-foreground">{t(`overviewIntro.benefits.${key}.body`)}</p>
               </div>
             </li>
           ))}

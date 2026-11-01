@@ -143,7 +143,7 @@ function breakdownName(s: AvailabilitySeries, language: AppLanguage, t: TFunctio
 function Step({ n, title, children, testId }: { n: number; title: string; children: ReactNode; testId?: string }) {
   return (
     <fieldset className="flex min-w-0 flex-col gap-2.5 border-t border-border pt-4 first:border-t-0 first:pt-0" data-testid={testId}>
-      <legend className="float-start mb-2.5 flex w-full items-center gap-2 text-sm font-semibold">
+      <legend className="float-start mb-2.5 flex w-full items-center gap-2 text-base font-semibold">
         <span aria-hidden="true" className="flex size-6 shrink-0 items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background">{n}</span>
         {title}
       </legend>
@@ -180,15 +180,15 @@ export function SectorWorkflow({ section, title }: { section: SectionCode; title
   const [chart, setChart] = useState(false);
 
   if (adapterKind !== 'http') {
-    return <StatePanel kind="not_implemented"><p className="text-sm text-muted-foreground">{t('sectorFlow.requiresApi')}</p></StatePanel>;
+    return <StatePanel kind="not_implemented"><p className="text-base text-muted-foreground">{t('sectorFlow.requiresApi')}</p></StatePanel>;
   }
   if (availability.isPending) {
-    return <p role="status" className="text-sm text-muted-foreground" data-testid="sector-availability-loading">{t('sectorFlow.loadingAvailability')}</p>;
+    return <p role="status" className="text-base text-muted-foreground" data-testid="sector-availability-loading">{t('sectorFlow.loadingAvailability')}</p>;
   }
   if (availability.isError) {
     return (
       <StatePanel kind="error" detail={availability.error.message} onRetry={() => void availability.refetch()}>
-        <p className="text-sm">{t('sectorFlow.availabilityFailed')}</p>
+        <p className="text-base">{t('sectorFlow.availabilityFailed')}</p>
       </StatePanel>
     );
   }
@@ -197,7 +197,7 @@ export function SectorWorkflow({ section, title }: { section: SectionCode; title
   if (!draft) {
     return (
       <StatePanel kind={mode === 'verified_source' ? 'no_verified_data' : 'empty'}>
-        <p className="text-sm text-muted-foreground" data-testid="sector-no-data">{t('sectorFlow.noData')}</p>
+        <p className="text-base text-muted-foreground" data-testid="sector-no-data">{t('sectorFlow.noData')}</p>
       </StatePanel>
     );
   }
@@ -235,13 +235,13 @@ export function SectorWorkflow({ section, title }: { section: SectionCode; title
           <ListChecks aria-hidden="true" className="size-5 text-primary" />{t('sectorFlow.chooseHeading')}
         </h2>
         <Step n={1} title={t('sectorFlow.stepSector')}>
-          <p className="text-sm font-medium" data-testid="sector-current">{title}</p>
+          <p className="text-base font-medium" data-testid="sector-current">{title}</p>
         </Step>
         <Step n={2} title={t('sectorFlow.indicator')}>
           <SelectField label={t('sectorFlow.indicator')} labelClassName="sr-only" value={draft.selection.indicator}
             onValueChange={(v) => change({ indicator: v, area: draft.selection.area, breakdown: NO_CHOICE, view: undefined })}
             options={indicators.map((i) => ({ value: i.code, label: i.name[language] }))} data-testid="sector-indicator" />
-          <p className="text-xs text-muted-foreground" data-testid="sector-definition">{draft.indicator.definition[language]}</p>
+          <p className="text-sm text-muted-foreground" data-testid="sector-definition">{draft.indicator.definition[language]}</p>
         </Step>
         <Step n={3} title={t('sectorFlow.area')}>
           {draft.areas.length > 1 ? (
@@ -249,7 +249,7 @@ export function SectorWorkflow({ section, title }: { section: SectionCode; title
               onValueChange={(v) => change({ area: v, breakdown: NO_CHOICE, view: undefined })}
               options={draft.areas.map((a) => ({ value: a.code, label: a.name[language] }))} data-testid="sector-area" />
           ) : (
-            <p className="text-sm" data-testid="sector-area-fixed">{draft.areas[0]?.name[language]}</p>
+            <p className="text-base" data-testid="sector-area-fixed">{draft.areas[0]?.name[language]}</p>
           )}
           {draft.breakdowns.length > 1 ? (
             <SelectField label={t('sectorFlow.breakdown')} value={draft.selection.breakdown}
@@ -259,16 +259,16 @@ export function SectorWorkflow({ section, title }: { section: SectionCode; title
           ) : null}
         </Step>
         <Step n={4} title={t('sectorFlow.stepPeriod')}>
-          <span className="text-xs font-medium text-muted-foreground" aria-hidden="true">{t('sectorFlow.frequency')}</span>
+          <span className="text-sm font-medium text-muted-foreground" aria-hidden="true">{t('sectorFlow.frequency')}</span>
           <Segmented label={t('sectorFlow.frequency')} value={draft.selection.view} testId="sector-frequency" className="w-full"
             onChange={(v) => change({ view: v })}
             options={VIEWS.map((v) => ({ value: v, label: t(`series.views.${v}`),
               note: draft.available.includes(v) ? undefined : t('series.viewUnavailable') }))} />
           {draft.entry.year_to_date.length ? (
-            <p className="text-xs text-muted-foreground">{t('sectorFlow.ytdApart')}</p>
+            <p className="text-sm text-muted-foreground">{t('sectorFlow.ytdApart')}</p>
           ) : null}
           {noPeriods ? (
-            <p role="status" className="text-sm" data-testid="sector-no-periods">{t('sectorFlow.noPeriods')}</p>
+            <p role="status" className="text-base" data-testid="sector-no-periods">{t('sectorFlow.noPeriods')}</p>
           ) : (
             <div className="grid grid-cols-2 gap-3 xl:grid-cols-1 2xl:grid-cols-2">
               <SelectField label={t('sectorFlow.from')} value={draft.selection.from} onValueChange={(v) => change({ from: v })}
@@ -278,7 +278,7 @@ export function SectorWorkflow({ section, title }: { section: SectionCode; title
             </div>
           )}
           {complete.length ? (
-            <p className="text-xs text-muted-foreground" data-testid="sector-coverage">
+            <p className="text-sm text-muted-foreground" data-testid="sector-coverage">
               {t('sectorFlow.coverage', {
                 first: label(complete[0]!.start, draft.selection.view),
                 last: label(complete[complete.length - 1]!.start, draft.selection.view),
@@ -287,11 +287,11 @@ export function SectorWorkflow({ section, title }: { section: SectionCode; title
             </p>
           ) : null}
         </Step>
-        {error ? <p role="alert" className="text-sm font-medium text-destructive" data-testid="sector-error">{t(`sectorFlow.errors.${error}`)}</p> : null}
+        {error ? <p role="alert" className="text-base font-medium text-destructive" data-testid="sector-error">{t(`sectorFlow.errors.${error}`)}</p> : null}
         <Button type="submit" size="lg" className="w-full" disabled={noPeriods} data-testid="sector-show-results">
           <Table2 aria-hidden="true" />{t('sectorFlow.showResults')}
         </Button>
-        {stale ? <p role="status" className="text-sm" data-testid="sector-stale">{t('sectorFlow.stale')}</p> : null}
+        {stale ? <p role="status" className="text-base" data-testid="sector-stale">{t('sectorFlow.stale')}</p> : null}
       </form>
 
       {showing ? (
@@ -300,7 +300,7 @@ export function SectorWorkflow({ section, title }: { section: SectionCode; title
       ) : (
         <div className="flex flex-col gap-3 xl:col-start-2 3xl:row-start-1">
           {state.applied && !appliedValid ? (
-            <p role="status" className="text-sm" data-testid="sector-applied-gone">{t('sectorFlow.appliedGone')}</p>
+            <p role="status" className="text-base" data-testid="sector-applied-gone">{t('sectorFlow.appliedGone')}</p>
           ) : null}
           <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border-strong/50 bg-card/60 px-6 py-12 text-center"
             data-testid="sector-empty-results">
@@ -373,9 +373,9 @@ function Results({ section, title, resolved, chart, onChart }: {
         <div className="flex flex-col gap-3 rounded-lg border border-border border-s-4 border-s-primary bg-card px-4 py-4 shadow-card sm:px-5" data-testid="applied-period">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-xs font-medium text-muted-foreground">{t('sectorFlow.resultsFor')}</p>
+              <p className="text-sm font-medium text-muted-foreground">{t('sectorFlow.resultsFor')}</p>
               <h2 id={`${section}-results-h`} className="text-2xl font-semibold" data-testid="applied-range">{range}</h2>
-              <p className="text-sm" data-testid="applied-details">{details}</p>
+              <p className="text-base" data-testid="applied-details">{details}</p>
             </div>
             {scoped[0] ? <WatchButton series={scoped[0]} /> : null}
           </div>
@@ -400,7 +400,7 @@ function Results({ section, title, resolved, chart, onChart }: {
                 {chart ? (
                   <div className="flex flex-col gap-3" data-testid="sector-chart">
                     <TimelineChart timeline={data} />
-                    <p className="text-xs text-muted-foreground">{t('sectorFlow.chartNote')}</p>
+                    <p className="text-sm text-muted-foreground">{t('sectorFlow.chartNote')}</p>
                   </div>
                 ) : null}
               </div>
@@ -412,7 +412,7 @@ function Results({ section, title, resolved, chart, onChart }: {
         <details className="group rounded-lg border border-border bg-card p-4 shadow-card" data-testid="sector-calculations">
           <summary className="cursor-pointer text-base font-semibold">{t('sectorFlow.calcHeading')}</summary>
           <div className="mt-3 flex flex-col gap-4">
-            <p className="text-sm text-muted-foreground">{t('sectorFlow.calcNote', { range })}</p>
+            <p className="text-base text-muted-foreground">{t('sectorFlow.calcNote', { range })}</p>
             {section === 'food_security' ? (
               <SelectField label={t('analysis.stockAssumption')} value={stock} className="max-w-xs"
                 onValueChange={(v) => setStock(STOCK_OPTIONS.find((o) => o === v) ?? 'assumed_zero')}
@@ -425,7 +425,7 @@ function Results({ section, title, resolved, chart, onChart }: {
         <details className="group rounded-lg border border-border bg-card p-4 shadow-card" data-testid="sector-reviews">
           <summary className="cursor-pointer text-base font-semibold">{t('sectorFlow.reviewHeading')}</summary>
           <div className="mt-3 flex flex-col gap-3">
-            <p className="text-sm text-muted-foreground">{t('sectorFlow.reviewNote')}</p>
+            <p className="text-base text-muted-foreground">{t('sectorFlow.reviewNote')}</p>
             <ReviewCards mode={mode} section={section} headingLevel={3} />
           </div>
         </details>
@@ -436,7 +436,7 @@ function Results({ section, title, resolved, chart, onChart }: {
         data-testid="sector-insights-panel">
         <Panel id={`${section}-ai-h`} title={t('sectorFlow.aiHeading')} icon={<Bot aria-hidden="true" className="size-4 text-primary" />}
           className="border-t-4 border-t-copper" testId="sector-next">
-          <p className="text-sm text-muted-foreground">{t('sectorFlow.aiLead')}</p>
+          <p className="text-base text-muted-foreground">{t('sectorFlow.aiLead')}</p>
           <Link to={ask} className={cn(buttonVariants(), 'w-full')} data-testid="sector-request-analysis">
             <Bot aria-hidden="true" />{t('sectorFlow.requestAnalysis')}
           </Link>
@@ -456,7 +456,7 @@ function Results({ section, title, resolved, chart, onChart }: {
               <Scale aria-hidden="true" />{t('sector.balanceLink')}
             </Link>
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <span>{t('sectorFlow.exportsNote')}</span>
             <ExportLinks section={section} mode={mode} filters={filters} only="observations" />
           </div>
@@ -468,7 +468,7 @@ function Results({ section, title, resolved, chart, onChart }: {
 
         <Panel id={`${section}-sources-h`} title={t('sector.parts.sources')} icon={<BookOpen aria-hidden="true" className="size-4 text-primary" />}>
           {loaded ? <TimelineSources timeline={loaded} /> : null}
-          <p className="text-sm">
+          <p className="text-base">
             <Link to={link('/sources')} className="text-primary underline underline-offset-2">{t('sector.allSources')}</Link>
           </p>
         </Panel>
@@ -490,7 +490,7 @@ function Figure({ label, number, unit, extra, text, note, testId }: {
 }) {
   return (
     <div className="flex min-w-0 flex-col gap-1 rounded-lg border border-border bg-card p-4 shadow-card" data-testid={testId}>
-      <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+      <dt className="text-sm font-medium text-muted-foreground">{label}</dt>
       <dd className="text-2xl font-semibold tabular-nums">
         {number != null ? (
           <>
@@ -499,7 +499,7 @@ function Figure({ label, number, unit, extra, text, note, testId }: {
           </>
         ) : <span className="text-sm font-normal">{text ?? '—'}</span>}
       </dd>
-      {note ? <dd className="text-xs text-muted-foreground">{note}</dd> : null}
+      {note ? <dd className="text-sm text-muted-foreground">{note}</dd> : null}
     </div>
   );
 }
@@ -530,13 +530,13 @@ function Summary({ timeline, from }: { timeline: Timeline; from: string }) {
     <section aria-labelledby="sector-summary-h" className="flex flex-col gap-3" data-testid="sector-summary">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h3 id="sector-summary-h" className="text-base font-semibold">{t('sectorFlow.summaryHeading')}</h3>
-        <p className="text-xs text-muted-foreground" data-testid="sector-summary-note">{t('sectorFlow.summaryNote')}</p>
+        <p className="text-sm text-muted-foreground" data-testid="sector-summary-note">{t('sectorFlow.summaryNote')}</p>
       </div>
-      <p className="text-sm" data-testid="sector-summary-counts">
+      <p className="text-base" data-testid="sector-summary-counts">
         {t('sectorFlow.periodsShown', { count: s.periods, withValue: s.with_value, missing: s.missing })}
       </p>
       {s.with_value === 0 ? (
-        <p role="status" className="text-sm font-medium" data-testid="sector-summary-empty">
+        <p role="status" className="text-base font-medium" data-testid="sector-summary-empty">
           {timeline.year_to_date.length ? t('sectorFlow.onlyYtdInRange') : t('sectorFlow.noValuesInRange')}
         </p>
       ) : (
@@ -554,10 +554,10 @@ function Summary({ timeline, from }: { timeline: Timeline; from: string }) {
         </dl>
       )}
       {s.total_reason && s.with_value > 1 ? (
-        <p className="text-xs text-muted-foreground" data-testid="summary-total-reason" data-reason={s.total_reason.code}>{s.total_reason[language]}</p>
+        <p className="text-sm text-muted-foreground" data-testid="summary-total-reason" data-reason={s.total_reason.code}>{s.total_reason[language]}</p>
       ) : null}
       {outside.length ? (
-        <p className="text-xs text-muted-foreground" data-testid="summary-comparison-outside">
+        <p className="text-sm text-muted-foreground" data-testid="summary-comparison-outside">
           {t('sectorFlow.comparisonOutside', { periods: outside.map((a) => periodLabel(a, view, language)).join(', ') })}
         </p>
       ) : null}

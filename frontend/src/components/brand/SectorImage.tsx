@@ -37,7 +37,7 @@ export function SectorImage({ sector, variant = 'card', className, eager = false
         data-sector={sector}>
         <img src={`/images/illustrations/sector-${sector}.svg`} width={320} height={240} alt={t(`illustrations.${sector}`)}
           loading={eager ? 'eager' : 'lazy'} decoding="async" className={cn('block w-full object-contain p-2', box)} />
-        <figcaption className="absolute end-2 bottom-2 rounded-sm bg-black/60 px-1.5 py-0.5 text-[0.6875rem] font-medium text-white">
+        <figcaption className="absolute end-2 bottom-2 rounded-sm bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white">
           {t('illustrations.label')}
         </figcaption>
       </figure>
@@ -49,7 +49,7 @@ export function SectorImage({ sector, variant = 'card', className, eager = false
         sizes={variant === 'banner' ? '100vw' : '(min-width: 1280px) 25vw, (min-width: 640px) 50vw, 100vw'}
         loading={eager ? 'eager' : 'lazy'} decoding="async" className={cn('block w-full object-cover', box)} />
       <PhotoCaption photo={photo}
-        className="on-nav absolute end-0 bottom-0 max-w-full rounded-ss-md bg-black/65 px-2.5 py-1 text-[0.6875rem] text-white [&_a]:text-white" />
+        className="on-nav absolute end-0 bottom-0 max-w-full rounded-ss-md bg-black/65 px-2.5 py-1 text-xs text-white [&_a]:text-white" />
     </figure>
   );
 }

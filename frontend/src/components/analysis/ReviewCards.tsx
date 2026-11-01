@@ -26,7 +26,7 @@ function ReviewHistory({ card }: { card: ReviewCard }) {
   const [reason, setReason] = useState('');
   const reasonId = useId();
 
-  if (!canRead) return <p className="text-xs text-muted-foreground">{t('cards.protected')}</p>;
+  if (!canRead) return <p className="text-sm text-muted-foreground">{t('cards.protected')}</p>;
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -35,10 +35,10 @@ function ReviewHistory({ card }: { card: ReviewCard }) {
 
   return (
     <div className="flex flex-col gap-3 border-t border-border pt-3">
-      <p className="text-xs font-semibold">{t('cards.history')}</p>
-      {history.data && history.data.length === 0 ? <p className="text-xs text-muted-foreground">{t('cards.noHistory')}</p> : null}
+      <p className="text-sm font-semibold">{t('cards.history')}</p>
+      {history.data && history.data.length === 0 ? <p className="text-sm text-muted-foreground">{t('cards.noHistory')}</p> : null}
       {history.data && history.data.length > 0 ? (
-        <ol className="flex flex-col gap-1.5 text-xs" data-testid="review-history">
+        <ol className="flex flex-col gap-1.5 text-sm" data-testid="review-history">
           {history.data.map((r) => (
             <li key={r.id} className="rounded-md border border-border p-2">
               <span className="font-medium">{t(`cards.status.${r.status as ReviewCard['status']}`)}</span>
@@ -53,12 +53,12 @@ function ReviewHistory({ card }: { card: ReviewCard }) {
           <SelectField label={t('cards.newStatus')} value={status} onValueChange={setStatus}
             options={(['under_review', 'explained', 'dismissed'] as const).map((s) => ({ value: s, label: t(`cards.status.${s}`) }))} />
           <div className="flex flex-col gap-1.5">
-            <label htmlFor={reasonId} className="text-xs font-medium text-muted-foreground">{t('cards.reason')}</label>
+            <label htmlFor={reasonId} className="text-sm font-medium text-muted-foreground">{t('cards.reason')}</label>
             <input id={reasonId} value={reason} onChange={(e) => setReason(e.target.value)} required
               className="h-10 rounded-md border border-border-strong bg-card px-3 text-sm" />
           </div>
           <Button type="submit" size="sm" className="w-fit" disabled={!reason.trim() || add.isPending}>{t('cards.submit')}</Button>
-          {add.isError ? <p role="alert" className="text-xs text-destructive">{add.error.message}</p> : null}
+          {add.isError ? <p role="alert" className="text-sm text-destructive">{add.error.message}</p> : null}
         </form>
       ) : null}
     </div>
@@ -82,17 +82,17 @@ export function ReviewCardView({ card, withReviews = true }: { card: ReviewCard;
         <Badge variant={STATUS_VARIANT[card.status]} data-testid="card-status">{t(`cards.status.${card.status}`)}</Badge>
       </div>
       <div>
-        <p className="text-xs font-semibold text-muted-foreground">{t('cards.observation')}</p>
+        <p className="text-sm font-semibold text-muted-foreground">{t('cards.observation')}</p>
         <p data-testid="card-observation">{l(card.observation)}</p>
       </div>
       <div className="rounded-md border-s-4 border-s-accent bg-muted/40 p-3">
-        <p className="text-xs font-semibold text-muted-foreground">{t('cards.next')}</p>
+        <p className="text-sm font-semibold text-muted-foreground">{t('cards.next')}</p>
         <p className="text-sm" data-testid="card-next">{l(card.next_steps)}</p>
       </div>
       <details className="text-sm">
         <summary className="cursor-pointer font-medium">{t('cards.details')}</summary>
         <div className="mt-3 flex flex-col gap-3">
-          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
             <dt className="text-muted-foreground">{t('cards.rule')}</dt>
             <dd>{t('cards.ruleVersion', { v: rule.version })}</dd>
             <dt className="text-muted-foreground">{t('cards.eligibility')}</dt>
@@ -104,7 +104,7 @@ export function ReviewCardView({ card, withReviews = true }: { card: ReviewCard;
               </>
             ) : null}
           </dl>
-          <p className="text-xs font-semibold">{l(card.evidence.calculation_title)}: <span className="font-normal">{l(card.evidence.formula)}</span></p>
+          <p className="text-sm font-semibold">{l(card.evidence.calculation_title)}: <span className="font-normal">{l(card.evidence.formula)}</span></p>
           {result.status === 'ok' && result.value ? (
             <ResultValue value={result.value} unitCode={result.unit?.code} unitLabel={unitLabel} />
           ) : null}
@@ -142,7 +142,7 @@ export function ReviewCards({ mode, section, headingLevel = 2, compact = false }
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <Heading id={`cards-${section ?? 'all'}`} className={compact ? 'sr-only' : 'text-xl font-semibold'}>{t('cards.heading')}</Heading>
-          <p className={compact ? 'max-w-3xl text-xs text-muted-foreground' : 'max-w-3xl text-sm text-muted-foreground'}>{t('cards.intro')}</p>
+          <p className={compact ? 'max-w-3xl text-sm text-muted-foreground' : 'max-w-3xl text-sm text-muted-foreground'}>{t('cards.intro')}</p>
         </div>
         {canRun ? (
           <Button variant="outline" size="sm" onClick={() => run.mutate(mode)} disabled={run.isPending} data-testid="run-rules">
