@@ -23,9 +23,13 @@ from app.core.errors import ApiError, conflict, not_found, unprocessable
 from app.domain.enums import AccountStatus, Permission, Role
 from app.models import (
     AppUser,
+    GroupMember,
+    GroupPermission,
+    GroupRole,
     LoginAttempt,
     PermissionRow,
     RolePermission,
+    RoleRow,
     UserPermissionGrant,
     UserRole,
     UserSession,
@@ -48,13 +52,19 @@ def normalize_email(email: str) -> str:
 def load_principal(
     session: Session, user: AppUser, user_session: UserSession | None = None
 ) -> Principal:
+    # Roles: the person's own and those their groups give (migration 0026).
+    in_groups = select(GroupMember.group_id).where(GroupMember.user_id == user.id)
     roles = frozenset(
-        session.scalars(select(UserRole.role_code).where(UserRole.user_id == user.id))
+        [
+            *session.scalars(select(UserRole.role_code).where(UserRole.user_id == user.id)),
+            *session.scalars(select(GroupRole.role_code).where(GroupRole.group_id.in_(in_groups))),
+        ]
     )
     from_roles = session.scalars(
-        select(RolePermission.permission_code)
-        .join(UserRole, UserRole.role_code == RolePermission.role_code)
-        .where(UserRole.user_id == user.id)
+        select(RolePermission.permission_code).where(RolePermission.role_code.in_(roles))
+    )
+    from_groups = session.scalars(
+        select(GroupPermission.permission_code).where(GroupPermission.group_id.in_(in_groups))
     )
     grants = session.scalars(
         select(UserPermissionGrant.permission_code).where(UserPermissionGrant.user_id == user.id)
@@ -68,7 +78,9 @@ def load_principal(
         display_name=user.display_name,
         roles=roles,
         # Nothing is permitted until a temporary password has been replaced.
-        permissions=frozenset() if change_required else frozenset([*from_roles, *grants]),
+        permissions=frozenset()
+        if change_required
+        else frozenset([*from_roles, *from_groups, *grants]),
         session_id=user_session.id if user_session else None,
         csrf_token_hash=user_session.csrf_token_hash if user_session else None,
         password_change_required=change_required,
@@ -140,32 +152,57 @@ def get_user(session: Session, user_id: uuid.UUID) -> AppUser:
     return user
 
 
-def assign_role(session: Session, actor: Principal, user_id: uuid.UUID, role: Role) -> None:
+def assign_role(session: Session, actor: Principal, user_id: uuid.UUID, role: Role | str) -> None:
+    """A built-in or custom role (by its code) for one person."""
+    code = role.value if isinstance(role, Role) else str(role)
     get_user(session, user_id)
-    if session.get(UserRole, (user_id, role.value)) is None:
-        session.add(UserRole(user_id=user_id, role_code=role.value, granted_by=actor.user_id))
+    if session.get(RoleRow, code) is None:
+        raise not_found("role")
+    if session.get(UserRole, (user_id, code)) is None:
+        session.add(UserRole(user_id=user_id, role_code=code, granted_by=actor.user_id))
     audit.record(
         session,
         actor,
         "user.role.assign",
         entity_type="user",
         entity_id=user_id,
-        metadata={"role": role.value},
+        metadata={"role": code},
     )
     session.flush()
 
 
-def remove_role(session: Session, actor: Principal, user_id: uuid.UUID, role: Role) -> None:
-    session.execute(
-        delete(UserRole).where(UserRole.user_id == user_id, UserRole.role_code == role.value)
-    )
+def remove_role(session: Session, actor: Principal, user_id: uuid.UUID, role: Role | str) -> None:
+    code = role.value if isinstance(role, Role) else str(role)
+    if code == Role.ADMINISTRATOR.value and user_id == actor.user_id:
+        raise ApiError(
+            409, "own_administrator_role", "You cannot remove your own administrator role."
+        )
+    if code == Role.ADMINISTRATOR.value and _other_administrators(session, user_id) == 0:
+        raise ApiError(409, "last_administrator", "OSRIP must keep at least one administrator.")
+    session.execute(delete(UserRole).where(UserRole.user_id == user_id, UserRole.role_code == code))
     audit.record(
         session,
         actor,
         "user.role.remove",
         entity_type="user",
         entity_id=user_id,
-        metadata={"role": role.value},
+        metadata={"role": code},
+    )
+
+
+def _other_administrators(session: Session, user_id: uuid.UUID) -> int:
+    return (
+        session.scalar(
+            select(func.count())
+            .select_from(UserRole)
+            .join(AppUser, AppUser.id == UserRole.user_id)
+            .where(
+                UserRole.role_code == Role.ADMINISTRATOR.value,
+                UserRole.user_id != user_id,
+                AppUser.status == AccountStatus.ACTIVE,
+            )
+        )
+        or 0
     )
 
 

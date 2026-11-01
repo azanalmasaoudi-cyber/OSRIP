@@ -72,7 +72,7 @@ class UserOut(BaseModel):
 
 
 class RoleIn(BaseModel):
-    role: Role
+    role: str = Field(min_length=1, max_length=40)  # a built-in or custom role code
 
 
 class GrantIn(BaseModel):

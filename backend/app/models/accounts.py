@@ -45,6 +45,12 @@ class RoleRow(Base):
 
     code: Mapped[str] = mapped_column(Text, primary_key=True)
     description: Mapped[str] = mapped_column(Text)
+    # The four built-in roles; custom roles (migration 0026) have builtin = false.
+    builtin: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), **NOW)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("app_user.id", ondelete="SET NULL")
+    )
 
 
 class PermissionRow(Base):
@@ -70,6 +76,53 @@ class UserRole(Base):
     role_code: Mapped[str] = mapped_column(ForeignKey("role.code"), primary_key=True)
     granted_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("app_user.id"))
     granted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), **NOW)
+
+
+class UserGroup(Base):
+    """A group gives its members roles and permissions (migration 0026)."""
+
+    __tablename__ = "user_group"
+
+    id: Mapped[uuid.UUID] = mapped_column(**UUID_PK)
+    name: Mapped[str] = mapped_column(Text)
+    description: Mapped[str] = mapped_column(Text, server_default=text("''"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), **NOW)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("app_user.id", ondelete="SET NULL")
+    )
+
+
+class GroupMember(Base):
+    __tablename__ = "group_member"
+
+    group_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("user_group.id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("app_user.id", ondelete="CASCADE"), primary_key=True
+    )
+    added_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("app_user.id", ondelete="SET NULL")
+    )
+    added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), **NOW)
+
+
+class GroupRole(Base):
+    __tablename__ = "group_role"
+
+    group_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("user_group.id", ondelete="CASCADE"), primary_key=True
+    )
+    role_code: Mapped[str] = mapped_column(ForeignKey("role.code"), primary_key=True)
+
+
+class GroupPermission(Base):
+    __tablename__ = "group_permission"
+
+    group_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("user_group.id", ondelete="CASCADE"), primary_key=True
+    )
+    permission_code: Mapped[str] = mapped_column(ForeignKey("permission.code"), primary_key=True)
 
 
 class UserPermissionGrant(Base):
