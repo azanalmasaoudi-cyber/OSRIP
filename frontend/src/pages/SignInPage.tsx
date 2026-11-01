@@ -9,6 +9,7 @@ import {
   oidcStartUrl,
   ROLES,
   useAdminResetPassword,
+  useAdminRoles,
   useAdminUsers,
   useChangePassword,
   useConsumeMagicLink,
@@ -33,6 +34,7 @@ import {
 } from '@/api/auth';
 import { ApiRequestError } from '@/api/client';
 import { adapterKind } from '@/api/config';
+import { GroupsPanel, RolesPanel, useRoleLabel } from '@/components/admin/AccessControl';
 import { PhoneVerification } from '@/components/auth/PhoneVerification';
 import { PageHeader } from '@/components/common/PageHeader';
 import { SettingsSection } from '@/components/settings/SettingsSection';
@@ -803,11 +805,28 @@ export function LinkEmailPage() {
 
 // ------------------------------------------------------------------ administration
 
+/** The tab of the users page, kept in ?tab= (replaced, not pushed). */
+function useTabParam<T extends string>(values: readonly T[], fallback: T): [T, (value: T) => void] {
+  const [params, setParams] = useSearchParams();
+  const value = values.find((v) => v === params.get('tab')) ?? fallback;
+  const set = (next: T) => setParams((prev) => {
+    const updated = new URLSearchParams(prev);
+    if (next === fallback) updated.delete('tab'); else updated.set('tab', next);
+    return updated;
+  }, { replace: true });
+  return [value, set];
+}
+
 export function AdminUsersPage() {
   const { t } = useTranslation();
   const me = useMe();
   const allowed = hasPermission(me.data, 'user.manage');
+  const [tab, setTab] = useTabParam(['users', 'roles', 'groups'] as const, 'users');
   const users = useAdminUsers(adapterKind === 'http' && allowed);
+  const roleList = useAdminRoles(adapterKind === 'http' && allowed);
+  const roleLabel = useRoleLabel();
+  // Built-in and custom roles, as the server lists them.
+  const roleCodes: readonly string[] = roleList.data?.map((r) => r.code) ?? ROLES;
   const setRole = useSetRole();
   const reset = useAdminResetPassword();
   const [confirmReset, setConfirmReset] = useState<string | null>(null);
@@ -819,7 +838,14 @@ export function AdminUsersPage() {
   return (
     <>
       <PageHeader title={t('account.adminTitle')} intro={t('account.adminIntro')} />
-      {!allowed ? <StatePanel kind="restricted" /> : users.isPending ? <StatePanel kind="loading" skeleton="lines" /> : users.isError ? (
+      {allowed ? (
+        <Segmented label={t('access.title')} value={tab} onChange={setTab} testId="access-tabs" className="mb-5" options={[
+          { value: 'users', label: t('access.tabUsers') },
+          { value: 'roles', label: t('access.tabRoles') },
+          { value: 'groups', label: t('access.tabGroups') },
+        ]} />
+      ) : null}
+      {allowed && tab === 'roles' ? <RolesPanel /> : allowed && tab === 'groups' ? <GroupsPanel /> : !allowed ? <StatePanel kind="restricted" /> : users.isPending ? <StatePanel kind="loading" skeleton="lines" /> : users.isError ? (
         <StatePanel kind="error" detail={users.error.message} onRetry={() => void users.refetch()} />
       ) : (
         <div className="relative overflow-x-auto rounded-lg border border-border bg-card">
@@ -830,7 +856,7 @@ export function AdminUsersPage() {
                 <th scope="col" className="px-4 py-2 text-start font-medium">{t('account.name')}</th>
                 <th scope="col" className="px-2 py-2 text-start font-medium">{t('auth.email')}</th>
                 <th scope="col" className="px-2 py-2 text-start font-medium">{t('account.createdVia')}</th>
-                {ROLES.map((r) => <th key={r} scope="col" className="px-2 py-2 text-center font-medium">{t(`account.role.${r}`)}</th>)}
+                {roleCodes.map((r) => <th key={r} scope="col" className="px-2 py-2 text-center font-medium">{roleLabel(r)}</th>)}
                 <th scope="col" className="px-2 py-2 text-start font-medium">{t('account.adminPassword')}</th>
               </tr>
             </thead>
@@ -844,10 +870,10 @@ export function AdminUsersPage() {
                     {u.phone ? <span className="block text-xs text-muted-foreground tabular-nums">{u.phone}</span> : null}
                   </td>
                   <td className="px-2 py-2 text-xs text-muted-foreground">{u.created_via}</td>
-                  {ROLES.map((r) => (
+                  {roleCodes.map((r) => (
                     <td key={r} className="px-2 py-2 text-center">
                       <input type="checkbox" checked={pending[`${u.id}:${r}`] ?? u.roles.includes(r)} disabled={`${u.id}:${r}` in pending || (u.id === me.data?.user_id && r === 'administrator')}
-                        aria-label={t('account.roleFor', { role: t(`account.role.${r}`), name: u.display_name })}
+                        aria-label={t('account.roleFor', { role: roleLabel(r), name: u.display_name })}
                         onChange={(e) => {
                           const key = `${u.id}:${r}`;
                           const add = e.target.checked;

@@ -306,6 +306,85 @@ export function useAdminUsers(enabled: boolean) {
   return useQuery({ queryKey: ['admin', 'users'], queryFn: () => apiJson('/admin/users', z.array(adminUser)), enabled });
 }
 
+// ------------------------------------------------------------------ roles and groups (migration 0026)
+
+const permissionRow = z.object({ code: z.string(), description: z.string() });
+const roleRow = z.object({
+  code: z.string(),
+  description: z.string(),
+  builtin: z.boolean(),
+  permissions: z.array(z.string()),
+  users: z.number(),
+  groups: z.number(),
+});
+export type AccessRole = z.infer<typeof roleRow>;
+const groupRow = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  roles: z.array(z.string()),
+  permissions: z.array(z.string()),
+  members: z.array(z.object({
+    id: z.string(), display_name: z.string(), username: z.string().nullable(), email: z.string().nullable(),
+  })),
+});
+export type AccessGroup = z.infer<typeof groupRow>;
+const ACCESS_KEY = ['admin', 'access'] as const;
+
+export function useAdminPermissions(enabled: boolean) {
+  return useQuery({ queryKey: [...ACCESS_KEY, 'permissions'], queryFn: () => apiJson('/admin/permissions', z.array(permissionRow)), enabled });
+}
+
+export function useAdminRoles(enabled: boolean) {
+  return useQuery({ queryKey: [...ACCESS_KEY, 'roles'], queryFn: () => apiJson('/admin/roles', z.array(roleRow)), enabled });
+}
+
+export function useAdminGroups(enabled: boolean) {
+  return useQuery({ queryKey: [...ACCESS_KEY, 'groups'], queryFn: () => apiJson('/admin/groups', z.array(groupRow)), enabled });
+}
+
+/** Create, change or remove a custom role; the list is reloaded afterwards. */
+export function useSaveRole() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { code: string; description: string; permissions: string[]; mode: 'create' | 'update' | 'delete' }) =>
+      v.mode === 'create'
+        ? apiJson('/admin/roles', z.array(roleRow), jsonBody('POST', { code: v.code, description: v.description, permissions: v.permissions }))
+        : v.mode === 'update'
+          ? apiJson(`/admin/roles/${v.code}`, z.array(roleRow), jsonBody('PUT', { description: v.description, permissions: v.permissions }))
+          : apiJson(`/admin/roles/${v.code}`, z.array(roleRow), { method: 'DELETE' }),
+    onSettled: () => {
+      void client.invalidateQueries({ queryKey: ACCESS_KEY });
+      void client.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+  });
+}
+
+/** Create, change or remove a group (its name, description, roles and permissions). */
+export function useSaveGroup() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id?: string; name: string; description: string; roles: string[]; permissions: string[]; mode: 'create' | 'update' | 'delete' }) => {
+      const body = { name: v.name, description: v.description, roles: v.roles, permissions: v.permissions };
+      if (v.mode === 'create') return apiJson('/admin/groups', groupRow, jsonBody('POST', body));
+      if (v.mode === 'update') return apiJson(`/admin/groups/${v.id}`, groupRow, jsonBody('PUT', body));
+      return apiFetch(`/admin/groups/${v.id}`, { method: 'DELETE' }).then(() => null); // 204: no body
+    },
+    onSettled: () => void client.invalidateQueries({ queryKey: ACCESS_KEY }),
+  });
+}
+
+export function useGroupMember() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ groupId, userId, add }: { groupId: string; userId: string; add: boolean }) =>
+      add
+        ? apiJson(`/admin/groups/${groupId}/members`, groupRow, jsonBody('POST', { user_id: userId }))
+        : apiJson(`/admin/groups/${groupId}/members/${userId}`, groupRow, { method: 'DELETE' }),
+    onSettled: () => void client.invalidateQueries({ queryKey: ACCESS_KEY }),
+  });
+}
+
 export function useSetRole() {
   const client = useQueryClient();
   return useMutation({
