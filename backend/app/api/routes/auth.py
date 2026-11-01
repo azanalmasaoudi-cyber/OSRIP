@@ -18,7 +18,14 @@ from app.core import ratelimit, security
 from app.core.config import get_settings
 from app.core.errors import ApiError
 from app.models import AppUser, EmailOutbox, UserSession
-from app.schemas.accounts import LoginIn, MeOut, PasswordChangeIn
+from app.schemas.accounts import (
+    LoginIn,
+    MeOut,
+    PasswordChangeIn,
+    RecoverIn,
+    RecoveryCodeIn,
+    UsernameRegisterIn,
+)
 from app.services import accounts, identity, mail, oidc, phone, phone_numbers, sms
 from app.services.principal import Principal
 
@@ -33,7 +40,7 @@ def _me(principal: Principal, session: DbSession | None = None) -> MeOut:
     if not principal.is_authenticated:
         return MeOut(authenticated=False)
     email, verified, phone, phone_verified, has_password = principal.label, None, None, None, None
-    username = None
+    username, has_recovery_code = None, None
     if session is not None:
         with session.begin():
             user = session.get(AppUser, principal.user_id)
@@ -44,6 +51,7 @@ def _me(principal: Principal, session: DbSession | None = None) -> MeOut:
                 phone_verified = user.phone_verified_at is not None
                 has_password = user.password_hash != security.UNUSABLE_PASSWORD
                 username = user.username
+                has_recovery_code = user.recovery_code_hash is not None
     return MeOut(
         username=username,
         password_change_required=principal.password_change_required,
@@ -55,6 +63,7 @@ def _me(principal: Principal, session: DbSession | None = None) -> MeOut:
         phone=phone,
         phone_verified=phone_verified,
         has_password=has_password,
+        has_recovery_code=has_recovery_code,
         roles=sorted(principal.roles),
         permissions=sorted(principal.permissions),
     )
@@ -115,6 +124,69 @@ def login(body: LoginIn, request: Request, response: Response, session: DbSessio
     new = accounts.login(session, body.email, body.password, client)
     _set_session_cookies(response, new)
     return _me(new.principal, session)
+
+
+# ------------------------------------------------------------------ username accounts
+
+
+@router.post("/register/username", status_code=201)
+def register_username(
+    body: UsernameRegisterIn, request: Request, response: Response, session: DbSession
+) -> dict[str, Any]:
+    """Registration with a username and password only: an ordinary (viewer) account, signed
+    in at once. The recovery code in the answer is shown once and never stored."""
+    _client_limit(request, "register")
+    done = accounts.register_username(
+        session,
+        username=body.username,
+        password=body.password,
+        password_confirm=body.password_confirm,
+    )
+    _set_session_cookies(response, done.new_session)
+    response.headers["Cache-Control"] = "no-store"
+    return {
+        "status": "registered",
+        "recovery_code": done.recovery_code,
+        "me": _me(done.new_session.principal, session).model_dump(mode="json"),
+    }
+
+
+@router.post("/recover")
+def recover(
+    body: RecoverIn, request: Request, response: Response, session: DbSession
+) -> dict[str, Any]:
+    """A forgotten password, with the username and the recovery code. A new recovery code
+    replaces the spent one; other sessions are signed out."""
+    _client_limit(request, "recover")
+    client = request.client.host if request.client else "unknown"
+    done = accounts.recover_with_code(
+        session,
+        username=body.username,
+        recovery_code=body.recovery_code,
+        new_password=body.new_password,
+        new_password_confirm=body.new_password_confirm,
+        client_address=client,
+    )
+    _set_session_cookies(response, done.new_session)
+    response.headers["Cache-Control"] = "no-store"
+    return {
+        "status": "recovered",
+        "recovery_code": done.recovery_code,
+        "me": _me(done.new_session.principal, session).model_dump(mode="json"),
+    }
+
+
+@router.post("/recovery-code")
+def recovery_code(
+    body: RecoveryCodeIn,
+    response: Response,
+    session: DbSession,
+    principal: Annotated[Principal, Depends(require_authenticated)],
+) -> dict[str, str]:
+    """A new recovery code for the signed-in account, shown once."""
+    code = accounts.replace_recovery_code(session, principal, body.current_password)
+    response.headers["Cache-Control"] = "no-store"
+    return {"recovery_code": code}
 
 
 @router.post("/password/change", response_model=MeOut)

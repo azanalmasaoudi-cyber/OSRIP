@@ -36,6 +36,11 @@ def hash_password(password: str, *, temporary: bool = False) -> str:
     return _hasher.hash(password)
 
 
+def hash_secret(value: str) -> str:
+    """Argon2id hash of a generated secret (a recovery code); no strength rules apply."""
+    return _hasher.hash(value)
+
+
 def verify_password(stored_hash: str | None, password: str) -> bool:
     """Constant-work verification; unknown accounts and unusable hashes fail."""
     if not stored_hash or stored_hash == UNUSABLE_PASSWORD:

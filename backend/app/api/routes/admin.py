@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy import select
 
 from app.api.deps import DbSession, require
@@ -107,6 +107,17 @@ def reactivate(user_id: uuid.UUID, session: DbSession, actor: Manager) -> UserOu
     with session.begin():
         accounts.set_status(session, actor, user_id, AccountStatus.ACTIVE)
         return _user_out(session, accounts.get_user(session, user_id))
+
+
+@router.post("/users/{user_id}/reset-password")
+def reset_password(
+    user_id: uuid.UUID, response: Response, session: DbSession, actor: Manager
+) -> dict[str, str]:
+    """A temporary password for an account that cannot recover itself, returned once for the
+    administrator to hand over in person; it must be changed at the next sign-in."""
+    temporary = accounts.admin_reset_password(session, actor, user_id)
+    response.headers["Cache-Control"] = "no-store"
+    return {"temporary_password": temporary}
 
 
 @router.get("/audit-events")

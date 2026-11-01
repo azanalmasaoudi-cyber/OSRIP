@@ -31,6 +31,10 @@ class AppUser(Base):
     # Operator-created accounts may be identified by a username alone (migration 0011).
     username: Mapped[str | None] = mapped_column(Text)
     password_change_required: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    # One-time recovery code for accounts without verified contact details (migration 0025):
+    # an Argon2id hash only; the code itself is shown once and never stored.
+    recovery_code_hash: Mapped[str | None] = mapped_column(Text)
+    recovery_code_created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # The assistant persona this person chose (a code from the active profile; migration 0017).
     # NULL: the profile's default persona.
     assistant_persona: Mapped[str | None] = mapped_column(Text)
