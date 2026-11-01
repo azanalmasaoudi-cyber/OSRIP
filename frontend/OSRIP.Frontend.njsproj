@@ -128,6 +128,7 @@
     <TypeScriptCompile Include="src\api\balance.ts" />
     <TypeScriptCompile Include="src\api\client.ts" />
     <TypeScriptCompile Include="src\api\config.ts" />
+    <TypeScriptCompile Include="src\api\decision.ts" />
     <TypeScriptCompile Include="src\api\forecasting.ts" />
     <TypeScriptCompile Include="src\api\geography.ts" />
     <TypeScriptCompile Include="src\api\httpAdapter.ts" />
@@ -145,6 +146,8 @@
     <TypeScriptCompile Include="src\api\studyEvents.ts" />
     <TypeScriptCompile Include="src\api\syntheticFixtures.ts" />
     <TypeScriptCompile Include="src\app\router.tsx" />
+    <TypeScriptCompile Include="src\components\admin\AccessControl.tsx" />
+    <TypeScriptCompile Include="src\components\admin\HealthDetails.tsx" />
     <TypeScriptCompile Include="src\components\analysis\AnalysisPanel.tsx" />
     <TypeScriptCompile Include="src\components\analysis\CalculationCard.tsx" />
     <TypeScriptCompile Include="src\components\analysis\ReviewCards.tsx" />
@@ -208,6 +211,7 @@
     <TypeScriptCompile Include="src\components\research\ResearchQueue.tsx" />
     <TypeScriptCompile Include="src\components\results\model.ts" />
     <TypeScriptCompile Include="src\components\results\ResultsPanel.tsx" />
+    <TypeScriptCompile Include="src\components\sector\DecisionBrief.tsx" />
     <TypeScriptCompile Include="src\components\sector\SectorNav.tsx" />
     <TypeScriptCompile Include="src\components\sector\SectorWorkflow.tsx" />
     <TypeScriptCompile Include="src\components\sector\SpokenSummary.tsx" />

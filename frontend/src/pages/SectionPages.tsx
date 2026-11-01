@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { Sector } from '@/components/brand/SectorIllustration';
 import { SectorImage } from '@/components/brand/SectorImage';
 import { CommodityRegistry } from '@/components/common/CommodityRegistry';
+import { DecisionBrief } from '@/components/sector/DecisionBrief';
 import { SectorNav } from '@/components/sector/SectorNav';
 import { SectorWorkflow } from '@/components/sector/SectorWorkflow';
 import type { SectionCode } from '@/domain/types';
@@ -10,7 +11,7 @@ import { useDocumentTitle } from '@/lib/useDocumentTitle';
 
 /** One sector page: the sector's name and image with the four sectors as tabs (step 1), then the
  * selection, results and insights (components/sector/SectorWorkflow). Results appear only after
- * "Show results"; a chart only after "Show chart". */
+ * "Show results"; a chart only after "Show chart". Then the decision brief of the axis. */
 function SectorPage({ section, page, image, registry = false }: {
   section: SectionCode;
   page: 'electricity' | 'water' | 'food' | 'trade';
@@ -34,6 +35,7 @@ function SectorPage({ section, page, image, registry = false }: {
         <SectorNav />
       </header>
       <SectorWorkflow section={section} title={title} />
+      <DecisionBrief section={section} />
       {registry ? (
         <details className="rounded-lg border border-border bg-card p-4 shadow-card" data-testid="commodity-registry-details">
           <summary className="cursor-pointer text-base font-semibold">{t('pages.food.commoditiesHeading')}</summary>

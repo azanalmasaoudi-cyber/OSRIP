@@ -166,6 +166,7 @@
     <Compile Include="app\services\datasets\parsing.py" />
     <Compile Include="app\services\datasets\store.py" />
     <Compile Include="app\services\datasets\summary.py" />
+    <Compile Include="app\services\decision.py" />
     <Compile Include="app\services\documents\__init__.py" />
     <Compile Include="app\services\documents\build.py" />
     <Compile Include="app\services\documents\export.py" />
@@ -253,6 +254,7 @@
     <Compile Include="tests\test_assistant_datatable.py" />
     <Compile Include="tests\test_datasets.py" />
     <Compile Include="tests\test_datasets_integration.py" />
+    <Compile Include="tests\test_decision_brief_integration.py" />
     <Compile Include="tests\test_documents.py" />
     <Compile Include="tests\test_openai_sdk.py" />
     <Compile Include="tests\test_reports_export_integration.py" />
