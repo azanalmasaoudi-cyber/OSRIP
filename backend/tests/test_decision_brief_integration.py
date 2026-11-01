@@ -6,6 +6,7 @@ reference ids while source names stay in the provenance list."""
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from decimal import Decimal
 from typing import Any
 
@@ -23,7 +24,7 @@ pytestmark = pytest.mark.integration
 
 
 @pytest.fixture(scope="module")
-def published(database_url: str) -> dict[str, Any]:
+def published(database_url: str) -> Iterator[dict[str, Any]]:
     from fastapi.testclient import TestClient
 
     from app.db.session import session_factory
@@ -70,7 +71,18 @@ def published(database_url: str) -> dict[str, Any]:
         "TRADE_MERCH_IMPORTS,OM,2023-01-01,2023-12-31,annual,million_OMR,100,,TUR,import",
         "TRADE_MERCH_IMPORTS,OM,2024-01-01,2024-12-31,annual,million_OMR,500,,TUR,import",
     )
-    return {"client": client, "water": water, "trade": trade}
+    yield {"client": client, "water": water, "trade": trade}
+    # Leave nothing published behind: other modules count synthetic coverage by area.
+    from sqlalchemy import text
+
+    with session_factory()() as s, s.begin():
+        s.execute(
+            text(
+                "UPDATE dataset_version SET status = 'superseded', superseded_at = now() "
+                "WHERE id IN (:water, :trade)"
+            ),
+            {"water": water, "trade": trade},
+        )
 
 
 def brief(client, section: str, version: str) -> dict[str, Any]:  # noqa: ANN001
