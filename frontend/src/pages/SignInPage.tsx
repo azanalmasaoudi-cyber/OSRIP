@@ -1,5 +1,5 @@
-import { CheckCircle2, KeyRound, LogIn, Mail, ShieldCheck, Trash2, UserPlus } from 'lucide-react';
-import { useEffect, useId, useRef, useState, type FormEvent, type InputHTMLAttributes, type ReactNode } from 'react';
+import { CheckCircle2, Copy, KeyRound, LogIn, Mail, ShieldCheck, Trash2, UserPlus } from 'lucide-react';
+import { useEffect, useId, useRef, useState, type InputHTMLAttributes, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
@@ -8,6 +8,7 @@ import {
   OIDC_PROVIDERS,
   oidcStartUrl,
   ROLES,
+  useAdminResetPassword,
   useAdminUsers,
   useChangePassword,
   useConsumeMagicLink,
@@ -19,8 +20,10 @@ import {
   useLinkEmail,
   useLogin,
   useMe,
+  useNewRecoveryCode,
   useProviders,
-  useRegister,
+  useRecover,
+  useRegisterUsername,
   useResetPassword,
   useSetRole,
   useUnlinkIdentity,
@@ -60,7 +63,9 @@ function Field({ label, hint, ...props }: { label: string; hint?: string } & Inp
 const ERROR_CODES = [
   'wrong_current_password', 'reauthentication_required', 'email_unchanged', 'email_taken', 'invalid_email',
   'invalid_name', 'invalid_or_expired_token', 'weak_password', 'password_unchanged', 'email_not_configured',
-  'email_delivery_failed', 'too_many_requests',
+  'email_delivery_failed', 'too_many_requests', 'invalid_username', 'username_reserved', 'username_taken',
+  'password_mismatch', 'password_contains_username', 'password_too_simple', 'invalid_recovery', 'invalid_credentials',
+  'too_many_attempts', 'email_not_verified', 'no_password', 'own_account',
 ] as const;
 
 function ErrorText({ error }: { error: unknown }) {
@@ -153,29 +158,24 @@ function useTokenFromUrl(): string | null {
 
 // ------------------------------------------------------------------ sign in
 
+/** Usernames: the rule the server applies (accounts.USERNAME_PATTERN), checked as people type. */
+const USERNAME_RULE = /^[A-Za-z][A-Za-z0-9_.-]{2,31}$/;
+
+/** Sign-in with a username and password. Accounts created with an e-mail address type that
+ * address in the same field; phone, e-mail-link, Google and Microsoft sign-in are on
+ * /sign-in/other, off the main screen. */
 export function SignInPage() {
   const { t } = useTranslation();
   const login = useLogin();
   const navigate = useNavigate();
   const to = usePreservedSearch();
   const [params] = useSearchParams();
-  const providers = useProviders();
-  const magic = useEmailRequest('/auth/magic-link');
   const resend = useEmailRequest('/auth/verify-email/resend');
-  const [method, setMethod] = useMethodParam(['password', 'magic', 'phone'] as const, 'password');
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
   if (adapterKind !== 'http') return <RequiresApi title={t('auth.title')} />;
 
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    if (method === 'password') {
-      login.mutate({ email, password }, { onSuccess: () => void navigate(to('/account')) });
-    } else {
-      magic.mutate(email);
-    }
-  };
   const unverified = login.error instanceof ApiRequestError && login.error.code === 'email_not_verified';
   const notice = params.get('notice');
   const error = params.get('error');
@@ -183,50 +183,80 @@ export function SignInPage() {
   return (
     <>
       <PageHeader title={t('auth.title')} intro={t('auth.intro')} />
-      <div className="grid max-w-3xl gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,18rem)]">
-        <div className="surface-card flex flex-col gap-4 p-6">
-          {notice === 'link_required' ? (
-            <Notice>{t('account.linkRequired', { provider: PROVIDER_LABEL[(params.get('provider') as OidcProvider) ?? 'google'] ?? '' })}</Notice>
-          ) : null}
-          {error ? <p role="alert" className="text-sm text-destructive" data-testid="oidc-error">{t(`account.oidcError.${oidcErrorKey(error)}`)}</p> : null}
-          <Segmented label={t('account.method')} value={method} onChange={setMethod} testId="sign-in-method" options={[
-            { value: 'password', label: t('account.methodPassword') },
-            { value: 'magic', label: t('account.methodMagic'), note: providers.data?.magic_link === false ? t('phone.unavailableShort') : undefined },
-            { value: 'phone', label: t('phone.methodPhone'), note: providers.data?.sms.available === false ? t('phone.unavailableShort') : undefined },
-          ]} />
-          {method === 'phone' ? (
-            <PhoneVerification purpose="sign_in" onDone={() => void navigate(to('/account'))} onUseEmail={() => setMethod('password')} />
-          ) : (
-        <form onSubmit={submit} className="flex flex-col gap-4" noValidate data-testid="sign-in-form">
-          {/* Password sign-in accepts a username or an e-mail address; links need an address. */}
-          <Field label={method === 'password' ? t('auth.identifier') : t('auth.email')} type={method === 'password' ? 'text' : 'email'}
-            autoComplete="username" autoCapitalize="none" spellCheck={false} required value={email}
-            onChange={(e) => setEmail(e.target.value)} dir="ltr" data-testid="sign-in-identifier" />
-          {method === 'password' ? (
-            <Field label={t('auth.password')} type="password" autoComplete="current-password" required value={password}
-              onChange={(e) => setPassword(e.target.value)} dir="ltr" />
-          ) : (
-            <p className="text-xs text-muted-foreground">{t('account.magicHint')}</p>
-          )}
-          {method === 'password' ? <ErrorText error={login.error} /> : <ErrorText error={magic.error} />}
+      <div className="surface-card flex max-w-md flex-col gap-5 p-6">
+        {/* Returns from Google or Microsoft (started on the other page) land here. */}
+        {notice === 'link_required' ? (
+          <Notice>{t('account.linkRequired', { provider: PROVIDER_LABEL[(params.get('provider') as OidcProvider) ?? 'google'] ?? '' })}</Notice>
+        ) : null}
+        {error ? <p role="alert" className="text-base text-destructive" data-testid="oidc-error">{t(`account.oidcError.${oidcErrorKey(error)}`)}</p> : null}
+        <form
+          onSubmit={(e) => { e.preventDefault(); login.mutate({ email: username.trim(), password }, { onSuccess: () => void navigate(to('/account')) }); }}
+          className="flex flex-col gap-4" noValidate data-testid="sign-in-form"
+        >
+          <Field label={t('account.username')} autoComplete="username" autoCapitalize="none" spellCheck={false} required
+            value={username} onChange={(e) => setUsername(e.target.value)} dir="ltr" hint={t('auth.usernameOlder')}
+            data-testid="sign-in-identifier" />
+          <Field label={t('auth.password')} type="password" autoComplete="current-password" required value={password}
+            onChange={(e) => setPassword(e.target.value)} dir="ltr" data-testid="sign-in-password" />
+          <ErrorText error={login.error} />
           {unverified ? (
-            <Button type="button" variant="outline" size="sm" className="w-fit" onClick={() => resend.mutate(email)} disabled={resend.isPending}>
+            <Button type="button" variant="outline" size="sm" className="w-fit" onClick={() => resend.mutate(username.trim())} disabled={resend.isPending}>
               <Mail aria-hidden="true" />{t('account.resend')}
             </Button>
           ) : null}
           {resend.isSuccess ? <Notice>{t('account.checkInbox')}</Notice> : null}
-          {magic.isSuccess && method === 'magic' ? <Notice>{t('account.checkInbox')}</Notice> : null}
-          <Button type="submit" disabled={login.isPending || magic.isPending || !email || (method === 'password' && !password)}>
-            {method === 'password' ? <LogIn aria-hidden="true" /> : <Mail aria-hidden="true" />}
-            {method === 'password'
-              ? (login.isPending ? t('auth.submitting') : t('auth.submit'))
-              : t('account.sendLink')}
+          <Button type="submit" disabled={login.isPending || !username.trim() || !password}>
+            <LogIn aria-hidden="true" />{login.isPending ? t('auth.submitting') : t('auth.submit')}
           </Button>
         </form>
+        <div className="flex flex-wrap justify-between gap-2 text-base">
+          <Link to={to('/forgot-password')} className="text-primary underline underline-offset-2">{t('account.forgot')}</Link>
+          <Link to={to('/register')} className="text-primary underline underline-offset-2">{t('account.createAccount')}</Link>
+        </div>
+        <Link to={to('/sign-in/other')} className="text-sm text-muted-foreground underline underline-offset-2" data-testid="sign-in-other">
+          {t('auth.otherWays')}
+        </Link>
+      </div>
+    </>
+  );
+}
+
+/** Older accounts: a link by e-mail, a code by SMS or WhatsApp (a new number becomes an
+ * ordinary account), Google and Microsoft, and the reset by e-mail. */
+export function OtherSignInPage() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const to = usePreservedSearch();
+  const providers = useProviders();
+  const magic = useEmailRequest('/auth/magic-link');
+  const [method, setMethod] = useMethodParam(['magic', 'phone'] as const, 'magic');
+  const [email, setEmail] = useState('');
+
+  if (adapterKind !== 'http') return <RequiresApi title={t('auth.otherTitle')} />;
+  return (
+    <>
+      <PageHeader title={t('auth.otherTitle')} intro={t('auth.otherIntro')} />
+      <div className="grid max-w-3xl gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,18rem)]">
+        <div className="surface-card flex flex-col gap-4 p-6">
+          <Segmented label={t('account.method')} value={method} onChange={setMethod} testId="sign-in-method" options={[
+            { value: 'magic', label: t('account.methodMagic'), note: providers.data?.magic_link === false ? t('phone.unavailableShort') : undefined },
+            { value: 'phone', label: t('phone.methodPhone'), note: providers.data?.sms.available === false ? t('phone.unavailableShort') : undefined },
+          ]} />
+          {method === 'phone' ? (
+            <PhoneVerification purpose="sign_in" askName onDone={() => void navigate(to('/account'))} onUseEmail={() => setMethod('magic')} />
+          ) : (
+            <form onSubmit={(e) => { e.preventDefault(); magic.mutate(email); }} className="flex flex-col gap-4" noValidate data-testid="magic-form">
+              <Field label={t('auth.email')} type="email" autoComplete="email" required value={email}
+                onChange={(e) => setEmail(e.target.value)} dir="ltr" />
+              <p className="text-sm text-muted-foreground">{t('account.magicHint')}</p>
+              <ErrorText error={magic.error} />
+              {magic.isSuccess ? <Notice>{t('account.checkInbox')}</Notice> : null}
+              <Button type="submit" disabled={magic.isPending || !email}><Mail aria-hidden="true" />{t('account.sendLink')}</Button>
+            </form>
           )}
           <div className="flex flex-wrap justify-between gap-2 text-sm">
-            <Link to={to('/forgot-password')} className="text-primary underline underline-offset-2">{t('account.forgot')}</Link>
-            <Link to={to('/register')} className="text-primary underline underline-offset-2">{t('account.createAccount')}</Link>
+            <Link to={to('/forgot-password/email')} className="text-primary underline underline-offset-2">{t('account.emailResetLink')}</Link>
+            <Link to={to('/sign-in')} className="text-primary underline underline-offset-2">{t('auth.backToSignIn')}</Link>
           </div>
         </div>
         <section aria-labelledby="providers-heading" className="flex flex-col gap-3">
@@ -237,6 +267,33 @@ export function SignInPage() {
         </section>
       </div>
     </>
+  );
+}
+
+/** The recovery code, shown once: copy it, confirm it was saved, then continue. */
+function RecoveryCodePanel({ code, onContinue, heading = true }: { code: string; onContinue: () => void; heading?: boolean }) {
+  const { t } = useTranslation();
+  const [saved, setSaved] = useState(false);
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="flex flex-col gap-4" data-testid="recovery-panel">
+      {heading ? <h2 className="text-lg font-semibold">{t('account.recoveryTitle')}</h2> : null}
+      <p className="text-base">{t('account.recoveryShownOnce')}</p>
+      <p className="rounded-md border border-sand/60 bg-sand-subtle px-4 py-3 text-center font-mono text-xl tracking-wider select-all"
+        dir="ltr" data-testid="recovery-code">{code}</p>
+      <Button type="button" variant="outline" className="w-fit" data-testid="recovery-copy"
+        onClick={() => { void navigator.clipboard?.writeText(code).then(() => setCopied(true), () => setCopied(false)); }}>
+        <Copy aria-hidden="true" />{copied ? t('account.recoveryCopied') : t('account.recoveryCopy')}
+      </Button>
+      <label className="flex items-start gap-2 text-base">
+        <input type="checkbox" checked={saved} onChange={(e) => setSaved(e.target.checked)} className="mt-1 size-4 accent-primary"
+          data-testid="recovery-saved" />
+        {t('account.recoverySaved')}
+      </label>
+      <Button type="button" className="w-fit" disabled={!saved} onClick={onContinue} data-testid="recovery-continue">
+        {t('account.recoveryContinue')}
+      </Button>
+    </div>
   );
 }
 
@@ -254,50 +311,51 @@ function DevMailHint() {
 
 export function RegisterPage() {
   const { t } = useTranslation();
-  const register = useRegister();
-  const providers = useProviders();
+  const register = useRegisterUsername();
   const to = usePreservedSearch();
   const navigate = useNavigate();
-  const [method, setMethod] = useMethodParam(['email', 'phone'] as const, 'email');
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
 
   if (adapterKind !== 'http') return <RequiresApi title={t('account.registerTitle')} />;
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    register.mutate({ email, display_name: name, password });
-  };
+  if (register.data) {
+    return (
+      <>
+        <PageHeader title={t('account.registeredTitle')} />
+        <div className="surface-card max-w-md p-6" data-testid="register-done">
+          <RecoveryCodePanel code={register.data.recovery_code} onContinue={() => void navigate(to('/account'))} />
+        </div>
+      </>
+    );
+  }
+  const name = username.trim();
+  const badName = name.length > 0 && !USERNAME_RULE.test(name);
+  const mismatch = confirm.length > 0 && confirm !== password;
 
   return (
     <>
       <PageHeader title={t('account.registerTitle')} intro={t('account.registerIntro')} />
       <div className="surface-card flex max-w-md flex-col gap-5 p-6" data-testid="register-card">
-      <Segmented label={t('account.registerMethod')} value={method} onChange={setMethod} testId="register-method" options={[
-        { value: 'email', label: t('account.methodEmail'), note: providers.data?.registration === false ? t('phone.unavailableShort') : undefined },
-        { value: 'phone', label: t('phone.methodPhone'), note: providers.data?.sms.available === false ? t('phone.unavailableShort') : undefined },
-      ]} />
-      {method === 'phone' ? (
-        <PhoneVerification purpose="sign_in" askName onDone={() => void navigate(to('/account'))} onUseEmail={() => setMethod('email')} />
-      ) : providers.data?.registration === false ? <Notice>{t('account.emailDisabled')}</Notice> : register.isSuccess ? (
-        <div className="flex max-w-lg flex-col gap-3" data-testid="register-done">
-          <Notice tone="success">{t('account.checkInbox')}</Notice>
-          {providers.data?.email_delivery === 'outbox' ? <DevMailHint /> : null}
-        </div>
-      ) : (
-        <form onSubmit={submit} className="flex flex-col gap-4" noValidate data-testid="register-form">
-          <Field label={t('account.name')} autoComplete="name" required value={name} onChange={(e) => setName(e.target.value)} />
-          <Field label={t('auth.email')} type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" />
+        <form onSubmit={(e) => { e.preventDefault(); register.mutate({ username: name, password, password_confirm: confirm }); }}
+          className="flex flex-col gap-4" noValidate data-testid="register-form">
+          <Field label={t('account.username')} autoComplete="username" autoCapitalize="none" spellCheck={false} required maxLength={32}
+            value={username} onChange={(e) => setUsername(e.target.value)} dir="ltr" hint={t('auth.usernameRules')}
+            aria-invalid={badName || undefined} data-testid="register-username" />
+          {badName ? <p className="text-sm text-destructive" data-testid="register-username-problem">{t('auth.errors.invalid_username')}</p> : null}
           <Field label={t('auth.password')} type="password" autoComplete="new-password" required minLength={12} value={password}
-            onChange={(e) => setPassword(e.target.value)} dir="ltr" hint={t('account.passwordHint')} />
+            onChange={(e) => setPassword(e.target.value)} dir="ltr" hint={t('account.passwordHint')} data-testid="register-password" />
+          <Field label={t('auth.confirmPassword')} type="password" autoComplete="new-password" required value={confirm}
+            onChange={(e) => setConfirm(e.target.value)} dir="ltr" aria-invalid={mismatch || undefined} data-testid="register-confirm" />
+          {mismatch ? <p className="text-sm text-destructive" data-testid="register-mismatch">{t('auth.errors.password_mismatch')}</p> : null}
           <ErrorText error={register.error} />
-          <p className="text-xs text-muted-foreground">{t('account.ordinaryAccess')}</p>
-          <Button type="submit" disabled={register.isPending || !name || !email || password.length < 12}>
+          <p className="text-sm text-muted-foreground">{t('account.ordinaryAccess')}</p>
+          <Button type="submit" disabled={register.isPending || !name || badName || password.length < 12 || confirm !== password}
+            data-testid="register-submit">
             <UserPlus aria-hidden="true" />{t('account.createAccount')}
           </Button>
         </form>
-      )}
-      <Link to={to('/sign-in')} className="text-sm text-primary underline underline-offset-2">{t('account.haveAccount')}</Link>
+        <Link to={to('/sign-in')} className="text-base text-primary underline underline-offset-2">{t('account.haveAccount')}</Link>
       </div>
     </>
   );
@@ -331,13 +389,71 @@ export function VerifyEmailPage() {
   );
 }
 
+/** A forgotten password: the username, the recovery code and a new password. */
 export function ForgotPasswordPage() {
+  const { t } = useTranslation();
+  const recover = useRecover();
+  const navigate = useNavigate();
+  const to = usePreservedSearch();
+  const [username, setUsername] = useState('');
+  const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+
+  if (adapterKind !== 'http') return <RequiresApi title={t('account.forgotTitle')} />;
+  if (recover.data) {
+    return (
+      <>
+        <PageHeader title={t('account.recoveredTitle')} />
+        <div className="surface-card flex max-w-md flex-col gap-4 p-6" data-testid="recover-done">
+          <Notice tone="success">{t('account.recoveredNotice')}</Notice>
+          <RecoveryCodePanel code={recover.data.recovery_code} onContinue={() => void navigate(to('/account'))} />
+        </div>
+      </>
+    );
+  }
+  const mismatch = confirm.length > 0 && confirm !== password;
+  return (
+    <>
+      <PageHeader title={t('account.forgotTitle')} intro={t('account.forgotIntro')} />
+      <div className="surface-card flex max-w-md flex-col gap-5 p-6">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            recover.mutate({ username: username.trim(), recovery_code: code, new_password: password, new_password_confirm: confirm });
+          }}
+          noValidate className="flex flex-col gap-4" data-testid="recover-form"
+        >
+          <Field label={t('account.username')} autoComplete="username" autoCapitalize="none" spellCheck={false} required
+            value={username} onChange={(e) => setUsername(e.target.value)} dir="ltr" data-testid="recover-username" />
+          <Field label={t('account.recoveryCodeLabel')} autoComplete="off" autoCapitalize="characters" spellCheck={false} required
+            value={code} onChange={(e) => setCode(e.target.value)} dir="ltr" placeholder="ABCD-EFGH-JKMN-PQRS-TWXY" data-testid="recover-code" />
+          <Field label={t('account.newPassword')} type="password" autoComplete="new-password" required minLength={12} value={password}
+            onChange={(e) => setPassword(e.target.value)} dir="ltr" hint={t('account.passwordHint')} data-testid="recover-password" />
+          <Field label={t('auth.confirmPassword')} type="password" autoComplete="new-password" required value={confirm}
+            onChange={(e) => setConfirm(e.target.value)} dir="ltr" aria-invalid={mismatch || undefined} data-testid="recover-confirm" />
+          {mismatch ? <p className="text-sm text-destructive">{t('auth.errors.password_mismatch')}</p> : null}
+          <ErrorText error={recover.error} />
+          <Button type="submit" disabled={recover.isPending || !username.trim() || !code.trim() || password.length < 12 || confirm !== password}
+            data-testid="recover-submit">
+            <KeyRound aria-hidden="true" />{t('account.recoverSubmit')}
+          </Button>
+        </form>
+        <p className="text-sm text-muted-foreground">{t('account.noRecoveryCode')}</p>
+        <Link to={to('/sign-in')} className="text-base text-primary underline underline-offset-2">{t('auth.backToSignIn')}</Link>
+      </div>
+    </>
+  );
+}
+
+/** The reset link by e-mail, for accounts with a confirmed address (from "Other ways to sign in"). */
+export function EmailForgotPasswordPage() {
   const { t } = useTranslation();
   const forgot = useEmailRequest('/auth/password/forgot');
   const [email, setEmail] = useState('');
   return (
     <>
-      <PageHeader title={t('account.forgotTitle')} intro={t('account.forgotIntro')} />
+      <PageHeader title={t('account.emailForgotTitle')} intro={t('account.emailForgotIntro')} />
       <form onSubmit={(e) => { e.preventDefault(); forgot.mutate(email); }} noValidate
         className="flex max-w-md flex-col gap-4 rounded-lg border border-border bg-card p-6" data-testid="forgot-form">
         <Field label={t('auth.email')} type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" />
@@ -474,6 +590,7 @@ export function AccountPage() {
           ? <AddEmail unconfirmed={me.data.email ?? null} />
           : <ChangeEmail hasPassword={me.data.has_password === true} />}
         {me.data.has_password ? <ChangePassword /> : null}
+        {me.data.has_password ? <RecoveryCodeSection has={me.data.has_recovery_code === true} /> : null}
         <section aria-labelledby="linked-heading" className="flex flex-col gap-3">
           <h2 id="linked-heading" className="text-lg font-semibold">{t('account.linkedHeading')}</h2>
           <p className="text-sm text-muted-foreground">{t('account.linkedIntro')}</p>
@@ -495,6 +612,34 @@ export function AccountPage() {
         <SettingsSection />
       </div>
     </>
+  );
+}
+
+/** A new recovery code (the current password first); the old code stops working. */
+function RecoveryCodeSection({ has }: { has: boolean }) {
+  const { t } = useTranslation();
+  const create = useNewRecoveryCode();
+  const [current, setCurrent] = useState('');
+  return (
+    <section aria-labelledby="recovery-section-heading" className="surface-card flex flex-col gap-3 p-5" data-testid="recovery-section">
+      <h2 id="recovery-section-heading" className="text-lg font-semibold">{t('account.recoverySectionTitle')}</h2>
+      {create.data ? (
+        <RecoveryCodePanel code={create.data.recovery_code} heading={false} onContinue={() => create.reset()} />
+      ) : (
+        <>
+          <p className="text-base text-muted-foreground" data-testid="recovery-status">{has ? t('account.recoveryHas') : t('account.recoveryNone')}</p>
+          <form onSubmit={(e) => { e.preventDefault(); create.mutate(current, { onSuccess: () => setCurrent('') }); }}
+            className="flex flex-col gap-3" noValidate>
+            <Field label={t('account.currentPassword')} type="password" autoComplete="current-password" value={current}
+              onChange={(e) => setCurrent(e.target.value)} dir="ltr" data-testid="recovery-current-password" />
+            <ErrorText error={create.error} />
+            <Button type="submit" variant="outline" className="w-fit" disabled={create.isPending || !current} data-testid="recovery-new">
+              <KeyRound aria-hidden="true" />{t('account.recoveryNew')}
+            </Button>
+          </form>
+        </>
+      )}
+    </section>
   );
 }
 
@@ -664,6 +809,9 @@ export function AdminUsersPage() {
   const allowed = hasPermission(me.data, 'user.manage');
   const users = useAdminUsers(adapterKind === 'http' && allowed);
   const setRole = useSetRole();
+  const reset = useAdminResetPassword();
+  const [confirmReset, setConfirmReset] = useState<string | null>(null);
+  const [temporary, setTemporary] = useState<{ name: string; password: string } | null>(null);
   // Optimistic state per checkbox until the server answers; the list is refetched afterwards.
   const [pending, setPending] = useState<Record<string, boolean>>({});
 
@@ -683,11 +831,12 @@ export function AdminUsersPage() {
                 <th scope="col" className="px-2 py-2 text-start font-medium">{t('auth.email')}</th>
                 <th scope="col" className="px-2 py-2 text-start font-medium">{t('account.createdVia')}</th>
                 {ROLES.map((r) => <th key={r} scope="col" className="px-2 py-2 text-center font-medium">{t(`account.role.${r}`)}</th>)}
+                <th scope="col" className="px-2 py-2 text-start font-medium">{t('account.adminPassword')}</th>
               </tr>
             </thead>
             <tbody>
               {users.data.map((u) => (
-                <tr key={u.id} className="border-b border-border last:border-0" data-email={u.email ?? undefined}>
+                <tr key={u.id} className="border-b border-border last:border-0" data-email={u.email ?? undefined} data-username={u.username ?? undefined}>
                   <th scope="row" className="px-4 py-2 text-start font-medium">{u.display_name}</th>
                   <td className="px-2 py-2" dir="ltr">
                     {u.username ? <span className="block font-mono text-xs">@{u.username}</span> : null}
@@ -714,11 +863,36 @@ export function AdminUsersPage() {
                         data-testid={`role-${r}`} className="size-4" />
                     </td>
                   ))}
+                  <td className="px-2 py-2">
+                    {u.id === me.data?.user_id ? null : confirmReset === u.id ? (
+                      <span className="flex flex-wrap gap-1">
+                        <Button size="sm" variant="outline" disabled={reset.isPending} data-testid="reset-password-confirm"
+                          onClick={() => reset.mutate(u.id, {
+                            onSuccess: (r) => setTemporary({ name: u.display_name, password: r.temporary_password }),
+                            onSettled: () => setConfirmReset(null),
+                          })}>
+                          {t('account.adminResetConfirm')}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setConfirmReset(null)}>{t('account.adminResetCancel')}</Button>
+                      </span>
+                    ) : (
+                      <Button size="sm" variant="outline" data-testid="reset-password" onClick={() => { setConfirmReset(u.id); setTemporary(null); }}>
+                        {t('account.adminReset')}
+                      </Button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
           <ErrorText error={setRole.error} />
+          <ErrorText error={reset.error} />
+          {temporary ? (
+            <div className="m-4"><Notice tone="success">
+              <span className="block">{t('account.adminResetDone', { name: temporary.name })}</span>
+              <code className="mt-2 block font-mono text-lg" dir="ltr" data-testid="temporary-password">{temporary.password}</code>
+            </Notice></div>
+          ) : null}
         </div>
       )}
     </>

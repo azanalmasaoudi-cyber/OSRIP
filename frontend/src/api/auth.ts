@@ -13,6 +13,7 @@ const meSchema = z.object({
   phone: z.string().nullable().optional(),
   phone_verified: z.boolean().nullable().optional(),
   has_password: z.boolean().nullable().optional(),
+  has_recovery_code: z.boolean().nullable().optional(),
   username: z.string().nullable().optional(),
   // A temporary password must be replaced before the account can do anything else.
   password_change_required: z.boolean().optional(),
@@ -51,6 +52,49 @@ export function useLogin() {
       client.setQueryData(ME_KEY, me);
       void client.invalidateQueries({ queryKey: ['imports'] });
     },
+  });
+}
+
+// ------------------------------------------------------------------ username accounts
+
+/** A new session and the recovery code, shown once (never stored in the browser). */
+const withRecovery = z.object({ status: z.string(), recovery_code: z.string(), me: meSchema });
+
+export function useRegisterUsername() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { username: string; password: string; password_confirm: string }) =>
+      apiJson('/auth/register/username', withRecovery, jsonBody('POST', body)),
+    onSuccess: (r) => client.setQueryData(ME_KEY, r.me),
+  });
+}
+
+/** A forgotten password: username, recovery code and a new password. */
+export function useRecover() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { username: string; recovery_code: string; new_password: string; new_password_confirm: string }) =>
+      apiJson('/auth/recover', withRecovery, jsonBody('POST', body)),
+    onSuccess: (r) => client.setQueryData(ME_KEY, r.me),
+  });
+}
+
+export function useNewRecoveryCode() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (currentPassword: string) =>
+      apiJson('/auth/recovery-code', z.object({ recovery_code: z.string() }), jsonBody('POST', { current_password: currentPassword })),
+    onSuccess: () => void client.invalidateQueries({ queryKey: ME_KEY }),
+  });
+}
+
+/** An administrator's reset: a temporary password, returned once, that must be changed. */
+export function useAdminResetPassword() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) =>
+      apiJson(`/admin/users/${userId}/reset-password`, z.object({ temporary_password: z.string() }), jsonBody('POST', {})),
+    onSettled: () => void client.invalidateQueries({ queryKey: ['admin', 'users'] }),
   });
 }
 
