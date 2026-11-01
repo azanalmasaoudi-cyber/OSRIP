@@ -242,8 +242,14 @@ def test_read_web_page_reads_a_pdf_report_as_evidence(monkeypatch) -> None:  # n
         f"NCSI reports 41,234 GWh for 2023 [{item['id']}].", [item["id"]], ledger.items
     )
     assert verdict.ok, verdict.problems
-    # A PDF without extractable text (e.g. scanned pages) is reported, never guessed at.
+    # The same address again in the same answer is not fetched or counted a second time.
     body = _pdf("")
+    again = research.read_web_page(ledger, "E1")
+    assert again["status"] == "ok" and "41,234 GWh" in again["untrusted_page_text"]
+    assert ledger.pages == 1
+    # A PDF without extractable text (e.g. scanned pages) is reported, never guessed at.
+    ledger = Ledger(DataMode.SYNTHETIC)
+    ledger.add({"kind": "web", "url": url, "title": "Bulletin", "query": "electricity 2023"})
     scanned = research.read_web_page(ledger, "E1")
     assert scanned["status"] == "pdf_no_text" and "evidence_id" not in scanned
 

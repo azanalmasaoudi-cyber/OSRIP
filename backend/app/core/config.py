@@ -151,6 +151,12 @@ class Settings(BaseSettings):
     # Searches and pages are reused for this many hours (research_search, research_document);
     # when a search fails, the last successful results are shown with their own date.
     research_cache_hours: int = 24
+    # For a question about the latest figures, cached searches and documents older than this
+    # are retrieved again before they are relied on.
+    research_latest_cache_hours: float = 6.0
+    # Independent searches and page reads asked for in the same step run at the same time,
+    # at most this many at once (each still with its own timeout and the daily limits).
+    research_parallel_fetches: int = 3
     # Paid search and fetch calls per UTC day, across all users and jobs (provider_call rows).
     research_daily_search_limit: int = 200
     research_daily_fetch_limit: int = 200

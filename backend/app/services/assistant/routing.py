@@ -100,6 +100,19 @@ _CHART = re.compile(
 )
 
 
+# Words that ask for the newest figures: cached searches and documents then count only while
+# they are recent (``research_latest_cache_hours``), so "latest" is checked against the source.
+_LATEST = re.compile(
+    r"\b(latest|newest|most recent|recent|current(ly)?|up[- ]to[- ]date|now|today|this (year|month))\b"
+    r"|أحدث|احدث|آخر|اخر|الأخير|الأخيرة|الحالي|الحالية|حالياً|حاليا|الآن|الان|اليوم|هذا العام|هذا الشهر",
+    re.IGNORECASE,
+)
+
+
+def asks_for_latest(question: str) -> bool:
+    return bool(question and _LATEST.search(question))
+
+
 def asks_for_chart(question: str) -> bool:
     """Charts appear only when the person asks for one."""
     return bool(question and _CHART.search(question))

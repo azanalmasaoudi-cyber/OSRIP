@@ -207,6 +207,7 @@
     <Compile Include="app\services\research\firecrawl.py" />
     <Compile Include="app\services\research\jobs.py" />
     <Compile Include="app\services\research\pages.py" />
+    <Compile Include="app\services\research\parallel.py" />
     <Compile Include="app\services\research\robots.py" />
     <Compile Include="app\services\research\safe_fetch.py" />
     <Compile Include="app\services\research\saving.py" />
@@ -285,6 +286,7 @@
     <Compile Include="tests\test_release_audit_integration.py" />
     <Compile Include="tests\test_research.py" />
     <Compile Include="tests\test_research_assistant_units.py" />
+    <Compile Include="tests\test_research_parallel.py" />
     <Compile Include="tests\test_research_jobs_integration.py" />
     <Compile Include="tests\test_research_progress_integration.py" />
     <Compile Include="tests\test_research_workflow.py" />
@@ -298,6 +300,7 @@
     <Compile Include="tests\test_study_schema.py" />
     <Compile Include="tests\test_timeline.py" />
     <Compile Include="tests\test_upgrade_integration.py" />
+    <Compile Include="tests\test_username_accounts_integration.py" />
     <Compile Include="tests\test_verification_change_integration.py" />
     <Compile Include="tests\test_voice_bridge.py" />
     <Compile Include="tests\test_voice_gender.py" />
@@ -313,6 +316,7 @@
     <Compile Include="scripts\live_assistant_check.py" />
     <Compile Include="scripts\ncsi_import.py" />
     <Compile Include="scripts\perf_workload.py" />
+    <Compile Include="scripts\research_timing.py" />
     <Compile Include="scripts\serve_dev.py" />
     <Compile Include="scripts\serve_e2e.py" />
     <Compile Include="scripts\serve_public.py" />
@@ -346,6 +350,7 @@
     <Compile Include="alembic\versions\0022_source_sync.py" />
     <Compile Include="alembic\versions\0023_research_save.py" />
     <Compile Include="alembic\versions\0024_datasets_reports.py" />
+    <Compile Include="alembic\versions\0025_username_recovery.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="alembic\sql\0001_core_down.sql" />
