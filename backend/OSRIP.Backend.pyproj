@@ -295,6 +295,7 @@
     <Compile Include="tests\test_reviews_reports_integration.py" />
     <Compile Include="tests\test_series_integration.py" />
     <Compile Include="tests\test_series_speech.py" />
+    <Compile Include="tests\test_service_health_integration.py" />
     <Compile Include="tests\test_settings_isolation.py" />
     <Compile Include="tests\test_sms_twilio.py" />
     <Compile Include="tests\test_source_sync.py" />
