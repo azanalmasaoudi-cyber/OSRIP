@@ -24,11 +24,11 @@ test('navigation lists the required sections and every link opens its page', asy
     ['Water', /\/energy\/water/, 'Water'],
     ['Food Security', /\/food-security/, 'Food Security'],
     ['Trade', /\/trade/, 'Trade'],
-    ['Map', /\/geography/, 'Geography'],
+    ['Oman Geographic Map', /\/geography/, 'Geography'],
     ['Studies', /\/studies/, 'Studies'],
     ['Scenarios', /\/forecasts/, 'Forecasts and Scenarios'],
     ['Sources', /\/sources/, 'Sources and Methodology'],
-    ['AI Assistant', /\/assistant/, 'Al Mulhim'], // the page is titled with the chosen persona
+    ['AI Research Assistant', /\/assistant/, 'Al Mulhim'], // the page is titled with the chosen persona
     ['Analysis workspace', /\/workspace/, 'Analysis workspace'],
     ['Reports', /\/reports/, 'Reports'],
     ['Account', /\/(account|sign-in)/, ''],

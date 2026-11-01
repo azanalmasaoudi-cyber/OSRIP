@@ -84,7 +84,7 @@ interface NavModule {
 /** The modules, in this order: Dashboard; Economic and Development Axes; Scenarios, Data and
  * Analysis; the Oman map; Reports; the AI Research Assistant; then administration (only what
  * the person may use) and the account. A module with one destination is a direct link; one with
- * several opens and closes, and opens by itself when it holds the current page. */
+ * several starts open and can be closed (remembered in this browser). */
 export const NAV_MODULES: readonly NavModule[] = [
   {
     id: 'dashboard', label: 'nav.moduleDashboard', icon: Gauge, items: [
@@ -204,7 +204,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
           );
         }
         const holdsCurrent = items.some((item) => isCurrent(item.path, pathname));
-        const expanded = open[module.id] ?? holdsCurrent;
+        const expanded = open[module.id] ?? true;
         const ModuleIcon = module.icon;
         const listId = `nav-module-${module.id}`;
         return (

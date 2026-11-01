@@ -167,10 +167,15 @@ test('navigation and Settings: the main destinations in order, services and sche
   await page.goto('/overview?mode=synthetic');
   const nav = page.getByRole('navigation', { name: 'Main navigation' });
   const names = await nav.getByRole('link').allInnerTexts();
-  // The Overview, the four sectors, then decision support; Settings sits with the account.
-  const main = names.map((n) => n.trim()).slice(0, 9);
-  expect(main).toEqual(['Overview', 'Electricity', 'Water', 'Food Security', 'Trade', 'AI Assistant', 'Studies', 'Reports', 'Sources']);
-  expect(names.map((n) => n.trim())).toEqual(expect.arrayContaining(['Account', 'Settings']));
+  // The modules in the required order: Dashboard; the four axes; scenarios, data and analysis;
+  // the map; reports; the assistant; then administration and the account.
+  const all = names.map((n) => n.trim());
+  expect(all.slice(0, 15)).toEqual([
+    'Dashboard', 'Overview', 'Electricity', 'Water', 'Food Security', 'Trade',
+    'Scenarios', 'Analysis workspace', 'Datasets', 'Studies', 'Sources', 'Research library',
+    'Oman Geographic Map', 'Reports', 'AI Research Assistant',
+  ]);
+  expect(all.slice(15)).toEqual(['Data Management', 'Users, Roles and Groups', 'Service Health', 'Account', 'Settings']);
   await nav.getByRole('link', { name: 'Settings' }).click();
   await expect(page.getByTestId('settings-services')).toBeVisible();
   await expect(page.getByTestId('service-answers').getByTestId('assistant-service')).toBeVisible();
