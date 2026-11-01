@@ -20,7 +20,7 @@ function omaniNumber(): string {
 
 test('WhatsApp test mode is labelled and the form speaks of WhatsApp', async ({ page }) => {
   await asWhatsAppSandbox(page);
-  await page.goto('/register?method=phone');
+  await page.goto('/sign-in/other?method=phone');
   await expect(page.getByTestId('whatsapp-sandbox')).toContainText('only the approved test numbers');
   await expect(page.getByTestId('sms-test-mode')).toHaveCount(0);
   const national = omaniNumber();
@@ -36,18 +36,18 @@ test('a number outside the approved test list is explained, with e-mail offered'
     status: 422,
     json: { error: { code: 'sms_not_test_recipient', message: 'This is a WhatsApp demonstration.' } },
   }));
-  await page.goto('/register?method=phone');
+  await page.goto('/sign-in/other?method=phone');
   await page.getByTestId('phone-number').fill(omaniNumber());
   await page.getByTestId('phone-send').click();
   await expect(page.getByTestId('phone-error')).toHaveAttribute('data-code', 'sms_not_test_recipient');
   await expect(page.getByTestId('phone-error')).toContainText('codes are sent only to the approved test numbers');
   await page.getByRole('button', { name: 'Use e-mail instead' }).click();
-  await expect(page.getByTestId('register-form')).toBeVisible();
+  await expect(page.getByTestId('magic-form')).toBeVisible();
 });
 
 test('Arabic: WhatsApp test mode and wording', async ({ page }) => {
   await asWhatsAppSandbox(page);
-  await page.goto('/register?method=phone');
+  await page.goto('/sign-in/other?method=phone');
   await page.getByRole('button', { name: 'العربية' }).first().click();
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
   await expect(page.getByTestId('whatsapp-sandbox')).toContainText('أرقام الاختبار المعتمدة فقط');

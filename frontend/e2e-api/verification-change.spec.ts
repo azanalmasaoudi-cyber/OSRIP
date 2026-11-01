@@ -34,18 +34,15 @@ async function smsCode(page: Page, national: string): Promise<string> {
 /** A new e-mail account, confirmed and signed in, on the account page. */
 async function confirmedAccount(page: Page): Promise<string> {
   const address = unique('change');
-  await page.goto('/register');
-  const form = page.getByTestId('register-form');
-  await form.getByLabel('Name').fill('E2E Change');
-  await form.getByLabel('E-mail address').fill(address);
-  await form.getByLabel('Password').fill(PASSWORD);
-  await form.getByRole('button', { name: 'Create an account' }).click();
-  await expect(page.getByTestId('register-done')).toBeVisible();
+  const r = await page.request.post('/api/v1/auth/register', {
+    data: { email: address, display_name: 'E2E Change', password: PASSWORD },
+  });
+  expect(r.status()).toBe(202);
   await openMail(page, address, 'verify_email');
   await expect(page.getByTestId('verify-result')).toContainText('Your e-mail address is confirmed');
   await page.goto('/sign-in');
   const signIn = page.getByTestId('sign-in-form');
-  await signIn.getByLabel('E-mail address').fill(address);
+  await signIn.getByLabel('Username').fill(address);
   await signIn.getByLabel('Password').fill(PASSWORD);
   await signIn.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/account/);

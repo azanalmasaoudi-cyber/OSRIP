@@ -60,7 +60,7 @@ test('web research cites a labelled official source and failures are shown, not 
 test('a data manager reviews web figures; accepting needs a note and publishes nothing', async ({ page }) => {
   await page.goto('/sign-in');
   const form = page.getByTestId('sign-in-form');
-  await form.getByLabel('Username or e-mail address').fill('manager@e2e.invalid');
+  await form.getByLabel('Username').fill('manager@e2e.invalid');
   await form.getByLabel('Password').fill(PASSWORD);
   await form.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByTestId('account-page')).toBeVisible();
@@ -80,7 +80,7 @@ test('a data manager reviews web figures; accepting needs a note and publishes n
 test('a username account must replace its temporary password before anything else', async ({ page }) => {
   await page.goto('/sign-in');
   const form = page.getByTestId('sign-in-form');
-  await form.getByLabel('Username or e-mail address').fill('E2ETemp');
+  await form.getByLabel('Username').fill('E2ETemp');
   await form.getByLabel('Password').fill(PASSWORD);
   await form.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByRole('heading', { name: 'Choose a new password to continue' })).toBeVisible();
