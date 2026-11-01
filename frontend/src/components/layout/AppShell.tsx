@@ -1,7 +1,7 @@
 import { Menu, Search } from 'lucide-react';
 import { MotionConfig, motion } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, Outlet, useLocation, useNavigate } from 'react-router';
+import { Link, Outlet, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
 import { useMe } from '@/api/auth';
@@ -72,11 +72,11 @@ export function AppShell() {
   const { t } = useTranslation();
   const { pathname, hash } = useLocation();
   const to = usePreservedSearch();
-  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  // The introduction opens the home page once per browser session: a direct link (a study, the
-  // workspace, sign-in, the account) opens straight away. Replayable from the footer and Settings.
+  // The opening (about 3 s) plays on the home page once per browser session: a direct link (a
+  // study, the workspace, sign-in, the account) opens straight away. Replayable from the footer
+  // and Settings.
   const [entranceOpen, setEntranceOpen] = useState(() => pathname === '/' && introDue());
   const replayEntrance = useCallback(() => setEntranceOpen(true), []);
   // Arriving at the home page later in the session (after a direct link) also opens it, once
@@ -253,11 +253,8 @@ export function AppShell() {
         </footer>
       </div>
       {pathname === '/talk' ? null : <AssistantOrb />}
-      <Entrance open={entranceOpen} onClose={(action) => {
-        setEntranceOpen(false);
-        // Explore and Skip enter the dashboard (the Overview); Escape only closes.
-        if (action !== 'dismiss' && pathname !== '/overview') void navigate(to('/overview'));
-      }} />
+      {/* The opening ends on the page it was opened on: never a redirect. */}
+      <Entrance open={entranceOpen} onClose={() => setEntranceOpen(false)} />
     </div>
     </EntranceReplayContext.Provider>
     </PersonaProvider>
