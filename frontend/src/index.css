@@ -336,6 +336,40 @@ details > summary:hover { color: var(--color-primary); }
   box-shadow: var(--shadow-card);
 }
 
+/*
+ * Glass: cards and panels are lightly translucent over a soft navy, emerald and gold light
+ * in the page background. They stay 86% opaque, so text keeps the contrast the tokens are
+ * checked for (scripts/check-contrast.mjs); without blur support, or when the person asks for
+ * less transparency, they are solid.
+ */
+@media screen {
+  body {
+    background-image:
+      radial-gradient(60rem 38rem at 105% -12%, color-mix(in oklab, var(--primary) 11%, transparent), transparent 70%),
+      radial-gradient(48rem 34rem at -12% 108%, color-mix(in oklab, var(--sidebar-accent) 9%, transparent), transparent 70%);
+    background-attachment: fixed;
+  }
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .surface-card,
+  .glass-card {
+    background: color-mix(in oklab, var(--card) 86%, transparent);
+    -webkit-backdrop-filter: blur(14px) saturate(1.15);
+    backdrop-filter: blur(14px) saturate(1.15);
+    border-color: color-mix(in oklab, var(--border) 85%, transparent);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .surface-card,
+  .glass-card {
+    background: var(--card);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
 /* A short soft-gold rule above section headings (decorative; the heading carries the meaning). */
 .gold-rule::before {
   content: "";
