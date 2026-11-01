@@ -198,6 +198,7 @@
     <TypeScriptCompile Include="src\components\geography\Basemap.tsx" />
     <TypeScriptCompile Include="src\components\geography\GovernorateComparison.tsx" />
     <TypeScriptCompile Include="src\components\geography\maplibre.ts" />
+    <TypeScriptCompile Include="src\components\geography\OmanMap.tsx" />
     <TypeScriptCompile Include="src\components\layout\AccountControl.tsx" />
     <TypeScriptCompile Include="src\components\layout\AppShell.tsx" />
     <TypeScriptCompile Include="src\components\layout\DataModeSelector.tsx" />
