@@ -300,10 +300,10 @@ def build(path: Path) -> None:
             "features": sorted(features, key=lambda f: f["id"]),
         }
         (OUT / f"{name}.geojson").write_text(
-            json.dumps(collection, separators=(",", ":")), encoding="utf-8"
+            json.dumps(collection, separators=(",", ":")), encoding="utf-8", newline="\n"
         )
     (OUT / "boundaries-report.json").write_text(
-        json.dumps(report, ensure_ascii=False, indent=1), encoding="utf-8"
+        json.dumps(report, ensure_ascii=False, indent=1), encoding="utf-8", newline="\n"
     )
     low = [w for w in report["wilayats"] if w["similarity"] is not None and w["similarity"] < 0.85]
     print(
