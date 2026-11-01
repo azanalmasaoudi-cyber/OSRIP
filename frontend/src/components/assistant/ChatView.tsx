@@ -1,6 +1,6 @@
 import {
-  ArrowDown, Check, CircleHelp, Copy, Loader2, MessageSquarePlus, Mic, MicOff, RotateCcw, Send, Settings2, SlidersHorizontal,
-  Sparkles, Square, Trash2, Volume2, VolumeX, X,
+  ArrowDown, BarChart3, Check, CircleHelp, Copy, EyeOff, Loader2, MessageSquarePlus, Mic, MicOff, RotateCcw, Send, Settings2,
+  SlidersHorizontal, Sparkles, Square, Trash2, Volume2, VolumeX, X,
 } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router';
@@ -8,8 +8,8 @@ import { useTranslation } from 'react-i18next';
 
 import { useAssistantUi } from './AssistantContext';
 import { AssistantAvatar } from './AssistantAvatar';
-import { ServiceChip } from './AssistantIdentityCard';
 import { AssistantStatusBar } from './AssistantStatusBar';
+import { ConversationSources } from './ConversationSources';
 import type { ChatVoice } from './AssistantPanel';
 import {
   EvidenceItem, GroundedContext, pick, SAVEABLE, SaveResearchButton, SearchLog, STATUS_BADGE, WebEvidenceItem,
@@ -86,12 +86,13 @@ export interface ChatModel {
 const NEAR_BOTTOM = 96; // px: closer than this to the end counts as reading the latest message
 
 /**
- * The AI Assistant page: one conversation, centred and at most 800px wide. A compact header
- * (portrait, name, honest service status, Al Mulhim / Ilham, New conversation, Settings), the
- * messages in one scrolling area, and one message box at the bottom with Send, Speak and an
- * optional Tools drawer. Before the first message only a welcome and up to three examples are
- * shown. Explanations, voice and conversation settings, research modes, the research brief and
- * the analysis forms are in the Settings and Tools drawers, not in the conversation.
+ * The AI Assistant page: one conversation, centred and at most 50rem (800px) wide. A compact
+ * header (portrait, name, Al Mulhim / Ilham, New conversation, Settings), the messages in one
+ * scrolling area, and one message box at the bottom with Send, Speak and an optional Tools
+ * drawer. Before the first message only a welcome and up to three examples are shown. The answer
+ * service's status, explanations, voice and conversation settings, research modes, the research
+ * brief and the analysis forms are in Settings and the drawers, not in the conversation. On wide
+ * screens the conversation's sources stand in a column beside it (ConversationSources).
  */
 export function ChatView({ chat }: { chat: ChatModel }) {
   const { t } = useTranslation();
@@ -144,12 +145,14 @@ export function ChatView({ chat }: { chat: ChatModel }) {
   const started = chat.messages.length > 0 || Boolean(echo) || chat.pending;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col" data-testid="assistant-panel" data-variant="chat" lang={chat.language}>
-      <header className="mx-auto flex w-full max-w-[800px] shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border pb-2" data-testid="chat-header">
+    // On wide screens (1792 px and up) the sources of the conversation stand beside it.
+    <div className="flex min-h-0 flex-1 gap-6" data-testid="assistant-panel" data-variant="chat" lang={chat.language}>
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <header className="mx-auto flex w-full max-w-[50rem] shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border pb-2" data-testid="chat-header">
         <AssistantAvatar state={ui.state} size="2.25rem" decorative={false} />
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
-          <h1 className="text-base font-semibold" data-testid="mulhim-name" data-persona={persona.code}>{persona.name[language]}</h1>
-          <ServiceChip />
+        <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-1">
+          <h1 className="text-lg font-semibold" data-testid="mulhim-name" data-persona={persona.code}>{persona.name[language]}</h1>
+          <span className="text-xs text-muted-foreground">{t('assistant.aiAssistant')}</span>
         </div>
         {/* Phones: the choice gets its own row under the name. */}
         <div className="max-sm:order-last max-sm:flex max-sm:w-full max-sm:justify-center"><PersonaSwitch /></div>
@@ -167,7 +170,7 @@ export function ChatView({ chat }: { chat: ChatModel }) {
 
       <div className="relative min-h-0 flex-1">
         <div ref={scroller} onScroll={onScroll} className="h-full overflow-y-auto" data-testid="assistant-messages" aria-live="polite">
-          <div className="mx-auto flex w-full max-w-[800px] flex-col gap-6 px-1 py-5">
+          <div className="mx-auto flex w-full max-w-[50rem] flex-col gap-6 px-1 py-5">
             {!started && chat.canAsk && !chat.needsAccount ? (
               <section className="flex flex-col items-center gap-4 py-10 text-center" data-testid="chat-welcome">
                 <p className="text-2xl font-semibold" data-testid="chat-greeting">{t('chat.welcome')}</p>
@@ -228,6 +231,8 @@ export function ChatView({ chat }: { chat: ChatModel }) {
         }} />
       </Dialog>
     </div>
+    <ConversationSources messages={chat.messages} className="hidden w-[22rem] shrink-0 3xl:flex" />
+    </div>
   );
 }
 
@@ -253,6 +258,9 @@ function ChatMessage({ message, question, chat, onAsk }: {
   const language = useAppLanguage();
   const { byCode } = usePersona();
   const [copied, setCopied] = useState(false);
+  // A chart is offered under an answer that has chartable figures, and drawn only when the
+  // person asks: in words ("show a chart of …") or with the Show chart button.
+  const [chartOpen, setChartOpen] = useState(() => asksForChart(question) && message.status !== 'clarification');
   if (message.role === 'user') {
     return (
       <li className="ms-auto max-w-[85%] rounded-2xl bg-muted px-4 py-2 text-sm whitespace-pre-wrap" dir="auto" data-testid="user-message">
@@ -269,11 +277,12 @@ function ChatMessage({ message, question, chat, onAsk }: {
   const known = new Set([...shown.map((e) => e.id), ...message.calculations.map((c) => c.id)]);
   const anchor = (id: string) => evidenceAnchor(message.id, id);
   const failed = message.status === 'unavailable' || message.status === 'data_report';
-  // A chart only when this question asked for one, from the cited published values.
-  const wantsChart = asksForChart(question) && message.status !== 'clarification';
   // The server's chart of the table's own rows when it built one; otherwise the cited values.
-  const dataCharts = wantsChart ? message.structured.data_charts ?? [] : [];
-  const points = wantsChart && !dataCharts.length ? chartPoints(shown) : null;
+  const chartable = message.status !== 'clarification';
+  const wantsChart = asksForChart(question) && chartable;
+  const dataCharts = chartable ? message.structured.data_charts ?? [] : [];
+  const points = chartable && !dataCharts.length ? chartPoints(shown) : null;
+  const canChart = dataCharts.length > 0 || points !== null;
   const sourceNames = [...new Set(shown.map((e) => e.source?.title ?? (typeof e.title === 'string' ? e.title : pick(e.title, language))).filter(Boolean))];
   const copy = () => {
     const text = [message.content, ...(sourceNames.length ? ['', `${t('assistant.sources')}: ${sourceNames.join(' · ')}`] : [])].join('\n');
@@ -306,8 +315,16 @@ function ChatMessage({ message, question, chat, onAsk }: {
         <Markdown text={message.content} cite={(id) => <CitationChip messageId={message.id} id={id} known={known.has(id)} />} />
       </div>
       {message.structured.data_tables?.length ? <ChatDataTables blocks={message.structured.data_tables} messageId={message.id} /> : null}
-      {dataCharts.length ? <ChatDataCharts charts={dataCharts} messageId={message.id} /> : null}
-      {dataCharts.length ? null : points ? <InlineChart points={points} messageId={message.id} /> : wantsChart && message.status === 'answered' ? (
+      {canChart ? (
+        <Button type="button" variant="outline" size="sm" className="w-fit" aria-expanded={chartOpen} onClick={() => setChartOpen(!chartOpen)}
+          data-testid={chartOpen ? 'chat-hide-chart' : 'chat-show-chart'}>
+          {chartOpen ? <EyeOff aria-hidden="true" /> : <BarChart3 aria-hidden="true" />}
+          {chartOpen ? t('chart.hide') : t('chart.show')}
+        </Button>
+      ) : null}
+      {chartOpen && dataCharts.length ? <ChatDataCharts charts={dataCharts} messageId={message.id} /> : null}
+      {chartOpen && !dataCharts.length && points ? <InlineChart points={points} messageId={message.id} /> : null}
+      {wantsChart && !canChart && message.status === 'answered' ? (
         <p className="text-xs text-muted-foreground" data-testid="chart-unavailable">{t('chat.chartUnavailable')}</p>
       ) : null}
       {message.structured.research ? <ResearchSummary summary={message.structured.research} /> : null}
@@ -412,7 +429,7 @@ function Composer({ chat, onSend, onTools }: { chat: ChatModel; onSend: (text: s
   const override = chat.mode.value !== 'auto' ? chat.mode.value : null;
   if (!chat.canAsk) return null;
   return (
-    <form onSubmit={submit} className="mx-auto flex w-full max-w-[800px] shrink-0 flex-col gap-1.5 pt-2 pb-3" data-testid="chat-composer">
+    <form onSubmit={submit} className="mx-auto flex w-full max-w-[50rem] shrink-0 flex-col gap-1.5 pt-2 pb-3" data-testid="chat-composer">
       {chat.selection.value ? (
         <p className="flex flex-wrap items-center gap-2 rounded-md border border-primary/40 bg-primary/5 px-2 py-1 text-xs" data-testid="assistant-selection">
           <span>{t('assistant.selectionApplied', { selection: chat.selection.label ?? `${chat.selection.value.indicator} · ${chat.selection.value.area} · ${chat.selection.value.period_from} – ${chat.selection.value.period_to}` })}</span>

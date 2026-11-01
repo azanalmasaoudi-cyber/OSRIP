@@ -9,8 +9,8 @@ export const THEME_PREFERENCES = ['light', 'dark', 'system'] as const;
 export type ThemePreference = (typeof THEME_PREFERENCES)[number];
 
 const STORAGE_KEY = 'osrip.theme';
-const DEFAULT_PREFERENCE: ThemePreference = 'dark';
-const META_COLOUR = { light: '#f5f5f6', dark: '#09090b' } as const;
+const DEFAULT_PREFERENCE: ThemePreference = 'light';
+const META_COLOUR = { light: '#f5f7fa', dark: '#07111f' } as const;
 
 function readStored(): ThemePreference {
   try {

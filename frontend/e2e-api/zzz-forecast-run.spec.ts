@@ -69,7 +69,9 @@ test('an analyst runs a forecast: baseline comparison, intervals, labels and an 
   await expect(run.getByTestId('forecast-metrics').locator('tbody tr')).toHaveCount(3);
   await expect(run.getByTestId('forecast-metrics')).toContainText('baseline');
   await expect(run.getByTestId('selected-model')).not.toHaveText('—');
-  // History and estimates are drawn differently; intervals are shaded.
+  // The chart is drawn only on request. History and estimates are drawn differently; intervals are shaded.
+  await expect(run.getByTestId('forecast-chart')).toHaveCount(0);
+  await run.getByTestId('forecast-chart-toggle-show').click();
   const chart = run.getByTestId('forecast-chart');
   await expect(chart.getByTestId('estimate-line')).toHaveAttribute('stroke-dasharray', '7 5');
   await expect(chart.getByTestId('band-80')).toHaveCount(1);
@@ -101,6 +103,8 @@ test('the scenario explorer is separate from forecasts and recalculates from the
   await expect(explorer.getByTestId('scenario-summary')).toContainText('60,758.78');
   await expect(explorer.getByTestId('scenario-table').locator('tbody tr')).toHaveCount(2);
   await expect(explorer.getByTestId('scenario-table')).toContainText('57,865.5');
+  await expect(explorer.getByTestId('forecast-chart')).toHaveCount(0); // drawn only on request
+  await explorer.getByTestId('scenario-chart-toggle-show').click();
   await expect(explorer.getByTestId('forecast-chart').getByTestId('scenario-line')).toBeVisible();
   await expect(explorer.getByTestId('forecast-chart').getByTestId('estimate-line')).toHaveCount(0);
 });

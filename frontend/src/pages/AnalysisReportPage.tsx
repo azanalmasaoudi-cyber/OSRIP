@@ -16,6 +16,7 @@ import { ViewChart } from '@/components/datasets/ViewChart';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { ChartOnRequest } from '@/components/ui/chart-on-request';
 import { formatDateTime } from '@/lib/format';
 import { useAppLanguage } from '@/lib/useAppLanguage';
 import { usePreservedSearch } from '@/state/usePreservedSearch';
@@ -43,7 +44,13 @@ function Block({ block, index, rtl }: { block: ReportBlock; index: number; rtl: 
       alternatives: [block.chart.type],
       note: block.note ? { en: block.note, ar: block.note } : null,
     };
-    return <Card className="p-4" dir={rtl ? 'rtl' : 'ltr'}><ViewChart view={view} /></Card>;
+    // The report's chart is drawn on request, like every chart; its rows are the report's table.
+    return (
+      <Card className="flex flex-col gap-2 p-4" dir={rtl ? 'rtl' : 'ltr'}>
+        {block.title ? <p className="text-sm font-semibold">{block.title}</p> : null}
+        <ChartOnRequest label={block.title} testId="report-chart"><ViewChart view={view} /></ChartOnRequest>
+      </Card>
+    );
   }
   return (
     <div className="flex flex-col gap-1">

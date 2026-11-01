@@ -105,14 +105,15 @@ export function SpokenSummary({ selection }: { selection: SeriesSpeech }) {
     <div className="flex flex-col gap-2 rounded-md border border-border p-3" data-testid="sector-listen-block" data-state={state}>
       <div className="flex flex-wrap items-center gap-2">
         {configured ? (
-          <Button size="sm" variant="outline" onClick={listen} disabled={state === 'loading'} data-testid="sector-listen">
+          <Button size="sm" variant="outline" onClick={listen} disabled={state === 'loading'} data-testid="sector-listen" title={t('sectorFlow.listenNote')}>
             <Headphones aria-hidden="true" />{state === 'loading' ? t('sectorFlow.preparing') : t('sectorFlow.listen', { name: persona.name[language] })}
           </Button>
         ) : (
+          // Whether the server voice is set up is listed under Settings › Services, not here.
           <>
-            <span className="text-xs text-muted-foreground" data-testid="sector-listen-unavailable">{t('sectorFlow.voiceUnavailable')}</span>
             {browserAvailable ? (
-              <Button size="sm" variant="outline" onClick={listenInBrowser} disabled={state === 'loading'} data-testid="sector-listen-browser">
+              <Button size="sm" variant="outline" onClick={listenInBrowser} disabled={state === 'loading'} data-testid="sector-listen-browser"
+                title={t('sectorFlow.listenNote')}>
                 <Volume2 aria-hidden="true" />{t('sectorFlow.listenBrowser')}
               </Button>
             ) : null}
@@ -124,7 +125,6 @@ export function SpokenSummary({ selection }: { selection: SeriesSpeech }) {
         ) : null}
         <VoiceVolume testId="sector-listen-volume" />
       </div>
-      <p className="text-xs text-muted-foreground">{t('sectorFlow.listenNote')}</p>
       {error ? <p role="alert" className="text-xs text-destructive" data-testid="sector-listen-error">{error}</p> : null}
       {transcript ? (
         <p className="rounded-md bg-muted/60 p-2 text-xs" dir="auto" lang={language} data-testid="sector-listen-transcript">

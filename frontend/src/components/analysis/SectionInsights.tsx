@@ -42,8 +42,10 @@ function Question({ icon, title, children, testid }: { icon: ReactNode; title: s
  * the section calculations, the sources and dataset versions, and the open review
  * cards. Nothing is generated.
  */
-export function SectionInsights({ section, mode, filters, series }: {
+export function SectionInsights({ section, mode, filters, series, columns = 2 }: {
   section: SectionCode; mode: DataMode; filters: SectionFilters; series: readonly Series[];
+  /** One column in a narrow side panel; two side by side from the laptop width otherwise. */
+  columns?: 1 | 2;
 }) {
   const { t } = useTranslation();
   const language = useAppLanguage();
@@ -63,7 +65,7 @@ export function SectionInsights({ section, mode, filters, series }: {
   return (
     <section aria-labelledby={`insights-${section}`} className="flex flex-col gap-2" data-testid="section-insights">
       <h2 id={`insights-${section}`} className="sr-only">{t('insights.heading')}</h2>
-      <div className="grid items-start gap-2 lg:grid-cols-2">
+      <div className={columns === 2 ? 'grid items-start gap-2 lg:grid-cols-2' : 'grid items-start gap-2'}>
         <Question testid="insight-measure" icon={<CircleHelp aria-hidden="true" className={iconClass} />} title={t('insights.measure')}>
           {indicators.length === 0 ? <p className="text-muted-foreground">{t('insights.noSeries')}</p> : (
             <ul className="flex flex-col gap-2">

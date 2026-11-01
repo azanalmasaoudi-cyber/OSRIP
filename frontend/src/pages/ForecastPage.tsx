@@ -35,6 +35,7 @@ import { ForecastChart, ForecastTable } from '@/components/forecast/ForecastChar
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { ChartOnRequest } from '@/components/ui/chart-on-request';
 import { ProgressBar } from '@/components/ui/progress';
 import { Segmented } from '@/components/ui/segmented';
 import { SelectField } from '@/components/ui/select';
@@ -233,7 +234,9 @@ function RunView({ run, conditions }: { run: ForecastRun; conditions: Developmen
         <dt className="text-muted-foreground">{t('forecasts.model')}</dt>
         <dd data-testid="selected-model">{run.selected_model ? modelName(run.selected_model) : '—'}</dd>
       </dl>
-      <ForecastChart title={title} unit={unit} history={run.history} estimates={run.outputs} />
+      <ChartOnRequest label={title} testId="forecast-chart-toggle">
+        <ForecastChart title={title} unit={unit} history={run.history} estimates={run.outputs} />
+      </ChartOnRequest>
       {run.explanation ? <p className="rounded-md bg-sand-subtle/60 p-3 text-sm" data-testid="forecast-explanation">{pick(run.explanation, language)}</p> : null}
       <ExplanationBlock testId="forecast-explained" explanation={{
         change: t('explain.forecastChange', { n: run.outputs.length, indicator: s ? (language === 'ar' ? s.indicator.name_ar : s.indicator.name_en) : '' }),
@@ -334,9 +337,11 @@ function ScenarioExplorer({ domains, conditions }: { domains: readonly Domain[];
       {projection.isError ? <StatePanel kind="error" detail={projection.error.message} /> : null}
       {p ? (
         <>
-          <ForecastChart title={seriesLabel(p.series, language, flowLabel)} unit={unit}
-            history={[{ period_start: p.base.period_start, period_end: p.base.period_end, value: p.base.value }]}
-            scenario={p.points.map((pt) => ({ label: `${pt.year}-01-01`, value: pt.value }))} />
+          <ChartOnRequest label={seriesLabel(p.series, language, flowLabel)} testId="scenario-chart-toggle">
+            <ForecastChart title={seriesLabel(p.series, language, flowLabel)} unit={unit}
+              history={[{ period_start: p.base.period_start, period_end: p.base.period_end, value: p.base.value }]}
+              scenario={p.points.map((pt) => ({ label: `${pt.year}-01-01`, value: pt.value }))} />
+          </ChartOnRequest>
           <p className="text-sm" data-testid="scenario-summary">
             {t('forecasts.scenarioSummary', {
               base: formatDecimal(p.base.value, language, 2) ?? '—', unit, period: formatPeriod(p.base.period_start, p.base.period_end, language),

@@ -4,18 +4,21 @@
 @custom-variant short (@media (max-height: 560px));
 
 /*
- * OSRIP design tokens (release 1.0: dashboard identity, dark and light).
+ * OSRIP design tokens (release 2.0: Omani decision-support identity, light and dark).
  *
- * Near-black (dark) or near-white (light) pages, slightly raised cards with thin borders,
- * white or ink text with muted secondary text, and emerald as the one action and chart colour.
- * Copper and sand stay as small accents. A PROPOSED identity for an academic prototype: no
- * official seals, emblems or government branding.
+ * White and cool off-white pages, a deep navy navigation, emerald as the one action and
+ * single-series chart colour, and a soft gold for rules, highlights and the focus ring on navy.
+ * A PROPOSED identity for an academic prototype: no official seals, emblems or government
+ * branding.
  *
- * Themes: the light tokens are on :root; :root[data-theme="dark"] overrides them. The attribute
- * is always the resolved theme ("light" or "dark"), set before the first paint by
- * public/theme-init.js and then by lib/theme.ts (Light, Dark or System, remembered locally).
- * The --nav tokens are the deep-emerald stage of the introduction and the brand mark, the same
- * in both themes; the --sidebar tokens follow the theme.
+ * Themes: the light tokens are on :root (the default); :root[data-theme="dark"] overrides them
+ * with deep navy surfaces. The attribute is always the resolved theme ("light" or "dark"), set
+ * before the first paint by public/theme-init.js and then by lib/theme.ts (Light, Dark or
+ * System, remembered locally). The --sidebar and --nav tokens are navy in both themes.
+ *
+ * Type: body copy is 1rem (12pt); dense data (tables, badges, metadata) is 0.75rem (12px);
+ * headings step up from 1.125rem to 2.25rem. On very wide screens (2560 px and up, e.g. a 4K
+ * display at 100 % scaling) the root size grows, so every rem-based size and width scales.
  *
  * `npm run check:contrast` (scripts/check-contrast.mjs) reads both blocks from this file and
  * checks every text/control pairing for WCAG contrast. Mode colours always accompany text
@@ -25,103 +28,111 @@
   color-scheme: light;
 
   /* Surfaces and ink */
-  --background: #f5f5f6;
+  --background: #f5f7fa;
   --card: #ffffff;
   --card-foreground: var(--foreground);
-  --muted: #eeeef0; /* sunken surfaces, hover */
-  --foreground: #0a0a0b;
-  --muted-foreground: #55555d;
-  --border: #e2e2e6;
-  --border-strong: #85858f; /* form-control outlines (>= 3:1) */
+  --muted: #edf1f6; /* sunken surfaces, hover */
+  --foreground: #0b1b33; /* navy ink */
+  --muted-foreground: #4a5874;
+  --border: #dbe2ec;
+  --border-strong: #7d8ca3; /* form-control outlines (>= 3:1) */
 
   /* Actions */
   --primary: #047857; /* emerald */
   --primary-hover: #065f46;
   --primary-foreground: #ffffff;
-  --ring: #3f3f46; /* focus: neutral, distinct from the emerald selection */
+  --ring: #1d3a66; /* focus: navy, distinct from the emerald selection */
 
-  /* The sidebar and top bar */
-  --sidebar: #fbfbfc;
-  --sidebar-foreground: #18181b;
-  --sidebar-muted: #5b5b64;
-  --sidebar-active: #ececef;
-  --sidebar-border: #e4e4e7;
-  --sidebar-accent: #047857;
+  /* The navigation (navy in both themes) */
+  --sidebar: #0b1f3a;
+  --sidebar-foreground: #f3f6fb;
+  --sidebar-muted: #b3c0d4;
+  --sidebar-active: #173560;
+  --sidebar-border: #1b3559;
+  --sidebar-accent: #e2c27f; /* soft gold: the active item's mark */
 
-  /* The introduction's stage and the brand mark (deep emerald, both themes) */
-  --nav: #0c3326; /* deep emerald */
-  --nav-foreground: #f4efe4;
-  --nav-muted: #b7cbc1;
-  --nav-active: #165040;
-  --nav-ring: #e8c48e;
-  --nav-accent: #63d4a8; /* light emerald marks on the navigation (active rule, icons) */
+  /* The introduction's stage and the brand mark */
+  --nav: #0b1f3a;
+  --nav-foreground: #f3f6fb;
+  --nav-muted: #b3c0d4;
+  --nav-active: #173560;
+  --nav-ring: #e2c27f; /* soft gold focus ring on navy */
+  --nav-accent: #5fd0a4; /* light emerald marks on navy */
 
-  /* Accents and details */
-  --accent: #a0502a; /* copper, used sparingly */
-  --copper: #b86b3a; /* decorative lines and rules only (not text) */
-  --copper-subtle: #f6e7da;
-  --copper-foreground: #793812;
-  --sand: #b08d57;
-  --sand-subtle: #f1ead9;
-  --sand-foreground: #5c4521;
+  /* Accents and details: soft gold */
+  --accent: #7a5810; /* gold text */
+  --copper: #a7802e; /* decorative gold rules and the avatar ring (not text) */
+  --copper-subtle: #f7f0df;
+  --copper-foreground: #694b0e;
+  --sand: #c4a265;
+  --sand-subtle: #f6efde;
+  --sand-foreground: #5b430f;
 
   /* Status */
   --destructive: #b42318;
   --synthetic: #fdf3d8;
   --synthetic-foreground: #6a470a;
   --synthetic-border: #d2a850;
-  --verified: #e3f5ec;
+  --verified: #e2f5ec;
   --verified-foreground: #065f46;
   --verified-border: #86d0ad;
+  --pending: #fbf1dc;
+  --pending-foreground: #6b4a0b;
+  --pending-border: #d8b46a;
+  --missing: #f3f4f7;
+  --missing-foreground: #4a5874;
+  --missing-border: #7d8ca3;
 
-  /* Charts: emerald for single-series marks, blue for comparison, recessive grid */
+  /* Charts: emerald for single-series marks, navy blue for comparison, recessive grid */
   --chart-1: #059669;
-  --chart-2: #2563eb;
-  --chart-grid: #e7e7ea;
+  --chart-2: #1d4ed8;
+  --chart-grid: #e3e8ef;
 
   /* Shape and depth */
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
-  --shadow-card: 0 1px 2px rgb(10 10 11 / 0.04);
-  --shadow-raised: 0 2px 4px rgb(10 10 11 / 0.05), 0 18px 40px -20px rgb(10 10 11 / 0.28);
+  --radius-xl: 1rem;
+  --shadow-card: 0 1px 2px rgb(11 27 51 / 0.05), 0 1px 3px rgb(11 27 51 / 0.04);
+  --shadow-raised: 0 2px 6px rgb(11 27 51 / 0.06), 0 18px 40px -20px rgb(11 27 51 / 0.3);
 
   /* Layout */
-  --sidebar-width: 15rem;
+  --sidebar-width: 16rem;
+  --content-max: 120rem;
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --background: #09090b;
-  --card: #141416;
-  --muted: #1c1c1f;
-  --foreground: #f4f4f5;
-  --muted-foreground: #a1a1aa;
-  --border: #26262a;
-  --border-strong: #6e6e78;
+  --background: #07111f;
+  --card: #0d1b2e;
+  --muted: #13243b;
+  --foreground: #eef2f8;
+  --muted-foreground: #a9b6ca;
+  --border: #1d3150;
+  --border-strong: #6c809e;
   --primary: #34d399;
   --primary-hover: #6ee7b7;
   --primary-foreground: #04261a;
-  --ring: #d4d4d8;
-  --sidebar: #0c0c0e;
-  --sidebar-foreground: #e4e4e7;
-  --sidebar-muted: #a1a1aa;
-  --sidebar-active: #1c1c20;
-  --sidebar-border: #1f1f23;
-  --sidebar-accent: #34d399;
-  --nav: #06120d;
-  --nav-foreground: #f1ebde;
-  --nav-muted: #a7bdb2;
-  --nav-active: #153a2c;
-  --nav-ring: #e8c48e;
-  --nav-accent: #55d1a2;
-  --accent: #e6a679;
-  --copper: #d38a56;
-  --copper-subtle: #33261b;
-  --copper-foreground: #f2c4a0;
-  --sand: #c9a96e;
-  --sand-subtle: #2a261d;
-  --sand-foreground: #e3cd9c;
+  --ring: #e2e8f2;
+  --sidebar: #061427;
+  --sidebar-foreground: #eef2f8;
+  --sidebar-muted: #a9b6ca;
+  --sidebar-active: #12294a;
+  --sidebar-border: #142b4b;
+  --sidebar-accent: #e2c27f;
+  --nav: #061427;
+  --nav-foreground: #eef2f8;
+  --nav-muted: #a9b6ca;
+  --nav-active: #12294a;
+  --nav-ring: #e2c27f;
+  --nav-accent: #5fd0a4;
+  --accent: #e2c27f;
+  --copper: #d2ae68;
+  --copper-subtle: #2a2414;
+  --copper-foreground: #efd9a6;
+  --sand: #cdac6c;
+  --sand-subtle: #262113;
+  --sand-foreground: #ecd7a3;
   --destructive: #f87171;
   --synthetic: #2b2312;
   --synthetic-foreground: #f4d99a;
@@ -129,11 +140,17 @@
   --verified: #0b2a1f;
   --verified-foreground: #a7f3d0;
   --verified-border: #1f6f52;
+  --pending: #2a2213;
+  --pending-foreground: #f0d79d;
+  --pending-border: #8a6b2c;
+  --missing: #13243b;
+  --missing-foreground: #c3cddc;
+  --missing-border: #6c809e;
   --chart-1: #10b981;
-  --chart-2: #60a5fa;
-  --chart-grid: #232327;
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow-raised: 0 2px 4px rgb(0 0 0 / 0.4), 0 22px 44px -22px rgb(0 0 0 / 0.7);
+  --chart-2: #7aa7ff;
+  --chart-grid: #1b2d47;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.45);
+  --shadow-raised: 0 2px 6px rgb(0 0 0 / 0.4), 0 22px 44px -22px rgb(0 0 0 / 0.75);
 }
 
 @theme inline {
@@ -175,16 +192,25 @@
   --color-verified: var(--verified);
   --color-verified-foreground: var(--verified-foreground);
   --color-verified-border: var(--verified-border);
+  --color-pending: var(--pending);
+  --color-pending-foreground: var(--pending-foreground);
+  --color-pending-border: var(--pending-border);
+  --color-missing: var(--missing);
+  --color-missing-foreground: var(--missing-foreground);
+  --color-missing-border: var(--missing-border);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-grid: var(--chart-grid);
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
   --shadow-card: var(--shadow-card);
   --shadow-raised: var(--shadow-raised);
   /* IBM Plex Sans + IBM Plex Sans Arabic: one designed family, SIL OFL 1.1, self-hosted. */
   --font-sans: "IBM Plex Sans", "IBM Plex Sans Arabic", system-ui, sans-serif;
+  /* A wide-screen step for the three-column layouts (filters, data, insights). */
+  --breakpoint-3xl: 112rem;
 }
 
 @layer base {
@@ -195,10 +221,24 @@
     scroll-padding-top: 4.5rem;
   }
 
+  /* 4K-ready: on very wide screens at 100 % scaling every rem grows with the root size, so
+     text, cards and the three-column layouts keep their proportions. (Media queries are
+     measured in CSS pixels, so the breakpoints themselves do not move.) */
+  @media (min-width: 2200px) {
+    html { font-size: 112.5%; }
+  }
+  @media (min-width: 2880px) {
+    html { font-size: 131.25%; }
+  }
+  @media (min-width: 3600px) {
+    html { font-size: 150%; }
+  }
+
   body {
     background-color: var(--background);
     color: var(--foreground);
     font-family: var(--font-sans);
+    font-size: 1rem; /* 12pt body copy */
     line-height: 1.6;
     text-rendering: optimizeLegibility;
   }
@@ -294,6 +334,17 @@ details > summary:hover { color: var(--color-primary); }
   box-shadow: var(--shadow-card);
 }
 
+/* A short soft-gold rule above section headings (decorative; the heading carries the meaning). */
+.gold-rule::before {
+  content: "";
+  display: block;
+  width: 2.5rem;
+  height: 3px;
+  margin-bottom: 0.625rem;
+  border-radius: 3px;
+  background: var(--copper);
+}
+
 /* Animated tabs (Segmented, Energy view links): the indicator slides. */
 .segment-indicator { transition: inset-inline-start 220ms cubic-bezier(0.2, 0, 0, 1), width 220ms cubic-bezier(0.2, 0, 0, 1); }
 .tab-underline { position: relative; }
@@ -303,26 +354,13 @@ details > summary:hover { color: var(--color-primary); }
 }
 .tab-underline[aria-current="page"]::after { transform: scaleX(1); }
 
-/*
- * Gentle depth. .tilt follows the pointer by a few degrees (set by useTilt through
- * --tilt-x/--tilt-y); .scene/.depth give the hero layered parallax inside one box.
- * The 2D fallback (no perspective, no movement) applies on touch screens, under
- * prefers-reduced-motion, and wherever the browser lacks 3D transforms.
- */
-.tilt {
-  transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) translateY(var(--lift, 0));
-  transition: transform 200ms cubic-bezier(0.2, 0, 0, 1), box-shadow 200ms ease-out;
-  will-change: transform;
+/* Cards that lead somewhere: a border and shadow change on hover only (no movement, no tilt). */
+.card-link {
+  transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
 }
-.tilt:hover, .tilt:focus-within { --lift: -2px; box-shadow: var(--shadow-raised); }
-.scene { transform-style: preserve-3d; transform: perspective(1100px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)); transition: transform 260ms cubic-bezier(0.2, 0, 0, 1); }
-.depth { transform: translateZ(var(--depth, 0px)); }
-@media (pointer: coarse), (prefers-reduced-motion: reduce) {
-  .tilt, .scene, .depth { transform: none !important; will-change: auto; }
-  .tilt:hover, .tilt:focus-within { --lift: 0; }
-}
-@supports not (transform-style: preserve-3d) {
-  .scene, .depth { transform: none; }
+.card-link:hover, .card-link:focus-within {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-raised);
 }
 
 /*
