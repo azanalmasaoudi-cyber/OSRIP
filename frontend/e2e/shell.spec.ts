@@ -6,12 +6,18 @@ test('landing page explains the project and credits every photograph', async ({ 
   await page.goto('/');
   await expect(page.getByTestId('home-page')).toBeVisible();
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  await expect(page.getByTestId('photo')).toHaveCount(5); // plus the hero background image
+  // The water, food and trade sector photographs, plus the hero background image; electricity
+  // has no licensed photograph yet and shows the project's labelled illustration instead.
+  await expect(page.getByTestId('photo')).toHaveCount(3);
+  await expect(page.getByTestId('home-hero-image')).toBeVisible();
+  await expect(page.getByTestId('sector-image')).toContainText('Illustration');
   const credits = page.getByTestId('photo-credit');
-  await expect(credits).toHaveCount(6);
+  await expect(credits).toHaveCount(4);
   for (const credit of await credits.all()) {
     await expect(credit).toContainText('Wikimedia Commons');
   }
+  // No pointer-following or parallax effects.
+  await expect(page.locator('.tilt, .scene, .depth')).toHaveCount(0);
 });
 
 test('verified mode is the default and a sector shows nothing before a period is chosen', async ({ page }) => {
@@ -76,7 +82,11 @@ test('the overview introduces the project with sector cards and draws no statist
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('OSRIP: Oman Smart Resource Intelligence Platform');
   await expect(page.getByTestId('overview-status')).toContainText('not an official government service');
   await expect(page.getByTestId('overview-sector')).toHaveCount(4);
-  await expect(page.getByTestId('overview-steps').locator('li')).toHaveCount(4);
+  // Sector, indicator, area, period, results, chart on request.
+  await expect(page.getByTestId('overview-steps').locator('li')).toHaveCount(6);
+  for (const part of ['overview-users', 'overview-ai', 'overview-official-first', 'quality-legend', 'overview-benefits']) {
+    await expect(page.getByTestId(part)).toBeVisible();
+  }
   await expect(page.locator('svg[role="img"]')).toHaveCount(0);
   await expect(page.getByTestId('indicator-card')).toHaveCount(0);
   await page.getByTestId('overview-sector').filter({ hasText: 'Water' }).getByTestId('overview-sector-link').click();
@@ -110,20 +120,20 @@ test('the analysis workspace shows the four resources and indicator cards with p
   await expect(resources.nth(3).getByRole('button', { name: /Analyse/ })).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('theme: Dark by default, Light and System from the top bar, remembered after a reload', async ({ page, isMobile }) => {
+test('theme: Light by default, Dark and System from the top bar, remembered after a reload', async ({ page, isMobile }) => {
   test.skip(isMobile, 'the phone menu holds the theme choice');
   await page.goto('/overview?mode=synthetic');
   const html = page.locator('html');
-  await expect(html).toHaveAttribute('data-theme', 'dark');
+  await expect(html).toHaveAttribute('data-theme', 'light');
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(245, 247, 250)');
   const theme = page.getByTestId('theme-selector');
-  await theme.getByRole('radio', { name: 'Light' }).click();
-  await expect(html).toHaveAttribute('data-theme', 'light');
-  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(245, 245, 246)');
+  await theme.getByRole('radio', { name: 'Dark' }).click();
+  await expect(html).toHaveAttribute('data-theme', 'dark');
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(7, 17, 31)'); // deep navy
   await page.reload();
-  await expect(html).toHaveAttribute('data-theme', 'light');
+  await expect(html).toHaveAttribute('data-theme', 'dark');
   // System follows the device: arrows move the choice.
-  await theme.getByRole('radio', { name: 'Light' }).focus();
-  await page.keyboard.press('ArrowRight');
+  await theme.getByRole('radio', { name: 'Dark' }).focus();
   await page.keyboard.press('ArrowRight');
   await expect(theme.getByRole('radio', { name: 'System' })).toHaveAttribute('aria-checked', 'true');
   await page.emulateMedia({ colorScheme: 'dark' });

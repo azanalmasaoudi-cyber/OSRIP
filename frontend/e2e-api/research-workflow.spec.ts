@@ -167,8 +167,10 @@ test('navigation and Settings: the main destinations in order, services and sche
   await page.goto('/overview?mode=synthetic');
   const nav = page.getByRole('navigation', { name: 'Main navigation' });
   const names = await nav.getByRole('link').allInnerTexts();
-  const main = names.map((n) => n.trim()).slice(0, 8);
-  expect(main).toEqual(['Overview', 'Electricity', 'Water', 'Food Security', 'Trade', 'Studies', 'Sources', 'Settings']);
+  // The Overview, the four sectors, then decision support; Settings sits with the account.
+  const main = names.map((n) => n.trim()).slice(0, 9);
+  expect(main).toEqual(['Overview', 'Electricity', 'Water', 'Food Security', 'Trade', 'AI Assistant', 'Studies', 'Reports', 'Sources']);
+  expect(names.map((n) => n.trim())).toEqual(expect.arrayContaining(['Account', 'Settings']));
   await nav.getByRole('link', { name: 'Settings' }).click();
   await expect(page.getByTestId('settings-services')).toBeVisible();
   await expect(page.getByTestId('service-answers').getByTestId('assistant-service')).toBeVisible();

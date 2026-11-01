@@ -61,13 +61,13 @@ export function ChatDataTables({ blocks, messageId }: { blocks: DataTableBlock[]
       {blocks.flatMap((block) => block.tables.map((table, i) => (
         <figure key={`${block.id}-${i}`} className="m-0 flex flex-col gap-2 rounded-lg border border-border bg-card p-3"
           data-testid="chat-data-table" data-table={block.id} data-rows={table.rows.length} data-message={messageId}>
-          <figcaption className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+          <figcaption className="flex flex-wrap items-center gap-2 text-sm font-semibold">
             <Table2 aria-hidden="true" className="size-3.5" />
             {t('chat.table.title')}
             <span className="font-normal text-muted-foreground">({name({ en: table.unit.label_en, ar: table.unit.label_ar }, language, table.unit.code)})</span>
           </figcaption>
           <div className="max-w-full overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-start text-muted-foreground">
                   {COLUMNS.map((k, i) => (
@@ -127,7 +127,7 @@ export function ChatDataCharts({ charts, messageId }: { charts: DataChartBlock[]
             {c.chart.type === 'line'
               ? <StudyLineChart chart={c.chart} rows={rows} labelFor={labels.text} />
               : <StudyBarChart chart={c.chart} rows={rows} labelFor={labels.text} />}
-            <figcaption className="text-xs text-muted-foreground" data-testid="chat-chart-meta">
+            <figcaption className="text-sm text-muted-foreground" data-testid="chat-chart-meta">
               {t('chat.chart.meta', {
                 unit,
                 periods: periods.length ? `${periods[0]} – ${periods[periods.length - 1]}` : '—',
@@ -183,7 +183,7 @@ export function ResearchSummary({ summary }: { summary: ResearchSummaryBlock }) 
   const { t } = useTranslation();
   const saved = summary.saved.length;
   return (
-    <details className="text-xs" data-testid="research-summary" data-saved={saved} data-read={summary.sources_read.length} open={summary.submitted > 0}>
+    <details className="text-sm" data-testid="research-summary" data-saved={saved} data-read={summary.sources_read.length} open={summary.submitted > 0}>
       <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
         <FileSearch aria-hidden="true" className="me-1 inline size-3.5" />
         <span className="font-semibold">{t('chat.research.title')}</span>

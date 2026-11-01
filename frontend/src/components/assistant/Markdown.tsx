@@ -81,7 +81,7 @@ function blocks(text: string): Block[] {
 function renderBlock(block: Block, key: number, cite: (id: string) => ReactNode): ReactNode {
   switch (block.kind) {
     case 'heading': {
-      const className = block.level <= 2 ? 'mt-2 text-base font-semibold' : 'mt-1 text-sm font-semibold';
+      const className = block.level <= 2 ? 'mt-2 text-lg font-semibold' : 'mt-1 text-base font-semibold';
       return block.level <= 2
         ? <h3 key={key} className={className} dir="auto">{inline(block.text, cite)}</h3>
         : <h4 key={key} className={className} dir="auto">{inline(block.text, cite)}</h4>;

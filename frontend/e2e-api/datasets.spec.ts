@@ -54,7 +54,10 @@ test('an analyst uploads a CSV, reads computed results and charts, and downloads
   await expect(findings.locator('[data-kind="jump"]')).toContainText('2,400 in 2023 to 25,000 in 2024 (data row 10)');
   await expect(findings.locator('[data-kind="quality"]').first()).toContainText('never counted as zero');
 
+  // Each chart is drawn only on request.
   const shares = page.getByTestId('dataset-view-compare_3_by_1');
+  await expect(shares).toHaveCount(0);
+  await page.getByTestId('dataset-view-chart-compare_3_by_1-show').click();
   await expect(shares.getByTestId('study-bar-chart')).toBeVisible();
   await shares.getByRole('radio', { name: 'Pie' }).click();
   await expect(shares.getByTestId('study-pie-chart')).toContainText('64.3%');

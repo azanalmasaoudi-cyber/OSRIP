@@ -15,6 +15,7 @@ import { StatePanel } from '@/components/common/StatePanel';
 import { TimelineChart } from '@/components/series/SeriesParts';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ChartOnRequest } from '@/components/ui/chart-on-request';
 import { Segmented } from '@/components/ui/segmented';
 import { SelectField } from '@/components/ui/select';
 import type { DataMode } from '@/domain/types';
@@ -152,7 +153,9 @@ function SeriesPreview({ table }: { table: NonNullable<NonNullable<ResearchJob['
   return (
     <div className="rounded-md border border-border p-3" data-testid="job-series" data-dataset-id={table.dataset_id}>
       <p className="mb-1 text-sm font-semibold">{table.name[language]}</p>
-      <TimelineChart timeline={q.data} />
+      <ChartOnRequest label={table.name[language]} testId="job-series-chart">
+        <TimelineChart timeline={q.data} />
+      </ChartOnRequest>
     </div>
   );
 }

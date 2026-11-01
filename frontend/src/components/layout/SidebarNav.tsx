@@ -56,41 +56,51 @@ export interface NavItem {
 }
 
 interface NavGroup {
-  label: 'nav.groupMain' | 'nav.groupMoreTools' | 'nav.groupYou' | 'nav.groupAdmin' | null;
+  label: 'nav.groupSectors' | 'nav.groupDecide' | 'nav.groupMoreTools' | 'nav.groupYou' | 'nav.groupAdmin' | null;
   items: readonly NavItem[];
 }
 
-/** The main destinations, in this order: Overview, the four sectors, Studies, Sources and
- * Settings. Then the other tools (the AI Assistant, the analysis workspace, the map,
- * scenarios, reports, the library), the account and administration (authorized users).
- * Page titles keep their full names. */
+/** The destinations, in this order: the Overview; the four sectors; decision support (the AI
+ * Assistant, studies, reports and the sources); the other tools (the analysis workspace,
+ * datasets, the map, scenarios, the library); the account and Settings (where every technical
+ * detail lives); and administration (authorized users). Page titles keep their full names. */
 export const NAV_GROUPS: readonly NavGroup[] = [
+  { label: null, items: [{ path: '/overview', key: 'nav.overview', icon: Info }] },
   {
-    label: null,
+    label: 'nav.groupSectors',
     items: [
-      { path: '/overview', key: 'nav.overview', icon: Info },
       { path: '/energy/electricity', key: 'nav.electricity', icon: Zap },
       { path: '/energy/water', key: 'nav.water', icon: Droplets },
       { path: '/food-security', key: 'nav.foodSecurity', icon: Wheat },
       { path: '/trade', key: 'nav.trade', icon: Ship },
+    ],
+  },
+  {
+    label: 'nav.groupDecide',
+    items: [
+      { path: '/assistant', key: 'nav.aiAssistant', icon: Bot },
       { path: '/studies', key: 'nav.studies', icon: FlaskConical },
+      { path: '/reports', key: 'nav.reports', icon: FileText },
       { path: '/sources', key: 'nav.sourcesShort', icon: BookOpen },
-      { path: '/settings', key: 'nav.settings', icon: Settings },
     ],
   },
   {
     label: 'nav.groupMoreTools',
     items: [
-      { path: '/assistant', key: 'nav.aiAssistant', icon: Bot },
       { path: '/workspace', key: 'nav.workspace', icon: LayoutDashboard },
       { path: '/datasets', key: 'nav.datasets', icon: Sheet },
       { path: '/geography', key: 'nav.map', icon: Map },
       { path: '/forecasts', key: 'nav.scenarios', icon: LineChart },
-      { path: '/reports', key: 'nav.reports', icon: FileText },
       { path: '/library', key: 'nav.library', icon: LibraryBig },
     ],
   },
-  { label: 'nav.groupYou', items: [{ path: '/account', key: 'nav.accountShort', icon: UserRound }] },
+  {
+    label: 'nav.groupYou',
+    items: [
+      { path: '/account', key: 'nav.accountShort', icon: UserRound },
+      { path: '/settings', key: 'nav.settings', icon: Settings },
+    ],
+  },
   {
     label: 'nav.groupAdmin',
     items: [
@@ -110,11 +120,11 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const to = usePreservedSearch();
 
   return (
-    <nav aria-label={t('nav.mainLabel')} className="flex flex-col gap-5">
+    <nav aria-label={t('nav.mainLabel')} className="flex flex-col gap-4">
       {NAV_GROUPS.map((group, gi) => (
         <div key={group.label ?? gi} className="flex flex-col gap-0.5">
           {group.label ? (
-            <p className="px-2.5 pb-1 text-[0.6875rem] font-medium text-sidebar-muted ltr:tracking-wider ltr:uppercase">{t(group.label)}</p>
+            <p className="px-3 pb-1 text-xs font-medium text-sidebar-muted ltr:tracking-wider ltr:uppercase">{t(group.label)}</p>
           ) : null}
           <ul className="flex flex-col gap-0.5">
             {group.items.map((item) => {
@@ -126,9 +136,10 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                     onClick={onNavigate}
                     className={({ isActive }) =>
                       cn(
-                        'group flex min-h-9 items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors',
+                        // The active item: a lighter navy fill and a soft-gold bar on its inline start.
+                        'group relative flex min-h-10 items-center gap-3 rounded-md px-3 py-1.5 text-sm transition-colors',
                         isActive
-                          ? 'bg-sidebar-active font-medium text-sidebar-foreground'
+                          ? 'bg-sidebar-active font-semibold text-sidebar-foreground before:absolute before:inset-y-2 before:start-0 before:w-[3px] before:rounded-full before:bg-sidebar-accent'
                           : 'text-sidebar-muted hover:bg-sidebar-active/70 hover:text-sidebar-foreground',
                       )
                     }
