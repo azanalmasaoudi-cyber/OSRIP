@@ -65,7 +65,7 @@ function LatestFigures() {
           const shown = found ? provenance.value(found.obs, language, 1) : null;
           const ytd = found && found.series.frequency === 'year_to_date';
           return (
-            <li key={section} className="surface-card flex flex-col gap-1 p-5" data-testid="latest-card" data-section={section}
+            <li key={section} className="surface-card flex min-w-0 flex-col gap-1 p-5" data-testid="latest-card" data-section={section}
               data-indicator={found?.series.indicatorCode ?? indicators[0]}>
               <p className="text-sm text-muted-foreground">{found ? found.series.name[language] : t(`pages.home.headline.${section}`)}</p>
               {qs.some((q) => q.isPending) ? <p className="text-base text-muted-foreground">{t('states.loading')}</p> : found && shown ? (
