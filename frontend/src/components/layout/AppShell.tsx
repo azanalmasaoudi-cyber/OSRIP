@@ -1,7 +1,7 @@
 import { Menu, Search } from 'lucide-react';
 import { MotionConfig, motion } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, Outlet, useLocation, useNavigate } from 'react-router';
+import { Link, Outlet, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
 import { useMe } from '@/api/auth';
@@ -28,11 +28,11 @@ function Brand({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation();
   const to = usePreservedSearch();
   return (
-    <Link to={to('/')} onClick={onNavigate} className="flex min-w-0 items-center gap-2.5 rounded-md">
-      <BrandMark className="size-8" />
+    <Link to={to('/')} onClick={onNavigate} className="flex min-w-0 items-center gap-3 rounded-md">
+      <BrandMark className="size-9" />
       <span className="min-w-0">
-        <span className="block text-sm leading-tight font-semibold">{t('app.shortName')}</span>
-        <span className="block text-[0.6875rem] leading-snug text-sidebar-muted">{t('app.fullName')}</span>
+        <span className="block text-base leading-tight font-semibold ltr:tracking-wide">{t('app.shortName')}</span>
+        <span className="block text-xs leading-snug text-sidebar-muted">{t('app.fullName')}</span>
       </span>
     </Link>
   );
@@ -72,11 +72,11 @@ export function AppShell() {
   const { t } = useTranslation();
   const { pathname, hash } = useLocation();
   const to = usePreservedSearch();
-  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  // The introduction opens the home page once per browser session: a direct link (a study, the
-  // workspace, sign-in, the account) opens straight away. Replayable from the footer and Settings.
+  // The opening (about 3 s) plays on the home page once per browser session: a direct link (a
+  // study, the workspace, sign-in, the account) opens straight away. Replayable from the footer
+  // and Settings.
   const [entranceOpen, setEntranceOpen] = useState(() => pathname === '/' && introDue());
   const replayEntrance = useCallback(() => setEntranceOpen(true), []);
   // Arriving at the home page later in the session (after a direct link) also opens it, once
@@ -127,26 +127,25 @@ export function AppShell() {
         {t('app.skipToContent')}
       </a>
 
-      {/* Desktop sidebar */}
-      <aside className="hidden border-e border-sidebar-border bg-sidebar text-sidebar-foreground lg:block print:hidden">
+      {/* Desktop sidebar: navy, with the soft-gold focus ring (.on-nav) */}
+      <aside className="on-nav hidden border-e border-sidebar-border bg-sidebar text-sidebar-foreground lg:block print:hidden">
         <div className="sticky top-0 flex h-dvh flex-col">
-          <div className="flex h-14 shrink-0 items-center border-b border-sidebar-border px-4">
+          <div className="flex h-16 shrink-0 items-center border-b border-sidebar-border px-4">
             <Brand />
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-2.5 py-4">
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
             <SidebarNav />
           </div>
-          <div className="flex shrink-0 flex-col gap-3 border-t border-sidebar-border px-3 py-3">
+          <div className="flex shrink-0 flex-col gap-2 border-t border-sidebar-border px-4 py-3">
             <DataModeSelector />
-            <p className="text-[0.6875rem] leading-relaxed text-sidebar-muted">{t('app.identityNote')}</p>
           </div>
         </div>
       </aside>
 
       <div className={cn('flex min-w-0 flex-col', isChat ? 'h-dvh' : 'min-h-dvh')}>
         {/* Top bar: page title, search, language, theme and account */}
-        <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur-md print:hidden" data-testid="top-bar">
-          <div className="flex h-14 items-center gap-1.5 px-3 sm:gap-2 sm:px-4 lg:px-6">
+        <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md print:hidden" data-testid="top-bar">
+          <div className="mx-auto flex h-16 max-w-[var(--content-max)] items-center gap-1.5 px-3 sm:gap-2 sm:px-4 lg:px-8">
             <button
               type="button"
               onClick={() => setMenuOpen(true)}
@@ -161,10 +160,10 @@ export function AppShell() {
             <Link to={to('/')} className="shrink-0 rounded-md lg:hidden" aria-label={t('app.shortName')}>
               <BrandMark className="size-7" />
             </Link>
-            <p className="flex min-w-0 flex-1 items-center gap-1.5 text-sm" data-testid="page-title">
+            <p className="flex min-w-0 flex-1 items-center gap-2 text-sm" data-testid="page-title">
               <span className="hidden text-muted-foreground sm:inline">{t('app.shortName')}</span>
-              <span aria-hidden="true" className="hidden text-muted-foreground/60 sm:inline">/</span>
-              <span className="truncate font-medium">{title}</span>
+              <span aria-hidden="true" className="hidden text-copper sm:inline">/</span>
+              <span className="truncate text-base font-semibold">{title}</span>
             </p>
             <GlobalSearch shortcut className="hidden w-56 md:block xl:w-72" />
             <button type="button" onClick={() => setSearchOpen(true)} aria-haspopup="dialog"
@@ -179,15 +178,14 @@ export function AppShell() {
           </div>
         </header>
 
-        <Dialog open={menuOpen} onClose={() => setMenuOpen(false)} title={t('nav.menuTitle')} placement="start">
+        <Dialog open={menuOpen} onClose={() => setMenuOpen(false)} title={t('nav.menuTitle')} placement="start" className="on-nav">
           <div className="flex flex-col gap-5" data-testid="mobile-menu">
             <Brand onNavigate={() => setMenuOpen(false)} />
-            <div className="flex flex-col gap-3">
+            <SidebarNav onNavigate={() => setMenuOpen(false)} />
+            <div className="flex flex-col gap-3 border-t border-sidebar-border pt-4">
               <ThemeSelector />
               <DataModeSelector />
             </div>
-            <SidebarNav onNavigate={() => setMenuOpen(false)} />
-            <p className="text-xs leading-relaxed text-sidebar-muted">{t('app.identityNote')}</p>
           </div>
         </Dialog>
 
@@ -203,7 +201,7 @@ export function AppShell() {
           tabIndex={-1}
           // Bottom padding keeps the floating assistant orb clear of the last content.
           className={cn('outline-none', isChat ? 'flex min-h-0 flex-1 flex-col px-3 pt-3 sm:px-6'
-            : cn('flex-1 pb-24', !isHome && 'px-4 pt-6 sm:px-6 lg:px-8'))}
+            : cn('flex-1 pb-24', !isHome && 'px-4 pt-6 sm:px-6 lg:px-8 lg:pt-8'))}
         >
           {/* Keyed by route: a short entrance on page change, never an exit animation, so
               back/forward and the focus move above stay immediate. Under reduced motion
@@ -213,7 +211,7 @@ export function AppShell() {
             initial={{ opacity: 0.01, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-            className={cn(!isHome && 'mx-auto w-full max-w-[96rem]', isChat && 'flex min-h-0 flex-1 flex-col')}
+            className={cn(!isHome && 'mx-auto w-full max-w-[var(--content-max)]', isChat && 'flex min-h-0 flex-1 flex-col')}
             data-testid="route-transition"
           >
             <ErrorBoundary resetKey={pathname} fallback={(reset) => (
@@ -227,7 +225,7 @@ export function AppShell() {
         {/* On the conversation page, phones and tablets give the footer's room to the messages
             (the menu keeps the same note). */}
         <footer className={cn('border-t border-border print:hidden', isChat && 'max-lg:hidden')}>
-          <div className="mx-auto flex max-w-[96rem] flex-col gap-3 px-4 pt-5 pb-24 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:pe-28 sm:pb-5 lg:px-8 lg:pe-28">
+          <div className="mx-auto flex max-w-[var(--content-max)] flex-col gap-3 px-4 pt-5 pb-24 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:pe-28 sm:pb-5 lg:px-8 lg:pe-28">
             <p className="max-w-3xl">
               {t('footer.disclaimer')} {t('app.identityNote')}
             </p>
@@ -253,11 +251,8 @@ export function AppShell() {
         </footer>
       </div>
       {pathname === '/talk' ? null : <AssistantOrb />}
-      <Entrance open={entranceOpen} onClose={(action) => {
-        setEntranceOpen(false);
-        // Explore and Skip enter the dashboard (the Overview); Escape only closes.
-        if (action !== 'dismiss' && pathname !== '/overview') void navigate(to('/overview'));
-      }} />
+      {/* The opening ends on the page it was opened on: never a redirect. */}
+      <Entrance open={entranceOpen} onClose={() => setEntranceOpen(false)} />
     </div>
     </EntranceReplayContext.Provider>
     </PersonaProvider>

@@ -25,8 +25,8 @@ function tokens(body) {
   return out;
 }
 
-const light = tokens(block(css, css.indexOf(':root')));
-const dark = { ...light, ...tokens(block(css, css.indexOf(':root[data-theme="dark"]'))) };
+const light = tokens(block(css, css.indexOf(':root {')));
+const dark = { ...light, ...tokens(block(css, css.indexOf(':root[data-theme="dark"] {'))) };
 
 const lum = (hex) => {
   const c = hex.replace('#', '').match(/../g).map((h) => parseInt(h, 16) / 255);
@@ -55,8 +55,12 @@ const checks = [
   ['sidebar-foreground', 'sidebar-active', 4.5, 'sidebar active item'],
   ['sidebar-accent', 'sidebar', 3, 'sidebar active mark'],
   ['sidebar-accent', 'sidebar-active', 3, 'sidebar mark on active item'],
-  ['ring', 'sidebar', 3, 'focus ring on sidebar'],
-  ['ring', 'sidebar-active', 3, 'focus ring on active item'],
+  ['nav-ring', 'sidebar', 3, 'focus ring on the navy sidebar (.on-nav)'],
+  ['nav-ring', 'sidebar-active', 3, 'focus ring on active item (.on-nav)'],
+  ['pending-foreground', 'pending', 4.5, 'pending-review badge'],
+  ['missing-foreground', 'missing', 4.5, 'missing-data badge'],
+  ['missing-border', 'card', 3, 'missing-data badge outline'],
+  ['sidebar-accent', 'nav', 3, 'gold mark on navy'],
   ['nav-foreground', 'nav', 4.5, 'introduction text'],
   ['nav-muted', 'nav', 4.5, 'introduction secondary'],
   ['nav-foreground', 'nav-active', 4.5, 'introduction card text'],

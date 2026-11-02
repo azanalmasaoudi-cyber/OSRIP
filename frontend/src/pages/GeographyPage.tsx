@@ -1,8 +1,9 @@
 import { CheckCircle2, CircleDashed, ExternalLink, MapPin } from 'lucide-react';
-import { useId, useRef, useState } from 'react';
+import { useCallback, useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { adapterKind } from '@/api/config';
+import type { AreaComparison } from '@/api/library';
 import {
   useAreaCoverage,
   useAreaObservations,
@@ -18,11 +19,12 @@ import { mixedFrequencies, MixedFrequencyNotice, type Frequency } from '@/compon
 import { FilterBar } from '@/components/common/FilterBar';
 import { PageHeader } from '@/components/common/PageHeader';
 import { StatePanel } from '@/components/common/StatePanel';
-import { Basemap } from '@/components/geography/Basemap';
 import { GovernorateComparison } from '@/components/geography/GovernorateComparison';
+import { OmanMap, type MapLevel, type Shade } from '@/components/geography/OmanMap';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Segmented } from '@/components/ui/segmented';
 import { SelectField } from '@/components/ui/select';
 import type { DataMode } from '@/domain/types';
 import { FLOW_KEY } from '@/i18n/keys';
@@ -329,7 +331,7 @@ export function GeographyPage() {
   const [search, setSearch] = useState('');
   const searchId = useId();
 
-  const areas = registry.data?.areas ?? [];
+  const areas = useMemo(() => registry.data?.areas ?? [], [registry.data]);
   const byCode = new Map(areas.map((a) => [a.code, a]));
   const governorates = areas.filter((a) => a.level === 'governorate');
 
@@ -338,6 +340,43 @@ export function GeographyPage() {
   const [cov, setCov] = useUrlFilter('coverage', COVERAGE_FILTER, 'all');
   const [selected, setSelected] = useUrlFilter('area', [NONE, ...areas.map((a) => a.code)], NONE);
   const { reset, active, count } = useResetFilters(['level', 'governorate', 'coverage']);
+  const [mapLevel, setMapLevel] = useState<MapLevel>('governorate');
+  const [shadeBy, setShadeBy] = useState<'coverage' | 'indicator'>('coverage');
+  const [compared, setCompared] = useState<AreaComparison | undefined>(undefined);
+  const onCompared = useCallback((result: AreaComparison | undefined) => setCompared(result), []);
+  const byIndicator = shadeBy === 'indicator' && mapLevel === 'governorate' && Boolean(compared?.rows?.length);
+
+  // Map shading: published values per area (coverage), or the compared indicator's values.
+  // Areas without a published value are "No data", never zero.
+  const { shades, legendTitle } = useMemo(() => {
+    const out: Record<string, Shade> = {};
+    if (byIndicator && compared?.rows) {
+      const unit = compared.unit ? (language === 'ar' ? compared.unit.label_ar : compared.unit.label_en) : '';
+      const nat = compared.national?.value != null && !compared.national.value_operator ? Number(compared.national.value) : null;
+      for (const row of compared.rows) {
+        const exact = row.status === 'published' && row.value !== null && !row.value_operator;
+        const v = exact ? Number(row.value) : null;
+        const share = v !== null && nat ? ` · ${formatDecimal(String((v * 100) / nat), language, 1)}% ${t('omanMap.ofNational')}` : '';
+        out[row.area] = {
+          value: v,
+          detail: v === null
+            ? (row.value ? `${row.value_operator ?? ''}${row.value} ${unit}` : t(`compare.status.${row.status}`))
+            : `${formatDecimal(row.value ?? '', language, 2)} ${unit}${share}`,
+        };
+      }
+      const name = compared.indicator_name ? (language === 'ar' ? compared.indicator_name.ar : compared.indicator_name.en) : compared.indicator ?? '';
+      const period = compared.period_start && compared.period_end ? ` · ${formatPeriod(compared.period_start, compared.period_end, language)}` : '';
+      return { shades: out, legendTitle: `${name}${period}${unit ? ` (${unit})` : ''}` };
+    }
+    for (const a of areas) {
+      const c = coverage.data?.areas[a.code];
+      if (a.level === mapLevel && c) {
+        out[a.code] = { value: c.values, detail: t('omanMap.coverageDetail', { values: c.values, indicators: c.indicators.length }) };
+      }
+    }
+    return { shades: out, legendTitle: t('omanMap.coverageLegend') };
+  }, [byIndicator, compared, coverage.data, areas, mapLevel, language, t]);
+  const mapNames = useMemo(() => Object.fromEntries(areas.map((a) => [a.code, areaName(a, language)])), [areas, language]);
 
   if (adapterKind !== 'http') {
     return (
@@ -388,7 +427,14 @@ export function GeographyPage() {
 
           <section aria-labelledby="map-heading" className="flex flex-col gap-3">
             <h2 id="map-heading" className="text-xl font-semibold">{t('pages.geography.mapHeading')}</h2>
-            <Basemap label={t('pages.geography.mapLabel')} />
+            {compared?.rows?.length ? (
+              <Segmented label={t('omanMap.shadeBy')} value={byIndicator ? 'indicator' : 'coverage'} testId="map-shade-by" className="w-full max-w-md"
+                onChange={(v) => { setShadeBy(v); if (v === 'indicator') setMapLevel('governorate'); }}
+                options={[{ value: 'coverage', label: t('omanMap.shadeCoverage') }, { value: 'indicator', label: t('omanMap.shadeIndicator') }]} />
+            ) : null}
+            <OmanMap label={t('pages.geography.mapLabel')} level={mapLevel} names={mapNames} shades={shades} legendTitle={legendTitle}
+              onLevelChange={(l) => { setMapLevel(l); if (l === 'wilayat') setShadeBy('coverage'); }}
+              selected={selected === NONE ? null : selected} onSelect={select} />
             <ul className="flex max-w-4xl list-disc flex-col gap-1 ps-5 text-xs text-muted-foreground" data-testid="map-notes">
               <li>{language === 'ar' ? registry.data.geometry.ar : registry.data.geometry.en}</li>
               <li>{t('pages.geography.mapBoundariesNote')}</li>
@@ -399,7 +445,7 @@ export function GeographyPage() {
 
           <section aria-labelledby="compare-heading" className="flex flex-col gap-3">
             <h2 id="compare-heading" className="text-xl font-semibold">{t('compare.title')}</h2>
-            <GovernorateComparison mode={mode} indicators={governorateIndicators} />
+            <GovernorateComparison mode={mode} indicators={governorateIndicators} onResult={onCompared} />
           </section>
 
           <section aria-labelledby="areas-heading" className="flex flex-col gap-4">

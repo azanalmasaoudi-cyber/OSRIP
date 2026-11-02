@@ -117,12 +117,19 @@ def registry(session: Session) -> dict[str, Any]:
         # Groups used by sources to publish figures; never split among their members and
         # never counted as registry areas.
         "reporting_groups": list(groups.values()),
+        # The registry itself holds no coordinates; the web map draws a separate boundary file.
         "geometry": {
-            "available": False,
-            "en": "No boundary geometry is included: no current, suitably licensed boundary "
-            "dataset matching this registry was found. Areas have no coordinates or centroids.",
-            "ar": "لا تتضمن المنصة حدوداً جغرافية: لم يُعثر على مجموعة حدود حديثة ومرخصة بشكل مناسب "
-            "تطابق هذا السجل. لا توجد إحداثيات أو نقاط مركزية للمناطق.",
+            "available": True,
+            "source": "OpenStreetMap",
+            "licence": "ODbL-1.0",
+            "en": "Boundaries on the map come from OpenStreetMap (Open Database Licence), "
+            "matched to this registry: all 11 governorates by ISO 3166-2 code and all 63 "
+            "wilayats by name, with one documented correction. They are simplified for "
+            "display, not for legal or survey use. The registry itself stores no coordinates.",
+            "ar": "الحدود على الخريطة من OpenStreetMap (رخصة قاعدة البيانات المفتوحة)، "
+            "مطابَقة مع هذا السجل: المحافظات الـ11 كلها برمز ISO 3166-2، والولايات الـ63 "
+            "كلها بالاسم، مع تصحيح واحد موثق. وهي مبسّطة للعرض، وليست للاستخدام القانوني "
+            "أو المساحي. السجل نفسه لا يخزن إحداثيات.",
         },
         "areas": [
             {

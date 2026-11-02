@@ -149,3 +149,22 @@ master. The booklet generator and prompts were not recorded and are reported as 
 | Mark: eight-point star of two overlapping squares | `frontend/public/favicon.svg`, `src/components/brand/BrandMark.tsx` | A generic geometric motif, chosen so it cannot be read as a seal or crest |
 | Lattice pattern | `pattern-lattice` utility in `src/index.css` | Inspired by star lattices in carved doors and screens, not traced from any building |
 | Crenellation divider | `pattern-crenellation` utility in `src/index.css` | Inspired by the stepped, pointed merlons on Omani fort parapets, not traced from any building |
+
+## Image use from release 2.0 (2026-11-01, branch `redesign/omani-decision-platform`)
+
+Only photographs of real places with a recorded free licence, or the project's own labelled
+drawings, are shown. Nothing was downloaded, generated or edited for this release.
+
+| Where | Image | Kind |
+|---|---|---|
+| Landing hero (full-width background, credit in the corner) | `misfat-al-abriyeen-village.jpg` | Photograph, CC0 1.0 |
+| Overview hero | `bahla-fort.jpg` | Photograph, CC BY-SA 4.0 |
+| Water (sector header, sector cards) | `desalination-al-khaluf.jpg` | Photograph, CC BY-SA 3.0 |
+| Food Security (sector header, sector cards) | `falaj-misfah.jpg` | Photograph, CC BY-SA 3.0 |
+| Trade (sector header, sector cards) | `duqm-port.jpg` | Photograph, CC BY-SA 4.0 |
+| Electricity (sector header, sector cards) | `illustrations/sector-electricity.svg` | Project drawing, labelled "Illustration" (no licensed photograph of an Omani power or solar plant is in the repository yet) |
+
+No longer shown: the generated Omani-professional portrait (landing hero), the booklet's
+conceptual electricity, water and trade rasters (sector headers) and the floating sector tiles.
+The files stay in the repository. The photographs are at most 2000 px wide (none is a native
+4K master); see the release report for which Commons originals could replace them.

@@ -84,7 +84,7 @@ test('choosing Ilham changes who answers; switching back keeps the conversation,
 test('a signed-in choice is saved on the account and follows to another browser', async ({ page, browser }) => {
   const signIn = async (p: Page) => {
     await p.goto('/sign-in');
-    await p.getByTestId('sign-in-form').getByLabel('E-mail address').fill('viewer@e2e.invalid');
+    await p.getByTestId('sign-in-form').getByLabel('Username').fill('viewer@e2e.invalid');
     await p.getByTestId('sign-in-form').getByLabel('Password').fill(PASSWORD);
     await p.getByTestId('sign-in-form').getByRole('button', { name: 'Sign in' }).click();
     await expect(p.getByTestId('account-page')).toBeVisible();

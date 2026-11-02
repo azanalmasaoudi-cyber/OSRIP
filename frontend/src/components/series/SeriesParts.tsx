@@ -147,7 +147,7 @@ export function TimelineChart({ timeline }: { timeline: Timeline }) {
           </text>
         ) : null))}
       </svg>
-      <figcaption className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+      <figcaption className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
         <span className="font-medium text-foreground">{t('series.unit')}: {unit}</span>
         {natures.map((n) => (
           <span key={n} className="inline-flex items-center gap-1.5" data-legend={n}>
@@ -199,16 +199,16 @@ export function TimelineTable({ timeline, query }: { timeline: Timeline; query: 
   return (
     <div className="flex flex-col gap-3" data-testid="series-table-block">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-muted-foreground">{t('series.tableNote', { unit })}</p>
+        <p className="text-sm text-muted-foreground">{t('series.tableNote', { unit })}</p>
         <a href={timelineCsvUrl(query, language)} download data-testid="series-csv"
-          className="inline-flex items-center gap-1.5 rounded-md border border-border-strong/60 px-3 py-1.5 text-xs font-medium hover:bg-muted">
+          className="inline-flex items-center gap-1.5 rounded-md border border-border-strong/60 px-3 py-1.5 text-sm font-medium hover:bg-muted">
           <Download aria-hidden="true" className="size-3.5" />{t('series.downloadCsv')}
         </a>
       </div>
       <div className="overflow-x-auto rounded-md border border-border">
         <table className="w-full min-w-[40rem] text-sm" data-testid="series-table" data-dataset-id={timeline.dataset_id ?? ''}>
           <caption className="sr-only">{t('series.tableCaption', { name: timeline.indicator.name[language] })}</caption>
-          <thead className="bg-muted/60 text-xs">
+          <thead className="bg-muted/60 text-sm">
             <tr>
               <th scope="col" className="px-3 py-2 text-start">{t('series.period')}</th>
               <th scope="col" className="px-3 py-2 text-end">{t('series.value')} ({unit})</th>
@@ -244,7 +244,7 @@ export function TimelineTable({ timeline, query }: { timeline: Timeline; query: 
                   </td>
                   {prevLabel ? <td className="px-3 py-1.5 text-end"><ChangeCell change={previous} /></td> : null}
                   <td className="px-3 py-1.5 text-end"><ChangeCell change={yearChange} /></td>
-                  <td className="px-3 py-1.5 text-xs"><SourceCell row={r} /></td>
+                  <td className="px-3 py-1.5 text-sm"><SourceCell row={r} /></td>
                 </tr>
               );
             })}
@@ -253,8 +253,8 @@ export function TimelineTable({ timeline, query }: { timeline: Timeline; query: 
       </div>
       {timeline.year_to_date.length ? (
         <div data-testid="series-ytd">
-          <h4 className="mb-1 text-sm font-semibold">{t('series.ytdHeading')}</h4>
-          <p className="mb-2 text-xs text-muted-foreground">{t('series.ytdNote')}</p>
+          <h4 className="mb-1 text-base font-semibold">{t('series.ytdHeading')}</h4>
+          <p className="mb-2 text-sm text-muted-foreground">{t('series.ytdNote')}</p>
           <ul className="flex flex-col gap-1 text-sm">
             {timeline.year_to_date.map((r) => (
               <li key={`${r.period_start}-${r.period_end}`} className="flex flex-wrap items-center gap-2" data-testid="series-ytd-row">
@@ -274,7 +274,7 @@ export function TimelineRules({ timeline }: { timeline: Timeline }) {
   const language = useAppLanguage();
   if (!timeline.rules.length) return null;
   return (
-    <ul className="flex list-disc flex-col gap-0.5 ps-4 text-xs text-muted-foreground" data-testid="series-rules">
+    <ul className="flex list-disc flex-col gap-0.5 ps-4 text-sm text-muted-foreground" data-testid="series-rules">
       {timeline.rules.map((r) => <li key={r.code} data-rule={r.code}>{r[language]}</li>)}
     </ul>
   );
@@ -284,13 +284,13 @@ export function TimelineSources({ timeline }: { timeline: Timeline }) {
   const { t } = useTranslation();
   if (!timeline.sources.length) return null;
   return (
-    <ul className="flex flex-col gap-1.5 text-sm" data-testid="series-sources">
+    <ul className="flex flex-col gap-1.5 text-base" data-testid="series-sources">
       {timeline.sources.map((s, i) => (
         <li key={`${s.id ?? i}`} className="flex flex-wrap items-baseline gap-x-2">
           {s.url && /^https?:\/\//.test(s.url)
             ? <a href={s.url} target="_blank" rel="noreferrer noopener" className="text-primary underline underline-offset-2">{s.dataset_title}</a>
             : <span>{s.dataset_title}</span>}
-          <span className="text-xs text-muted-foreground">
+          <span className="text-sm text-muted-foreground">
             {[s.publisher, s.source_code, s.access_date ? t('series.accessed', { date: s.access_date }) : null].filter(Boolean).join(' · ')}
           </span>
         </li>

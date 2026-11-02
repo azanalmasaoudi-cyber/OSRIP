@@ -44,7 +44,13 @@ export function SettingsPage() {
           </Link>
         </p>
         <SettingsSection />
-        {api ? <Services admin={admin} /> : null}
+        {api ? <Services admin={admin} /> : (
+          // The offline prototype: no data service (moved here from the status strip on every page).
+          <section className="surface-card flex flex-col gap-2 p-5" aria-labelledby="services-h" data-testid="settings-services">
+            <h2 id="services-h" className="flex items-center gap-2 text-lg font-semibold"><ServerCog aria-hidden="true" className="size-5" />{t('settingsPage.services')}</h2>
+            <p className="text-sm text-muted-foreground" data-testid="prototype-notice">{t('prototype.mockAdapter')}</p>
+          </section>
+        )}
         {api && auditor ? <ProviderReadiness enabled={auditor} canTest={admin} /> : null}
         {api && admin ? <Schedules /> : null}
         <Help />

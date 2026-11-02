@@ -1,14 +1,15 @@
 import uuid
-from typing import Annotated
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from app.api.deps import DbSession, require
-from app.domain.enums import AccountStatus, Permission, Role
-from app.models import AppUser, AuditEvent, UserPermissionGrant, UserRole
+from app.domain.enums import AccountStatus, Permission
+from app.models import AppUser, AuditEvent, UserGroup, UserPermissionGrant, UserRole
 from app.schemas.accounts import GrantIn, RoleIn, UserCreateIn, UserOut
-from app.services import accounts, phone_numbers
+from app.services import accounts, groups, phone_numbers
 from app.services.principal import Principal
 
 router = APIRouter(prefix="/admin", tags=["administration"])
@@ -73,7 +74,7 @@ def assign_role(user_id: uuid.UUID, body: RoleIn, session: DbSession, actor: Man
 
 
 @router.delete("/users/{user_id}/roles/{role}", response_model=UserOut)
-def remove_role(user_id: uuid.UUID, role: Role, session: DbSession, actor: Manager) -> UserOut:
+def remove_role(user_id: uuid.UUID, role: str, session: DbSession, actor: Manager) -> UserOut:
     with session.begin():
         accounts.remove_role(session, actor, user_id, role)
         return _user_out(session, accounts.get_user(session, user_id))
@@ -107,6 +108,134 @@ def reactivate(user_id: uuid.UUID, session: DbSession, actor: Manager) -> UserOu
     with session.begin():
         accounts.set_status(session, actor, user_id, AccountStatus.ACTIVE)
         return _user_out(session, accounts.get_user(session, user_id))
+
+
+@router.post("/users/{user_id}/reset-password")
+def reset_password(
+    user_id: uuid.UUID, response: Response, session: DbSession, actor: Manager
+) -> dict[str, str]:
+    """A temporary password for an account that cannot recover itself, returned once for the
+    administrator to hand over in person; it must be changed at the next sign-in."""
+    temporary = accounts.admin_reset_password(session, actor, user_id)
+    response.headers["Cache-Control"] = "no-store"
+    return {"temporary_password": temporary}
+
+
+# ------------------------------------------------------------------ roles and groups
+
+
+class RoleCreateIn(BaseModel):
+    code: str = Field(min_length=1, max_length=40)
+    description: str = Field(min_length=1, max_length=300)
+    permissions: list[str] = Field(default_factory=list, max_length=100)
+
+
+class RoleUpdateIn(BaseModel):
+    description: str | None = Field(default=None, max_length=300)
+    permissions: list[str] = Field(default_factory=list, max_length=100)
+
+
+class GroupIn(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    description: str = Field(default="", max_length=500)
+    roles: list[str] = Field(default_factory=list, max_length=50)
+    permissions: list[str] = Field(default_factory=list, max_length=100)
+
+
+class MemberIn(BaseModel):
+    user_id: uuid.UUID
+
+
+@router.get("/permissions")
+def list_permissions(session: DbSession, _: Manager) -> list[dict[str, str]]:
+    with session.begin():
+        return groups.permissions(session)
+
+
+@router.get("/roles")
+def list_roles(session: DbSession, _: Manager) -> list[dict[str, Any]]:
+    with session.begin():
+        return groups.roles(session)
+
+
+@router.post("/roles", status_code=201)
+def create_role(body: RoleCreateIn, session: DbSession, actor: Manager) -> list[dict[str, Any]]:
+    with session.begin():
+        groups.create_role(
+            session, actor, code=body.code, description=body.description,
+            permission_codes=body.permissions,
+        )  # fmt: skip
+        return groups.roles(session)
+
+
+@router.put("/roles/{code}")
+def update_role(
+    code: str, body: RoleUpdateIn, session: DbSession, actor: Manager
+) -> list[dict[str, Any]]:
+    with session.begin():
+        groups.update_role(
+            session, actor, code, description=body.description, permission_codes=body.permissions
+        )
+        return groups.roles(session)
+
+
+@router.delete("/roles/{code}")
+def delete_role(code: str, session: DbSession, actor: Manager) -> list[dict[str, Any]]:
+    with session.begin():
+        groups.delete_role(session, actor, code)
+        return groups.roles(session)
+
+
+@router.get("/groups")
+def list_groups(session: DbSession, _: Manager) -> list[dict[str, Any]]:
+    with session.begin():
+        return groups.groups(session)
+
+
+@router.post("/groups", status_code=201)
+def create_group(body: GroupIn, session: DbSession, actor: Manager) -> dict[str, Any]:
+    with session.begin():
+        group = groups.create_group(
+            session, actor, name=body.name, description=body.description,
+            role_codes=body.roles, permission_codes=body.permissions,
+        )  # fmt: skip
+        return groups.group_out(session, group)
+
+
+@router.put("/groups/{group_id}")
+def update_group(
+    group_id: uuid.UUID, body: GroupIn, session: DbSession, actor: Manager
+) -> dict[str, Any]:
+    with session.begin():
+        group = groups.update_group(
+            session, actor, group_id, name=body.name, description=body.description,
+            role_codes=body.roles, permission_codes=body.permissions,
+        )  # fmt: skip
+        return groups.group_out(session, group)
+
+
+@router.delete("/groups/{group_id}", status_code=204)
+def delete_group(group_id: uuid.UUID, session: DbSession, actor: Manager) -> None:
+    with session.begin():
+        groups.delete_group(session, actor, group_id)
+
+
+@router.post("/groups/{group_id}/members")
+def add_member(
+    group_id: uuid.UUID, body: MemberIn, session: DbSession, actor: Manager
+) -> dict[str, Any]:
+    with session.begin():
+        groups.add_member(session, actor, group_id, body.user_id)
+        return groups.group_out(session, session.get(UserGroup, group_id))
+
+
+@router.delete("/groups/{group_id}/members/{user_id}")
+def remove_member(
+    group_id: uuid.UUID, user_id: uuid.UUID, session: DbSession, actor: Manager
+) -> dict[str, Any]:
+    with session.begin():
+        groups.remove_member(session, actor, group_id, user_id)
+        return groups.group_out(session, session.get(UserGroup, group_id))
 
 
 @router.get("/audit-events")

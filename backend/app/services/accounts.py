@@ -7,6 +7,8 @@ grant therefore takes effect on the very next request of an existing session.
 
 from __future__ import annotations
 
+import re
+import secrets
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -21,9 +23,13 @@ from app.core.errors import ApiError, conflict, not_found, unprocessable
 from app.domain.enums import AccountStatus, Permission, Role
 from app.models import (
     AppUser,
+    GroupMember,
+    GroupPermission,
+    GroupRole,
     LoginAttempt,
     PermissionRow,
     RolePermission,
+    RoleRow,
     UserPermissionGrant,
     UserRole,
     UserSession,
@@ -46,13 +52,19 @@ def normalize_email(email: str) -> str:
 def load_principal(
     session: Session, user: AppUser, user_session: UserSession | None = None
 ) -> Principal:
+    # Roles: the person's own and those their groups give (migration 0026).
+    in_groups = select(GroupMember.group_id).where(GroupMember.user_id == user.id)
     roles = frozenset(
-        session.scalars(select(UserRole.role_code).where(UserRole.user_id == user.id))
+        [
+            *session.scalars(select(UserRole.role_code).where(UserRole.user_id == user.id)),
+            *session.scalars(select(GroupRole.role_code).where(GroupRole.group_id.in_(in_groups))),
+        ]
     )
     from_roles = session.scalars(
-        select(RolePermission.permission_code)
-        .join(UserRole, UserRole.role_code == RolePermission.role_code)
-        .where(UserRole.user_id == user.id)
+        select(RolePermission.permission_code).where(RolePermission.role_code.in_(roles))
+    )
+    from_groups = session.scalars(
+        select(GroupPermission.permission_code).where(GroupPermission.group_id.in_(in_groups))
     )
     grants = session.scalars(
         select(UserPermissionGrant.permission_code).where(UserPermissionGrant.user_id == user.id)
@@ -66,7 +78,9 @@ def load_principal(
         display_name=user.display_name,
         roles=roles,
         # Nothing is permitted until a temporary password has been replaced.
-        permissions=frozenset() if change_required else frozenset([*from_roles, *grants]),
+        permissions=frozenset()
+        if change_required
+        else frozenset([*from_roles, *from_groups, *grants]),
         session_id=user_session.id if user_session else None,
         csrf_token_hash=user_session.csrf_token_hash if user_session else None,
         password_change_required=change_required,
@@ -138,32 +152,57 @@ def get_user(session: Session, user_id: uuid.UUID) -> AppUser:
     return user
 
 
-def assign_role(session: Session, actor: Principal, user_id: uuid.UUID, role: Role) -> None:
+def assign_role(session: Session, actor: Principal, user_id: uuid.UUID, role: Role | str) -> None:
+    """A built-in or custom role (by its code) for one person."""
+    code = role.value if isinstance(role, Role) else str(role)
     get_user(session, user_id)
-    if session.get(UserRole, (user_id, role.value)) is None:
-        session.add(UserRole(user_id=user_id, role_code=role.value, granted_by=actor.user_id))
+    if session.get(RoleRow, code) is None:
+        raise not_found("role")
+    if session.get(UserRole, (user_id, code)) is None:
+        session.add(UserRole(user_id=user_id, role_code=code, granted_by=actor.user_id))
     audit.record(
         session,
         actor,
         "user.role.assign",
         entity_type="user",
         entity_id=user_id,
-        metadata={"role": role.value},
+        metadata={"role": code},
     )
     session.flush()
 
 
-def remove_role(session: Session, actor: Principal, user_id: uuid.UUID, role: Role) -> None:
-    session.execute(
-        delete(UserRole).where(UserRole.user_id == user_id, UserRole.role_code == role.value)
-    )
+def remove_role(session: Session, actor: Principal, user_id: uuid.UUID, role: Role | str) -> None:
+    code = role.value if isinstance(role, Role) else str(role)
+    if code == Role.ADMINISTRATOR.value and user_id == actor.user_id:
+        raise ApiError(
+            409, "own_administrator_role", "You cannot remove your own administrator role."
+        )
+    if code == Role.ADMINISTRATOR.value and _other_administrators(session, user_id) == 0:
+        raise ApiError(409, "last_administrator", "OSRIP must keep at least one administrator.")
+    session.execute(delete(UserRole).where(UserRole.user_id == user_id, UserRole.role_code == code))
     audit.record(
         session,
         actor,
         "user.role.remove",
         entity_type="user",
         entity_id=user_id,
-        metadata={"role": role.value},
+        metadata={"role": code},
+    )
+
+
+def _other_administrators(session: Session, user_id: uuid.UUID) -> int:
+    return (
+        session.scalar(
+            select(func.count())
+            .select_from(UserRole)
+            .join(AppUser, AppUser.id == UserRole.user_id)
+            .where(
+                UserRole.role_code == Role.ADMINISTRATOR.value,
+                UserRole.user_id != user_id,
+                AppUser.status == AccountStatus.ACTIVE,
+            )
+        )
+        or 0
     )
 
 
@@ -553,3 +592,223 @@ def confirm_identity(
             f"For your security, sign in again and make this change within {minutes} minutes.",
             {"minutes": minutes},
         )
+
+
+# ------------------------------------------------------------------ registration by username
+
+# The database enforces the same pattern (migration 0011) and case-insensitive uniqueness.
+USERNAME_PATTERN = re.compile(r"[A-Za-z][A-Za-z0-9_.-]{2,31}")
+# Names that could pass for the platform or its staff are not offered to the public.
+RESERVED_USERNAMES = frozenset(
+    {"admin", "administrator", "root", "system", "support", "osrip", "security", "moderator",
+     "owner", "staff", "help", "service", "official", "ncsi"}
+)  # fmt: skip
+# Recovery codes: 20 characters in 5 groups from an alphabet without look-alikes (0/O,
+# 1/I/L, U/V), about 97 bits; only an Argon2id hash is stored.
+RECOVERY_ALPHABET = "ABCDEFGHJKMNPQRSTWXYZ23456789"
+SYSTEM_REGISTRATION = Principal(None, "system:registration")
+
+
+@dataclass(frozen=True, slots=True)
+class WithRecoveryCode:
+    new_session: NewSession
+    recovery_code: str  # shown once to its owner, never stored
+
+
+def username_problem(username: str) -> ApiError | None:
+    if not USERNAME_PATTERN.fullmatch(username):
+        return unprocessable(
+            "invalid_username",
+            "Use 3 to 32 characters: English letters, digits, '.', '_' or '-', "
+            "starting with a letter.",
+        )
+    if username.lower() in RESERVED_USERNAMES:
+        return unprocessable("username_reserved", "This username is reserved. Choose another.")
+    return None
+
+
+def password_problem(password: str, confirm: str, username: str) -> ApiError | None:
+    if password != confirm:
+        return unprocessable("password_mismatch", "The two passwords do not match.")
+    if len(password) < security.MIN_PASSWORD_LENGTH:
+        return unprocessable(
+            "weak_password",
+            f"Password must be at least {security.MIN_PASSWORD_LENGTH} characters.",
+        )
+    if username and username.lower() in password.lower():
+        return unprocessable(
+            "password_contains_username", "The password must not contain the username."
+        )
+    if len(set(password)) < 5:
+        return unprocessable(
+            "password_too_simple", "The password is too simple: use more different characters."
+        )
+    return None
+
+
+def new_recovery_code() -> str:
+    raw = "".join(secrets.choice(RECOVERY_ALPHABET) for _ in range(20))
+    return "-".join(raw[i : i + 4] for i in range(0, 20, 4))
+
+
+def _recovery_key(code: str) -> str:
+    """What is hashed and compared: upper case, without spaces or dashes."""
+    return "".join(ch for ch in code.upper() if ch.isalnum())
+
+
+def _set_recovery_code(user: AppUser) -> str:
+    code = new_recovery_code()
+    user.recovery_code_hash = security.hash_secret(_recovery_key(code))
+    user.recovery_code_created_at = now()
+    return code
+
+
+def _revoke_sessions(session: Session, user_id: uuid.UUID) -> None:
+    session.execute(
+        update(UserSession)
+        .where(UserSession.user_id == user_id, UserSession.revoked_at.is_(None))
+        .values(revoked_at=now())
+    )
+
+
+def register_username(
+    session: Session, *, username: str, password: str, password_confirm: str
+) -> WithRecoveryCode:
+    """Public registration with a username and password only: an ordinary (viewer) account,
+    signed in at once, with a recovery code shown once. No role can be requested."""
+    username = username.strip()
+    problem = username_problem(username) or password_problem(password, password_confirm, username)
+    if problem is not None:
+        raise problem
+    taken = conflict("username_taken", "This username is already used. Choose another.")
+    with session.begin():
+        if find_by_username(session, username) is not None:
+            raise taken
+        user = AppUser(
+            username=username,
+            email=None,
+            display_name=username,
+            password_hash=security.hash_password(password),
+            created_via="self_registration",
+        )
+        code = _set_recovery_code(user)
+        session.add(user)
+        try:
+            with session.begin_nested():
+                session.flush()
+        except IntegrityError as exc:  # registered concurrently with the same name
+            raise taken from exc
+        session.add(UserRole(user_id=user.id, role_code=Role.VIEWER.value))  # lowest role
+        audit.record(
+            session,
+            SYSTEM_REGISTRATION,
+            "user.create",
+            entity_type="user",
+            entity_id=user.id,
+            metadata={"username": username, "roles": [Role.VIEWER.value], "via": "username"},
+        )
+        session.flush()
+        return WithRecoveryCode(open_session(session, user, method="password"), code)
+
+
+def recover_with_code(
+    session: Session,
+    *,
+    username: str,
+    recovery_code: str,
+    new_password: str,
+    new_password_confirm: str,
+    client_address: str,
+) -> WithRecoveryCode:
+    """A forgotten password: the username, the recovery code and a new password. The code
+    is spent (a new one is issued and shown once), every other session is signed out, and
+    failed attempts are throttled like sign-in attempts."""
+    settings = get_settings()
+    username = username.strip()
+    problem = password_problem(new_password, new_password_confirm, username)
+    if problem is not None:
+        raise problem
+    key = f"recover:{username.lower()}"
+    client_hash = security.keyed_digest(settings.client_hash_key.get_secret_value(), client_address)
+    with session.begin():
+        if _throttled(session, key, client_hash):
+            audit.record(
+                session, Principal(None, key), "auth.recover", "denied",
+                metadata={"reason": "throttled"},
+            )  # fmt: skip
+            raise ApiError(
+                429,
+                "too_many_attempts",
+                "Too many failed attempts. Wait a few minutes and try again.",
+            )
+        user = find_by_username(session, username)
+        stored = user.recovery_code_hash if user is not None else None
+        ok = (
+            user is not None
+            and user.status is AccountStatus.ACTIVE
+            and not user.is_service_account
+            and security.verify_password(stored, _recovery_key(recovery_code))
+        )
+        session.add(LoginAttempt(email=key, client_hash=client_hash, succeeded=ok))
+        if ok and user is not None:
+            user.password_hash = security.hash_password(new_password)
+            user.password_changed_at = now()
+            user.password_change_required = False
+            code = _set_recovery_code(user)
+            _revoke_sessions(session, user.id)
+            audit.record(
+                session, load_principal(session, user), "auth.recover",
+                entity_type="user", entity_id=user.id,
+            )  # fmt: skip
+            return WithRecoveryCode(open_session(session, user, method="recovery_code"), code)
+        audit.record(
+            session, Principal(None, key), "auth.recover", "denied",
+            metadata={"reason": "invalid_recovery"},
+        )  # fmt: skip
+        # Committed deliberately: failed attempts count towards throttling.
+    raise ApiError(401, "invalid_recovery", "The username or recovery code is not correct.")
+
+
+def replace_recovery_code(session: Session, principal: Principal, current_password: str) -> str:
+    """A new recovery code for the signed-in account (the previous one stops working)."""
+    with session.begin():
+        user = get_user(session, principal.user_id)  # type: ignore[arg-type]
+        if not has_password(user):
+            raise ApiError(
+                409,
+                "no_password",
+                "This account signs in without a password, so it needs no recovery code.",
+            )
+        if not security.verify_password(user.password_hash, current_password):
+            audit.record_separately(
+                principal, "auth.recovery_code", "denied",
+                metadata={"reason": "wrong_current_password"},
+            )  # fmt: skip
+            raise ApiError(403, "wrong_current_password", "The current password is not correct.")
+        code = _set_recovery_code(user)
+        audit.record(
+            session, principal, "auth.recovery_code", entity_type="user", entity_id=user.id
+        )
+        return code
+
+
+def admin_reset_password(session: Session, actor: Principal, user_id: uuid.UUID) -> str:
+    """An administrator's reset for an account that cannot recover itself: a temporary
+    password (returned once, for the administrator to hand over in person) that must be
+    changed at the next sign-in. Every session is signed out and the old recovery code
+    stops working."""
+    with session.begin():
+        user = get_user(session, user_id)
+        if user.is_service_account:
+            raise unprocessable("service_account", "Service accounts have no password.")
+        if user.id == actor.user_id:
+            raise unprocessable("own_account", "Use Change password for your own account.")
+        temporary = new_recovery_code()[:14]  # three groups of four, e.g. ABCD-EFGH-JKMN
+        user.password_hash = security.hash_password(temporary, temporary=True)
+        user.password_changed_at = now()
+        user.password_change_required = True
+        user.recovery_code_hash = None
+        user.recovery_code_created_at = None
+        _revoke_sessions(session, user.id)
+        audit.record(session, actor, "user.password.reset", entity_type="user", entity_id=user.id)
+        return temporary

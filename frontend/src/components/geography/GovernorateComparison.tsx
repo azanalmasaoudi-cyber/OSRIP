@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useAreaComparison, type CompareRow } from '@/api/library';
+import { useAreaComparison, type AreaComparison, type CompareRow } from '@/api/library';
 import { StatePanel } from '@/components/common/StatePanel';
 import { Badge } from '@/components/ui/badge';
 import { SelectField } from '@/components/ui/select';
@@ -18,9 +18,11 @@ const FLOWS = ['import', 'domestic_export', 're_export'] as const;
  * comparison (same unit and period length, or flagged as not comparable). Missing values
  * stay missing; national totals and combined figures are shown apart and never divided.
  */
-export function GovernorateComparison({ mode, indicators }: {
+export function GovernorateComparison({ mode, indicators, onResult }: {
   mode: DataMode;
   indicators: readonly { code: string; name_en: string; name_ar: string; frequency: string }[];
+  /** The comparison shown, for the map's "compared indicator" shading. */
+  onResult?: (result: AreaComparison | undefined) => void;
 }) {
   const { t } = useTranslation();
   const language = useAppLanguage();
@@ -30,6 +32,9 @@ export function GovernorateComparison({ mode, indicators }: {
   const chosen = indicators.find((i) => i.code === picked) ?? indicators[0];
   const indicator = chosen?.code ?? null;
   const comparison = useAreaComparison(mode, indicator, period || null, flow, chosen?.frequency);
+  useEffect(() => {
+    onResult?.(comparison.data);
+  }, [comparison.data, onResult]);
   if (!indicators.length) {
     return (
       <div data-testid="governorate-comparison">

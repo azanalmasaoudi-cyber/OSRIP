@@ -236,11 +236,14 @@ def _ncsi_news(url: str, news_id: str) -> Read:
     )
 
 
-def _cached(url: str) -> Read | None:
+def _cached(url: str, max_age_hours: float | None = None) -> Read | None:
     from app.db.session import session_factory
     from app.models import ResearchDocument
 
-    since = datetime.now(UTC) - timedelta(hours=get_settings().research_cache_hours)
+    hours = get_settings().research_cache_hours if max_age_hours is None else max_age_hours
+    if hours <= 0:
+        return None
+    since = datetime.now(UTC) - timedelta(hours=hours)
     try:
         with session_factory()() as s, s.begin():
             row = s.scalar(
@@ -316,8 +319,16 @@ def _store(result: Read, job_id: uuid.UUID | None) -> uuid.UUID | None:
         return None
 
 
-def read(url: str, *, job_id: uuid.UUID | None = None, use_cache: bool = True) -> Read:
-    """Read one document by the configured route, record it, and return its text."""
+def read(
+    url: str,
+    *,
+    job_id: uuid.UUID | None = None,
+    use_cache: bool = True,
+    max_age_hours: float | None = None,
+) -> Read:
+    """Read one document by the configured route, record it, and return its text. A copy
+    read within ``max_age_hours`` (default: the research cache period) is reused, with its
+    original retrieval time."""
     s = get_settings()
     deepseek_ready = (
         s.research_fetch_provider == "deepseek"
@@ -332,7 +343,7 @@ def read(url: str, *, job_id: uuid.UUID | None = None, use_cache: bool = True) -
         result.document_id = _store(result, job_id) if persist else None
         return result
     if use_cache and persist:
-        hit = _cached(url)
+        hit = _cached(url, max_age_hours)
         if hit is not None:
             return hit
     if deepseek_ready and not _direct_first(host) and not pdf_like:

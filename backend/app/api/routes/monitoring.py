@@ -48,7 +48,13 @@ def monitoring_view(
     session: DbSession, _: Annotated[Principal, Depends(require(Permission.AUDIT_READ))]
 ) -> dict[str, Any]:
     with session.begin():
-        report = {**monitoring.readiness(session), "errors": monitoring.recent_errors(session)}
+        report = {
+            **monitoring.readiness(session),
+            "errors": monitoring.recent_errors(session),
+            "usage": monitoring.provider_usage(session),
+            "sync": monitoring.sync_summary(session),
+        }
+    report["performance"] = monitoring.performance()
     # Administrators also see which SMS settings are missing (names only, never values).
     report["integrations"]["sms"]["missing_settings"] = sms.status(admin=True)["missing_settings"]
     return report

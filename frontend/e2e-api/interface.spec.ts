@@ -9,7 +9,7 @@ const PASSWORD = process.env.OSRIP_E2E_PASSWORD ?? '';
 
 async function signIn(page: Page, email: string): Promise<void> {
   await page.goto('/sign-in');
-  await page.getByLabel('E-mail address').fill(email);
+  await page.getByLabel('Username').fill(email);
   await page.getByLabel('Password').fill(PASSWORD);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByTestId('signed-in-as')).toBeVisible();
@@ -24,11 +24,11 @@ test('navigation lists the required sections and every link opens its page', asy
     ['Water', /\/energy\/water/, 'Water'],
     ['Food Security', /\/food-security/, 'Food Security'],
     ['Trade', /\/trade/, 'Trade'],
-    ['Map', /\/geography/, 'Geography'],
+    ['Oman Geographic Map', /\/geography/, 'Geography'],
     ['Studies', /\/studies/, 'Studies'],
     ['Scenarios', /\/forecasts/, 'Forecasts and Scenarios'],
     ['Sources', /\/sources/, 'Sources and Methodology'],
-    ['AI Assistant', /\/assistant/, 'Al Mulhim'], // the page is titled with the chosen persona
+    ['AI Research Assistant', /\/assistant/, 'Al Mulhim'], // the page is titled with the chosen persona
     ['Analysis workspace', /\/workspace/, 'Analysis workspace'],
     ['Reports', /\/reports/, 'Reports'],
     ['Account', /\/(account|sign-in)/, ''],
@@ -100,25 +100,22 @@ test('motion: gentle route entrance that keeps focus and history; reduced motion
   expect(parseFloat(await card.locator('xpath=..').evaluate((el) => getComputedStyle(el).animationDuration))).toBeLessThan(0.001);
 });
 
-test('3D depth: the hero follows the mouse; reduced motion keeps the flat 2D layout', async ({ page }) => {
+test('no decorative motion: the landing hero is a still, credited photograph that does not follow the mouse', async ({ page }) => {
   await page.goto('/');
-  const scene = page.getByTestId('hero-scene');
-  await expect(scene).toBeVisible();
-  const box = await scene.boundingBox();
+  const hero = page.getByTestId('home-hero-image');
+  await expect(hero).toBeVisible();
+  const box = await hero.boundingBox();
   if (!box) throw new Error('no hero box');
+  const before = await hero.evaluate((el) => getComputedStyle(el).transform);
   await page.mouse.move(box.x + box.width * 0.9, box.y + box.height * 0.1);
-  await expect.poll(() => scene.evaluate((el) => el.style.getPropertyValue('--tilt-y'))).not.toBe('');
-  expect(await scene.evaluate((el) => getComputedStyle(el).transform)).not.toBe('none');
-  // Charts and forms never tilt.
+  expect(await hero.evaluate((el) => getComputedStyle(el).transform)).toBe(before);
+  expect(before).toBe('none');
+  await expect(page.getByTestId('home-page').getByTestId('photo-credit').first()).toContainText('Wikimedia Commons');
+  // No tilt, parallax or depth layers anywhere, charts and forms included.
+  await expect(page.locator('.tilt, .scene, .depth')).toHaveCount(0);
   await page.goto('/energy/electricity?mode=synthetic');
-  expect(await page.locator('.tilt svg, form.tilt, .tilt form').count()).toBe(0);
-
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('/');
-  await page.mouse.move(box.x + box.width * 0.9, box.y + box.height * 0.1);
-  expect(await scene.evaluate((el) => getComputedStyle(el).transform)).toBe('none');
-  expect(await scene.evaluate((el) => el.style.getPropertyValue('--tilt-y'))).toBe('');
-  await expect(page.getByTestId('home-portrait').locator('img').first()).toBeVisible();
+  await expect(page.getByTestId('sector-form')).toBeVisible();
+  await expect(page.locator('.tilt, .scene, .depth')).toHaveCount(0);
 });
 
 test('service health: administrators only; integrations and errors are listed without personal data', async ({ page }) => {

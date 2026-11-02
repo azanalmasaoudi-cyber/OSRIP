@@ -12,7 +12,7 @@ const PASSWORD = process.env.OSRIP_E2E_PASSWORD ?? '';
 async function signIn(page: Page, email: string): Promise<void> {
   await page.goto('/sign-in');
   const form = page.getByTestId('sign-in-form');
-  await form.getByLabel('E-mail address').fill(email);
+  await form.getByLabel('Username').fill(email);
   await form.getByLabel('Password').fill(PASSWORD);
   await form.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).not.toHaveURL(/sign-in/);
@@ -167,8 +167,15 @@ test('navigation and Settings: the main destinations in order, services and sche
   await page.goto('/overview?mode=synthetic');
   const nav = page.getByRole('navigation', { name: 'Main navigation' });
   const names = await nav.getByRole('link').allInnerTexts();
-  const main = names.map((n) => n.trim()).slice(0, 8);
-  expect(main).toEqual(['Overview', 'Electricity', 'Water', 'Food Security', 'Trade', 'Studies', 'Sources', 'Settings']);
+  // The modules in the required order: Dashboard; the four axes; scenarios, data and analysis;
+  // the map; reports; the assistant; then administration and the account.
+  const all = names.map((n) => n.trim());
+  expect(all.slice(0, 15)).toEqual([
+    'Dashboard', 'Overview', 'Electricity', 'Water', 'Food Security', 'Trade',
+    'Scenarios', 'Analysis workspace', 'Datasets', 'Studies', 'Sources', 'Research library',
+    'Oman Geographic Map', 'Reports', 'AI Research Assistant',
+  ]);
+  expect(all.slice(15)).toEqual(['Data Management', 'Users, Roles and Groups', 'Service Health', 'Account', 'Settings']);
   await nav.getByRole('link', { name: 'Settings' }).click();
   await expect(page.getByTestId('settings-services')).toBeVisible();
   await expect(page.getByTestId('service-answers').getByTestId('assistant-service')).toBeVisible();
