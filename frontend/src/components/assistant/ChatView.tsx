@@ -195,7 +195,7 @@ export function ChatView({ chat }: { chat: ChatModel }) {
                   chat={chat} onAsk={send} />
               ))}
               {echo ? (
-                <li className="ms-auto max-w-[85%] rounded-2xl bg-muted px-4 py-2 text-base whitespace-pre-wrap" dir="auto"
+                <li className="ms-auto max-w-[85%] rounded-2xl rounded-ee-md border border-brand/25 bg-primary-soft px-4 py-2.5 text-base whitespace-pre-wrap shadow-card" dir="auto"
                   data-testid="user-message" data-pending="true">{echo.text}</li>
               ) : null}
               {chat.pending ? <Thinking requestId={chat.asking?.requestId ?? null} guest={chat.guest} /> : null}
@@ -263,7 +263,7 @@ function ChatMessage({ message, question, chat, onAsk }: {
   const [chartOpen, setChartOpen] = useState(() => asksForChart(question) && message.status !== 'clarification');
   if (message.role === 'user') {
     return (
-      <li className="ms-auto max-w-[85%] rounded-2xl bg-muted px-4 py-2 text-base whitespace-pre-wrap" dir="auto" data-testid="user-message">
+      <li className="ms-auto max-w-[85%] rounded-2xl rounded-ee-md border border-brand/25 bg-primary-soft px-4 py-2.5 text-base whitespace-pre-wrap shadow-card" dir="auto" data-testid="user-message">
         {message.content}
       </li>
     );
@@ -292,7 +292,7 @@ function ChatMessage({ message, question, chat, onAsk }: {
     });
   };
   return (
-    <li className="flex flex-col gap-2 text-base leading-relaxed" data-testid="assistant-message" data-status={message.status ?? ''}
+    <li className="glass-card flex flex-col gap-2 rounded-2xl rounded-es-md border p-4 text-base leading-relaxed shadow-card sm:p-5" data-testid="assistant-message" data-status={message.status ?? ''}
       data-persona={author.code}>
       <p className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
         <span className="inline-flex items-center gap-1.5 font-semibold text-foreground" data-testid="message-persona">
@@ -464,7 +464,7 @@ function Composer({ chat, onSend, onTools }: { chat: ChatModel; onSend: (text: s
           </Button>
         </div>
       ) : null}
-      <div className="flex items-end gap-1 rounded-2xl border border-border-strong/60 bg-card px-2 py-1.5 shadow-card focus-within:border-primary">
+      <div className="glass-card glass-strong flex items-end gap-1 rounded-2xl border border-border-strong/60 px-2 py-1.5 shadow-raised transition-shadow focus-within:border-primary focus-within:shadow-[0_0_0_4px_var(--primary-soft)]">
         <Button type="button" variant="ghost" size="sm" className="w-9 shrink-0 px-0" onClick={onTools} data-testid="chat-tools"
           title={t('chat.tools')} aria-haspopup="dialog">
           <SlidersHorizontal aria-hidden="true" /><span className="sr-only">{t('chat.tools')}</span>
