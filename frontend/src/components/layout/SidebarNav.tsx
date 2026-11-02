@@ -3,29 +3,37 @@ import {
   BookOpen,
   Bot,
   ChevronDown,
+  ClipboardList,
   DatabaseZap,
   Droplets,
   FileText,
   FlaskConical,
+  FolderOpen,
   Gauge,
   Info,
+  Languages,
   Layers,
   LayoutDashboard,
   LibraryBig,
   LineChart,
   Map,
+  MapPinned,
+  Palette,
+  ScrollText,
   Settings,
   Sheet,
   ShieldCheck,
   Ship,
+  SlidersHorizontal,
   UserRound,
   Users,
+  UsersRound,
   Wheat,
   Zap,
   type LucideIcon,
 } from 'lucide-react';
-import { useState } from 'react';
-import { NavLink, useLocation } from 'react-router';
+import { useState, type FocusEvent, type MouseEvent } from 'react';
+import { Link, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
 import { hasPermission, useMe } from '@/api/auth';
@@ -35,37 +43,47 @@ import { usePreservedSearch } from '@/state/usePreservedSearch';
 export type NavKey =
   | 'nav.dashboard'
   | 'nav.overview'
-  | 'nav.workspace'
-  | 'nav.datasets'
   | 'nav.electricity'
   | 'nav.water'
   | 'nav.foodSecurity'
   | 'nav.trade'
-  | 'nav.map'
-  | 'nav.studies'
+  | 'nav.workspace'
+  | 'nav.datasets'
   | 'nav.scenarios'
-  | 'nav.sourcesShort'
+  | 'nav.forecasting'
   | 'nav.aiAssistant'
-  | 'nav.reports'
+  | 'nav.studies'
   | 'nav.library'
-  | 'nav.accountShort'
+  | 'nav.sourcesShort'
+  | 'nav.map'
+  | 'nav.geoCompare'
+  | 'nav.reports'
+  | 'nav.savedReports'
+  | 'nav.profile'
   | 'nav.settings'
+  | 'nav.appearance'
+  | 'nav.language'
   | 'nav.dataManagement'
   | 'nav.users'
-  | 'nav.health';
+  | 'nav.groupsPermissions'
+  | 'nav.health'
+  | 'nav.audit';
 
 type ModuleKey =
   | 'nav.moduleDashboard'
   | 'nav.moduleAxes'
-  | 'nav.moduleAnalysis'
-  | 'nav.moduleMap'
+  | 'nav.moduleResearch'
+  | 'nav.moduleGeo'
   | 'nav.moduleReports'
-  | 'nav.moduleAssistant'
-  | 'nav.groupAdmin'
-  | 'nav.groupYou';
+  | 'nav.groupAccount'
+  | 'nav.groupAdmin';
 
 export interface NavItem {
   path: string;
+  /** A section of the page (`#id`); items of one page are told apart by it. */
+  hash?: string;
+  /** A query that opens a tab of the page (`tab=groups`). */
+  query?: string;
   key: NavKey;
   icon: LucideIcon;
   /** Shown only to people holding one of these permissions (the server checks again). */
@@ -77,14 +95,13 @@ interface NavModule {
   label: ModuleKey;
   icon: LucideIcon;
   items: readonly NavItem[];
-  /** Administration and the account: set apart at the end of the list. */
+  /** The account and administration: set apart at the end of the list. */
   section?: 'admin' | 'you';
 }
 
-/** The modules, in this order: Dashboard; Economic and Development Axes; Scenarios, Data and
- * Analysis; the Oman map; Reports; the AI Research Assistant; then administration (only what
- * the person may use) and the account. A module with one destination is a direct link; one with
- * several starts open and can be closed (remembered in this browser). */
+/** The modules: Dashboard; the Axes; Research and Analytics; Geographic Intelligence; Reports;
+ * then the account and, only for those who may use it, administration. Every module opens and
+ * closes (remembered in this browser) and starts open. */
 export const NAV_MODULES: readonly NavModule[] = [
   {
     id: 'dashboard', label: 'nav.moduleDashboard', icon: Gauge, items: [
@@ -101,29 +118,44 @@ export const NAV_MODULES: readonly NavModule[] = [
     ],
   },
   {
-    id: 'analysis', label: 'nav.moduleAnalysis', icon: LineChart, items: [
-      { path: '/forecasts', key: 'nav.scenarios', icon: LineChart },
+    id: 'research', label: 'nav.moduleResearch', icon: FlaskConical, items: [
       { path: '/workspace', key: 'nav.workspace', icon: LayoutDashboard },
       { path: '/datasets', key: 'nav.datasets', icon: Sheet },
-      { path: '/studies', key: 'nav.studies', icon: FlaskConical },
-      { path: '/sources', key: 'nav.sourcesShort', icon: BookOpen },
+      { path: '/forecasts', hash: '#scenarios', key: 'nav.scenarios', icon: SlidersHorizontal },
+      { path: '/forecasts', key: 'nav.forecasting', icon: LineChart },
+      { path: '/assistant', key: 'nav.aiAssistant', icon: Bot },
+      { path: '/studies', key: 'nav.studies', icon: ClipboardList },
       { path: '/library', key: 'nav.library', icon: LibraryBig },
+      { path: '/sources', key: 'nav.sourcesShort', icon: BookOpen },
     ],
   },
-  { id: 'map', label: 'nav.moduleMap', icon: Map, items: [{ path: '/geography', key: 'nav.map', icon: Map }] },
-  { id: 'reports', label: 'nav.moduleReports', icon: FileText, items: [{ path: '/reports', key: 'nav.reports', icon: FileText }] },
-  { id: 'assistant', label: 'nav.moduleAssistant', icon: Bot, items: [{ path: '/assistant', key: 'nav.aiAssistant', icon: Bot }] },
+  {
+    id: 'geo', label: 'nav.moduleGeo', icon: Map, items: [
+      { path: '/geography', key: 'nav.map', icon: MapPinned },
+      { path: '/geography', hash: '#compare-heading', key: 'nav.geoCompare', icon: Layers },
+    ],
+  },
+  {
+    id: 'reports', label: 'nav.moduleReports', icon: FileText, items: [
+      { path: '/reports', key: 'nav.reports', icon: FileText },
+      { path: '/reports', hash: '#saved-reports', key: 'nav.savedReports', icon: FolderOpen },
+    ],
+  },
+  {
+    id: 'you', label: 'nav.groupAccount', icon: UserRound, section: 'you', items: [
+      { path: '/account', key: 'nav.profile', icon: UserRound },
+      { path: '/settings', key: 'nav.settings', icon: Settings },
+      { path: '/settings', hash: '#appearance', key: 'nav.appearance', icon: Palette },
+      { path: '/settings', hash: '#language', key: 'nav.language', icon: Languages },
+    ],
+  },
   {
     id: 'admin', label: 'nav.groupAdmin', icon: ShieldCheck, section: 'admin', items: [
       { path: '/data-management', key: 'nav.dataManagement', icon: DatabaseZap, requires: ['import.read', 'research.review', 'user.manage'] },
       { path: '/admin/users', key: 'nav.users', icon: Users, requires: ['user.manage'] },
+      { path: '/admin/users', query: 'tab=groups', key: 'nav.groupsPermissions', icon: UsersRound, requires: ['user.manage'] },
       { path: '/admin/health', key: 'nav.health', icon: Activity, requires: ['audit.read'] },
-    ],
-  },
-  {
-    id: 'you', label: 'nav.groupYou', icon: UserRound, section: 'you', items: [
-      { path: '/account', key: 'nav.accountShort', icon: UserRound },
-      { path: '/settings', key: 'nav.settings', icon: Settings },
+      { path: '/admin/audit', key: 'nav.audit', icon: ScrollText, requires: ['audit.read'] },
     ],
   },
 ];
@@ -141,19 +173,50 @@ function readOpen(): Record<string, boolean> {
   }
 }
 
-function isCurrent(path: string, pathname: string): boolean {
+function onPath(path: string, pathname: string): boolean {
   return path === '/' ? pathname === '/' : pathname === path || pathname.startsWith(`${path}/`);
 }
 
-/** Navigation list for the sidebar and the mobile drawer. */
-export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
-  const { t } = useTranslation();
+/** The current item: the right page, then the open section (#hash) or tab (?tab=) when an item
+ * names one; otherwise the page's plain item. */
+export function isCurrentItem(item: NavItem, pathname: string, hash: string, search: string): boolean {
+  if (!onPath(item.path, pathname)) return false;
+  const tab = new URLSearchParams(search).get('tab');
+  const tabQuery = tab === null ? null : `tab=${tab}`;
+  if (item.query) return item.query === tabQuery;
+  if (item.hash) return hash === item.hash;
+  const siblings = NAV_ITEMS.filter((other) => other !== item && other.path === item.path);
+  return !siblings.some((other) => (other.hash !== undefined && other.hash === hash) || (other.query !== undefined && other.query === tabQuery));
+}
+
+/** Where an item leads: its page with the data mode kept, plus its section or tab. */
+export function useItemTarget() {
   const to = usePreservedSearch();
-  const { pathname } = useLocation();
+  return (item: NavItem) => {
+    const target = to(item.path);
+    const search = new URLSearchParams(target.search);
+    if (item.query) for (const [k, v] of new URLSearchParams(item.query)) search.set(k, v);
+    const query = search.toString();
+    return { ...target, search: query ? `?${query}` : '', hash: item.hash ?? '' };
+  };
+}
+
+/** Navigation list for the sidebar (full or icon-only) and the mobile drawer. */
+export function SidebarNav({ onNavigate, collapsed = false }: { onNavigate?: () => void; collapsed?: boolean }) {
+  const { t } = useTranslation();
+  const target = useItemTarget();
+  const { pathname, hash, search } = useLocation();
   const me = useMe();
   const [open, setOpen] = useState<Record<string, boolean>>(readOpen);
   const allowed = (item: NavItem) => !item.requires || item.requires.some((p) => hasPermission(me.data, p));
-  const showsAdmin = NAV_MODULES.some((m) => m.section === 'admin' && m.items.some(allowed));
+  // Icon-only mode: the hovered or focused item's name, beside it (fixed, so the scrolling
+  // sidebar cannot clip it); on the inline-end side in both directions.
+  const [tip, setTip] = useState<{ label: string; top: number; x: number; rtl: boolean } | null>(null);
+  const showTip = (label: string) => (event: MouseEvent<HTMLElement> | FocusEvent<HTMLElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const rtl = getComputedStyle(event.currentTarget).direction === 'rtl';
+    setTip({ label, top: rect.top + rect.height / 2, x: rtl ? window.innerWidth - rect.left + 8 : rect.right + 8, rtl });
+  };
 
   const toggle = (id: string, now: boolean) => {
     const next = { ...open, [id]: !now };
@@ -165,68 +228,83 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
     }
   };
 
-  const link = (item: NavItem, nested: boolean, label: NavKey | ModuleKey = item.key) => {
+  const link = (item: NavItem, nested: boolean) => {
     const Icon = item.icon;
+    const current = isCurrentItem(item, pathname, hash, search);
+    const label = t(item.key);
     return (
-      <NavLink
-        to={to(item.path)}
-        end={item.path === '/'}
+      <Link
+        to={target(item)}
         onClick={onNavigate}
-        className={({ isActive }) =>
-          cn(
-            // The active item: a lighter fill and a soft-gold bar on its inline start.
-            'group relative flex min-h-10 items-center gap-3 rounded-md px-3 py-1.5 text-sm transition-colors',
-            nested && 'ps-9',
-            isActive
-              ? 'bg-sidebar-active font-semibold text-sidebar-foreground before:absolute before:inset-y-2 before:start-0 before:w-[3px] before:rounded-full before:bg-sidebar-accent'
-              : 'text-sidebar-muted hover:bg-sidebar-active/70 hover:text-sidebar-foreground',
-          )
-        }
+        aria-current={current ? 'page' : undefined}
+        aria-label={collapsed ? label : undefined}
+        onMouseEnter={collapsed ? showTip(label) : undefined}
+        onFocus={collapsed ? showTip(label) : undefined}
+        onMouseLeave={collapsed ? () => setTip(null) : undefined}
+        onBlur={collapsed ? () => setTip(null) : undefined}
+        className={cn(
+          // The current item: a soft accent fill and a peach bar on its inline start.
+          'nav-link group relative flex min-h-10 items-center gap-3 rounded-lg px-3 py-1.5 text-sm transition-colors duration-150',
+          nested && !collapsed && 'ps-9',
+          collapsed && 'justify-center px-0',
+          current
+            ? 'bg-primary-soft font-semibold text-sidebar-foreground before:absolute before:inset-y-2 before:start-0 before:w-[3px] before:rounded-full before:bg-sidebar-accent'
+            : 'text-sidebar-muted hover:bg-sidebar-active/70 hover:text-sidebar-foreground',
+        )}
       >
-        <Icon aria-hidden="true" className="size-4 shrink-0 group-aria-[current=page]:text-sidebar-accent" />
-        <span className="min-w-0 flex-1 truncate">{t(label)}</span>
-      </NavLink>
+        <Icon aria-hidden="true" className={cn('size-4 shrink-0', current && 'text-sidebar-accent')} />
+        {collapsed ? null : <span className="min-w-0 flex-1 truncate">{label}</span>}
+      </Link>
     );
   };
 
+  // Administration only for those who may use it; the first of the end sections gets a rule.
+  const visible = NAV_MODULES.map((module) => ({ module, items: module.items.filter(allowed) })).filter((v) => v.items.length > 0);
+  const firstSection = visible.findIndex((v) => v.module.section);
   return (
-    <nav aria-label={t('nav.mainLabel')} className="flex flex-col gap-1" data-testid="main-nav">
-      {NAV_MODULES.map((module) => {
-        const items = module.items.filter(allowed);
-        if (items.length === 0) return null; // administration only for those who may use it
-        const separated = module.section === 'admin' || (module.section === 'you' && !showsAdmin);
-        const only = items.length === 1 ? items[0] : undefined;
-        if (only) {
+    <nav aria-label={t('nav.mainLabel')} className="flex flex-col gap-1" data-testid="main-nav" data-collapsed={collapsed || undefined}>
+      {collapsed && tip ? (
+        <span role="tooltip" className="pointer-events-none fixed z-50 -translate-y-1/2 rounded-md bg-foreground px-2.5 py-1 text-sm whitespace-nowrap text-background shadow-raised"
+          style={tip.rtl ? { top: tip.top, right: tip.x } : { top: tip.top, left: tip.x }} data-testid="nav-tooltip">
+          {tip.label}
+        </span>
+      ) : null}
+      {visible.map(({ module, items }, index) => {
+        const border = index === firstSection;
+        const key = (item: NavItem) => `${item.path}${item.hash ?? ''}${item.query ?? ''}`;
+        if (collapsed) {
+          // Icon-only: every destination as an icon with its name as a tooltip; modules apart.
           return (
-            <div key={module.id} className={cn(separated && 'mt-3 border-t border-sidebar-border pt-3')} data-module={module.id}>
-              {link({ ...only, icon: module.icon }, false, module.label)}
-            </div>
+            <ul key={module.id} aria-label={t(module.label)} data-module={module.id}
+              className={cn('flex flex-col gap-0.5', border ? 'mt-3 border-t border-sidebar-border pt-3' : 'border-t border-sidebar-border/60 pt-1 first:border-0 first:pt-0')}>
+              {items.map((item) => <li key={key(item)}>{link(item, false)}</li>)}
+            </ul>
           );
         }
-        const holdsCurrent = items.some((item) => isCurrent(item.path, pathname));
+        const holdsCurrent = items.some((item) => isCurrentItem(item, pathname, hash, search));
         const expanded = open[module.id] ?? true;
         const ModuleIcon = module.icon;
         const listId = `nav-module-${module.id}`;
         return (
-          <div key={module.id} className={cn('flex flex-col gap-0.5', separated && 'mt-3 border-t border-sidebar-border pt-3')} data-module={module.id}>
+          <div key={module.id} className={cn('flex flex-col gap-0.5', border && 'mt-3 border-t border-sidebar-border pt-3')} data-module={module.id}>
             <button
               type="button"
               aria-expanded={expanded}
               aria-controls={listId}
               onClick={() => toggle(module.id, expanded)}
               className={cn(
-                'flex min-h-10 items-center gap-3 rounded-md px-3 py-1.5 text-start text-sm font-medium transition-colors hover:bg-sidebar-active/70',
+                'flex min-h-10 items-center gap-3 rounded-lg px-3 py-1.5 text-start text-sm font-semibold transition-colors hover:bg-sidebar-active/70',
                 holdsCurrent ? 'text-sidebar-foreground' : 'text-sidebar-muted hover:text-sidebar-foreground',
               )}
               data-testid={`nav-module-${module.id}`}
             >
               <ModuleIcon aria-hidden="true" className={cn('size-4 shrink-0', holdsCurrent && 'text-sidebar-accent')} />
               <span className="min-w-0 flex-1">{t(module.label)}</span>
-              <ChevronDown aria-hidden="true" className={cn('size-4 shrink-0 transition-transform', expanded && 'rotate-180')} />
+              <ChevronDown aria-hidden="true" className={cn('size-4 shrink-0 transition-transform duration-200', expanded && 'rotate-180')} />
             </button>
             {expanded ? (
-              <ul id={listId} className="flex flex-col gap-0.5">
-                {items.map((item) => <li key={item.key}>{link(item, true)}</li>)}
+              <ul id={listId} className="nav-expand flex flex-col gap-0.5">
+                {items.map((item) => <li key={key(item)}>{link(item, true)}</li>)}
               </ul>
             ) : null}
           </div>

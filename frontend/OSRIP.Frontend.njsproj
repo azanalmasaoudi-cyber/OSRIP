@@ -226,6 +226,7 @@
     <TypeScriptCompile Include="src\components\ui\badge.tsx" />
     <TypeScriptCompile Include="src\components\ui\button.tsx" />
     <TypeScriptCompile Include="src\components\ui\card.tsx" />
+    <TypeScriptCompile Include="src\components\ui\data-table.tsx" />
     <TypeScriptCompile Include="src\components\ui\dialog.tsx" />
     <TypeScriptCompile Include="src\components\ui\progress.tsx" />
     <TypeScriptCompile Include="src\components\ui\segmented.tsx" />
@@ -272,6 +273,7 @@
     <TypeScriptCompile Include="src\lib\voicePlayer.ts" />
     <TypeScriptCompile Include="src\main.tsx" />
     <TypeScriptCompile Include="src\pages\AssistantPage.tsx" />
+    <TypeScriptCompile Include="src\pages\AuditPage.tsx" />
     <TypeScriptCompile Include="src\pages\DataManagementPage.tsx" />
     <TypeScriptCompile Include="src\pages\DesignReferencePage.tsx" />
     <TypeScriptCompile Include="src\pages\EnergyLayout.tsx" />

@@ -127,8 +127,8 @@ function AnalysisReportList() {
     );
   }
   return (
-    <section className="mt-10 flex flex-col gap-3" data-testid="analysis-reports">
-      <h2 className="text-lg font-semibold">{t('reportsAi.listTitle')}</h2>
+    <section id="saved-reports" tabIndex={-1} aria-labelledby="saved-reports-h" className="mt-10 flex scroll-mt-24 flex-col gap-3 outline-none" data-testid="analysis-reports">
+      <h2 id="saved-reports-h" className="text-lg font-semibold">{t('reportsAi.listTitle')}</h2>
       <p className="text-sm text-muted-foreground">{t('reportsAi.listIntro')}</p>
       {body}
     </section>

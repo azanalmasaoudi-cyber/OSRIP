@@ -9,6 +9,7 @@ import { DatasetsPage } from '@/pages/DatasetsPage';
 import { AnalysisReportPage } from '@/pages/AnalysisReportPage';
 import { AssistantPage } from '@/pages/AssistantPage';
 import { ForecastPage } from '@/pages/ForecastPage';
+import { AuditPage } from '@/pages/AuditPage';
 import { HealthPage } from '@/pages/HealthPage';
 import { GeographyPage } from '@/pages/GeographyPage';
 import { LibraryPage } from '@/pages/LibraryPage';
@@ -96,6 +97,7 @@ export const router = createBrowserRouter([
       { path: 'account', element: <AccountPage /> },
       { path: 'admin/users', element: <AdminUsersPage /> },
       { path: 'admin/health', element: <HealthPage /> },
+      { path: 'admin/audit', element: <AuditPage /> },
       { path: 'dev/mail', element: <DevMailPage /> },
       { path: 'design-reference', element: <DesignReferencePage /> },
       { path: '*', element: <NotFoundPage /> },
