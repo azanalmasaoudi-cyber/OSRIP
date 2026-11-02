@@ -99,7 +99,7 @@ function ProfileCard({ compact }: { compact: boolean }) {
 function usePageTitle(pathname: string): string {
   const { t } = useTranslation();
   const { hash, search } = useLocation();
-  if (pathname === '/') return t('nav.home');
+  if (pathname === '/') return t('nav.dashboard');
   if (pathname === '/talk') return t('nav.aiAssistant');
   if (pathname === '/energy') return t('nav.electricity');
   if (['/sign-in', '/register', '/forgot-password', '/reset-password', '/magic-link', '/verify-email', '/link-email'].includes(pathname)) {

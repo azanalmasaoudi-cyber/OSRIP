@@ -1573,7 +1573,7 @@ export const en = {
       mapDisabled: 'The basemap is switched off in this deployment. Every area and its coverage are in the table below.',
       tilesFailing: 'Some map tiles could not be loaded. The table below is unaffected.',
       mapBoundariesNote:
-        'Shaded areas are OpenStreetMap boundaries matched to this registry (match report: /geo/boundaries-report.json). Roads, coastlines and place names on the basemap come from the tile provider and are not checked by OSRIP. Terrain relief is not shown.',
+        'Shaded areas are OpenStreetMap boundaries matched to this registry (match report: /geo/boundaries-report.json). Roads, coastlines and place names on the basemap come from the tile provider and are not checked by OSRIP. Relief comes from the open Terrain Tiles (SRTM on land, ETOPO1 under the sea).',
       mapTableNote: 'Choose an area in the table to see its details and observations. The table is the complete, accessible alternative to the map.',
       noDirections: 'No directions links are offered: the registry contains no verified public locations.',
       areasHeading: 'Areas',
