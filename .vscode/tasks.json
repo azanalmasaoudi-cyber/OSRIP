@@ -93,6 +93,15 @@
             "options": { "cwd": "${workspaceFolder}/frontend", "shell": { "executable": "powershell.exe", "args": ["-NoProfile", "-Command"] } },
             "problemMatcher": ["$tsc"],
             "group": "test"
+        },
+        {
+            "label": "OSRIP: map tests (full stack, no map service contacted)",
+            "detail": "The Oman map and geography browser tests in Chrome: boundary files against the registry, fallback, views, 3D, Arabic, and MapTiler with stand-in responses. Starts its own API and web servers (ports 8765, 5174, 5176); the dev database must be running.",
+            "type": "shell",
+            "command": "$env:OSRIP_TEST_ADMIN_URL = (& ..\\backend\\.venv\\Scripts\\python.exe ..\\backend\\scripts\\devdb.py url); $env:PW_CHANNEL = 'chrome'; npx playwright test -c playwright.api.config.ts oman-map geography-forecast",
+            "options": { "cwd": "${workspaceFolder}/frontend", "shell": { "executable": "powershell.exe", "args": ["-NoProfile", "-Command"] } },
+            "problemMatcher": [],
+            "group": "test"
         }
     ],
     "inputs": [

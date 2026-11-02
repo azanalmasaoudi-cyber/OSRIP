@@ -255,6 +255,7 @@
     <Compile Include="tests\test_auth_integration.py" />
     <Compile Include="tests\test_balance.py" />
     <Compile Include="tests\test_balance_integration.py" />
+    <Compile Include="tests\test_build_boundaries.py" />
     <Compile Include="tests\test_calculations.py" />
     <Compile Include="tests\test_change_ids.py" />
     <Compile Include="tests\test_crawl.py" />

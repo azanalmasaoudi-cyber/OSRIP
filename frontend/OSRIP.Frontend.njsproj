@@ -100,6 +100,8 @@
     <TypeScriptCompile Include="e2e-api\intro-clips.spec.ts" />
     <TypeScriptCompile Include="e2e-api\journey.spec.ts" />
     <TypeScriptCompile Include="e2e-api\mulhim.spec.ts" />
+    <TypeScriptCompile Include="e2e-api\oman-map-maptiler.spec.ts" />
+    <TypeScriptCompile Include="e2e-api\oman-map.spec.ts" />
     <TypeScriptCompile Include="e2e-api\personas.spec.ts" />
     <TypeScriptCompile Include="e2e-api\phone.spec.ts" />
     <TypeScriptCompile Include="e2e-api\quality.spec.ts" />
@@ -218,6 +220,7 @@
     <TypeScriptCompile Include="src\components\geography\Basemap.tsx" />
     <TypeScriptCompile Include="src\components\geography\GovernorateComparison.tsx" />
     <TypeScriptCompile Include="src\components\geography\maplibre.ts" />
+    <TypeScriptCompile Include="src\components\geography\mapProviders.ts" />
     <TypeScriptCompile Include="src\components\geography\OmanMap.tsx" />
     <TypeScriptCompile Include="src\components\layout\AccountControl.tsx" />
     <TypeScriptCompile Include="src\components\layout\AppShell.tsx" />
@@ -346,6 +349,9 @@
     <Content Include="public\favicon.svg" />
     <Content Include="public\geo\boundaries-report.json" />
     <Content Include="public\geo\oman-governorates.geojson" />
+    <Content Include="public\geo\oman-labels.geojson" />
+    <Content Include="public\geo\oman-mask.geojson" />
+    <Content Include="public\geo\oman-national.geojson" />
     <Content Include="public\geo\oman-wilayats.geojson" />
     <Content Include="public\geo\README.md" />
     <Content Include="public\images\assistant\ai-assistant-face-200.jpg" />
