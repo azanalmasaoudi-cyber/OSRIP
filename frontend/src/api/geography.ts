@@ -63,6 +63,8 @@ const coverageIndicator = z.object({
   code: z.string(),
   name_en: z.string(),
   name_ar: z.string(),
+  /** The axis: electricity, water, food_security or trade. */
+  section: z.enum(['electricity', 'water', 'food_security', 'trade']).optional(),
   frequency: z.string(),
   observations: z.number(),
   values: z.number(),

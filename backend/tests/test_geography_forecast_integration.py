@@ -162,6 +162,7 @@ def test_coverage_counts_only_the_exact_area_and_missing_is_not_zero(manager, an
     cov = response.json()["areas"]
     muscat = cov["OM-MA"]
     water = next(i for i in muscat["indicators"] if i["code"] == "WATER_PRODUCTION")
+    assert water["section"] == "water", "each indicator names its axis"
     assert water["observations"] >= 2 and water["values"] >= 1
     assert muscat["missing"] >= 1
     # Nothing is inherited downwards or from the national total.

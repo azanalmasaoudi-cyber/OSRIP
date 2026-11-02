@@ -158,6 +158,7 @@ def coverage(session: Session, data_mode: DataMode) -> dict[str, Any]:
             Indicator.code,
             Indicator.name_en,
             Indicator.name_ar,
+            Indicator.section,
             Observation.frequency,
             func.count(),
             func.count(Observation.value),
@@ -173,12 +174,17 @@ def coverage(session: Session, data_mode: DataMode) -> dict[str, Any]:
             DatasetVersion.status == DatasetVersionStatus.PUBLISHED,
         )
         .group_by(
-            Area.code, Indicator.code, Indicator.name_en, Indicator.name_ar, Observation.frequency
+            Area.code,
+            Indicator.code,
+            Indicator.name_en,
+            Indicator.name_ar,
+            Indicator.section,
+            Observation.frequency,
         )
         .order_by(Area.code, Indicator.code)
     ).all()
     areas: dict[str, dict[str, Any]] = {}
-    for code, ind, name_en, name_ar, freq, n, n_values, start, end in rows:
+    for code, ind, name_en, name_ar, section, freq, n, n_values, start, end in rows:
         entry = areas.setdefault(
             code, {"observations": 0, "values": 0, "missing": 0, "indicators": []}
         )
@@ -190,6 +196,8 @@ def coverage(session: Session, data_mode: DataMode) -> dict[str, Any]:
                 "code": ind,
                 "name_en": name_en,
                 "name_ar": name_ar,
+                # The axis (electricity, water, food_security, trade), for filtering on the map.
+                "section": section.value,
                 "frequency": freq.value,
                 "observations": n,
                 "values": n_values,
