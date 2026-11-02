@@ -114,7 +114,7 @@ export function OmanMap({ label, level, onLevelChange, shades, names, legendTitl
         map.on('error', () => {
           if (cancelled || styled) return;
           setBasemap(false);
-          map.setStyle(FALLBACK);
+          map.setStyle(FALLBACK, { diff: false }); // a full replacement: the first style never loaded
         });
       })
       .catch(() => {
