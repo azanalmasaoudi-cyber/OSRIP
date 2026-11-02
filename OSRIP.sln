@@ -65,7 +65,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{951A985D-D
 		docs\Oman_Statistics_References_and_Images_English.docx = docs\Oman_Statistics_References_and_Images_English.docx
 		docs\OSRIP_Academic_Booklet_English_60_Pages-2.docx = docs\OSRIP_Academic_Booklet_English_60_Pages-2.docx
 		docs\OSRIP_Academic_Booklet_English_60_Pages.docx = docs\OSRIP_Academic_Booklet_English_60_Pages.docx
-		docs\OSRIP_Intro_Single_File.html = docs\OSRIP_Intro_Single_File.html
 		docs\PREMIUM_REDESIGN.md = docs\PREMIUM_REDESIGN.md
 		docs\progress.md = docs\progress.md
 		docs\requirements.md = docs\requirements.md
