@@ -262,7 +262,8 @@ test('older e-mail accounts: the e-mail link signs in once after pressing the bu
 test('the main sign-in has no e-mail or phone; unconfigured Google and Microsoft are labelled on the other page', async ({ page }) => {
   await page.goto('/sign-in');
   const form = page.getByTestId('sign-in-form');
-  await expect(form.locator('input')).toHaveCount(2); // username and password only
+  await expect(form.locator('input:not([type="checkbox"])')).toHaveCount(2); // username and password only
+  await expect(form.getByTestId('sign-in-remember')).not.toBeChecked(); // remember me is opt-in
   await expect(page.getByTestId('sign-in-method')).toHaveCount(0);
   await page.goto('/sign-in/other');
   await expect(page.getByTestId('oidc-google-unconfigured')).toHaveText('Google sign-in is not configured on this server.');

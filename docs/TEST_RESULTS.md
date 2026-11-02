@@ -1,5 +1,18 @@
 # Test results
 
+## 2026-11-02 (later): premium redesign (branch `feature/premium-osrip-redesign`)
+
+What changed (details and screenshots in PREMIUM_REDESIGN.md): the warm glass design tokens in both themes, the new sidebar (collapsible modules, icon-only mode, profile card), the dashboard KPI cards and analysis by axis, the full-screen sign-in with Remember me (migration 0027), the Audit Logs page and reusable data table, the assistant's glass messages, and relief on the map.
+
+| Check | Result |
+|---|---|
+| `ruff`, backend `pytest` with database tests | Pass; **941 passed**. New: `test_remember_me_integration.py` (a browser-session cookie and the idle limit without it; a 14-day persistent session that survives an idle gap with it; sign-out ends it). The 0027 migration round trip passes |
+| `npm run typecheck`, `npm run lint`, `npm run check:contrast` (47 pairs per theme), `npm run build` | Pass; 0 failing contrast pairs |
+| Mock-data browser tests (Chrome) | **40 passed, 3 skipped** (on a quiet machine; with the backend suite running alongside, the opening's 3-second timing check once read 4.6 s) |
+| Full-stack browser tests (Chrome) | **188 passed, 3 skipped, 1 failed** in the full run (192 tests). The failure was the sign-in test counting the form's inputs (Remember me adds a checkbox); it now counts text inputs and checks the box is off by default, and its spec file reruns: **13 passed** |
+| Browser, by hand (copy of the development database) | Sign-in in light and dark, password toggle, Remember me stored as a 14-day persistent session; dashboard KPIs and analysis; Audit Logs (119 events); map relief in light and dark; an assistant reply; Arabic at phone width with no sideways scroll |
+| OpenAI, live | **Not tested**: no API key configured |
+
 ## 2026-10-27 (evening): WhatsApp verification, Meta Cloud API (branch `feature/whatsapp-verification`)
 
 What changed (details in INTEGRATIONS.md, "WhatsApp verification"):
