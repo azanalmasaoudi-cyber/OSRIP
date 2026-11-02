@@ -158,12 +158,34 @@ drawings, are shown. Nothing was downloaded, generated or edited for this releas
 |---|---|---|
 | Landing hero (full-width background, credit in the corner) | `misfat-al-abriyeen-village.jpg` | Photograph, CC0 1.0 |
 | Overview hero | `bahla-fort.jpg` | Photograph, CC BY-SA 4.0 |
-| Water (sector header, sector cards) | `desalination-al-khaluf.jpg` | Photograph, CC BY-SA 3.0 |
-| Food Security (sector header, sector cards) | `falaj-misfah.jpg` | Photograph, CC BY-SA 3.0 |
-| Trade (sector header, sector cards) | `duqm-port.jpg` | Photograph, CC BY-SA 4.0 |
-| Electricity (sector header, sector cards) | `illustrations/sector-electricity.svg` | Project drawing, labelled "Illustration" (no licensed photograph of an Omani power or solar plant is in the repository yet) |
+| Water (Overview sector cards; until 2026-11-02 also the sector header and dashboard cards) | `desalination-al-khaluf.jpg` | Photograph, CC BY-SA 3.0 |
+| Food Security (as for Water) | `falaj-misfah.jpg` | Photograph, CC BY-SA 3.0 |
+| Trade (as for Water) | `duqm-port.jpg` | Photograph, CC BY-SA 4.0 |
+| Electricity (as for Water) | `illustrations/sector-electricity.svg` | Project drawing, labelled "Illustration" (no licensed photograph of an Omani power or solar plant is in the repository yet) |
 
 No longer shown: the generated Omani-professional portrait (landing hero), the booklet's
 conceptual electricity, water and trade rasters (sector headers) and the floating sector tiles.
 The files stay in the repository. The photographs are at most 2000 px wide (none is a native
 4K master); see the release report for which Commons originals could replace them.
+
+## Premium sector artwork (2026-11-02, branch `feature/premium-sector-images`)
+
+Four images supplied by the project owner for OSRIP, each 1672 × 941 px (about 16:9) with its
+own Arabic and English title. They are **AI-generated illustrations**, not photographs of
+specific Omani sites, and their alt text says so. They replace the sector images on the
+dashboard cards and in the sector page headers; the Overview page keeps the credited
+photographs above.
+
+| Sector | Original (kept as supplied) | Delivered as |
+|---|---|---|
+| Electricity | `frontend/public/images/sectors/osrip_electricity.png` (2.0 MB) | WebP 836 px (64 KB) or 1672 px (198 KB) |
+| Water | `frontend/public/images/sectors/osrip_water.png` (2.3 MB) | WebP 836 px (87 KB) or 1672 px (278 KB) |
+| Food Security | `frontend/public/images/sectors/osrip_food_security.png` (2.5 MB) | WebP 836 px (99 KB) or 1672 px (316 KB) |
+| Trade | `frontend/public/images/sectors/osrip_trade.png` (2.1 MB) | WebP 836 px (69 KB) or 1672 px (211 KB) |
+
+- **Display** (`components/brand/SectorArtwork.tsx`): each image is shown whole at its own
+  ratio (`object-contain`, width and height set, so nothing shifts while it loads). It is never
+  cropped, stretched or covered with text, since the image carries its own title.
+- **Delivery:** the browser picks the WebP copy it needs (quality 86–88, made with Pillow), and
+  falls back to the original PNG. Dashboard cards load lazily; the sector header loads at once.
+- **Rights:** owner-supplied for this project.
