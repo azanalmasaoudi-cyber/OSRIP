@@ -12,7 +12,7 @@ const PASSWORD = process.env.OSRIP_E2E_PASSWORD ?? '';
 
 async function signIn(page: Page): Promise<void> {
   await page.goto('/sign-in');
-  await page.getByTestId('sign-in-form').getByLabel('E-mail address').fill('viewer@e2e.invalid');
+  await page.getByTestId('sign-in-form').getByLabel('Username').fill('viewer@e2e.invalid');
   await page.getByTestId('sign-in-form').getByLabel('Password').fill(PASSWORD);
   await page.getByTestId('sign-in-form').getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByTestId('account-page')).toBeVisible();

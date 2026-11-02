@@ -2,14 +2,14 @@ import { expect, test, type Page } from '@playwright/test';
 
 // Full stack: the sourced area registry, statistical coverage by area and the
 // forecast eligibility check. The basemap style points at a URL that is not a
-// map style (playwright.api.config.ts), so these runs make no external requests
-// and exercise the "map unavailable" path.
+// map style (playwright.api.config.ts), so no basemap tiles are requested and the
+// map falls back to a plain background (oman-map.spec.ts covers the map itself).
 
 const PASSWORD = process.env.OSRIP_E2E_PASSWORD ?? '';
 
 async function signIn(page: Page, email: string): Promise<void> {
   await page.goto('/sign-in');
-  await page.getByLabel('E-mail address').fill(email);
+  await page.getByLabel('Username').fill(email);
   await page.getByLabel('Password').fill(PASSWORD);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByTestId('signed-in-as')).toBeVisible();
@@ -29,9 +29,18 @@ test('registry lists 11 governorates and 63 wilayats, separately from statistica
   await expect(row(page, 'OM-ZU')).toContainText('No data');
   await expect(page.locator('[data-testid="area-table"] [data-coverage="some"]')).toHaveCount(0);
 
-  // The map service is unavailable here; the page says so and the table remains.
-  await expect(page.getByTestId('map-unavailable')).toBeVisible();
-  await expect(page.getByTestId('map-notes')).toContainText('No boundary geometry is included');
+  // The basemap style is unavailable here, so the boundaries are drawn on a plain background
+  // (a browser without WebGL gets an explanation instead); every area is "No data"; the table stays.
+  const map = page.getByTestId('oman-map');
+  await expect(map.or(page.getByTestId('oman-map-unavailable'))).toBeVisible();
+  if (await map.isVisible()) {
+    await expect(page.getByTestId('oman-map-canvas')).toHaveAttribute('data-state', 'ready');
+    await expect(map).toContainText('boundaries on a plain background');
+    // No value classes: every area is "No data".
+    await expect(page.getByTestId('map-legend')).toContainText('No data');
+    await expect(page.getByTestId('map-legend-class')).toHaveCount(0);
+  }
+  await expect(page.getByTestId('map-notes')).toContainText('Boundaries on the map come from OpenStreetMap');
 });
 
 test('filters and selection: a wilayat shows its sources and "No data"', async ({ page }) => {

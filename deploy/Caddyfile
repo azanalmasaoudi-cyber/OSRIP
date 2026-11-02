@@ -21,10 +21,12 @@
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "strict-origin-when-cross-origin"
 		X-Frame-Options "DENY"
-		# Tiles, style and fonts for the basemap come from OpenFreeMap; nothing else is external.
-		# Search, speech and the language model are called by the API, never by the browser.
-		# media-src blob: plays the assistant's synthesised speech (fetched from /api).
-		Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; img-src 'self' data: blob: https://tiles.openfreemap.org; media-src 'self' blob:; connect-src 'self' https://tiles.openfreemap.org; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-ancestors 'none'"
+		# The map is the only external content: MapTiler (styles, tiles, fonts, terrain; when a
+		# VITE_MAPTILER_KEY is built in), OpenFreeMap (the fallback basemap) and the open Terrain
+		# Tiles on AWS (fallback relief and 3D). MapLibre fetches tiles (connect-src) and decodes
+		# them as images (img-src). Search, speech and the language model are called by the API,
+		# never by the browser. media-src blob: plays the assistant's synthesised speech.
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; img-src 'self' data: blob: https://tiles.openfreemap.org https://api.maptiler.com https://elevation-tiles-prod.s3.amazonaws.com; media-src 'self' blob:; connect-src 'self' https://tiles.openfreemap.org https://api.maptiler.com https://elevation-tiles-prod.s3.amazonaws.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-ancestors 'none'"
 		# The microphone only for this site (asked for when the user presses Speak); no camera or location.
 		Permissions-Policy "microphone=(self), camera=(), geolocation=()"
 	}

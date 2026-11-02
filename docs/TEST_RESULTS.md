@@ -1,5 +1,70 @@
 # Test results
 
+## 2026-11-02 (night): premium Oman map (branch `feature/oman-premium-map`)
+
+What changed (details in MAP.md):
+- MapTiler when a browser key is configured (Topographic, Satellite, Terrain, 3D terrain), otherwise OpenFreeMap with the open Terrain Tiles, otherwise a plain background; a refusal, quota or outage hands over to the next provider.
+- The national outline (dissolved from the governorates), a mask dimming everything outside Oman, and registry-named labels.
+- The comparison by axis and at wilayat level, and the data mode beside the map.
+- The MapTiler build argument and the map hosts in the Content-Security-Policy.
+
+| Check | Result |
+|---|---|
+| `ruff`, backend `pytest` with database tests | Pass; **945 passed**. New: `test_build_boundaries.py` (the outline dissolve with a shared way and an enclave, ring orientation, the mask, label points) |
+| Boundary build | 11/11 governorates, 63/63 wilayats, 0 unmatched either side, 0 geometry problems; outline 38 parts, 1 hole (Nahwa), 0 unjoined segments; 74 labels, each inside its area |
+| `npm run typecheck`, `npm run lint`, `npm run check:contrast` | Pass; 0 failing contrast pairs |
+| Full-stack browser tests (Chrome) | **193 passed, 3 skipped, 5 failed** in the full run (201 tests). The 5 were timeouts (a 3-minute browser launch among them) while the machine was loaded and asleep for part of the run; their spec files rerun: **19 passed**. New: `oman-map.spec.ts` (4) and `oman-map-maptiler.spec.ts` (5), with every external map request stopped or answered by a stand-in |
+| Headless Chrome against the development server, by hand | OpenFreeMap provider, toolbar, Satellite disabled without a key, hover tooltip, selection with zoom, Terrain view and 3D with relief, wilayat level and comparison, data mode switch; dark Arabic with the toolbar at the start edge and the zoom buttons opposite; 390 px with no sideways scroll; no console errors besides the API's handled mixed-frequency answer |
+| MapTiler, live | **Not tested**: no MapTiler account or key. The requests OSRIP makes and its fallback are tested with stand-in responses |
+
+## 2026-11-02 (later): premium redesign (branch `feature/premium-osrip-redesign`)
+
+What changed (details and screenshots in PREMIUM_REDESIGN.md): the warm glass design tokens in both themes, the new sidebar (collapsible modules, icon-only mode, profile card), the dashboard KPI cards and analysis by axis, the full-screen sign-in with Remember me (migration 0027), the Audit Logs page and reusable data table, the assistant's glass messages, and relief on the map.
+
+| Check | Result |
+|---|---|
+| `ruff`, backend `pytest` with database tests | Pass; **941 passed**. New: `test_remember_me_integration.py` (a browser-session cookie and the idle limit without it; a 14-day persistent session that survives an idle gap with it; sign-out ends it). The 0027 migration round trip passes |
+| `npm run typecheck`, `npm run lint`, `npm run check:contrast` (47 pairs per theme), `npm run build` | Pass; 0 failing contrast pairs |
+| Mock-data browser tests (Chrome) | **40 passed, 3 skipped** (on a quiet machine; with the backend suite running alongside, the opening's 3-second timing check once read 4.6 s) |
+| Full-stack browser tests (Chrome) | **188 passed, 3 skipped, 1 failed** in the full run (192 tests). The failure was the sign-in test counting the form's inputs (Remember me adds a checkbox); it now counts text inputs and checks the box is off by default, and its spec file reruns: **13 passed** |
+| Browser, by hand (copy of the development database) | Sign-in in light and dark, password toggle, Remember me stored as a 14-day persistent session; dashboard KPIs and analysis; Audit Logs (119 events); map relief in light and dark; an assistant reply; Arabic at phone width with no sideways scroll |
+| OpenAI, live | **Not tested**: no API key configured |
+
+## 2026-10-27 (evening): WhatsApp verification, Meta Cloud API (branch `feature/whatsapp-verification`)
+
+What changed (details in INTEGRATIONS.md, "WhatsApp verification"):
+- `OSRIP_SMS_PROVIDER=whatsapp`: codes made by OSRIP (only a keyed digest stored) and delivered with a WhatsApp authentication template in Arabic or English, through the Meta WhatsApp Cloud API. Meta's error codes mapped; no retry; the number, code and token never logged.
+- Test and production separated: `OSRIP_WHATSAPP_MODE=test` (default) sends only to `OSRIP_WHATSAPP_TEST_RECIPIENTS` and is labelled as a demonstration (status `sandbox`); `production` must be set explicitly and is not set anywhere.
+- `scripts/whatsapp_setup.py` (configure with a hidden token prompt, create the template, check the sender and template status; none of them sends a message).
+- The phone form and account page say "WhatsApp" when that is the channel, in both languages.
+
+| Check | Result |
+|---|---|
+| `ruff`, backend `pytest` with database tests | Pass; **906 passed**. New: `test_whatsapp.py` (request format, test-mode recipient list, keyed digest, Meta error mapping, no retry, nothing sensitive in logs, settings), `test_whatsapp_integration.py` (registration through the API in test mode with a simulated Meta API: refused number never reaches Meta, Arabic template, wrong code counted, code works once) |
+| `npm run typecheck`, `npm run lint`, `npm run build` | Pass |
+| Full-stack browser tests (Edge): `phone.spec.ts`, `verification-change.spec.ts`, new `whatsapp.spec.ts` | **24 passed** |
+| Browser (local preview) | An API in WhatsApp test mode with placeholder settings: the form shows the demonstration notice; a number outside the approved list is refused with an explanation and an e-mail alternative, and the server log shows no call to Meta |
+| WhatsApp, live | **Not tested**: no Meta developer app yet. The demonstration needs the setup in INTEGRATIONS.md |
+
+## 2026-10-27 (later): e-mail and phone verification (branch `feature/email-phone-verification`)
+
+What changed (details in INTEGRATIONS.md, "E-mail" and "SMS verification"):
+- Twilio Verify adapter (`OSRIP_SMS_PROVIDER=twilio_verify`; REST API, no SDK), with Twilio's error codes mapped, no retry, the code sent in the page's language, and logs without numbers or codes. Missing setting names (never values) are shown to administrators on Service health.
+- Account e-mails in Arabic and English (the reader's language first), as HTML with a plain-text part.
+- Changing a confirmed e-mail address or a verified phone number: current password (or a sign-in within `OSRIP_REAUTH_MINUTES` for accounts without one), proof of the new address or number, and a notice to the confirmed address. Account page: change forms, re-sending a confirmation, and translated errors.
+- A per-address limit on phone code checks; the per-address limit on code requests now follows `OSRIP_SMS_PER_CLIENT_HOUR` when it is set higher (production default unchanged at 20 per hour).
+
+| Check | Result |
+|---|---|
+| `ruff`, backend `pytest` with database tests | Pass; **890 passed**. New: `test_sms_twilio.py` (Twilio requests, authentication, error mapping, timeouts, no number or code in logs), `test_mail_templates.py` (both languages, right to left, escaping, no scripts or images), `test_verification_change_integration.py` (address and number changes, re-authentication, notices, other accounts' addresses never taken, SMTP HTML part via a fake server, per-address limit) |
+| `npm run typecheck`, `npm run lint`, `npm run build` | Pass |
+| Full-stack browser tests (Edge): `accounts.spec.ts`, `phone.spec.ts`, new `verification-change.spec.ts` | **29 passed**: registration and confirmation, links used once, password reset, magic link, phone registration, wrong and expired codes, resend countdown, delivery failure, linking, changing an address (wrong password refused, old address told), changing a number, Arabic |
+| Browser (local preview, Edge) | Account page on a phone-sized screen; change-number form in Arabic (right to left, number and password left to right) with the translated wrong-password error. A throwaway account `ui-check-…@test.invalid` was created in the local development database for this |
+| Twilio Verify, live | **Not tested**: no Twilio account. Every Twilio test uses mocked HTTP, so SMS delivery must not be reported as working |
+| E-mail, live | **Not tested**: no SMTP relay or e-mail service configured; messages go to the development outbox |
+
+**Remaining:** a Twilio account, Verify service, Oman sender ID registration and the live acceptance test (`backend/scripts/sms_acceptance.py`); an SMTP relay or e-mail service with SPF, DKIM and DMARC, then a real-inbox test in both languages.
+
 ## 2026-10-27: OpenAI SDK, datasets, charts and research reports (branch `feature/openai-research-platform`)
 
 What changed (details in AI_RESEARCH_PLATFORM.md):

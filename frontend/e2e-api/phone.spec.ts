@@ -45,7 +45,7 @@ async function enterCode(page: Page, code: string): Promise<void> {
 }
 
 async function registerByPhone(page: Page, national: string, name = 'Phone E2E'): Promise<void> {
-  await page.goto('/register?method=phone');
+  await page.goto('/sign-in/other?method=phone');
   await sendCode(page, national, name);
   await enterCode(page, await smsCode(page, national));
   await expect(page).toHaveURL(/\/account/);
@@ -53,9 +53,9 @@ async function registerByPhone(page: Page, national: string, name = 'Phone E2E')
 
 test('register with a phone number only: code, wrong code, ordinary access', async ({ page }) => {
   const national = omaniNumber();
-  await page.goto('/register');
-  // Email is the default; choosing Phone is kept in the address.
-  await page.getByTestId('register-method').getByRole('radio', { name: 'Phone' }).click();
+  await page.goto('/sign-in/other');
+  // The e-mail link is the default; choosing Phone is kept in the address.
+  await page.getByTestId('sign-in-method').getByRole('radio', { name: 'Phone' }).click();
   await expect(page).toHaveURL(/method=phone/);
   await expect(page.getByTestId('sms-test-mode')).toContainText('not sent to real phones');
   await sendCode(page, national, 'Salim E2E');
@@ -77,7 +77,7 @@ test('register with a phone number only: code, wrong code, ordinary access', asy
 
 test('Arabic: phone registration is right-to-left, the number stays left-to-right', async ({ page }) => {
   const national = omaniNumber();
-  await page.goto('/register?method=phone');
+  await page.goto('/sign-in/other?method=phone');
   await page.getByRole('button', { name: 'العربية' }).first().click();
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
   await expect(page.getByText('رقم الهاتف المحمول')).toBeVisible();
@@ -102,7 +102,7 @@ test('sign in with a phone code, including the resend countdown', async ({ page,
 
   const context = await browser.newContext();
   const other = await context.newPage();
-  await other.goto('/sign-in');
+  await other.goto('/sign-in/other');
   await other.getByTestId('sign-in-method').getByRole('radio', { name: 'Phone' }).click();
   await sendCode(other, national);
   const first = await smsCode(other, national);
@@ -119,40 +119,40 @@ test('sign in with a phone code, including the resend countdown', async ({ page,
 });
 
 test('keyboard: the method choice moves with the arrow keys, mirrored in Arabic', async ({ page }) => {
-  await page.goto('/register');
-  const email = page.getByTestId('register-method').getByRole('radio', { name: 'E-mail' });
+  await page.goto('/sign-in/other');
+  const email = page.getByTestId('sign-in-method').getByRole('radio', { name: 'E-mail link' });
   await email.focus();
   await page.keyboard.press('ArrowRight');
-  await expect(page.getByTestId('register-method').getByRole('radio', { name: 'Phone' })).toBeFocused();
+  await expect(page.getByTestId('sign-in-method').getByRole('radio', { name: 'Phone' })).toBeFocused();
   await expect(page).toHaveURL(/method=phone/);
   await page.getByRole('button', { name: 'العربية' }).first().click();
-  await page.getByTestId('register-method').getByRole('radio', { checked: true }).focus();
+  await page.getByTestId('sign-in-method').getByRole('radio', { checked: true }).focus();
   await page.keyboard.press('ArrowLeft'); // "forward" in right-to-left
   await expect(page).not.toHaveURL(/method=phone/); // wrapped back to e-mail
   await page.getByRole('button', { name: 'English' }).first().click();
 });
 
 test('the chosen method survives Back and Forward', async ({ page }) => {
-  await page.goto('/register');
-  await page.getByTestId('register-method').getByRole('radio', { name: 'Phone' }).click();
+  await page.goto('/sign-in/other');
+  await page.getByTestId('sign-in-method').getByRole('radio', { name: 'Phone' }).click();
   await expect(page).toHaveURL(/method=phone/);
-  await page.getByRole('link', { name: 'Already have an account? Sign in' }).click();
-  await expect(page).toHaveURL(/\/sign-in/);
+  await page.getByRole('link', { name: 'Back to sign-in with a username' }).click();
+  await expect(page).toHaveURL(/\/sign-in$/);
   await page.goBack();
-  await expect(page).toHaveURL(/\/register\?.*method=phone/);
-  await expect(page.getByTestId('register-method').getByRole('radio', { name: 'Phone' })).toHaveAttribute('aria-checked', 'true');
+  await expect(page).toHaveURL(/\/sign-in\/other\?.*method=phone/);
+  await expect(page.getByTestId('sign-in-method').getByRole('radio', { name: 'Phone' })).toHaveAttribute('aria-checked', 'true');
   await page.goForward();
-  await expect(page).toHaveURL(/\/sign-in/);
+  await expect(page).toHaveURL(/\/sign-in$/);
 });
 
 test('delivery failure is explained and offers e-mail instead', async ({ page }) => {
-  await page.goto('/register?method=phone');
+  await page.goto('/sign-in/other?method=phone');
   await page.getByTestId('phone-number').fill('90000000'); // test number: undeliverable
   await page.getByTestId('phone-send').click();
   await expect(page.getByTestId('phone-error')).toHaveAttribute('data-code', 'sms_undeliverable');
   await page.getByRole('button', { name: 'Use e-mail instead' }).click();
   await expect(page).not.toHaveURL(/method=phone/);
-  await expect(page.getByTestId('register-form')).toBeVisible();
+  await expect(page.getByTestId('magic-form')).toBeVisible();
 });
 
 test('when SMS is not configured, phone is marked unavailable and e-mail is offered', async ({ page }) => {
@@ -162,20 +162,20 @@ test('when SMS is not configured, phone is marked unavailable and e-mail is offe
     body.sms = { ...body.sms, available: false, status: 'not_configured', provider: null };
     await route.fulfill({ response, json: body });
   });
-  await page.goto('/register');
-  const phone = page.getByTestId('register-method').getByRole('radio', { name: /Phone/ });
+  await page.goto('/sign-in/other');
+  const phone = page.getByTestId('sign-in-method').getByRole('radio', { name: /Phone/ });
   await expect(phone).toContainText('(unavailable)');
   await phone.click();
   await expect(page.getByTestId('phone-unavailable')).toContainText('no SMS service configured');
   await page.getByTestId('phone-unavailable').getByRole('button', { name: 'Use e-mail instead' }).click();
-  await expect(page.getByTestId('register-form')).toBeVisible();
+  await expect(page.getByTestId('magic-form')).toBeVisible();
 });
 
 test('linking: an e-mail account adds a phone only after verifying it', async ({ page }, info) => {
   await page.goto('/sign-in');
   const form = page.getByTestId('sign-in-form');
   // One account per project (desktop and phone both run this spec).
-  await form.getByLabel('E-mail address').fill(info.project.name === 'mobile' ? 'manager@e2e.invalid' : 'viewer@e2e.invalid');
+  await form.getByLabel('Username').fill(info.project.name === 'mobile' ? 'manager@e2e.invalid' : 'viewer@e2e.invalid');
   await form.getByLabel('Password').fill(PASSWORD);
   await form.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/account/);

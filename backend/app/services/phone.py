@@ -13,7 +13,10 @@ Rules enforced here, whatever the provider does:
   code is verified; answers before verification do not reveal whether a number has
   an account;
 * linking needs a signed-in session, and a number verified by one account is never
-  moved to, or merged with, another account.
+  moved to, or merged with, another account;
+* replacing a verified number needs the current password, or a recent sign-in for an
+  account without one, and a confirmed e-mail address is told about the change;
+* the code is sent in the person's language (Arabic or English) when the provider can.
 """
 
 from __future__ import annotations
@@ -32,7 +35,7 @@ from app.core.config import get_settings
 from app.core.errors import ApiError, unprocessable
 from app.domain.enums import AccountStatus, Role
 from app.models import AppUser, PhoneChallenge, UserRole
-from app.services import accounts, audit, monitoring, phone_numbers, sms
+from app.services import accounts, audit, identity, monitoring, phone_numbers, sms
 from app.services.principal import Principal
 
 PURPOSES = ("sign_in", "link")
@@ -50,6 +53,10 @@ DELIVERY_MESSAGES = {
     "provider_unavailable": (
         503,
         "The SMS service is not responding. Try again in a few minutes, or use e-mail instead.",
+    ),
+    "not_test_recipient": (
+        422,
+        "This is a WhatsApp demonstration: codes are sent only to the approved test numbers. Use e-mail instead.",
     ),
 }
 
@@ -91,6 +98,8 @@ def request_code(
     purpose: str,
     principal: Principal,
     client_address: str,
+    password: str | None = None,
+    language: str = "en",
 ) -> dict[str, Any]:
     s = get_settings()
     provider = sms.get_provider()
@@ -113,6 +122,9 @@ def request_code(
                 raise ApiError(
                     409, "phone_already_linked", "This number is already verified on your account."
                 )
+            if user is not None and user.phone_e164 and user.phone_verified_at:
+                # Replacing a verified number: the same step-up check as for an e-mail change.
+                accounts.confirm_identity(session, principal, user, password, action="phone.change")
         last = session.scalar(
             select(func.max(PhoneChallenge.created_at)).where(PhoneChallenge.phone_e164 == phone)
         )
@@ -143,7 +155,9 @@ def request_code(
             )
 
         try:
-            started = provider.request_verification(phone)
+            started = provider.request_verification(
+                phone, language if language in sms.LOCALES else None
+            )
         except sms.DeliveryError as exc:
             raise _delivery_error(exc) from exc
         monitoring.external_success("sms")
@@ -188,7 +202,7 @@ def request_code(
 
 @dataclass(frozen=True, slots=True)
 class Verified:
-    outcome: str  # signed_in | registered | linked
+    outcome: str  # signed_in | registered | linked | changed
     new_session: accounts.NewSession | None
 
 
@@ -229,6 +243,7 @@ def verify_code(
     code: str,
     display_name: str | None,
     principal: Principal,
+    language: str = "en",
 ) -> Verified:
     provider = sms.get_provider()
     if provider is None:
@@ -291,7 +306,7 @@ def verify_code(
             monitoring.external_success("sms")
             challenge.consumed_at = now
             session.flush()
-            result, failure = _complete(session, challenge, display_name)
+            result, failure = _complete(session, challenge, display_name, language)
     # Committed either way: a wrong code still counts as an attempt, and a verified
     # challenge stays spent even if the account step is refused.
     if failure is not None:
@@ -301,7 +316,7 @@ def verify_code(
 
 
 def _complete(
-    session: Session, challenge: PhoneChallenge, display_name: str | None
+    session: Session, challenge: PhoneChallenge, display_name: str | None, language: str
 ) -> tuple[Verified | None, ApiError | None]:
     phone = challenge.phone_e164
     masked = phone_numbers.mask(phone)
@@ -318,17 +333,20 @@ def _complete(
                 "phone_taken",
                 "This number is verified on another OSRIP account. Accounts are never merged.",
             )
+        changed = bool(user.phone_e164 and user.phone_verified_at and user.phone_e164 != phone)
         user.phone_e164 = phone
         user.phone_verified_at = accounts.now()
+        if changed:
+            identity.notify_phone_changed(session, user, masked or "", language)
         audit.record(
             session,
             accounts.load_principal(session, user),
-            "auth.phone.link",
+            "auth.phone.change" if changed else "auth.phone.link",
             entity_type="user",
             entity_id=user.id,
             metadata={"phone": masked},
         )
-        return Verified("linked", None), None
+        return Verified("changed" if changed else "linked", None), None
 
     user = session.scalar(select(AppUser).where(AppUser.phone_e164 == phone))
     outcome = "signed_in"

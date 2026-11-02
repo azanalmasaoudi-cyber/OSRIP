@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate, useLocation } from 'react-router';
 
+import { AuthLayout } from '@/components/layout/AuthLayout';
 import { AppShell } from '@/components/layout/AppShell';
 import { DesignReferencePage } from '@/pages/DesignReferencePage';
 import { EnergyIndexRedirect, EnergyLayout } from '@/pages/EnergyLayout';
@@ -9,6 +10,7 @@ import { DatasetsPage } from '@/pages/DatasetsPage';
 import { AnalysisReportPage } from '@/pages/AnalysisReportPage';
 import { AssistantPage } from '@/pages/AssistantPage';
 import { ForecastPage } from '@/pages/ForecastPage';
+import { AuditPage } from '@/pages/AuditPage';
 import { HealthPage } from '@/pages/HealthPage';
 import { GeographyPage } from '@/pages/GeographyPage';
 import { LibraryPage } from '@/pages/LibraryPage';
@@ -24,9 +26,11 @@ import {
   AccountPage,
   AdminUsersPage,
   DevMailPage,
+  EmailForgotPasswordPage,
   ForgotPasswordPage,
   LinkEmailPage,
   MagicLinkPage,
+  OtherSignInPage,
   RegisterPage,
   ResetPasswordPage,
   SignInPage,
@@ -46,6 +50,11 @@ function MethodologyRedirect() {
 }
 
 export const router = createBrowserRouter([
+  {
+    path: '/sign-in',
+    element: <AuthLayout />,
+    children: [{ index: true, element: <SignInPage /> }],
+  },
   {
     path: '/',
     element: <AppShell />,
@@ -81,16 +90,19 @@ export const router = createBrowserRouter([
       { path: 'settings', element: <SettingsPage /> },
       { path: 'methodology', element: <MethodologyRedirect /> },
       { path: 'data-management', element: <DataManagementPage /> },
-      { path: 'sign-in', element: <SignInPage /> },
+      // Older e-mail and phone accounts, Google and Microsoft: off the main sign-in screen.
+      { path: 'sign-in/other', element: <OtherSignInPage /> },
       { path: 'register', element: <RegisterPage /> },
       { path: 'verify-email', element: <VerifyEmailPage /> },
       { path: 'forgot-password', element: <ForgotPasswordPage /> },
+      { path: 'forgot-password/email', element: <EmailForgotPasswordPage /> },
       { path: 'reset-password', element: <ResetPasswordPage /> },
       { path: 'magic-link', element: <MagicLinkPage /> },
       { path: 'link-email', element: <LinkEmailPage /> },
       { path: 'account', element: <AccountPage /> },
       { path: 'admin/users', element: <AdminUsersPage /> },
       { path: 'admin/health', element: <HealthPage /> },
+      { path: 'admin/audit', element: <AuditPage /> },
       { path: 'dev/mail', element: <DevMailPage /> },
       { path: 'design-reference', element: <DesignReferencePage /> },
       { path: '*', element: <NotFoundPage /> },

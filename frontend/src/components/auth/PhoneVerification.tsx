@@ -2,7 +2,7 @@ import { MessageSquareText, RotateCcw, ShieldCheck, Smartphone } from 'lucide-re
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { usePhoneRequest, usePhoneVerify, useProviders, type PhoneChallenge } from '@/api/auth';
+import { usePhoneRequest, usePhoneVerify, useProviders, type PhoneChallenge, type PhoneOutcome } from '@/api/auth';
 import { ApiRequestError } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { SelectField } from '@/components/ui/select';
@@ -18,12 +18,17 @@ const ERROR_CODES = [
   'sms_unavailable', 'invalid_phone', 'invalid_country_code', 'sms_resend_cooldown', 'sms_number_limit', 'sms_client_limit',
   'sms_busy', 'sms_invalid_number', 'sms_undeliverable', 'sms_provider_unavailable', 'sms_code_incorrect', 'sms_code_expired',
   'sms_too_many_attempts', 'sms_challenge_invalid', 'invalid_code_format', 'phone_taken', 'phone_already_linked',
-  'account_unavailable', 'too_many_requests',
+  'account_unavailable', 'too_many_requests', 'wrong_current_password', 'reauthentication_required',
+  'sms_not_test_recipient',
 ] as const;
 type ErrorCode = (typeof ERROR_CODES)[number];
+/** Errors worded for the channel: "WhatsApp" instead of "SMS". */
+const WHATSAPP_ERRORS = ['sms_busy', 'sms_invalid_number', 'sms_undeliverable', 'sms_provider_unavailable', 'invalid_code_format'] as const;
+type WhatsAppError = (typeof WHATSAPP_ERRORS)[number];
+const isWhatsAppError = (code: string): code is WhatsAppError => (WHATSAPP_ERRORS as readonly string[]).includes(code);
 /** After these, the only way forward is a new code or another method. */
 const NEEDS_NEW_CODE = new Set<string>(['sms_code_expired', 'sms_too_many_attempts', 'sms_challenge_invalid']);
-const OFFER_EMAIL = new Set<string>(['sms_unavailable', 'sms_undeliverable', 'sms_invalid_number', 'sms_provider_unavailable', 'sms_busy', 'sms_number_limit']);
+const OFFER_EMAIL = new Set<string>(['sms_unavailable', 'sms_undeliverable', 'sms_invalid_number', 'sms_provider_unavailable', 'sms_busy', 'sms_number_limit', 'sms_not_test_recipient']);
 
 function useCountdown(): [number, (seconds: number) => void] {
   const [until, setUntil] = useState(0);
@@ -37,15 +42,18 @@ function useCountdown(): [number, (seconds: number) => void] {
 }
 
 /**
- * Phone number → SMS code → verified. Used for registration and sign-in (purpose
+ * Phone number → code (by SMS or WhatsApp, as the server is set up) → verified. Used for
+ * registration and sign-in (purpose
  * "sign_in": an account is created only after the code is verified) and for adding a
- * number to the signed-in account (purpose "link"). The code never passes through
+ * number to the signed-in account (purpose "link"), including replacing a verified one
+ * (`askPassword`: the current password is needed first). The code never passes through
  * anything but this form and the server.
  */
-export function PhoneVerification({ purpose, askName = false, onDone, onUseEmail }: {
+export function PhoneVerification({ purpose, askName = false, askPassword = false, onDone, onUseEmail }: {
   purpose: 'sign_in' | 'link';
   askName?: boolean;
-  onDone: (status: 'registered' | 'signed_in' | 'linked') => void;
+  askPassword?: boolean;
+  onDone: (status: PhoneOutcome) => void;
   onUseEmail?: () => void;
 }) {
   const { t } = useTranslation();
@@ -54,14 +62,16 @@ export function PhoneVerification({ purpose, askName = false, onDone, onUseEmail
   const request = usePhoneRequest();
   const verify = usePhoneVerify();
   const sms = providers.data?.sms;
+  const whatsapp = sms?.channel === 'whatsapp';
   const [country, setCountry] = useState(sms?.default_country ?? '+968');
   const [number, setNumber] = useState('');
   const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [challenge, setChallenge] = useState<PhoneChallenge | null>(null);
   const [remaining, startCountdown] = useCountdown();
   const codeRef = useRef<HTMLInputElement>(null);
-  const ids = { number: useId(), code: useId(), name: useId(), hint: useId(), codeHint: useId() };
+  const ids = { number: useId(), code: useId(), name: useId(), hint: useId(), codeHint: useId(), password: useId() };
 
   const regions = useMemo(() => {
     let names: Intl.DisplayNames | null = null;
@@ -78,7 +88,7 @@ export function PhoneVerification({ purpose, askName = false, onDone, onUseEmail
     return (
       <div className="flex flex-col gap-3 rounded-lg border border-dashed border-border-strong/60 bg-card p-5" data-testid="phone-unavailable">
         <p className="flex items-start gap-2 text-sm font-semibold"><Smartphone aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />{t('phone.unavailableTitle')}</p>
-        <p className="text-sm text-muted-foreground">{t('phone.unavailable')}</p>
+        <p className="text-sm text-muted-foreground">{whatsapp ? t('phone.whatsapp.unavailable') : t('phone.unavailable')}</p>
         {onUseEmail ? <Button type="button" variant="outline" className="w-fit" onClick={onUseEmail}>{t('phone.useEmail')}</Button> : null}
       </div>
     );
@@ -87,12 +97,12 @@ export function PhoneVerification({ purpose, askName = false, onDone, onUseEmail
   const error = (verify.error ?? request.error) as unknown;
   const apiError = error instanceof ApiRequestError ? error : null;
   const errorCode: ErrorCode | 'other' | null = apiError ? (ERROR_CODES.find((c) => c === apiError.code) ?? 'other') : error ? 'other' : null;
-  const details = (apiError?.details ?? {}) as { attempts_left?: number; retry_after?: number };
+  const details = (apiError?.details ?? {}) as { attempts_left?: number; retry_after?: number; minutes?: number };
 
   const send = (event?: FormEvent) => {
     event?.preventDefault();
     verify.reset();
-    request.mutate({ country_code: country, number, purpose }, {
+    request.mutate({ country_code: country, number, purpose, password: askPassword ? password : undefined }, {
       onSuccess: (c) => { setChallenge(c); setCode(''); startCountdown(c.resend_after); },
       onError: (e) => {
         if (e instanceof ApiRequestError && e.code === 'sms_resend_cooldown') {
@@ -112,13 +122,18 @@ export function PhoneVerification({ purpose, askName = false, onDone, onUseEmail
 
   const message = errorCode === null ? null
     : errorCode === 'other' ? (error instanceof Error ? error.message : t('phone.error.other'))
-    : t(`phone.error.${errorCode}`, { n: details.attempts_left ?? details.retry_after ?? 0 });
+    : whatsapp && isWhatsAppError(errorCode) ? t(`phone.whatsapp.error.${errorCode}`)
+    : t(`phone.error.${errorCode}`, { n: details.attempts_left ?? details.retry_after ?? details.minutes ?? 0 });
 
   return (
     <div className="flex flex-col gap-4" data-testid="phone-verification" data-step={challenge ? 'code' : 'number'}>
       {sms.status === 'test' ? (
         <p className="rounded-md border border-dashed border-synthetic-border bg-synthetic px-3 py-2 text-xs text-synthetic-foreground" data-testid="sms-test-mode">
           {t('phone.testMode')}
+        </p>
+      ) : sms.status === 'sandbox' ? (
+        <p className="rounded-md border border-dashed border-synthetic-border bg-synthetic px-3 py-2 text-xs text-synthetic-foreground" data-testid="whatsapp-sandbox">
+          {t('phone.sandbox')}
         </p>
       ) : null}
       {!challenge ? (
@@ -141,12 +156,20 @@ export function PhoneVerification({ purpose, askName = false, onDone, onUseEmail
             </div>
           </div>
           <p id={ids.hint} className="text-xs text-muted-foreground">{country === '+968' ? t('phone.omanHint') : t('phone.hint')}</p>
+          {askPassword ? (
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor={ids.password} className="text-sm font-medium">{t('account.currentPassword')}</label>
+              <input id={ids.password} type="password" autoComplete="current-password" dir="ltr" value={password}
+                onChange={(e) => setPassword(e.target.value)} data-testid="phone-password"
+                className="h-10 rounded-md border border-border-strong bg-card px-3 text-sm" />
+            </div>
+          ) : null}
           {message ? <p role="alert" className="text-sm text-destructive" data-testid="phone-error" data-code={errorCode}>{message}</p> : null}
           {errorCode && OFFER_EMAIL.has(errorCode) && onUseEmail ? (
             <Button type="button" variant="outline" size="sm" className="w-fit" onClick={onUseEmail}>{t('phone.useEmail')}</Button>
           ) : null}
           {purpose === 'sign_in' ? <p className="text-xs text-muted-foreground">{t('phone.ordinaryAccess')}</p> : null}
-          <Button type="submit" disabled={request.isPending || number.replace(/\D/g, '').length < 4 || remaining > 0} data-testid="phone-send">
+          <Button type="submit" disabled={request.isPending || number.replace(/\D/g, '').length < 4 || remaining > 0 || (askPassword && !password)} data-testid="phone-send">
             <MessageSquareText aria-hidden="true" />
             {remaining > 0 ? t('phone.resendIn', { n: remaining }) : request.isPending ? t('phone.sending') : t('phone.sendCode')}
           </Button>
@@ -154,10 +177,10 @@ export function PhoneVerification({ purpose, askName = false, onDone, onUseEmail
       ) : (
         <form onSubmit={check} className="flex flex-col gap-4" noValidate data-testid="phone-code-form">
           <p role="status" className="text-sm" data-testid="phone-sent">
-            {t('phone.sentTo', { phone: challenge.phone_masked, minutes: Math.round(challenge.expires_in / 60) })}
+            {t(whatsapp ? 'phone.whatsapp.sentTo' : 'phone.sentTo', { phone: challenge.phone_masked, minutes: Math.round(challenge.expires_in / 60) })}
           </p>
           <div className="flex flex-col gap-1.5">
-            <label htmlFor={ids.code} className="text-sm font-medium">{t('phone.code')}</label>
+            <label htmlFor={ids.code} className="text-sm font-medium">{whatsapp ? t('phone.whatsapp.code') : t('phone.code')}</label>
             <input id={ids.code} ref={codeRef} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" dir="ltr"
               maxLength={10} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} aria-describedby={ids.codeHint}
               data-testid="phone-code"

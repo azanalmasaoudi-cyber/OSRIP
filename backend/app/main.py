@@ -1,6 +1,7 @@
 """OSRIP API entry point: ``uvicorn app.main:app --reload``."""
 
 import logging
+import time
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -119,6 +120,7 @@ def create_app() -> FastAPI:
     async def request_id_and_errors(request: Request, call_next):  # noqa: ANN001, ANN202
         """Tag every request with an id; capture unhandled exceptions without leaking them."""
         request_id = request.headers.get("X-Request-ID", "")[:64] or uuid.uuid4().hex
+        started = time.perf_counter()
         try:
             response = await call_next(request)
         except Exception as exc:  # noqa: BLE001 - last-resort handler
@@ -139,6 +141,13 @@ def create_app() -> FastAPI:
                 },
             )
         response.headers["X-Request-ID"] = request_id
+        # The route pattern (``/admin/groups/{group_id}``), never the concrete path.
+        route = getattr(request.scope.get("route"), "path", None) or "unmatched"
+        monitoring.record_request(
+            f"{request.method} {route}",
+            response.status_code,
+            (time.perf_counter() - started) * 1000,
+        )
         return response
 
     @app.exception_handler(ApiError)

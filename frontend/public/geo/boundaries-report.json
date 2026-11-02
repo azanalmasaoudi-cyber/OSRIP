@@ -1,0 +1,596 @@
+{
+ "built_at": "2026-11-02T09:55:25+00:00",
+ "source": "OpenStreetMap via the Overpass API",
+ "licence": "Open Database Licence 1.0 (ODbL); (c) OpenStreetMap contributors",
+ "query": "[out:json][timeout:180];area[\"ISO3166-1\"=\"OM\"][admin_level=2]->.om;(relation(area.om)[\"boundary\"=\"administrative\"][\"admin_level\"~\"^(4|6)$\"];);out geom;",
+ "governorates": [
+  {
+   "code": "OM-BJ",
+   "registry": "Al Batinah South",
+   "osm": "Al Batinah South Governorate",
+   "osm_relation": 3994012
+  },
+  {
+   "code": "OM-BS",
+   "registry": "Al Batinah North",
+   "osm": "Al Batinah North Governorate",
+   "osm_relation": 3781240
+  },
+  {
+   "code": "OM-BU",
+   "registry": "Al Buraimi",
+   "osm": "Al Buraimi Governorate",
+   "osm_relation": 3781313
+  },
+  {
+   "code": "OM-DA",
+   "registry": "A'Dakhiliya",
+   "osm": "Ad Dakhiliyah Governorate",
+   "osm_relation": 3781241
+  },
+  {
+   "code": "OM-MA",
+   "registry": "Muscat",
+   "osm": "Muscat Governorate",
+   "osm_relation": 3781239
+  },
+  {
+   "code": "OM-MU",
+   "registry": "Musandam",
+   "osm": "Musandam Governorate",
+   "osm_relation": 3781315
+  },
+  {
+   "code": "OM-SJ",
+   "registry": "A'Sharqiyah South",
+   "osm": "Ash Sharqiyah South Governorate",
+   "osm_relation": 10169426
+  },
+  {
+   "code": "OM-SS",
+   "registry": "A'Sharqiyah North",
+   "osm": "Ash Sharqiyah North Governorate",
+   "osm_relation": 10169425
+  },
+  {
+   "code": "OM-WU",
+   "registry": "Al Wusta",
+   "osm": "Al Wusta Governorate",
+   "osm_relation": 3781238
+  },
+  {
+   "code": "OM-ZA",
+   "registry": "A'Dhahirah",
+   "osm": "Ad Dhahirah Governorate",
+   "osm_relation": 3781242
+  },
+  {
+   "code": "OM-ZU",
+   "registry": "Dhofar",
+   "osm": "Dhofar Governorate",
+   "osm_relation": 3781314
+  }
+ ],
+ "wilayats": [
+  {
+   "code": "OM-BJ-01",
+   "registry": "Al Rustaq",
+   "osm": "Al Rustaq Province",
+   "osm_relation": 19554866,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-BJ-02",
+   "registry": "Al Awabi",
+   "osm": "Al Awabi Province",
+   "osm_relation": 19644270,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-BJ-03",
+   "registry": "Al Musannah",
+   "osm": "Al Musanaah Province",
+   "osm_relation": 19554564,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-BJ-04",
+   "registry": "Barka",
+   "osm": "Barka Province",
+   "osm_relation": 19554527,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-BJ-05",
+   "registry": "Nakhal",
+   "osm": "Nakhal Province",
+   "osm_relation": 19554865,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-BJ-06",
+   "registry": "Wadi Al Ma'awil",
+   "osm": "Wadi Al Maawil Province",
+   "osm_relation": 19554864,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-BS-01",
+   "registry": "Sohar",
+   "osm": "Sohar Province",
+   "osm_relation": 19567555,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-BS-02",
+   "registry": "Al Khabourah",
+   "osm": "Al Khaburah Province",
+   "osm_relation": 19567582,
+   "similarity": 0.94,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-BS-03",
+   "registry": "Al Suwaiq",
+   "osm": "As Suwaiq Province",
+   "osm_relation": 19567587,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-BS-04",
+   "registry": "Liwa",
+   "osm": "Liwa Province",
+   "osm_relation": 19567547,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-BS-05",
+   "registry": "Saham",
+   "osm": "Saham Province",
+   "osm_relation": 19567567,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-BS-06",
+   "registry": "Shinas",
+   "osm": "Shinas Province",
+   "osm_relation": 19567533,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-BU-01",
+   "registry": "Al Buraimi",
+   "osm": "Al Buraimi Province",
+   "osm_relation": 19561384,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-BU-02",
+   "registry": "Al Sunaynah",
+   "osm": "As Sunaynah Province",
+   "osm_relation": 19561383,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-BU-03",
+   "registry": "Mahdah",
+   "osm": "Mahdah Province",
+   "osm_relation": 19560693,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-DA-01",
+   "registry": "Nizwa",
+   "osm": "Nizwa Province",
+   "osm_relation": 19563318,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-DA-02",
+   "registry": "Adam",
+   "osm": "Adam Province",
+   "osm_relation": 19563356,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-DA-03",
+   "registry": "Al Hamra",
+   "osm": "Al Hamra Province",
+   "osm_relation": 19563374,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-DA-04",
+   "registry": "Bahla",
+   "osm": "Bahla Province",
+   "osm_relation": 19563382,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-DA-05",
+   "registry": "Bid Bid",
+   "osm": "Bidbid Province",
+   "osm_relation": 19560400,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-DA-06",
+   "registry": "Izki",
+   "osm": "Izki Province",
+   "osm_relation": 19563250,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-DA-07",
+   "registry": "Manah",
+   "osm": "Manah Province",
+   "osm_relation": 19563314,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-DA-08",
+   "registry": "Samail",
+   "osm": "Samail Province",
+   "osm_relation": 19560595,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-DA-09",
+   "registry": "Al Jabal Al Akhdar",
+   "osm": "Al Jabal Al Akhdhar Province",
+   "osm_relation": 19666525,
+   "similarity": 0.96,
+   "parent_from": "name"
+  },
+  {
+   "code": "OM-MA-01",
+   "registry": "Muscat",
+   "osm": "Muscat Province",
+   "osm_relation": 19164110,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-MA-02",
+   "registry": "Al Amirat",
+   "osm": "al Amerat Province",
+   "osm_relation": 19164736,
+   "similarity": 0.83,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-MA-03",
+   "registry": "A'Seeb",
+   "osm": "Seeb Province",
+   "osm_relation": 19163878,
+   "similarity": 0.86,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-MA-04",
+   "registry": "Boushar",
+   "osm": "Bawshar Province",
+   "osm_relation": 19164013,
+   "similarity": 0.71,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-MA-05",
+   "registry": "Matrah",
+   "osm": "Matrah Province",
+   "osm_relation": 19164055,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-MA-06",
+   "registry": "Qurayyat",
+   "osm": "Qurayyat Province",
+   "osm_relation": 19164748,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-MU-01",
+   "registry": "Khasab",
+   "osm": "Khasab Province",
+   "osm_relation": 19556469,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-MU-02",
+   "registry": "Bukha",
+   "osm": "Bukha Province",
+   "osm_relation": 19556432,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-MU-03",
+   "registry": "Dibba",
+   "osm": "Dibba Province",
+   "osm_relation": 19556449,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-MU-04",
+   "registry": "Madha",
+   "osm": "Madha Province",
+   "osm_relation": 12486614,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-SJ-01",
+   "registry": "Sur",
+   "osm": "Jalaan Bani Bu ALi Province",
+   "osm_relation": 19558488,
+   "similarity": null,
+   "parent_from": "correction"
+  },
+  {
+   "code": "OM-SJ-02",
+   "registry": "Al Kamil W'al Wafi",
+   "osm": "Al Kamil Wal Wafi Province",
+   "osm_relation": 19558606,
+   "similarity": 0.86,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-SJ-03",
+   "registry": "Jaalan Bani Bu Ali",
+   "osm": "Jaalan Bani Bu Ali Province",
+   "osm_relation": 19558567,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-SJ-04",
+   "registry": "Jaalan Bani Bu Hassan",
+   "osm": "Jaalan Bani Bu Hasan Province",
+   "osm_relation": 19558599,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-SJ-05",
+   "registry": "Masirah",
+   "osm": "Masirah Province",
+   "osm_relation": 19166572,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-SS-01",
+   "registry": "Ibra",
+   "osm": "Ibra Province",
+   "osm_relation": 19570211,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-SS-02",
+   "registry": "Bidiya",
+   "osm": "Bidiyah Province",
+   "osm_relation": 19570226,
+   "similarity": 0.92,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-SS-03",
+   "registry": "Al Kabil",
+   "osm": "Al Qabil Province",
+   "osm_relation": 19570218,
+   "similarity": 0.8,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-SS-04",
+   "registry": "Al Mudhaibi",
+   "osm": "Al Mudhaibi Province",
+   "osm_relation": 19570202,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-SS-05",
+   "registry": "Dima W'attayeen",
+   "osm": "Dama wa at Ta'ieen Province",
+   "osm_relation": 19570210,
+   "similarity": 0.82,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-SS-06",
+   "registry": "Wadi Bani Khalid",
+   "osm": "Wadi Bani Khalid Province",
+   "osm_relation": 19570236,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-SS-07",
+   "registry": "Sinaw",
+   "osm": "Sinaw Province",
+   "osm_relation": 19666541,
+   "similarity": 1.0,
+   "parent_from": "name"
+  },
+  {
+   "code": "OM-WU-01",
+   "registry": "Haima",
+   "osm": "Haima Province",
+   "osm_relation": 19567652,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-WU-02",
+   "registry": "Al Jazer",
+   "osm": "Al Jazir Province",
+   "osm_relation": 19567677,
+   "similarity": 0.8,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-WU-03",
+   "registry": "Duqm",
+   "osm": "Ad Duqm Province",
+   "osm_relation": 19567693,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-WU-04",
+   "registry": "Mahout",
+   "osm": "Mahout Province",
+   "osm_relation": 19567637,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-ZA-01",
+   "registry": "Ibri",
+   "osm": "Ibri Province",
+   "osm_relation": 19563440,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-ZA-02",
+   "registry": "Dhank",
+   "osm": "Dhank Province",
+   "osm_relation": 19563425,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-ZA-03",
+   "registry": "Yankul",
+   "osm": "Yanqul Province",
+   "osm_relation": 19563433,
+   "similarity": 0.83,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-ZU-01",
+   "registry": "Salalah",
+   "osm": "Salalah Province",
+   "osm_relation": 19582270,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-ZU-02",
+   "registry": "Al Mazyona",
+   "osm": "Al Mazyunah Province",
+   "osm_relation": 19579065,
+   "similarity": 0.8,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-ZU-03",
+   "registry": "Dhalkut",
+   "osm": "Dhalkut Province",
+   "osm_relation": 19582284,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-ZU-04",
+   "registry": "Mirbat",
+   "osm": "Mirbat Province",
+   "osm_relation": 19579203,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-ZU-05",
+   "registry": "Muqshin",
+   "osm": "Muqshin Province",
+   "osm_relation": 19579021,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-ZU-06",
+   "registry": "Rakhyut",
+   "osm": "Rakhyut Province",
+   "osm_relation": 19582276,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-ZU-07",
+   "registry": "Sadah",
+   "osm": "Sadah Province",
+   "osm_relation": 19579131,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-ZU-08",
+   "registry": "Shalim and the Hallaniyat Islands",
+   "osm": "Shalim Wa Juzor Al Hallaniyat Province",
+   "osm_relation": 19579126,
+   "similarity": 0.64,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-ZU-09",
+   "registry": "Taqah",
+   "osm": "Taqah Province",
+   "osm_relation": 19582271,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  },
+  {
+   "code": "OM-ZU-10",
+   "registry": "Thumrait",
+   "osm": "Thumrait Province",
+   "osm_relation": 19579029,
+   "similarity": 1.0,
+   "parent_from": "ref"
+  }
+ ],
+ "unmatched_osm": [],
+ "unmatched_registry": [],
+ "geometry_problems": [],
+ "corrections": [
+  {
+   "osm_relation": 19558488,
+   "code": "OM-SJ-01",
+   "reason": "Named 'Jalaan Bani Bu ALi' in OSM (ref 0801), but the polygon contains the town of Sur (22.567 N, 59.529 E); the Jaalan Bani Bu Ali boundary is relation 19558567 (ref 0804)."
+  }
+ ],
+ "national": {
+  "method": "ways used by exactly one governorate, joined into rings",
+  "parts": 38,
+  "holes": 1,
+  "unjoined_segments": 0
+ }
+}

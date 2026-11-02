@@ -189,7 +189,8 @@ outside `development` with the development client-hash key or non-Secure cookies
 # on the host, from the repository root
 cp deploy/.env.example deploy/.env
 # edit deploy/.env: POSTGRES_PASSWORD, OSRIP_CLIENT_HASH_KEY (long random values),
-# OSRIP_DOMAIN and OSRIP_CORS_ORIGINS (the public https:// address), VITE_MAP_STYLE_URL
+# OSRIP_DOMAIN and OSRIP_CORS_ORIGINS (the public https:// address), VITE_MAP_STYLE_URL,
+# and optionally VITE_MAPTILER_KEY (restricted to OSRIP_DOMAIN; docs/MAP.md)
 docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build
 
 # first run only: seed the synthetic fixtures and create accounts
@@ -210,8 +211,10 @@ Update: pull the new code, then `up -d --build`; `migrate` applies new migration
 2. Run the full-stack suite against the deployment, or at least the journey:
    sign in, upload, validate, approve, publish, report.
 3. Check that the session cookie is `Secure; HttpOnly; SameSite=Strict` and that the
-   Content-Security-Policy does not block the basemap (it allows only
-   `tiles.openfreemap.org`; adjust it if `VITE_MAP_STYLE_URL` changes).
+   Content-Security-Policy does not block the map (it allows only `api.maptiler.com`,
+   `tiles.openfreemap.org` and `elevation-tiles-prod.s3.amazonaws.com`; adjust it if
+   `VITE_MAP_STYLE_URL` names another host). With a MapTiler key, the note under the map
+   should name MapTiler and must not say it fell back.
 4. Repeat the performance workload on the host and record the results separately
    from the laptop measurements.
 5. Run a backup and a restore into a separate database on the host (next section).

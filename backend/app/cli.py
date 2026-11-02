@@ -194,6 +194,49 @@ def provider_check_command(args: argparse.Namespace) -> None:
         raise SystemExit(1)
 
 
+def ensure_admin(args: argparse.Namespace) -> None:
+    """The first administrator (for example Azzan): a username account with the administrator
+    role and a temporary password typed at a hidden prompt (or OSRIP_NEW_USER_PASSWORD for this
+    terminal only), which must be replaced at the first sign-in. Nothing is hardcoded, printed
+    or logged. An existing account gets the administrator role only with --promote."""
+    from app.domain.enums import Role
+
+    with session_factory()() as session, session.begin():
+        existing = accounts.find_by_username(session, args.username)
+        if existing is not None:
+            if not args.promote:
+                print(
+                    f"Account '{existing.username}' already exists; nothing changed. "
+                    "Add --promote to give it the administrator role."
+                )
+                return
+            accounts.assign_role(session, CLI, existing.id, Role.ADMINISTRATOR)
+            print(f"'{existing.username}' now has the administrator role.")
+            return
+    password = os.environ.get("OSRIP_NEW_USER_PASSWORD")
+    if not password:
+        if not sys.stdin.isatty():
+            raise SystemExit(
+                "error: no password supplied. Run the command in an interactive terminal to be "
+                "prompted, or set OSRIP_NEW_USER_PASSWORD in this terminal session only."
+            )
+        password = getpass.getpass("Temporary password (12+ characters, not echoed): ")
+        if getpass.getpass("Repeat it: ") != password:
+            raise SystemExit("error: the two passwords differ; nothing was created.")
+    if len(password) < 12:
+        raise SystemExit("error: an administrator's temporary password needs 12+ characters.")
+    with session_factory()() as session, session.begin():
+        result = accounts.ensure_username_account(
+            session, CLI, username=args.username, display_name=args.name or args.username,
+            password=password,
+        )  # fmt: skip
+        accounts.assign_role(session, CLI, result.user.id, Role.ADMINISTRATOR)
+        print(
+            f"Created administrator '{result.user.username}'. The password is temporary: it must "
+            "be replaced at the first sign-in, and nothing else works until it is."
+        )
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="python -m app.cli")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -209,6 +252,12 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--username", required=True)
     p.add_argument("--name", help="display name (defaults to the username)")
     p.set_defaults(func=ensure_username_user)
+
+    p = commands.add_parser("ensure-admin", help="create the first administrator account")
+    p.add_argument("--username", required=True)
+    p.add_argument("--name", help="display name (defaults to the username)")
+    p.add_argument("--promote", action="store_true", help="give an existing account the role")
+    p.set_defaults(func=ensure_admin)
 
     commands.add_parser("seed-synthetic").set_defaults(func=seed_synthetic)
 

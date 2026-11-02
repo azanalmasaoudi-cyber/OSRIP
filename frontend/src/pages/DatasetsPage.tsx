@@ -22,6 +22,7 @@ import { ViewChart } from '@/components/datasets/ViewChart';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { ChartOnRequest } from '@/components/ui/chart-on-request';
 import { Segmented } from '@/components/ui/segmented';
 import { formatDateTime, formatDecimal } from '@/lib/format';
 import { useAppLanguage } from '@/lib/useAppLanguage';
@@ -390,7 +391,9 @@ function DatasetDetailView({ id }: { id: string }) {
           <Summary dataset={d} />
           {a.views.length ? (
             <div className="grid gap-4 xl:grid-cols-2">
-              {a.views.map((v) => <Card key={v.id} className="p-4"><ViewChart view={v} /></Card>)}
+              {a.views.map((v) => (
+                <Card key={v.id} className="p-4"><ChartOnRequest testId={`dataset-view-chart-${v.id}`} label={v.title[language]}><ViewChart view={v} /></ChartOnRequest></Card>
+              ))}
             </div>
           ) : <p className="text-sm text-muted-foreground">{t('datasets.noCharts')}</p>}
         </div>

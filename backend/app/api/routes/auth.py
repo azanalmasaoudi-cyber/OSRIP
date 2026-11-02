@@ -1,5 +1,5 @@
 import uuid
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Query, Request, Response
@@ -18,7 +18,14 @@ from app.core import ratelimit, security
 from app.core.config import get_settings
 from app.core.errors import ApiError
 from app.models import AppUser, EmailOutbox, UserSession
-from app.schemas.accounts import LoginIn, MeOut, PasswordChangeIn
+from app.schemas.accounts import (
+    LoginIn,
+    MeOut,
+    PasswordChangeIn,
+    RecoverIn,
+    RecoveryCodeIn,
+    UsernameRegisterIn,
+)
 from app.services import accounts, identity, mail, oidc, phone, phone_numbers, sms
 from app.services.principal import Principal
 
@@ -33,7 +40,7 @@ def _me(principal: Principal, session: DbSession | None = None) -> MeOut:
     if not principal.is_authenticated:
         return MeOut(authenticated=False)
     email, verified, phone, phone_verified, has_password = principal.label, None, None, None, None
-    username = None
+    username, has_recovery_code = None, None
     if session is not None:
         with session.begin():
             user = session.get(AppUser, principal.user_id)
@@ -44,6 +51,7 @@ def _me(principal: Principal, session: DbSession | None = None) -> MeOut:
                 phone_verified = user.phone_verified_at is not None
                 has_password = user.password_hash != security.UNUSABLE_PASSWORD
                 username = user.username
+                has_recovery_code = user.recovery_code_hash is not None
     return MeOut(
         username=username,
         password_change_required=principal.password_change_required,
@@ -55,6 +63,7 @@ def _me(principal: Principal, session: DbSession | None = None) -> MeOut:
         phone=phone,
         phone_verified=phone_verified,
         has_password=has_password,
+        has_recovery_code=has_recovery_code,
         roles=sorted(principal.roles),
         permissions=sorted(principal.permissions),
     )
@@ -62,7 +71,9 @@ def _me(principal: Principal, session: DbSession | None = None) -> MeOut:
 
 def _set_session_cookies(response: Response, new: accounts.NewSession) -> None:
     settings = get_settings()
-    max_age = settings.session_absolute_hours * 3600
+    # Remember me: a cookie that outlives the browser; otherwise a browser-session cookie.
+    # Either way the server enforces the session's own expiry and idle limit.
+    max_age = settings.session_remember_days * 86400 if new.persistent else None
     # HttpOnly session cookie: unreadable by scripts. SameSite=Strict: not sent on
     # cross-site requests. Secure: HTTPS only (disabled only for local HTTP dev).
     response.set_cookie(
@@ -112,9 +123,72 @@ def providers() -> dict[str, Any]:
 @router.post("/login", response_model=MeOut)
 def login(body: LoginIn, request: Request, response: Response, session: DbSession) -> MeOut:
     client = request.client.host if request.client else "unknown"
-    new = accounts.login(session, body.email, body.password, client)
+    new = accounts.login(session, body.email, body.password, client, remember=body.remember)
     _set_session_cookies(response, new)
     return _me(new.principal, session)
+
+
+# ------------------------------------------------------------------ username accounts
+
+
+@router.post("/register/username", status_code=201)
+def register_username(
+    body: UsernameRegisterIn, request: Request, response: Response, session: DbSession
+) -> dict[str, Any]:
+    """Registration with a username and password only: an ordinary (viewer) account, signed
+    in at once. The recovery code in the answer is shown once and never stored."""
+    _client_limit(request, "register")
+    done = accounts.register_username(
+        session,
+        username=body.username,
+        password=body.password,
+        password_confirm=body.password_confirm,
+    )
+    _set_session_cookies(response, done.new_session)
+    response.headers["Cache-Control"] = "no-store"
+    return {
+        "status": "registered",
+        "recovery_code": done.recovery_code,
+        "me": _me(done.new_session.principal, session).model_dump(mode="json"),
+    }
+
+
+@router.post("/recover")
+def recover(
+    body: RecoverIn, request: Request, response: Response, session: DbSession
+) -> dict[str, Any]:
+    """A forgotten password, with the username and the recovery code. A new recovery code
+    replaces the spent one; other sessions are signed out."""
+    _client_limit(request, "recover")
+    client = request.client.host if request.client else "unknown"
+    done = accounts.recover_with_code(
+        session,
+        username=body.username,
+        recovery_code=body.recovery_code,
+        new_password=body.new_password,
+        new_password_confirm=body.new_password_confirm,
+        client_address=client,
+    )
+    _set_session_cookies(response, done.new_session)
+    response.headers["Cache-Control"] = "no-store"
+    return {
+        "status": "recovered",
+        "recovery_code": done.recovery_code,
+        "me": _me(done.new_session.principal, session).model_dump(mode="json"),
+    }
+
+
+@router.post("/recovery-code")
+def recovery_code(
+    body: RecoveryCodeIn,
+    response: Response,
+    session: DbSession,
+    principal: Annotated[Principal, Depends(require_authenticated)],
+) -> dict[str, str]:
+    """A new recovery code for the signed-in account, shown once."""
+    code = accounts.replace_recovery_code(session, principal, body.current_password)
+    response.headers["Cache-Control"] = "no-store"
+    return {"recovery_code": code}
 
 
 @router.post("/password/change", response_model=MeOut)
@@ -166,18 +240,29 @@ def me(principal: CurrentPrincipal, response: Response, session: DbSession) -> M
 # ------------------------------------------------------------------ e-mail based flows
 
 
+# The language of the page that made the request: messages put it first (both languages
+# are always included).
+Language = Literal["en", "ar"]
+
+
 class RegisterIn(BaseModel):
     email: str = Field(min_length=3, max_length=254)
     display_name: str = Field(min_length=1, max_length=120)
     password: str = Field(min_length=1, max_length=1024)
+    language: Language = "en"
 
 
 class EmailIn(BaseModel):
     email: str = Field(min_length=3, max_length=254)
+    language: Language = "en"
 
 
 class TokenIn(BaseModel):
     token: str = Field(min_length=20, max_length=200)
+
+
+class ConfirmLinkIn(TokenIn):
+    language: Language = "en"
 
 
 class ResetIn(TokenIn):
@@ -193,7 +278,11 @@ def register(body: RegisterIn, request: Request, session: DbSession) -> dict[str
     """Creates an unverified account with ordinary (viewer) access and sends a link."""
     _client_limit(request, "register")
     identity.register(
-        session, email=body.email, display_name=body.display_name, password=body.password
+        session,
+        email=body.email,
+        display_name=body.display_name,
+        password=body.password,
+        language=body.language,
     )
     return _accepted()
 
@@ -207,14 +296,14 @@ def verify_email(body: TokenIn, session: DbSession) -> dict[str, str]:
 @router.post("/verify-email/resend", status_code=202)
 def resend(body: EmailIn, request: Request, session: DbSession) -> dict[str, str]:
     _client_limit(request, "resend")
-    identity.resend_verification(session, body.email)
+    identity.resend_verification(session, body.email, body.language)
     return _accepted()
 
 
 @router.post("/password/forgot", status_code=202)
 def forgot(body: EmailIn, request: Request, session: DbSession) -> dict[str, str]:
     _client_limit(request, "forgot")
-    identity.forgot_password(session, body.email)
+    identity.forgot_password(session, body.email, body.language)
     return _accepted()
 
 
@@ -228,7 +317,7 @@ def reset(body: ResetIn, session: DbSession) -> dict[str, str]:
 @router.post("/magic-link", status_code=202)
 def magic_link(body: EmailIn, request: Request, session: DbSession) -> dict[str, str]:
     _client_limit(request, "magic")
-    identity.request_magic_link(session, body.email)
+    identity.request_magic_link(session, body.email, body.language)
     return _accepted()
 
 
@@ -242,18 +331,23 @@ def magic_link_consume(body: TokenIn, response: Response, session: DbSession) ->
 # ------------------------------------------------------------------ phone (SMS verification)
 
 PHONE_REQUESTS_PER_CLIENT_HOUR = 20
+PHONE_CHECKS_PER_CLIENT_HOUR = 60  # each challenge also allows only a few wrong codes
 
 
 class PhoneRequestIn(BaseModel):
     country_code: str = Field(default="+968", max_length=5)
     number: str = Field(min_length=4, max_length=24)
     purpose: str = Field(default="sign_in", pattern="^(sign_in|link)$")
+    # Needed to replace a verified number on an account that has a password.
+    password: str | None = Field(default=None, max_length=1024)
+    language: Language = "en"
 
 
 class PhoneVerifyIn(BaseModel):
     challenge_id: str = Field(min_length=1, max_length=64)
     code: str = Field(min_length=1, max_length=12)
     display_name: str | None = Field(default=None, max_length=120)
+    language: Language = "en"
 
 
 @router.post("/phone/request", status_code=202)
@@ -264,9 +358,14 @@ def phone_request(
     the same whether or not the number already has an account."""
     if body.purpose == "link":
         principal = require_authenticated(request, principal)  # session + CSRF
+    s = get_settings()
     client = request.client.host if request.client else "unknown"
-    key = security.keyed_digest(get_settings().client_hash_key.get_secret_value(), client)
-    ratelimit.check(f"phone:{key}", PHONE_REQUESTS_PER_CLIENT_HOUR, 3600)
+    key = security.keyed_digest(s.client_hash_key.get_secret_value(), client)
+    # Also counts requests refused before any SMS; never below the configured SMS limit, so
+    # raising that (as the e2e server does) raises this too.
+    ratelimit.check(
+        f"phone:{key}", max(PHONE_REQUESTS_PER_CLIENT_HOUR, s.sms_per_client_hour), 3600
+    )
     return phone.request_code(
         session,
         country_code=body.country_code,
@@ -274,6 +373,8 @@ def phone_request(
         purpose=body.purpose,
         principal=principal,
         client_address=client,
+        password=body.password,
+        language=body.language,
     )
 
 
@@ -289,12 +390,18 @@ def phone_verify(
     links the number to the signed-in account."""
     if principal.is_authenticated:
         principal = require_authenticated(request, principal)  # CSRF for signed-in callers
+    s = get_settings()
+    client = request.client.host if request.client else "unknown"
+    key = security.keyed_digest(s.client_hash_key.get_secret_value(), client)
+    checks = max(PHONE_CHECKS_PER_CLIENT_HOUR, s.sms_per_client_hour * s.sms_max_attempts)
+    ratelimit.check(f"phone-check:{key}", checks, 3600)
     result = phone.verify_code(
         session,
         challenge_id=body.challenge_id,
         code=body.code,
         display_name=body.display_name,
         principal=principal,
+        language=body.language,
     )
     if result.new_session is not None:
         _set_session_cookies(response, result.new_session)
@@ -308,6 +415,9 @@ def phone_verify(
 
 class LinkEmailIn(BaseModel):
     email: str = Field(min_length=3, max_length=254)
+    # Needed to change a confirmed address on an account that has a password.
+    password: str | None = Field(default=None, max_length=1024)
+    language: Language = "en"
 
 
 @router.post("/email/link", status_code=202)
@@ -317,16 +427,19 @@ def email_link(
     session: DbSession,
     principal: Annotated[Principal, Depends(require_authenticated)],
 ) -> dict[str, str]:
-    """Adds an e-mail address to the signed-in account once the link sent to it is opened."""
+    """Adds an e-mail address to the signed-in account, or changes its confirmed address
+    (with the current password, or a recent sign-in), once the link sent to it is opened."""
     _client_limit(request, "link_email")
-    identity.request_email_link(session, principal, body.email)
+    identity.request_email_link(
+        session, principal, body.email, password=body.password, language=body.language
+    )
     return _accepted()
 
 
 @router.post("/email/link/confirm")
-def email_link_confirm(body: TokenIn, session: DbSession) -> dict[str, str]:
-    identity.confirm_email_link(session, body.token)
-    return {"status": "linked"}
+def email_link_confirm(body: ConfirmLinkIn, session: DbSession) -> dict[str, str]:
+    """Stores the address; ``changed`` when it replaced a confirmed one (which is told)."""
+    return {"status": identity.confirm_email_link(session, body.token, body.language)}
 
 
 # ------------------------------------------------------------------ OpenID Connect

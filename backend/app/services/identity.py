@@ -1,11 +1,16 @@
-"""Self-service accounts: registration, e-mail verification, password recovery, magic links.
+"""Self-service accounts: registration, e-mail verification, password recovery, magic links,
+adding or changing an e-mail address.
 
 * New accounts get the ``viewer`` role only; administrators grant anything more.
 * Tokens are 256-bit random values; only SHA-256 digests are stored. Each one
   expires and can be spent exactly once (atomic update plus a database trigger).
 * Every request that takes an e-mail address answers the same way whether or not an
   account exists, so the endpoints cannot be used to discover registered addresses.
-* Messages are only sent in response to the user's own request (no unsolicited mail).
+* Messages are only sent in response to the user's own request (no unsolicited mail),
+  in Arabic and English with the reader's language first (``mail_templates``).
+* Changing a confirmed address needs the current password (or a recent sign-in for an
+  account without one); the new address is stored only when the link sent to it is
+  opened, and the old address is then told about the change.
 """
 
 from __future__ import annotations
@@ -22,7 +27,7 @@ from app.core.config import get_settings
 from app.core.errors import ApiError, unprocessable
 from app.domain.enums import AccountStatus, Role
 from app.models import AppUser, AuthToken
-from app.services import accounts, audit, mail
+from app.services import accounts, audit, mail, mail_templates
 from app.services.principal import Principal
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -44,8 +49,30 @@ def _user(session: Session, email: str) -> AppUser | None:
     return session.scalar(select(AppUser).where(AppUser.email == email))
 
 
-def _link(path: str, token: str) -> str:
-    return f"{get_settings().public_base_url.rstrip('/')}{path}?token={token}"
+def _link(path: str, token: str | None = None) -> str:
+    base = f"{get_settings().public_base_url.rstrip('/')}{path}"
+    return f"{base}?token={token}" if token else base
+
+
+def mask_email(email: str) -> str:
+    """a•••@example.com: enough for the owner to recognise, not to read off."""
+    local, _, domain = email.partition("@")
+    return f"{local[:1]}•••@{domain}" if domain else "•••"
+
+
+def _send(
+    session: Session,
+    kind: str,
+    *,
+    to: str,
+    language: str,
+    link: str | None = None,
+    **values: object,
+) -> None:
+    message = mail_templates.render(kind, language, link=link, **values)
+    mail.send(
+        session, to=to, subject=message.subject, body=message.text, html=message.html, purpose=kind
+    )
 
 
 def _recent_tokens(session: Session, user_id: uuid.UUID, purpose: str) -> int:
@@ -109,48 +136,29 @@ def consume_token(session: Session, raw: str, purpose: str) -> AppUser:
 # ------------------------------------------------------------------ messages (EN + AR)
 
 
-def _send_verification(session: Session, user: AppUser) -> None:
+def _send_verification(session: Session, user: AppUser, language: str) -> None:
     assert user.email is not None
-    ttl = timedelta(hours=get_settings().verify_email_hours)
-    raw = issue_token(session, user, "verify_email", ttl)
+    hours = get_settings().verify_email_hours
+    raw = issue_token(session, user, "verify_email", timedelta(hours=hours))
     if raw is None:
         return
-    link = _link("/verify-email", raw)
-    mail.send(
-        session,
-        to=user.email,
-        subject="Confirm your OSRIP e-mail address / تأكيد بريدك الإلكتروني في OSRIP",
-        body=(
-            f"Hello {user.display_name},\n\nConfirm your e-mail address for OSRIP by opening this "
-            f"link (valid for {get_settings().verify_email_hours} hours, usable once):\n{link}\n\n"
-            "If you did not create an account, ignore this message.\n\n"
-            f"لتأكيد بريدك الإلكتروني في OSRIP افتح الرابط التالي (صالح لمرة واحدة):\n{link}\n"
-            "إذا لم تنشئ حساباً فتجاهل هذه الرسالة."
-        ),
-        purpose="verify_email",
-    )
+    _send(
+        session, "verify_email", to=user.email, language=language,
+        link=_link("/verify-email", raw), name=user.display_name, hours=hours,
+    )  # fmt: skip
 
 
-def _send_account_exists(session: Session, user: AppUser) -> None:
+def _send_account_exists(session: Session, user: AppUser, language: str) -> None:
     assert user.email is not None
-    mail.send(
-        session,
-        to=user.email,
-        subject="OSRIP: an account already exists / يوجد حساب بالفعل",
-        body=(
-            "Someone asked to create an OSRIP account with this address, which already has one. "
-            "Sign in, or use 'Forgot password'. If this was not you, no action is needed.\n\n"
-            "طلب أحدهم إنشاء حساب في OSRIP بهذا العنوان، وله حساب بالفعل. سجّل الدخول أو استخدم "
-            "'نسيت كلمة المرور'. إن لم تكن أنت فلا حاجة لأي إجراء."
-        ),
-        purpose="account_exists",
-    )
+    _send(session, "account_exists", to=user.email, language=language, link=_link("/sign-in"))
 
 
 # ------------------------------------------------------------------ registration
 
 
-def register(session: Session, *, email: str, display_name: str, password: str) -> None:
+def register(
+    session: Session, *, email: str, display_name: str, password: str, language: str = "en"
+) -> None:
     mail.require_delivery()
     email = _check_email(email)
     name = display_name.strip()
@@ -164,9 +172,9 @@ def register(session: Session, *, email: str, display_name: str, password: str) 
         existing = _user(session, email)
         if existing is not None:
             if existing.email_verified_at is None and not existing.is_service_account:
-                _send_verification(session, existing)
+                _send_verification(session, existing, language)
             elif not existing.is_service_account:
-                _send_account_exists(session, existing)
+                _send_account_exists(session, existing, language)
             return
         user = accounts.create_user(
             session,
@@ -178,7 +186,7 @@ def register(session: Session, *, email: str, display_name: str, password: str) 
             email_verified=False,
             created_via="self_registration",
         )
-        _send_verification(session, user)
+        _send_verification(session, user, language)
 
 
 def verify_email(session: Session, token: str) -> None:
@@ -195,19 +203,19 @@ def verify_email(session: Session, token: str) -> None:
         )
 
 
-def resend_verification(session: Session, email: str) -> None:
+def resend_verification(session: Session, email: str, language: str = "en") -> None:
     mail.require_delivery()
     email = _check_email(email)
     with session.begin():
         user = _user(session, email)
         if user is not None and user.email_verified_at is None and not user.is_service_account:
-            _send_verification(session, user)
+            _send_verification(session, user, language)
 
 
 # ------------------------------------------------------------------ password recovery
 
 
-def forgot_password(session: Session, email: str) -> None:
+def forgot_password(session: Session, email: str, language: str = "en") -> None:
     mail.require_delivery()
     email = _check_email(email)
     with session.begin():
@@ -218,20 +226,11 @@ def forgot_password(session: Session, email: str) -> None:
         raw = issue_token(session, user, "reset_password", ttl)
         if raw is None or user.email is None:
             return
-        link = _link("/reset-password", raw)
-        mail.send(
-            session,
-            to=user.email,
-            subject="Reset your OSRIP password / إعادة تعيين كلمة المرور",
-            body=(
-                f"A password reset was requested for your OSRIP account. Open this link within "
-                f"{ttl.seconds // 60} minutes; it works once:\n{link}\n\nIf you did not ask for "
-                "this, ignore this message; your password stays unchanged.\n\n"
-                f"طُلبت إعادة تعيين كلمة المرور لحسابك. افتح الرابط خلال {ttl.seconds // 60} دقيقة "
-                f"(صالح لمرة واحدة):\n{link}\nإن لم تطلب ذلك فتجاهل الرسالة."
-            ),
-            purpose="reset_password",
-        )
+        _send(
+            session, "reset_password", to=user.email, language=language,
+            link=_link("/reset-password", raw), name=user.display_name,
+            minutes=ttl.seconds // 60,
+        )  # fmt: skip
 
 
 def reset_password(session: Session, token: str, password: str) -> None:
@@ -258,7 +257,7 @@ def reset_password(session: Session, token: str, password: str) -> None:
 # ------------------------------------------------------------------ magic links
 
 
-def request_magic_link(session: Session, email: str) -> None:
+def request_magic_link(session: Session, email: str, language: str = "en") -> None:
     mail.require_delivery()
     email = _check_email(email)
     with session.begin():
@@ -274,19 +273,10 @@ def request_magic_link(session: Session, email: str) -> None:
         raw = issue_token(session, user, "magic_link", ttl)
         if raw is None or user.email is None:
             return
-        link = _link("/magic-link", raw)
-        mail.send(
-            session,
-            to=user.email,
-            subject="Your OSRIP sign-in link / رابط الدخول إلى OSRIP",
-            body=(
-                f"Open this link within {ttl.seconds // 60} minutes to sign in. It works once:\n"
-                f"{link}\n\nIf you did not ask for it, ignore this message.\n\n"
-                f"افتح هذا الرابط خلال {ttl.seconds // 60} دقيقة لتسجيل الدخول (صالح لمرة واحدة):\n"
-                f"{link}\nإن لم تطلبه فتجاهل الرسالة."
-            ),
-            purpose="magic_link",
-        )
+        _send(
+            session, "magic_link", to=user.email, language=language,
+            link=_link("/magic-link", raw), name=user.display_name, minutes=ttl.seconds // 60,
+        )  # fmt: skip
 
 
 def consume_magic_link(session: Session, token: str) -> accounts.NewSession:
@@ -295,54 +285,61 @@ def consume_magic_link(session: Session, token: str) -> accounts.NewSession:
         return accounts.open_session(session, user, method="magic_link")
 
 
-# ------------------------------------------------------------------ linking an e-mail address
+# ------------------------------------------------------------------ adding or changing an address
 
 
-def request_email_link(session: Session, principal: Principal, email: str) -> None:
-    """A signed-in account without a verified address (for example a phone-only one)
-    adds one. The address is stored only when the link sent to it is opened."""
+def request_email_link(
+    session: Session,
+    principal: Principal,
+    email: str,
+    *,
+    password: str | None = None,
+    language: str = "en",
+) -> None:
+    """Add an e-mail address to the signed-in account (one without a confirmed address, such
+    as a phone-only account), or change a confirmed one. A change needs the current password
+    (or a recent sign-in). The address is stored only when the link sent to it is opened."""
     mail.require_delivery()
     email = _check_email(email)
     with session.begin():
         user = session.get(AppUser, principal.user_id)
         if user is None:
             raise ApiError(401, "authentication_required", "Sign in to continue.")
-        if user.email is not None and user.email_verified_at is not None:
-            raise ApiError(
-                409,
-                "email_already_linked",
-                "Your account already has a confirmed e-mail address.",
-            )
+        changing = user.email is not None and user.email_verified_at is not None
+        if changing:
+            if email == user.email:
+                raise ApiError(
+                    409, "email_unchanged", "This is already the address of your account."
+                )
+            accounts.confirm_identity(session, principal, user, password, action="email.change")
         existing = _user(session, email)
         if existing is not None and existing.id != user.id:
             # Same answer as for a free address; the owner of that address is told instead.
             if not existing.is_service_account:
-                _send_account_exists(session, existing)
+                _send_account_exists(session, existing, language)
             return
-        ttl = timedelta(hours=get_settings().verify_email_hours)
-        raw = issue_token(session, user, "link_email", ttl, email=email)
+        hours = get_settings().verify_email_hours
+        raw = issue_token(session, user, "link_email", timedelta(hours=hours), email=email)
         if raw is None:
             return
-        link = _link("/link-email", raw)
-        mail.send(
-            session,
-            to=email,
-            subject="Add this e-mail address to OSRIP / إضافة هذا البريد إلى OSRIP",
-            body=(
-                f"Hello {user.display_name},\n\nOpen this link to add this address to your OSRIP "
-                f"account (valid for {get_settings().verify_email_hours} hours, usable once):\n"
-                f"{link}\n\nIf you did not ask for this, ignore this message.\n\n"
-                f"افتح هذا الرابط لإضافة هذا العنوان إلى حسابك في OSRIP (صالح لمرة واحدة):\n{link}\n"
-                "إن لم تطلب ذلك فتجاهل الرسالة."
-            ),
-            purpose="link_email",
-        )
+        _send(
+            session, "change_email" if changing else "link_email", to=email, language=language,
+            link=_link("/link-email", raw), name=user.display_name, hours=hours,
+        )  # fmt: skip
         audit.record(
-            session, principal, "auth.email.link_request", entity_type="user", entity_id=user.id
+            session,
+            principal,
+            "auth.email.change_request" if changing else "auth.email.link_request",
+            entity_type="user",
+            entity_id=user.id,
+            metadata={"to": mask_email(email)},
         )
 
 
-def confirm_email_link(session: Session, token: str) -> None:
+def confirm_email_link(session: Session, token: str, language: str = "en") -> str:
+    """Store the address the link was sent to. Returns ``linked`` or ``changed``; after a
+    change, the previous address is told (it can then reset the password if it was not
+    the owner's doing)."""
     with session.begin():
         row = session.execute(
             update(AuthToken)
@@ -372,12 +369,32 @@ def confirm_email_link(session: Session, token: str) -> None:
                 "email_taken",
                 "This address belongs to another OSRIP account. Accounts are never merged.",
             )
+        previous = user.email if user.email_verified_at is not None else None
         user.email = row.email
         user.email_verified_at = accounts.now()
+        changed = previous is not None and previous != row.email
+        if changed:
+            assert previous is not None
+            _send(
+                session, "email_changed", to=previous, language=language,
+                link=_link("/forgot-password"), name=user.display_name,
+                address=mask_email(row.email),
+            )  # fmt: skip
         audit.record(
             session,
             accounts.load_principal(session, user),
-            "auth.email.link",
+            "auth.email.change" if changed else "auth.email.link",
             entity_type="user",
             entity_id=user.id,
+            metadata={"to": mask_email(row.email)},
         )
+        return "changed" if changed else "linked"
+
+
+def notify_phone_changed(session: Session, user: AppUser, phone_masked: str, language: str) -> None:
+    """Tell a confirmed e-mail address that the account's verified number changed."""
+    if user.email and user.email_verified_at and mail.delivery_mode() != "disabled":
+        _send(
+            session, "phone_changed", to=user.email, language=language,
+            link=_link("/account"), name=user.display_name, phone=phone_masked,
+        )  # fmt: skip

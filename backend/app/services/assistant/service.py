@@ -55,6 +55,7 @@ from app.services.assistant.provider import (
 )
 from app.services.assistant.tools import MODES, Ledger, Tools, run_tool, tool_specs
 from app.services.principal import Principal
+from app.services.research import parallel
 from app.services.research import service as research
 
 log = logging.getLogger("osrip.assistant")
@@ -112,6 +113,7 @@ WEB_RULES = """- Web research is available (web_search, read_web_page). Prefer t
 - A result with content_kind 'provider_summary' is another AI model's statement about a source, not the source's own text: attribute it as a summary ("according to a web-search summary of <publisher>"), and read the page (read_web_page) before relying on a figure from it. A result with content_kind 'consulted_source' is only an address the search consulted, with no text: read it before saying anything about it.
 - Two search services or two models saying the same thing is NOT independent confirmation; independence comes only from different original publishers. For national statistics prefer the original Omani statistical publication.
 - If web_search returns 'shown_separately', the person sees Google Search results apart from your answer; you cannot use them. If it returns 'data_first', look up the platform's published data before searching.
+- Work in few steps: ask for independent tool calls together in ONE step (for example two or three web_search queries at once, then the two or three most promising pages with read_web_page at once); they run at the same time. Write focused queries naming the sector, the indicator and the period, and the official publisher where you know it (NCSI, the ministry or the regulator). Do not search again for what earlier results already answer, and do not read the same address twice.
 """
 
 
@@ -697,6 +699,9 @@ def _run_model(
         "route": route.as_dict(),
     }
     ledger.question = question
+    if routing.asks_for_latest(question):
+        # "Latest": cached searches and documents count only while recent.
+        ledger.fresh_hours = s.research_latest_cache_hours
     ledger.submitter = submitter if web else None
     ledger.previous_tables = list(previous_tables or [])
     ledger.job_id = job_id
@@ -806,6 +811,17 @@ def _run_model(
                 if not calls:
                     raise ProviderError("no_tool_call")
                 messages.append({"role": "assistant", "content": blocks})
+                # Independent searches and page reads of this step are fetched at the same
+                # time; the tools below then run one by one and take those results.
+                valid = [c for c in calls if not c.get("invalid_arguments")]
+                searches = [c for c in valid if c.get("name") == "web_search"]
+                reads = [c for c in valid if c.get("name") == "read_web_page"]
+                if web and len(searches) > 1:
+                    tracker.tool("web_search")
+                    parallel.prefetch_searches(ledger, searches, tracker.check)
+                if web and len(reads) > 1:
+                    tracker.tool("read_web_page")
+                    parallel.prefetch_reads(ledger, reads, tracker.check)
                 results = []
                 for c in calls:
                     name = str(c.get("name"))

@@ -54,6 +54,7 @@ services:
       dockerfile: deploy/Dockerfile.web
       args:
         VITE_MAP_STYLE_URL: ${VITE_MAP_STYLE_URL:-https://tiles.openfreemap.org/styles/positron}
+        VITE_MAPTILER_KEY: ${VITE_MAPTILER_KEY:-}
     restart: unless-stopped
     environment:
       OSRIP_DOMAIN: ${OSRIP_DOMAIN:-localhost}

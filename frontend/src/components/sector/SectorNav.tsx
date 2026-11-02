@@ -12,21 +12,22 @@ const SECTORS = [
   { path: '/trade', key: 'nav.trade', icon: Ship },
 ] as const;
 
-/** The four sectors as one row of links, the same on every sector page (it scrolls
- * sideways on a narrow screen instead of wrapping). Each sector keeps its own selection. */
+/** Step 1, the sector: the four sectors as one row of tabs along the foot of the sector header,
+ * the same on every sector page (it scrolls sideways on a narrow screen instead of wrapping).
+ * Each sector keeps its own selection. */
 export function SectorNav() {
   const { t } = useTranslation();
   const to = usePreservedSearch();
   return (
-    <nav aria-label={t('sectorFlow.navLabel')} className="-mt-2 mb-6 overflow-x-auto overflow-y-hidden border-b border-border" data-testid="sector-nav">
-      <ul className="flex min-w-max gap-1">
+    <nav aria-label={t('sectorFlow.navLabel')} className="overflow-x-auto overflow-y-hidden border-t border-border bg-muted/40" data-testid="sector-nav">
+      <ul className="flex min-w-max gap-1 px-2 sm:px-4">
         {SECTORS.map((s) => {
           const Icon = s.icon;
           return (
             <li key={s.path}>
               <NavLink to={to(s.path)} className={({ isActive }) => cn(
-                'tab-underline inline-flex min-h-11 items-center gap-2 rounded-t-md px-4 text-sm transition-colors hover:bg-muted/60',
-                isActive ? 'font-semibold text-foreground' : 'text-muted-foreground hover:text-foreground',
+                'tab-underline inline-flex min-h-12 items-center gap-2 px-4 text-sm transition-colors hover:text-foreground',
+                isActive ? 'font-semibold text-foreground' : 'text-muted-foreground',
               )}>
                 <Icon aria-hidden="true" className="size-4" />{t(s.key)}
               </NavLink>

@@ -166,6 +166,15 @@ class Ledger:
     tables: list[dict[str, Any]] = field(default_factory=list)
     charts: list[dict[str, Any]] = field(default_factory=list)
     previous_tables: list[dict[str, Any]] = field(default_factory=list)
+    # Web steps fetched at the same time (research/parallel.py): pages read for this answer
+    # by address (read once, reused), prefetched pages and searches not yet taken by their
+    # tool, queries whose rate-limit check was already counted, and for a question about the
+    # latest figures the oldest cache age (hours) still relied on (None: the usual cache).
+    reads: dict[str, Any] = field(default_factory=dict, repr=False)
+    prefetched: dict[str, Any] = field(default_factory=dict, repr=False)
+    search_memo: dict[tuple[str, str, str], Any] = field(default_factory=dict, repr=False)
+    search_prechecked: set[str] = field(default_factory=set, repr=False)
+    fresh_hours: float | None = None
 
     def add(self, item: dict[str, Any]) -> dict[str, Any]:
         item = {

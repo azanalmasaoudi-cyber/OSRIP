@@ -77,7 +77,7 @@ the booklet makes it depend on data that does not exist yet.
 | ID | Requirement | Status |
 |---|---|---|
 | GEO01 | Sourced registry of governorates and wilayats with EN/AR names, stable identifiers, parents, verification dates, references; completeness verified (Brief) | Met (11 + 63) |
-| GEO02 | Maintained mapping library, licensed boundaries, suitable tile provider, attribution (Brief) | Partly met: MapLibre + OpenFreeMap with attribution; **no licensed current boundary geometry exists**, so no boundaries or map selection |
+| GEO02 | Maintained mapping library, licensed boundaries, suitable tile provider, attribution (Brief) | Met: MapLibre with MapTiler (optional key) or OpenFreeMap, and open terrain; OpenStreetMap boundaries (ODbL) matched one-to-one to the registry, with national outline and selection; attribution on the map (`docs/MAP.md`). Not official boundaries; live MapTiler untested until a key exists |
 | GEO03 | Registry coverage distinguished from statistical coverage; "No data", never zero; no allocation of national totals (booklet §3.14; Brief) | Met |
 | GEO04 | Accessible table alternative; graceful map failure (Brief) | Met |
 | FC01 | Target, horizon, chronological splits and baseline defined before fitting; training-only transforms; identical held-out dates; predictions and errors kept; MAE/RMSE interpreted; interval method documented (booklet §2.4, §4.6; Brief) | Met in the engine (tests on synthetic series); no real series eligible |

@@ -12,7 +12,7 @@ const PASSWORD = process.env.OSRIP_E2E_PASSWORD ?? '';
 async function signIn(page: Page, email: string): Promise<void> {
   await page.goto('/sign-in');
   const form = page.getByTestId('sign-in-form');
-  await form.getByLabel('E-mail address').fill(email);
+  await form.getByLabel('Username').fill(email);
   await form.getByLabel('Password').fill(PASSWORD);
   await form.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).not.toHaveURL(/sign-in/);
@@ -167,9 +167,18 @@ test('navigation and Settings: the main destinations in order, services and sche
   await page.goto('/overview?mode=synthetic');
   const nav = page.getByRole('navigation', { name: 'Main navigation' });
   const names = await nav.getByRole('link').allInnerTexts();
-  const main = names.map((n) => n.trim()).slice(0, 8);
-  expect(main).toEqual(['Overview', 'Electricity', 'Water', 'Food Security', 'Trade', 'Studies', 'Sources', 'Settings']);
-  await nav.getByRole('link', { name: 'Settings' }).click();
+  // The modules in order: Dashboard; the Axes; Research and Analytics; Geographic Intelligence;
+  // Reports; the account; then administration (an administrator sees all of it).
+  expect(names.map((n) => n.trim())).toEqual([
+    'Dashboard', 'Overview',
+    'Electricity', 'Water', 'Food Security', 'Trade',
+    'Analysis Workspace', 'Datasets', 'Scenarios', 'Forecasting', 'AI Research Assistant', 'Studies', 'Research library', 'Sources',
+    'Interactive Oman Map', 'Geographic Comparisons',
+    'Reports Dashboard', 'Saved Reports',
+    'My Profile', 'Settings', 'Appearance', 'Language',
+    'Data Management', 'Users and Roles', 'Groups and Permissions', 'Service Health', 'Audit Logs',
+  ]);
+  await nav.getByRole('link', { name: 'Settings', exact: true }).click();
   await expect(page.getByTestId('settings-services')).toBeVisible();
   await expect(page.getByTestId('service-answers').getByTestId('assistant-service')).toBeVisible();
   await expect(page.getByTestId('service-retrieval')).toContainText('Not configured');

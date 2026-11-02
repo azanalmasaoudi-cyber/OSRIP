@@ -1,6 +1,6 @@
 import {
-  ArrowDown, Check, CircleHelp, Copy, Loader2, MessageSquarePlus, Mic, MicOff, RotateCcw, Send, Settings2, SlidersHorizontal,
-  Sparkles, Square, Trash2, Volume2, VolumeX, X,
+  ArrowDown, BarChart3, Check, CircleHelp, Copy, EyeOff, Loader2, MessageSquarePlus, Mic, MicOff, RotateCcw, Send, Settings2,
+  SlidersHorizontal, Sparkles, Square, Trash2, Volume2, VolumeX, X,
 } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router';
@@ -8,8 +8,8 @@ import { useTranslation } from 'react-i18next';
 
 import { useAssistantUi } from './AssistantContext';
 import { AssistantAvatar } from './AssistantAvatar';
-import { ServiceChip } from './AssistantIdentityCard';
 import { AssistantStatusBar } from './AssistantStatusBar';
+import { ConversationSources } from './ConversationSources';
 import type { ChatVoice } from './AssistantPanel';
 import {
   EvidenceItem, GroundedContext, pick, SAVEABLE, SaveResearchButton, SearchLog, STATUS_BADGE, WebEvidenceItem,
@@ -86,12 +86,13 @@ export interface ChatModel {
 const NEAR_BOTTOM = 96; // px: closer than this to the end counts as reading the latest message
 
 /**
- * The AI Assistant page: one conversation, centred and at most 800px wide. A compact header
- * (portrait, name, honest service status, Al Mulhim / Ilham, New conversation, Settings), the
- * messages in one scrolling area, and one message box at the bottom with Send, Speak and an
- * optional Tools drawer. Before the first message only a welcome and up to three examples are
- * shown. Explanations, voice and conversation settings, research modes, the research brief and
- * the analysis forms are in the Settings and Tools drawers, not in the conversation.
+ * The AI Assistant page: one conversation, centred and at most 50rem (800px) wide. A compact
+ * header (portrait, name, Al Mulhim / Ilham, New conversation, Settings), the messages in one
+ * scrolling area, and one message box at the bottom with Send, Speak and an optional Tools
+ * drawer. Before the first message only a welcome and up to three examples are shown. The answer
+ * service's status, explanations, voice and conversation settings, research modes, the research
+ * brief and the analysis forms are in Settings and the drawers, not in the conversation. On wide
+ * screens the conversation's sources stand in a column beside it (ConversationSources).
  */
 export function ChatView({ chat }: { chat: ChatModel }) {
   const { t } = useTranslation();
@@ -144,12 +145,14 @@ export function ChatView({ chat }: { chat: ChatModel }) {
   const started = chat.messages.length > 0 || Boolean(echo) || chat.pending;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col" data-testid="assistant-panel" data-variant="chat" lang={chat.language}>
-      <header className="mx-auto flex w-full max-w-[800px] shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border pb-2" data-testid="chat-header">
+    // On wide screens (1792 px and up) the sources of the conversation stand beside it.
+    <div className="flex min-h-0 flex-1 gap-6" data-testid="assistant-panel" data-variant="chat" lang={chat.language}>
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <header className="mx-auto flex w-full max-w-[50rem] shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border pb-2" data-testid="chat-header">
         <AssistantAvatar state={ui.state} size="2.25rem" decorative={false} />
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
-          <h1 className="text-base font-semibold" data-testid="mulhim-name" data-persona={persona.code}>{persona.name[language]}</h1>
-          <ServiceChip />
+        <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-1">
+          <h1 className="text-lg font-semibold" data-testid="mulhim-name" data-persona={persona.code}>{persona.name[language]}</h1>
+          <span className="text-sm text-muted-foreground">{t('assistant.aiAssistant')}</span>
         </div>
         {/* Phones: the choice gets its own row under the name. */}
         <div className="max-sm:order-last max-sm:flex max-sm:w-full max-sm:justify-center"><PersonaSwitch /></div>
@@ -167,7 +170,7 @@ export function ChatView({ chat }: { chat: ChatModel }) {
 
       <div className="relative min-h-0 flex-1">
         <div ref={scroller} onScroll={onScroll} className="h-full overflow-y-auto" data-testid="assistant-messages" aria-live="polite">
-          <div className="mx-auto flex w-full max-w-[800px] flex-col gap-6 px-1 py-5">
+          <div className="mx-auto flex w-full max-w-[50rem] flex-col gap-6 px-1 py-5">
             {!started && chat.canAsk && !chat.needsAccount ? (
               <section className="flex flex-col items-center gap-4 py-10 text-center" data-testid="chat-welcome">
                 <p className="text-2xl font-semibold" data-testid="chat-greeting">{t('chat.welcome')}</p>
@@ -176,7 +179,7 @@ export function ChatView({ chat }: { chat: ChatModel }) {
                     {chat.suggestions.slice(0, 3).map((s) => (
                       <li key={s}>
                         <button type="button" onClick={() => send(s)} dir="auto" data-testid="suggestion"
-                          className="w-full rounded-xl border border-border px-4 py-2.5 text-start text-sm transition-colors hover:bg-muted motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-ring">
+                          className="w-full rounded-xl border border-border px-4 py-2.5 text-start text-base transition-colors hover:bg-muted motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-ring">
                           {s}
                         </button>
                       </li>
@@ -192,14 +195,14 @@ export function ChatView({ chat }: { chat: ChatModel }) {
                   chat={chat} onAsk={send} />
               ))}
               {echo ? (
-                <li className="ms-auto max-w-[85%] rounded-2xl bg-muted px-4 py-2 text-sm whitespace-pre-wrap" dir="auto"
+                <li className="ms-auto max-w-[85%] rounded-2xl rounded-ee-md border border-brand/25 bg-primary-soft px-4 py-2.5 text-base whitespace-pre-wrap shadow-card" dir="auto"
                   data-testid="user-message" data-pending="true">{echo.text}</li>
               ) : null}
               {chat.pending ? <Thinking requestId={chat.asking?.requestId ?? null} guest={chat.guest} /> : null}
             </ol>
             {chat.needsAccount ? chat.signInPrompt : null}
             {chat.error ? (
-              <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-destructive" data-testid="assistant-error">
+              <div role="alert" className="flex flex-wrap items-center gap-2 text-base text-destructive" data-testid="assistant-error">
                 <p>{chat.error instanceof ApiRequestError && chat.error.code === 'network_unavailable' ? t('chat.errorNetwork') : chat.error.message}</p>
                 <Button variant="outline" size="sm" onClick={chat.retry} data-testid="error-retry"><RotateCcw aria-hidden="true" />{t('states.retry')}</Button>
               </div>
@@ -208,7 +211,7 @@ export function ChatView({ chat }: { chat: ChatModel }) {
         </div>
         {unseen ? (
           <button type="button" onClick={toEnd} data-testid="chat-new-messages"
-            className="absolute inset-x-0 bottom-3 mx-auto flex w-fit items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium shadow-raised hover:bg-muted">
+            className="absolute inset-x-0 bottom-3 mx-auto flex w-fit items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-sm font-medium shadow-raised hover:bg-muted">
             <ArrowDown aria-hidden="true" className="size-3.5" />{t('chat.newMessages')}
           </button>
         ) : null}
@@ -228,6 +231,8 @@ export function ChatView({ chat }: { chat: ChatModel }) {
         }} />
       </Dialog>
     </div>
+    <ConversationSources messages={chat.messages} className="hidden w-[22rem] shrink-0 3xl:flex" />
+    </div>
   );
 }
 
@@ -239,7 +244,7 @@ function Thinking({ requestId, guest }: { requestId: string | null; guest: boole
     .filter((s): s is (typeof PROGRESS_STAGES)[number] => (PROGRESS_STAGES as readonly string[]).includes(s));
   const stage = stages[stages.length - 1];
   return (
-    <li className="flex items-center gap-2 text-sm text-muted-foreground" role="status" data-testid="assistant-loading" data-stage={stage ?? ''}>
+    <li className="flex items-center gap-2 text-base text-muted-foreground" role="status" data-testid="assistant-loading" data-stage={stage ?? ''}>
       <Loader2 aria-hidden="true" className="size-4 animate-spin motion-reduce:animate-none" />
       {stage && stage !== 'received' ? t(`workflow.stage.${stage}`) : t('workflow.working')}
     </li>
@@ -253,9 +258,12 @@ function ChatMessage({ message, question, chat, onAsk }: {
   const language = useAppLanguage();
   const { byCode } = usePersona();
   const [copied, setCopied] = useState(false);
+  // A chart is offered under an answer that has chartable figures, and drawn only when the
+  // person asks: in words ("show a chart of …") or with the Show chart button.
+  const [chartOpen, setChartOpen] = useState(() => asksForChart(question) && message.status !== 'clarification');
   if (message.role === 'user') {
     return (
-      <li className="ms-auto max-w-[85%] rounded-2xl bg-muted px-4 py-2 text-sm whitespace-pre-wrap" dir="auto" data-testid="user-message">
+      <li className="ms-auto max-w-[85%] rounded-2xl rounded-ee-md border border-brand/25 bg-primary-soft px-4 py-2.5 text-base whitespace-pre-wrap shadow-card" dir="auto" data-testid="user-message">
         {message.content}
       </li>
     );
@@ -269,11 +277,12 @@ function ChatMessage({ message, question, chat, onAsk }: {
   const known = new Set([...shown.map((e) => e.id), ...message.calculations.map((c) => c.id)]);
   const anchor = (id: string) => evidenceAnchor(message.id, id);
   const failed = message.status === 'unavailable' || message.status === 'data_report';
-  // A chart only when this question asked for one, from the cited published values.
-  const wantsChart = asksForChart(question) && message.status !== 'clarification';
   // The server's chart of the table's own rows when it built one; otherwise the cited values.
-  const dataCharts = wantsChart ? message.structured.data_charts ?? [] : [];
-  const points = wantsChart && !dataCharts.length ? chartPoints(shown) : null;
+  const chartable = message.status !== 'clarification';
+  const wantsChart = asksForChart(question) && chartable;
+  const dataCharts = chartable ? message.structured.data_charts ?? [] : [];
+  const points = chartable && !dataCharts.length ? chartPoints(shown) : null;
+  const canChart = dataCharts.length > 0 || points !== null;
   const sourceNames = [...new Set(shown.map((e) => e.source?.title ?? (typeof e.title === 'string' ? e.title : pick(e.title, language))).filter(Boolean))];
   const copy = () => {
     const text = [message.content, ...(sourceNames.length ? ['', `${t('assistant.sources')}: ${sourceNames.join(' · ')}`] : [])].join('\n');
@@ -283,9 +292,9 @@ function ChatMessage({ message, question, chat, onAsk }: {
     });
   };
   return (
-    <li className="flex flex-col gap-2 text-[0.95rem] leading-relaxed" data-testid="assistant-message" data-status={message.status ?? ''}
+    <li className="glass-card flex flex-col gap-2 rounded-2xl rounded-es-md border p-4 text-base leading-relaxed shadow-card sm:p-5" data-testid="assistant-message" data-status={message.status ?? ''}
       data-persona={author.code}>
-      <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+      <p className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
         <span className="inline-flex items-center gap-1.5 font-semibold text-foreground" data-testid="message-persona">
           <PersonaImage src={author.avatar.portrait} alt="" width={20} height={20} className="size-5 rounded-full object-cover object-top" draggable={false} />
           {author.name[language]}
@@ -306,9 +315,17 @@ function ChatMessage({ message, question, chat, onAsk }: {
         <Markdown text={message.content} cite={(id) => <CitationChip messageId={message.id} id={id} known={known.has(id)} />} />
       </div>
       {message.structured.data_tables?.length ? <ChatDataTables blocks={message.structured.data_tables} messageId={message.id} /> : null}
-      {dataCharts.length ? <ChatDataCharts charts={dataCharts} messageId={message.id} /> : null}
-      {dataCharts.length ? null : points ? <InlineChart points={points} messageId={message.id} /> : wantsChart && message.status === 'answered' ? (
-        <p className="text-xs text-muted-foreground" data-testid="chart-unavailable">{t('chat.chartUnavailable')}</p>
+      {canChart ? (
+        <Button type="button" variant="outline" size="sm" className="w-fit" aria-expanded={chartOpen} onClick={() => setChartOpen(!chartOpen)}
+          data-testid={chartOpen ? 'chat-hide-chart' : 'chat-show-chart'}>
+          {chartOpen ? <EyeOff aria-hidden="true" /> : <BarChart3 aria-hidden="true" />}
+          {chartOpen ? t('chart.hide') : t('chart.show')}
+        </Button>
+      ) : null}
+      {chartOpen && dataCharts.length ? <ChatDataCharts charts={dataCharts} messageId={message.id} /> : null}
+      {chartOpen && !dataCharts.length && points ? <InlineChart points={points} messageId={message.id} /> : null}
+      {wantsChart && !canChart && message.status === 'answered' ? (
+        <p className="text-sm text-muted-foreground" data-testid="chart-unavailable">{t('chat.chartUnavailable')}</p>
       ) : null}
       {message.structured.research ? <ResearchSummary summary={message.structured.research} /> : null}
       {message.structured.data_report ? <DataReportNotice report={message.structured.data_report} /> : null}
@@ -319,7 +336,7 @@ function ChatMessage({ message, question, chat, onAsk }: {
       <SearchLog items={searches} />
       {message.structured.grounded_context?.length ? <GroundedContext entries={message.structured.grounded_context} /> : null}
       {shown.length > 0 ? (
-        <details className="group text-xs" data-testid="chat-sources" open={message.status === 'unverified'}>
+        <details className="group text-sm" data-testid="chat-sources" open={message.status === 'unverified'}>
           <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
             <span className="font-semibold">{t('chat.sourcesCount', { count: shown.length })}</span>
             {sourceNames.length ? <span className="ms-1" dir="auto">· {sourceNames.slice(0, 2).join(' · ')}{sourceNames.length > 2 ? ' …' : ''}</span> : null}
@@ -332,7 +349,7 @@ function ChatMessage({ message, question, chat, onAsk }: {
         </details>
       ) : null}
       {message.calculations.length > 0 ? (
-        <details className="text-xs" data-testid="how-calculated">
+        <details className="text-sm" data-testid="how-calculated">
           <summary className="cursor-pointer font-semibold text-muted-foreground hover:text-foreground">{t('assistant.howCalculated')}</summary>
           <ul className="mt-2 flex flex-col gap-2">
             {message.calculations.map((c) => (
@@ -375,7 +392,7 @@ function ChatMessage({ message, question, chat, onAsk }: {
       {message.suggestions.length > 0 ? (
         <div className="flex flex-wrap gap-1.5">
           {message.suggestions.map((s) => (
-            <button key={s} type="button" onClick={() => onAsk(s)} className="rounded-full border border-border px-2.5 py-1 text-xs hover:bg-muted" dir="auto">{s}</button>
+            <button key={s} type="button" onClick={() => onAsk(s)} className="rounded-full border border-border px-2.5 py-1 text-sm hover:bg-muted" dir="auto">{s}</button>
           ))}
         </div>
       ) : null}
@@ -412,9 +429,9 @@ function Composer({ chat, onSend, onTools }: { chat: ChatModel; onSend: (text: s
   const override = chat.mode.value !== 'auto' ? chat.mode.value : null;
   if (!chat.canAsk) return null;
   return (
-    <form onSubmit={submit} className="mx-auto flex w-full max-w-[800px] shrink-0 flex-col gap-1.5 pt-2 pb-3" data-testid="chat-composer">
+    <form onSubmit={submit} className="mx-auto flex w-full max-w-[50rem] shrink-0 flex-col gap-1.5 pt-2 pb-3" data-testid="chat-composer">
       {chat.selection.value ? (
-        <p className="flex flex-wrap items-center gap-2 rounded-md border border-primary/40 bg-primary/5 px-2 py-1 text-xs" data-testid="assistant-selection">
+        <p className="flex flex-wrap items-center gap-2 rounded-md border border-primary/40 bg-primary/5 px-2 py-1 text-sm" data-testid="assistant-selection">
           <span>{t('assistant.selectionApplied', { selection: chat.selection.label ?? `${chat.selection.value.indicator} · ${chat.selection.value.area} · ${chat.selection.value.period_from} – ${chat.selection.value.period_to}` })}</span>
           <button type="button" className="text-primary underline underline-offset-2" onClick={chat.selection.clear} data-testid="assistant-selection-clear">
             {t('assistant.selectionClear')}
@@ -422,7 +439,7 @@ function Composer({ chat, onSend, onTools }: { chat: ChatModel; onSend: (text: s
         </p>
       ) : null}
       {override ? (
-        <p className="flex items-center gap-1.5 text-xs" data-testid="chat-mode-chip">
+        <p className="flex items-center gap-1.5 text-sm" data-testid="chat-mode-chip">
           <Badge variant="outline">{t('chat.modeChip', { mode: t(`assistant.mode.${override}`) })}</Badge>
           <button type="button" onClick={() => chat.mode.set('auto')} className="inline-flex items-center rounded p-0.5 hover:bg-muted"
             data-testid="chat-mode-clear" title={t('chat.modeAuto')}>
@@ -430,15 +447,15 @@ function Composer({ chat, onSend, onTools }: { chat: ChatModel; onSend: (text: s
           </button>
         </p>
       ) : null}
-      {voice.notice ? <p className="text-xs text-destructive" role="alert" data-testid="voice-notice">{t(`voice.notice.${voice.notice}`)}</p> : null}
-      {voice.serverMode && voice.listening ? <p className="text-xs font-medium" role="status" data-testid="voice-recording">{t('voice.recording', { seconds: maxSeconds })}</p> : null}
+      {voice.notice ? <p className="text-sm text-destructive" role="alert" data-testid="voice-notice">{t(`voice.notice.${voice.notice}`)}</p> : null}
+      {voice.serverMode && voice.listening ? <p className="text-sm font-medium" role="status" data-testid="voice-recording">{t('voice.recording', { seconds: maxSeconds })}</p> : null}
       {voice.transcribing ? (
-        <p className="flex items-center gap-1 text-xs" role="status" data-testid="voice-transcribing">
+        <p className="flex items-center gap-1 text-sm" role="status" data-testid="voice-transcribing">
           <Loader2 aria-hidden="true" className="size-3 animate-spin motion-reduce:animate-none" />{t('voice.transcribing')}
         </p>
       ) : null}
       {chat.viaVoice && chat.draft && !voice.listening && !voice.transcribing ? (
-        <p className="text-xs text-muted-foreground" role="status" data-testid="voice-review">{t('voice.review')}</p>
+        <p className="text-sm text-muted-foreground" role="status" data-testid="voice-review">{t('voice.review')}</p>
       ) : null}
       {voice.speaking ? (
         <div className="flex items-center gap-2">
@@ -447,7 +464,7 @@ function Composer({ chat, onSend, onTools }: { chat: ChatModel; onSend: (text: s
           </Button>
         </div>
       ) : null}
-      <div className="flex items-end gap-1 rounded-2xl border border-border-strong/60 bg-card px-2 py-1.5 shadow-card focus-within:border-primary">
+      <div className="glass-card glass-strong flex items-end gap-1 rounded-2xl border border-border-strong/60 px-2 py-1.5 shadow-raised transition-shadow focus-within:border-primary focus-within:shadow-[0_0_0_4px_var(--primary-soft)]">
         <Button type="button" variant="ghost" size="sm" className="w-9 shrink-0 px-0" onClick={onTools} data-testid="chat-tools"
           title={t('chat.tools')} aria-haspopup="dialog">
           <SlidersHorizontal aria-hidden="true" /><span className="sr-only">{t('chat.tools')}</span>
@@ -463,7 +480,7 @@ function Composer({ chat, onSend, onTools }: { chat: ChatModel; onSend: (text: s
             }
           }}
           placeholder={chat.needsAccount ? t('guest.inputLocked') : t('chat.placeholder')} disabled={chat.needsAccount}
-          className="max-h-42 min-h-9 flex-1 resize-none bg-transparent px-1 py-1.5 text-[0.95rem] outline-none placeholder:text-muted-foreground"
+          className="max-h-42 min-h-9 flex-1 resize-none bg-transparent px-1 py-1.5 text-base outline-none placeholder:text-muted-foreground"
           data-testid="assistant-input" />
         {voice.canListen ? (
           voice.listening || voice.transcribing ? (
@@ -493,7 +510,7 @@ function Composer({ chat, onSend, onTools }: { chat: ChatModel; onSend: (text: s
           </Button>
         )}
       </div>
-      <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[0.7rem] text-muted-foreground">
+      <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
         <DataModeBadge mode={chat.dataMode} />
         <span data-testid="assistant-disclaimer-short">{t('assistant.disclaimerShort')}</span>
         {chat.allowance ? (
@@ -577,7 +594,7 @@ function SettingsSheet({ chat }: { chat: ChatModel }) {
       <MemoryPanel signedIn={chat.signedIn} guestExpires={chat.memory.guestExpires} guestConversationId={chat.memory.guestConversationId}
         onGuestDeleted={chat.memory.onGuestDeleted} onAllDeleted={chat.memory.onAllDeleted} />
       <AboutMulhim />
-      <details className="rounded-md border border-border px-3 py-2 text-xs" data-testid="assistant-help">
+      <details className="rounded-md border border-border px-3 py-2 text-sm" data-testid="assistant-help">
         <summary className="flex cursor-pointer items-center gap-1.5 font-semibold">
           <CircleHelp aria-hidden="true" className="size-3.5" />{t('assistant.help.title')}
         </summary>

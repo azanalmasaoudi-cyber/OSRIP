@@ -117,12 +117,19 @@ def registry(session: Session) -> dict[str, Any]:
         # Groups used by sources to publish figures; never split among their members and
         # never counted as registry areas.
         "reporting_groups": list(groups.values()),
+        # The registry itself holds no coordinates; the web map draws a separate boundary file.
         "geometry": {
-            "available": False,
-            "en": "No boundary geometry is included: no current, suitably licensed boundary "
-            "dataset matching this registry was found. Areas have no coordinates or centroids.",
-            "ar": "لا تتضمن المنصة حدوداً جغرافية: لم يُعثر على مجموعة حدود حديثة ومرخصة بشكل مناسب "
-            "تطابق هذا السجل. لا توجد إحداثيات أو نقاط مركزية للمناطق.",
+            "available": True,
+            "source": "OpenStreetMap",
+            "licence": "ODbL-1.0",
+            "en": "Boundaries on the map come from OpenStreetMap (Open Database Licence), "
+            "matched to this registry: all 11 governorates by ISO 3166-2 code and all 63 "
+            "wilayats by name, with one documented correction. They are simplified for "
+            "display, not for legal or survey use. The registry itself stores no coordinates.",
+            "ar": "الحدود على الخريطة من OpenStreetMap (رخصة قاعدة البيانات المفتوحة)، "
+            "مطابَقة مع هذا السجل: المحافظات الـ11 كلها برمز ISO 3166-2، والولايات الـ63 "
+            "كلها بالاسم، مع تصحيح واحد موثق. وهي مبسّطة للعرض، وليست للاستخدام القانوني "
+            "أو المساحي. السجل نفسه لا يخزن إحداثيات.",
         },
         "areas": [
             {
@@ -151,6 +158,7 @@ def coverage(session: Session, data_mode: DataMode) -> dict[str, Any]:
             Indicator.code,
             Indicator.name_en,
             Indicator.name_ar,
+            Indicator.section,
             Observation.frequency,
             func.count(),
             func.count(Observation.value),
@@ -166,12 +174,17 @@ def coverage(session: Session, data_mode: DataMode) -> dict[str, Any]:
             DatasetVersion.status == DatasetVersionStatus.PUBLISHED,
         )
         .group_by(
-            Area.code, Indicator.code, Indicator.name_en, Indicator.name_ar, Observation.frequency
+            Area.code,
+            Indicator.code,
+            Indicator.name_en,
+            Indicator.name_ar,
+            Indicator.section,
+            Observation.frequency,
         )
         .order_by(Area.code, Indicator.code)
     ).all()
     areas: dict[str, dict[str, Any]] = {}
-    for code, ind, name_en, name_ar, freq, n, n_values, start, end in rows:
+    for code, ind, name_en, name_ar, section, freq, n, n_values, start, end in rows:
         entry = areas.setdefault(
             code, {"observations": 0, "values": 0, "missing": 0, "indicators": []}
         )
@@ -183,6 +196,8 @@ def coverage(session: Session, data_mode: DataMode) -> dict[str, Any]:
                 "code": ind,
                 "name_en": name_en,
                 "name_ar": name_ar,
+                # The axis (electricity, water, food_security, trade), for filtering on the map.
+                "section": section.value,
                 "frequency": freq.value,
                 "observations": n,
                 "values": n_values,

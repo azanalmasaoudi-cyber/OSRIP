@@ -3,7 +3,8 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
-import { NAV_ITEMS, type NavItem } from './SidebarNav';
+import { NAV_ITEMS, useItemTarget, type NavItem } from './SidebarNav';
+import { hasPermission, useMe } from '@/api/auth';
 import { cn } from '@/lib/utils';
 import { usePreservedSearch } from '@/state/usePreservedSearch';
 
@@ -30,6 +31,8 @@ export function GlobalSearch({ shortcut = false, focusOnOpen = false, inline = f
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const to = usePreservedSearch();
+  const itemTarget = useItemTarget();
+  const me = useMe();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
@@ -56,8 +59,10 @@ export function GlobalSearch({ shortcut = false, focusOnOpen = false, inline = f
   const needle = text.toLowerCase();
   const en = i18n.getFixedT('en');
   const ar = i18n.getFixedT('ar');
+  // Pages the person may open (administration only with its permission; the server checks again).
   const pages = needle
-    ? NAV_ITEMS.filter((item) => [t(item.key), en(item.key), ar(item.key)].some((label) => label.toLowerCase().includes(needle)))
+    ? NAV_ITEMS.filter((item) => !item.requires || item.requires.some((p) => hasPermission(me.data, p)))
+      .filter((item) => [t(item.key), en(item.key), ar(item.key)].some((label) => label.toLowerCase().includes(needle)))
     : [];
   const options: Option[] = needle ? [...pages.map((item) => ({ kind: 'page' as const, item })), { kind: 'ask' as const }] : [];
   const expanded = open && options.length > 0;
@@ -66,7 +71,7 @@ export function GlobalSearch({ shortcut = false, focusOnOpen = false, inline = f
 
   const choose = (option: Option) => {
     if (option.kind === 'page') {
-      void navigate(to(option.item.path));
+      void navigate(itemTarget(option.item));
     } else {
       const target = to('/assistant');
       const params = new URLSearchParams(target.search);
@@ -135,7 +140,7 @@ export function GlobalSearch({ shortcut = false, focusOnOpen = false, inline = f
         {options.map((option, i) => (
           // Options are chosen with the keyboard through the combobox (aria-activedescendant).
           // eslint-disable-next-line jsx-a11y/click-events-have-key-events
-          <li key={option.kind === 'page' ? option.item.path : 'ask'} id={optionId(i)} role="option" aria-selected={i === current}
+          <li key={option.kind === 'page' ? `${option.item.path}${option.item.hash ?? ''}${option.item.query ?? ''}` : 'ask'} id={optionId(i)} role="option" aria-selected={i === current}
             onMouseDown={(event) => event.preventDefault()} onClick={() => choose(option)} onMouseEnter={() => setActive(i)}
             className={cn('flex cursor-pointer items-center gap-2 rounded-md px-2.5 py-2 text-sm', i === current && 'bg-muted')}
             data-testid={option.kind === 'page' ? 'search-result-page' : 'search-result-ask'}>

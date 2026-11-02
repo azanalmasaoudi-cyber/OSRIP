@@ -9,7 +9,11 @@ RUN npm ci
 COPY frontend/ ./
 # Same-origin API through Caddy; the basemap URL can be overridden (or "none").
 ARG VITE_MAP_STYLE_URL=https://tiles.openfreemap.org/styles/positron
-ENV VITE_DATA_ADAPTER=http VITE_API_BASE_URL=/api/v1 VITE_MAP_STYLE_URL=${VITE_MAP_STYLE_URL}
+# MapTiler browser key (optional; empty = OpenFreeMap and open terrain). It ends up in the public
+# JavaScript, so restrict it to the site's address in MapTiler ("Allowed HTTP origins").
+ARG VITE_MAPTILER_KEY=
+ENV VITE_DATA_ADAPTER=http VITE_API_BASE_URL=/api/v1 VITE_MAP_STYLE_URL=${VITE_MAP_STYLE_URL} \
+    VITE_MAPTILER_KEY=${VITE_MAPTILER_KEY}
 RUN npm run build
 
 FROM caddy:2-alpine
