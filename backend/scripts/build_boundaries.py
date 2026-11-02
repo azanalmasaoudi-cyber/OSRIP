@@ -10,6 +10,19 @@ matched silently: the report lists every match with its name similarity, and any
 unmatched on either side. Geometry is simplified (Douglas-Peucker) and rounded for the web;
 it is for orientation and choropleths, not for legal or survey use.
 
+It also writes:
+
+* ``oman-national.geojson``: the national outline, dissolved from the 11 governorates. In OSM
+  an internal border is one way shared by two governorates; the national edge (land borders,
+  coast and the maritime limit) is made of ways used once. Joining those gives the mainland,
+  Musandam and Madha, with the Nahwa enclave (part of the UAE) as a hole.
+* ``oman-mask.geojson``: everything outside that outline, to dim neighbouring countries.
+* ``oman-labels.geojson``: one label point inside each governorate and wilayat (a point far
+  from the edges of its largest part), with the registry's English and Arabic names.
+
+Rings are oriented as RFC 7946 asks (outer counter-clockwise, holes clockwise), so renderers
+draw holes as holes.
+
 OpenStreetMap data is (c) OpenStreetMap contributors, available under the Open Database
 Licence 1.0. The files written here are a derived database under the same licence.
 """
@@ -18,6 +31,7 @@ from __future__ import annotations
 
 import difflib
 import json
+import math
 import re
 import sys
 import urllib.parse
@@ -134,6 +148,89 @@ def _inside(point: Point, ring: list[Point]) -> bool:
     return inside
 
 
+def _area(ring: list[list[float]] | list[Point]) -> float:
+    """Signed area (shoelace): positive for counter-clockwise rings in longitude/latitude."""
+    return sum(x1 * y2 - x2 * y1 for (x1, y1), (x2, y2) in zip(ring, ring[1:], strict=False)) / 2
+
+
+def _orient(ring: list[list[float]], ccw: bool) -> list[list[float]]:
+    return ring if (_area(ring) > 0) == ccw else list(reversed(ring))
+
+
+def _label_point(polygons: list[list[list[list[float]]]]) -> list[float]:
+    """A point inside the largest part, far from its edges (a coarse-to-fine grid search for
+    the pole of inaccessibility; good enough to place a name)."""
+    poly = max(polygons, key=lambda p: abs(_area(p[0])))
+    outer, holes = poly[0], poly[1:]
+    edges = [(a, b) for ring in poly for a, b in zip(ring, ring[1:], strict=False)]
+    kx = max(0.2, abs(math.cos(math.radians(outer[0][1]))))
+
+    def inside(x: float, y: float) -> bool:
+        return _inside((x, y), outer) and not any(_inside((x, y), h) for h in holes)
+
+    def clearance(x: float, y: float) -> float:
+        best = float("inf")
+        for (x1, y1), (x2, y2) in edges:
+            dx, dy = (x2 - x1) * kx, y2 - y1
+            px, py = (x - x1) * kx, y - y1
+            t = max(0.0, min(1.0, (px * dx + py * dy) / (dx * dx + dy * dy or 1)))
+            best = min(best, ((px - t * dx) ** 2 + (py - t * dy) ** 2) ** 0.5)
+        return best
+
+    xs, ys = [p[0] for p in outer], [p[1] for p in outer]
+    x0, x1, y0, y1 = min(xs), max(xs), min(ys), max(ys)
+    best, best_d = None, -1.0
+    for _ in range(3):  # each pass searches a finer grid around the best point so far
+        for i in range(1, 16):
+            for j in range(1, 16):
+                x, y = x0 + (x1 - x0) * i / 16, y0 + (y1 - y0) * j / 16
+                if inside(x, y):
+                    d = clearance(x, y)
+                    if d > best_d:
+                        best, best_d = (x, y), d
+        if best is None:
+            break
+        w, h = (x1 - x0) / 8, (y1 - y0) / 8
+        x0, x1, y0, y1 = best[0] - w, best[0] + w, best[1] - h, best[1] + h
+    point = best or (outer[0][0], outer[0][1])
+    return [round(point[0], DIGITS), round(point[1], DIGITS)]
+
+
+def national(level4: list[dict[str, Any]], tolerance: float) -> tuple[dict[str, Any], int]:
+    """The national outline from the governorates: ways used by exactly one governorate."""
+    uses: dict[int, int] = {}
+    geometry_of: dict[int, list[Point]] = {}
+    for relation in level4:
+        for m in relation.get("members", []):
+            if m.get("type") == "way" and m.get("geometry"):
+                uses[m["ref"]] = uses.get(m["ref"], 0) + 1
+                geometry_of[m["ref"]] = [(g["lon"], g["lat"]) for g in m["geometry"]]
+    edge = [geometry_of[ref] for ref, n in uses.items() if n == 1]
+    rings, broken = _rings(edge)
+    simplified = [r for r in (_ring(ring, tolerance) for ring in rings) if r]
+    # Rings inside another ring are holes (the Nahwa enclave inside Madha).
+    outers = [
+        r for r in simplified if not any(o is not r and _inside(tuple(r[0]), o) for o in simplified)
+    ]
+    polygons = []
+    for outer in outers:
+        holes = [
+            r
+            for r in simplified
+            if r is not outer and r not in outers and _inside(tuple(r[0]), outer)
+        ]
+        polygons.append([_orient(outer, ccw=True), *(_orient(h, ccw=False) for h in holes)])
+    return {"type": "MultiPolygon", "coordinates": polygons}, broken
+
+
+def mask(outline: dict[str, Any]) -> dict[str, Any]:
+    """Everything outside the outline: the world with Oman cut out, plus any enclave inside."""
+    world = [[-180.0, -85.0], [180.0, -85.0], [180.0, 85.0], [-180.0, 85.0], [-180.0, -85.0]]
+    holes = [_orient(poly[0], ccw=False) for poly in outline["coordinates"]]
+    enclaves = [[_orient(h, ccw=True)] for poly in outline["coordinates"] for h in poly[1:]]
+    return {"type": "MultiPolygon", "coordinates": [[world, *holes], *enclaves]}
+
+
 def geometry(relation: dict[str, Any], tolerance: float) -> tuple[dict[str, Any] | None, int]:
     roles: dict[str, list[list[Point]]] = {"outer": [], "inner": []}
     for m in relation.get("members", []):
@@ -152,7 +249,9 @@ def geometry(relation: dict[str, Any], tolerance: float) -> tuple[dict[str, Any]
     for i, outer in enumerate(outers):
         simplified = _ring(outer, tolerance)
         if simplified:
-            polygons.append([simplified, *holes.get(i, [])])
+            polygons.append(
+                [_orient(simplified, ccw=True), *(_orient(h, ccw=False) for h in holes.get(i, []))]
+            )
     if not polygons:
         return None, broken_outer + broken_inner
     return {"type": "MultiPolygon", "coordinates": polygons}, broken_outer + broken_inner
@@ -302,6 +401,60 @@ def build(path: Path) -> None:
         (OUT / f"{name}.geojson").write_text(
             json.dumps(collection, separators=(",", ":")), encoding="utf-8", newline="\n"
         )
+    # The national outline and mask, from the governorates' own OSM ways.
+    outline, broken = national(level4, TOLERANCE["4"])
+    report["national"] = {
+        "method": "ways used by exactly one governorate, joined into rings",
+        "parts": len(outline["coordinates"]),
+        "holes": sum(len(p) - 1 for p in outline["coordinates"]),
+        "unjoined_segments": broken,
+    }
+    names = {r[0]: (r[2], r[3]) for r in rows}
+    labels = [
+        {
+            "type": "Feature",
+            "properties": {
+                "code": f["id"],
+                "level": f["properties"]["level"],
+                "name_en": names[f["id"]][0],
+                "name_ar": names[f["id"]][1],
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": _label_point(f["geometry"]["coordinates"]),
+            },
+        }
+        for f in sorted(gov_features + wil_features, key=lambda f: f["id"])
+    ]
+    for name, data in (
+        (
+            "oman-national",
+            {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "id": "OM",
+                        "properties": {"code": "OM"},
+                        "geometry": outline,
+                    }
+                ],
+            },
+        ),
+        (
+            "oman-mask",
+            {
+                "type": "FeatureCollection",
+                "features": [{"type": "Feature", "properties": {}, "geometry": mask(outline)}],
+            },
+        ),
+        ("oman-labels", {"type": "FeatureCollection", "features": labels}),
+    ):
+        (OUT / f"{name}.geojson").write_text(
+            json.dumps(data, ensure_ascii=False, separators=(",", ":")),
+            encoding="utf-8",
+            newline="\n",
+        )
     (OUT / "boundaries-report.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=1), encoding="utf-8", newline="\n"
     )
@@ -311,7 +464,9 @@ def build(path: Path) -> None:
         f"wilayats {len(wil_features)}/{len(wilayats)}, "
         f"unmatched osm {len(report['unmatched_osm'])}, "
         f"unmatched registry {len(report['unmatched_registry'])}, "
-        f"geometry problems {len(report['geometry_problems'])}, matches below 0.85: {len(low)}"
+        f"geometry problems {len(report['geometry_problems'])}, matches below 0.85: {len(low)}; "
+        f"national parts {report['national']['parts']}, holes {report['national']['holes']}, "
+        f"unjoined {broken}, labels {len(labels)}"
     )
 
 

@@ -1,5 +1,5 @@
 {
- "built_at": "2026-11-01T14:59:17+00:00",
+ "built_at": "2026-11-02T09:55:25+00:00",
  "source": "OpenStreetMap via the Overpass API",
  "licence": "Open Database Licence 1.0 (ODbL); (c) OpenStreetMap contributors",
  "query": "[out:json][timeout:180];area[\"ISO3166-1\"=\"OM\"][admin_level=2]->.om;(relation(area.om)[\"boundary\"=\"administrative\"][\"admin_level\"~\"^(4|6)$\"];);out geom;",
@@ -586,5 +586,11 @@
    "code": "OM-SJ-01",
    "reason": "Named 'Jalaan Bani Bu ALi' in OSM (ref 0801), but the polygon contains the town of Sur (22.567 N, 59.529 E); the Jaalan Bani Bu Ali boundary is relation 19558567 (ref 0804)."
   }
- ]
+ ],
+ "national": {
+  "method": "ways used by exactly one governorate, joined into rings",
+  "parts": 38,
+  "holes": 1,
+  "unjoined_segments": 0
+ }
 }
