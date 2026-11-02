@@ -215,10 +215,11 @@ export function SignInPage() {
               <input id={passwordId} type={reveal ? 'text' : 'password'} autoComplete="current-password" required value={password}
                 onChange={(e) => setPassword(e.target.value)} dir="ltr" data-testid="sign-in-password"
                 className="h-11 w-full rounded-lg border border-border-strong bg-card ps-3 pe-11 text-sm" />
-              <button type="button" onClick={() => setReveal((v) => !v)} aria-pressed={reveal} aria-controls={passwordId}
-                aria-label={reveal ? t('auth.hidePassword') : t('auth.showPassword')} data-testid="sign-in-reveal"
+              {/* Named by its text (not aria-label), so "Password" still finds only the field. */}
+              <button type="button" onClick={() => setReveal((v) => !v)} aria-pressed={reveal} aria-controls={passwordId} data-testid="sign-in-reveal"
                 className="absolute inset-y-0 end-0 flex w-11 items-center justify-center rounded-e-lg text-muted-foreground hover:text-foreground">
                 {reveal ? <EyeOff aria-hidden="true" className="size-4" /> : <Eye aria-hidden="true" className="size-4" />}
+                <span className="sr-only">{reveal ? t('auth.hidePassword') : t('auth.showPassword')}</span>
               </button>
             </span>
           </div>

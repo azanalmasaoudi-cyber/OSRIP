@@ -167,16 +167,18 @@ test('navigation and Settings: the main destinations in order, services and sche
   await page.goto('/overview?mode=synthetic');
   const nav = page.getByRole('navigation', { name: 'Main navigation' });
   const names = await nav.getByRole('link').allInnerTexts();
-  // The modules in the required order: Dashboard; the four axes; scenarios, data and analysis;
-  // the map; reports; the assistant; then administration and the account.
-  const all = names.map((n) => n.trim());
-  expect(all.slice(0, 15)).toEqual([
-    'Dashboard', 'Overview', 'Electricity', 'Water', 'Food Security', 'Trade',
-    'Scenarios', 'Analysis workspace', 'Datasets', 'Studies', 'Sources', 'Research library',
-    'Oman Geographic Map', 'Reports', 'AI Research Assistant',
+  // The modules in order: Dashboard; the Axes; Research and Analytics; Geographic Intelligence;
+  // Reports; the account; then administration (an administrator sees all of it).
+  expect(names.map((n) => n.trim())).toEqual([
+    'Dashboard', 'Overview',
+    'Electricity', 'Water', 'Food Security', 'Trade',
+    'Analysis Workspace', 'Datasets', 'Scenarios', 'Forecasting', 'AI Research Assistant', 'Studies', 'Research library', 'Sources',
+    'Interactive Oman Map', 'Geographic Comparisons',
+    'Reports Dashboard', 'Saved Reports',
+    'My Profile', 'Settings', 'Appearance', 'Language',
+    'Data Management', 'Users and Roles', 'Groups and Permissions', 'Service Health', 'Audit Logs',
   ]);
-  expect(all.slice(15)).toEqual(['Data Management', 'Users, Roles and Groups', 'Service Health', 'Account', 'Settings']);
-  await nav.getByRole('link', { name: 'Settings' }).click();
+  await nav.getByRole('link', { name: 'Settings', exact: true }).click();
   await expect(page.getByTestId('settings-services')).toBeVisible();
   await expect(page.getByTestId('service-answers').getByTestId('assistant-service')).toBeVisible();
   await expect(page.getByTestId('service-retrieval')).toContainText('Not configured');

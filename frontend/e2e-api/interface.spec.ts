@@ -24,14 +24,14 @@ test('navigation lists the required sections and every link opens its page', asy
     ['Water', /\/energy\/water/, 'Water'],
     ['Food Security', /\/food-security/, 'Food Security'],
     ['Trade', /\/trade/, 'Trade'],
-    ['Oman Geographic Map', /\/geography/, 'Geography'],
+    ['Interactive Oman Map', /\/geography/, 'Geography'],
     ['Studies', /\/studies/, 'Studies'],
     ['Scenarios', /\/forecasts/, 'Forecasts and Scenarios'],
     ['Sources', /\/sources/, 'Sources and Methodology'],
     ['AI Research Assistant', /\/assistant/, 'Al Mulhim'], // the page is titled with the chosen persona
-    ['Analysis workspace', /\/workspace/, 'Analysis workspace'],
-    ['Reports', /\/reports/, 'Reports'],
-    ['Account', /\/(account|sign-in)/, ''],
+    ['Analysis Workspace', /\/workspace/, 'Analysis workspace'],
+    ['Reports Dashboard', /\/reports/, 'Reports'],
+    ['My Profile', /\/(account|sign-in)/, ''],
   ];
   for (const [name, url, heading] of expected) {
     await nav.getByRole('link', { name, exact: true }).click();
