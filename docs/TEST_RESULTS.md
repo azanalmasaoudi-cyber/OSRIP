@@ -1,5 +1,22 @@
 # Test results
 
+## 2026-11-02 (night): premium Oman map (branch `feature/oman-premium-map`)
+
+What changed (details in MAP.md):
+- MapTiler when a browser key is configured (Topographic, Satellite, Terrain, 3D terrain), otherwise OpenFreeMap with the open Terrain Tiles, otherwise a plain background; a refusal, quota or outage hands over to the next provider.
+- The national outline (dissolved from the governorates), a mask dimming everything outside Oman, and registry-named labels.
+- The comparison by axis and at wilayat level, and the data mode beside the map.
+- The MapTiler build argument and the map hosts in the Content-Security-Policy.
+
+| Check | Result |
+|---|---|
+| `ruff`, backend `pytest` with database tests | Pass; **945 passed**. New: `test_build_boundaries.py` (the outline dissolve with a shared way and an enclave, ring orientation, the mask, label points) |
+| Boundary build | 11/11 governorates, 63/63 wilayats, 0 unmatched either side, 0 geometry problems; outline 38 parts, 1 hole (Nahwa), 0 unjoined segments; 74 labels, each inside its area |
+| `npm run typecheck`, `npm run lint`, `npm run check:contrast` | Pass; 0 failing contrast pairs |
+| Full-stack browser tests (Chrome) | **193 passed, 3 skipped, 5 failed** in the full run (201 tests). The 5 were timeouts (a 3-minute browser launch among them) while the machine was loaded and asleep for part of the run; their spec files rerun: **19 passed**. New: `oman-map.spec.ts` (4) and `oman-map-maptiler.spec.ts` (5), with every external map request stopped or answered by a stand-in |
+| Headless Chrome against the development server, by hand | OpenFreeMap provider, toolbar, Satellite disabled without a key, hover tooltip, selection with zoom, Terrain view and 3D with relief, wilayat level and comparison, data mode switch; dark Arabic with the toolbar at the start edge and the zoom buttons opposite; 390 px with no sideways scroll; no console errors besides the API's handled mixed-frequency answer |
+| MapTiler, live | **Not tested**: no MapTiler account or key. The requests OSRIP makes and its fallback are tested with stand-in responses |
+
 ## 2026-11-02 (later): premium redesign (branch `feature/premium-osrip-redesign`)
 
 What changed (details and screenshots in PREMIUM_REDESIGN.md): the warm glass design tokens in both themes, the new sidebar (collapsible modules, icon-only mode, profile card), the dashboard KPI cards and analysis by axis, the full-screen sign-in with Remember me (migration 0027), the Audit Logs page and reusable data table, the assistant's glass messages, and relief on the map.

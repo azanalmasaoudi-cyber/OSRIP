@@ -87,7 +87,8 @@ real external service. *Deployed*: reachable on a public HTTPS address from anot
 | SMS | `OSRIP_SMS_*` | No provider selected; scripted test provider |
 | Google / Microsoft sign-in | `OSRIP_GOOGLE_*`, `OSRIP_MICROSOFT_*` | Not configured |
 | NCSI data portal | (manual download) | File import only |
-| OpenFreeMap | `VITE_MAP_STYLE_URL` | Used without a key |
+| OpenFreeMap | `VITE_MAP_STYLE_URL` | Used without a key (fallback basemap) |
+| MapTiler Cloud (map) | `VITE_MAPTILER_KEY` (browser key, restricted by allowed origins) | No key yet; requests and fallback tested with stand-ins; setup in `docs/MAP.md` |
 
 Enter keys without displaying them: `backend\.venv\Scripts\python.exe backend\scripts\set_provider_keys.py`.
 
