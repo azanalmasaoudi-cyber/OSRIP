@@ -2,8 +2,8 @@ import { expect, test, type Page } from '@playwright/test';
 
 // Full stack: the sourced area registry, statistical coverage by area and the
 // forecast eligibility check. The basemap style points at a URL that is not a
-// map style (playwright.api.config.ts), so these runs make no external requests
-// and exercise the "map unavailable" path.
+// map style (playwright.api.config.ts), so no basemap tiles are requested and the
+// map falls back to a plain background (oman-map.spec.ts covers the map itself).
 
 const PASSWORD = process.env.OSRIP_E2E_PASSWORD ?? '';
 
@@ -35,8 +35,10 @@ test('registry lists 11 governorates and 63 wilayats, separately from statistica
   await expect(map.or(page.getByTestId('oman-map-unavailable'))).toBeVisible();
   if (await map.isVisible()) {
     await expect(page.getByTestId('oman-map-canvas')).toHaveAttribute('data-state', 'ready');
-    await expect(map).toContainText('boundaries are drawn on a plain background');
-    await expect(page.getByTestId('map-legend')).toHaveText(/No data$/);
+    await expect(map).toContainText('boundaries on a plain background');
+    // No value classes: every area is "No data".
+    await expect(page.getByTestId('map-legend')).toContainText('No data');
+    await expect(page.getByTestId('map-legend-class')).toHaveCount(0);
   }
   await expect(page.getByTestId('map-notes')).toContainText('Boundaries on the map come from OpenStreetMap');
 });
