@@ -55,7 +55,7 @@ export function Dialog({ open, onClose, title, description, children, placement 
         placement === 'center' &&
           'm-auto w-[min(40rem,calc(100vw-2rem))] max-h-[calc(100dvh-2rem)] rounded-lg border border-border p-0 shadow-raised',
         placement === 'start' &&
-          'm-0 me-auto h-dvh max-h-dvh w-[min(18rem,85vw)] max-w-none border-e border-sidebar-border bg-sidebar p-0 text-sidebar-foreground',
+          'on-sidebar m-0 me-auto h-dvh max-h-dvh w-[min(18rem,85vw)] max-w-none border-e border-sidebar-border bg-sidebar p-0 text-sidebar-foreground',
         placement === 'end' && 'm-0 ms-auto h-dvh max-h-dvh w-[min(32rem,100vw)] max-w-none border-s border-border p-0',
         className,
       )}

@@ -4,155 +4,198 @@
 @custom-variant short (@media (max-height: 560px));
 
 /*
- * OSRIP design tokens (release 2.0: Omani decision-support identity, light and dark).
+ * OSRIP design tokens (release 3.0: premium warm glass, light and dark).
  *
- * White and cool off-white pages, a deep navy navigation, emerald as the one action and
- * single-series chart colour, and a soft gold for rules, highlights and the focus ring on navy.
- * A PROPOSED identity for an academic prototype: no official seals, emblems or government
- * branding.
+ * Light: warm ivory and soft beige pages, frosted white cards, a burnt-peach accent.
+ * Dark: charcoal (not black) with frosted glass, a soft amber-peach accent.
+ * Both themes share one language: the same radii, depth, glass and accent roles. Status
+ * colours (positive, warning, critical) and the data-mode colours (verified, synthetic,
+ * pending, missing) always come with a text label; colour is never the only signal.
  *
- * Themes: the light tokens are on :root (the default); :root[data-theme="dark"] overrides them
- * with deep navy surfaces. The attribute is always the resolved theme ("light" or "dark"), set
- * before the first paint by public/theme-init.js and then by lib/theme.ts (Light, Dark or
- * System, remembered locally). The --sidebar and --nav tokens are navy in both themes.
+ * Requested palette and where it is used:
+ *   dark  #101315 page, #191D20 card, glass rgba(255,255,255,.055), accent #F4A873 / #D98A61,
+ *         text #F6F3EF / #A9AAA8, positive #72C6A1, warning #E4B765, critical #E67F7F.
+ *   light #F7F3EE page, #EEE8E0 secondary, glass rgba(255,255,255,.78), accent #B9683F / #D99163,
+ *         text #292623 / #706A65, positive #287A5B, warning #9C6A1D, critical #B94C4C.
+ * Where a requested colour is too light for small text on these surfaces it is kept for marks,
+ * rules and charts, and a slightly deeper shade of the same hue carries text and buttons
+ * (light: links and buttons #99532E, secondary text #655F5A, warning text #7A5216, critical
+ * text #A94141). `npm run check:contrast` (scripts/check-contrast.mjs) checks every pairing.
+ *
+ * Themes: the light tokens are on :root (the default); :root[data-theme="dark"] overrides them.
+ * The attribute is always the resolved theme, set before the first paint by
+ * public/theme-init.js and then by lib/theme.ts (Light, Dark or System, remembered locally).
+ * --nav is the dark stage of the introduction, hero bands and photo credits in both themes.
  *
  * Type: normal reading text is 1rem = 12pt = 16 CSS px (`text-base`) and never smaller; labels,
  * notes, tables and metadata are 0.875rem (14px, `text-sm`); only badges, chips, step numbers
  * and photo credits are 0.75rem (12px, `text-xs`). Headings step up from 1.125rem to 2.25rem.
- * On very wide screens (2200 px and up, e.g. a 4K display at 100 % scaling) the root size
- * grows, so every rem-based size and width scales.
- *
- * `npm run check:contrast` (scripts/check-contrast.mjs) reads both blocks from this file and
- * checks every text/control pairing for WCAG contrast. Mode colours always accompany text
- * labels; colour is never the only signal.
+ * On very wide screens (2200 px and up) the root size grows, so every rem-based size scales.
  */
 :root {
   color-scheme: light;
 
   /* Surfaces and ink */
-  --background: #f5f7fa;
-  --card: #ffffff;
+  --background: #f7f3ee; /* warm ivory */
+  --background-2: #eee8e0; /* soft beige: bands and the sidebar's base */
+  --card: #fdfbf8; /* solid card (print, reduced transparency) */
   --card-foreground: var(--foreground);
-  --muted: #edf1f6; /* sunken surfaces, hover */
-  --foreground: #0b1b33; /* navy ink */
-  --muted-foreground: #4a5874;
-  --border: #dbe2ec;
-  --border-strong: #7d8ca3; /* form-control outlines (>= 3:1) */
+  --muted: #eee8e0; /* sunken surfaces, hover */
+  --foreground: #292623;
+  --muted-foreground: #655f5a;
+  --border: #e3d9cd;
+  --border-strong: #948a80; /* form-control outlines (>= 3:1) */
+
+  /* Glass */
+  --glass: rgb(255 255 255 / 0.78);
+  --glass-strong: rgb(255 255 255 / 0.9);
+  --glass-border: rgb(255 255 255 / 0.7);
+  --glass-edge: rgb(120 84 52 / 0.12); /* the hairline that separates glass from the page */
+  --ambient-1: rgb(217 145 99 / 0.22); /* peach light, top corner */
+  --ambient-2: rgb(185 104 63 / 0.12); /* deeper peach, opposite corner */
+  --ambient-3: rgb(238 214 180 / 0.45); /* cream wash */
 
   /* Actions */
-  --primary: #047857; /* emerald */
-  --primary-hover: #065f46;
+  --brand: #b9683f; /* the requested accent: marks, rules, charts, active bars */
+  --brand-2: #d99163;
+  --primary: #99532e; /* text links and buttons (deeper shade for contrast) */
+  --primary-hover: #7f4425;
   --primary-foreground: #ffffff;
-  --ring: #1d3a66; /* focus: navy, distinct from the emerald selection */
+  --primary-soft: rgb(185 104 63 / 0.12); /* selected pills, active rows */
+  --ring: #7a4220;
 
-  /* The navigation (navy in both themes) */
-  --sidebar: #0b1f3a;
-  --sidebar-foreground: #f3f6fb;
-  --sidebar-muted: #b3c0d4;
-  --sidebar-active: #173560;
-  --sidebar-border: #1b3559;
-  --sidebar-accent: #e2c27f; /* soft gold: the active item's mark */
+  /* The sidebar follows the theme */
+  --sidebar: #f1ebe3;
+  --sidebar-foreground: #292623;
+  --sidebar-muted: #625c56;
+  --sidebar-active: #e6d9cb;
+  --sidebar-border: #e0d5c8;
+  --sidebar-accent: #b0603a;
+  --sidebar-ring: #7a4220;
 
-  /* The introduction's stage and the brand mark */
-  --nav: #0b1f3a;
-  --nav-foreground: #f3f6fb;
-  --nav-muted: #b3c0d4;
-  --nav-active: #173560;
-  --nav-ring: #e2c27f; /* soft gold focus ring on navy */
-  --nav-accent: #5fd0a4; /* light emerald marks on navy */
+  /* The dark stage (introduction, hero bands, photo credits) */
+  --nav: #171a1d;
+  --nav-foreground: #f6f3ef;
+  --nav-muted: #bdb9b3;
+  --nav-active: #262b2f;
+  --nav-ring: #f4a873;
+  --nav-accent: #f4a873;
 
-  /* Accents and details: soft gold */
-  --accent: #7a5810; /* gold text */
-  --copper: #a7802e; /* decorative gold rules and the avatar ring (not text) */
-  --copper-subtle: #f7f0df;
-  --copper-foreground: #694b0e;
-  --sand: #c4a265;
-  --sand-subtle: #f6efde;
-  --sand-foreground: #5b430f;
+  /* Accents and details */
+  --accent: #8f4f2b; /* accent text */
+  --copper: #b9683f; /* decorative rules and the avatar ring (not text) */
+  --copper-subtle: #f6e8de;
+  --copper-foreground: #743f1f;
+  --sand: #d99163;
+  --sand-subtle: #f7eadf;
+  --sand-foreground: #6a3c1d;
 
   /* Status */
-  --destructive: #b42318;
-  --synthetic: #fdf3d8;
-  --synthetic-foreground: #6a470a;
-  --synthetic-border: #d2a850;
-  --verified: #e2f5ec;
-  --verified-foreground: #065f46;
-  --verified-border: #86d0ad;
-  --pending: #fbf1dc;
-  --pending-foreground: #6b4a0b;
-  --pending-border: #d8b46a;
-  --missing: #f3f4f7;
-  --missing-foreground: #4a5874;
-  --missing-border: #7d8ca3;
+  --positive: #287a5b;
+  --warning: #9c6a1d;
+  --critical: #b94c4c;
+  --destructive: #a94141;
+  --synthetic: #f5ead6;
+  --synthetic-foreground: #694512;
+  --synthetic-border: #cfa25e;
+  --verified: #e2f0e8;
+  --verified-foreground: #1f6a4d;
+  --verified-border: #86c2a5;
+  --pending: #f6ecda;
+  --pending-foreground: #7a5216;
+  --pending-border: #d2ab62;
+  --missing: #efe9e2;
+  --missing-foreground: #5e5751;
+  --missing-border: #948a80;
 
-  /* Charts: emerald for single-series marks, navy blue for comparison, recessive grid */
-  --chart-1: #059669;
-  --chart-2: #1d4ed8;
-  --chart-grid: #e3e8ef;
+  /* Charts: peach for single-series marks, a cool slate blue for comparison */
+  --chart-1: #b9683f;
+  --chart-2: #3d6b8c;
+  --chart-3: #287a5b;
+  --chart-4: #9c6a1d;
+  --chart-grid: #e6ddd2;
 
   /* Shape and depth */
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --shadow-card: 0 1px 2px rgb(11 27 51 / 0.05), 0 1px 3px rgb(11 27 51 / 0.04);
-  --shadow-raised: 0 2px 6px rgb(11 27 51 / 0.06), 0 18px 40px -20px rgb(11 27 51 / 0.3);
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.375rem;
+  --shadow-card: 0 1px 2px rgb(70 45 25 / 0.05), 0 10px 30px -18px rgb(70 45 25 / 0.28);
+  --shadow-raised: 0 2px 8px rgb(70 45 25 / 0.07), 0 24px 48px -24px rgb(70 45 25 / 0.36);
 
   /* Layout */
-  --sidebar-width: 16rem;
+  --sidebar-width: 16.5rem;
+  --sidebar-width-collapsed: 4.75rem;
   --content-max: 120rem;
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --background: #07111f;
-  --card: #0d1b2e;
-  --muted: #13243b;
-  --foreground: #eef2f8;
-  --muted-foreground: #a9b6ca;
-  --border: #1d3150;
-  --border-strong: #6c809e;
-  --primary: #34d399;
-  --primary-hover: #6ee7b7;
-  --primary-foreground: #04261a;
-  --ring: #e2e8f2;
-  --sidebar: #061427;
-  --sidebar-foreground: #eef2f8;
-  --sidebar-muted: #a9b6ca;
-  --sidebar-active: #12294a;
-  --sidebar-border: #142b4b;
-  --sidebar-accent: #e2c27f;
-  --nav: #061427;
-  --nav-foreground: #eef2f8;
-  --nav-muted: #a9b6ca;
-  --nav-active: #12294a;
-  --nav-ring: #e2c27f;
-  --nav-accent: #5fd0a4;
-  --accent: #e2c27f;
-  --copper: #d2ae68;
-  --copper-subtle: #2a2414;
-  --copper-foreground: #efd9a6;
-  --sand: #cdac6c;
-  --sand-subtle: #262113;
-  --sand-foreground: #ecd7a3;
-  --destructive: #f87171;
-  --synthetic: #2b2312;
-  --synthetic-foreground: #f4d99a;
-  --synthetic-border: #8c6a26;
-  --verified: #0b2a1f;
-  --verified-foreground: #a7f3d0;
-  --verified-border: #1f6f52;
-  --pending: #2a2213;
-  --pending-foreground: #f0d79d;
-  --pending-border: #8a6b2c;
-  --missing: #13243b;
-  --missing-foreground: #c3cddc;
-  --missing-border: #6c809e;
-  --chart-1: #10b981;
-  --chart-2: #7aa7ff;
-  --chart-grid: #1b2d47;
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.45);
-  --shadow-raised: 0 2px 6px rgb(0 0 0 / 0.4), 0 22px 44px -22px rgb(0 0 0 / 0.75);
+  --background: #101315;
+  --background-2: #191d20;
+  --card: #191d20;
+  --muted: #22272b;
+  --foreground: #f6f3ef;
+  --muted-foreground: #a9aaa8;
+  --border: #2b3135;
+  --border-strong: #6e7478;
+  --glass: rgb(255 255 255 / 0.055);
+  --glass-strong: rgb(255 255 255 / 0.085);
+  --glass-border: rgb(255 255 255 / 0.09);
+  --glass-edge: rgb(255 255 255 / 0.06);
+  --ambient-1: rgb(244 168 115 / 0.13);
+  --ambient-2: rgb(217 138 97 / 0.08);
+  --ambient-3: rgb(120 96 74 / 0.12);
+  --brand: #f4a873;
+  --brand-2: #d98a61;
+  --primary: #f4a873;
+  --primary-hover: #f7bc93;
+  --primary-foreground: #1f140d;
+  --primary-soft: rgb(244 168 115 / 0.14);
+  --ring: #f6f3ef;
+  --sidebar: #14171a;
+  --sidebar-foreground: #f6f3ef;
+  --sidebar-muted: #a9aaa8;
+  --sidebar-active: #262a2e;
+  --sidebar-border: #22272b;
+  --sidebar-accent: #f4a873;
+  --sidebar-ring: #f4a873;
+  --nav: #14171a;
+  --nav-foreground: #f6f3ef;
+  --nav-muted: #a9aaa8;
+  --nav-active: #262a2e;
+  --nav-ring: #f4a873;
+  --nav-accent: #f4a873;
+  --accent: #f4a873;
+  --copper: #d98a61;
+  --copper-subtle: #2b2019;
+  --copper-foreground: #f3c6a6;
+  --sand: #d98a61;
+  --sand-subtle: #2a211b;
+  --sand-foreground: #f0c8a9;
+  --positive: #72c6a1;
+  --warning: #e4b765;
+  --critical: #e67f7f;
+  --destructive: #e67f7f;
+  --synthetic: #2a2317;
+  --synthetic-foreground: #efcf95;
+  --synthetic-border: #8a6b34;
+  --verified: #12261e;
+  --verified-foreground: #72c6a1;
+  --verified-border: #2e6a51;
+  --pending: #2a2416;
+  --pending-foreground: #e4b765;
+  --pending-border: #7c6331;
+  --missing: #1f2427;
+  --missing-foreground: #c3c2bf;
+  --missing-border: #6e7478;
+  --chart-1: #f4a873;
+  --chart-2: #8db7d4;
+  --chart-3: #72c6a1;
+  --chart-4: #e4b765;
+  --chart-grid: #2a2f33;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px -18px rgb(0 0 0 / 0.7);
+  --shadow-raised: 0 2px 8px rgb(0 0 0 / 0.45), 0 26px 52px -24px rgb(0 0 0 / 0.85);
 }
 
 @theme inline {
@@ -201,6 +244,18 @@
   --color-missing-foreground: var(--missing-foreground);
   --color-missing-border: var(--missing-border);
   --color-chart-1: var(--chart-1);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-brand: var(--brand);
+  --color-brand-2: var(--brand-2);
+  --color-primary-soft: var(--primary-soft);
+  --color-background-2: var(--background-2);
+  --color-glass: var(--glass);
+  --color-glass-strong: var(--glass-strong);
+  --color-glass-border: var(--glass-border);
+  --color-positive: var(--positive);
+  --color-warning: var(--warning);
+  --color-critical: var(--critical);
   --color-chart-2: var(--chart-2);
   --color-chart-grid: var(--chart-grid);
   --radius-sm: var(--radius-sm);
@@ -265,9 +320,14 @@
     border-radius: 2px;
   }
 
-  /* On the navy navigation the copper ring is too dark, so switch to a light sand. */
+  /* On the dark stage (hero bands, photo credits) the ring is a light peach. */
   .on-nav {
     --ring: var(--nav-ring);
+  }
+
+  /* The sidebar follows the theme, with its own checked ring colour. */
+  .on-sidebar {
+    --ring: var(--sidebar-ring);
   }
 
   ::selection {
@@ -337,16 +397,17 @@ details > summary:hover { color: var(--color-primary); }
 }
 
 /*
- * Glass: cards and panels are lightly translucent over a soft navy, emerald and gold light
- * in the page background. They stay 86% opaque, so text keeps the contrast the tokens are
- * checked for (scripts/check-contrast.mjs); without blur support, or when the person asks for
- * less transparency, they are solid.
+ * Glass: cards and panels are frosted surfaces (--glass) over a warm ambient light in the page
+ * background. Text on them is checked against the solid --card colour, and the glass is either
+ * almost opaque (light, 78-90 % white) or over a near-black page (dark), so the checked contrast
+ * holds. Without blur support, or when the person asks for less transparency, they are solid.
  */
 @media screen {
   body {
     background-image:
-      radial-gradient(60rem 38rem at 105% -12%, color-mix(in oklab, var(--primary) 11%, transparent), transparent 70%),
-      radial-gradient(48rem 34rem at -12% 108%, color-mix(in oklab, var(--sidebar-accent) 9%, transparent), transparent 70%);
+      radial-gradient(64rem 40rem at 108% -14%, var(--ambient-1), transparent 70%),
+      radial-gradient(52rem 36rem at -14% 110%, var(--ambient-2), transparent 70%),
+      radial-gradient(40rem 30rem at 40% 30%, var(--ambient-3), transparent 75%);
     background-attachment: fixed;
   }
 }
@@ -354,23 +415,55 @@ details > summary:hover { color: var(--color-primary); }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .surface-card,
   .glass-card {
-    background: color-mix(in oklab, var(--card) 86%, transparent);
-    -webkit-backdrop-filter: blur(14px) saturate(1.15);
-    backdrop-filter: blur(14px) saturate(1.15);
-    border-color: color-mix(in oklab, var(--border) 85%, transparent);
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(18px) saturate(1.2);
+    backdrop-filter: blur(18px) saturate(1.2);
+    border-color: var(--glass-edge);
   }
+  .glass-strong {
+    background: var(--glass-strong);
+    -webkit-backdrop-filter: blur(22px) saturate(1.25);
+    backdrop-filter: blur(22px) saturate(1.25);
+  }
+}
+
+/* In dark, the faint white glass needs the solid card under it to keep its checked contrast. */
+:root[data-theme="dark"] .surface-card,
+:root[data-theme="dark"] .glass-card {
+  background-color: var(--card);
+  background-image: linear-gradient(var(--glass), var(--glass));
 }
 
 @media (prefers-reduced-transparency: reduce) {
   .surface-card,
-  .glass-card {
+  .glass-card,
+  .glass-strong {
     background: var(--card);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
 }
 
-/* A short soft-gold rule above section headings (decorative; the heading carries the meaning). */
+/* The sidebar and the top bar: frosted bands that follow the theme. */
+.sidebar-glass {
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--sidebar) 92%, var(--brand) 8%), var(--sidebar) 40%),
+    var(--sidebar);
+}
+.topbar-glass {
+  border-color: var(--glass-edge);
+  background: color-mix(in oklab, var(--background) 82%, transparent);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  backdrop-filter: blur(18px) saturate(1.2);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .topbar-glass { background: var(--background); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+/* A navigation module opening: a short fade and drop (none under reduced motion). */
+.nav-expand { animation: osrip-enter 180ms cubic-bezier(0.2, 0, 0, 1) both; }
+
+/* A short peach rule above section headings (decorative; the heading carries the meaning). */
 .gold-rule::before {
   content: "";
   display: block;
@@ -378,7 +471,7 @@ details > summary:hover { color: var(--color-primary); }
   height: 3px;
   margin-bottom: 0.625rem;
   border-radius: 3px;
-  background: var(--copper);
+  background: linear-gradient(90deg, var(--brand), var(--brand-2));
 }
 
 /* Animated tabs (Segmented, Energy view links): the indicator slides. */
