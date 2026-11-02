@@ -1,4 +1,4 @@
-import { CheckCircle2, Copy, KeyRound, LogIn, Mail, ShieldCheck, Trash2, UserPlus } from 'lucide-react';
+import { CheckCircle2, Copy, Eye, EyeOff, KeyRound, LogIn, Mail, ShieldCheck, Trash2, UserPlus } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type InputHTMLAttributes, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
@@ -36,6 +36,8 @@ import { ApiRequestError } from '@/api/client';
 import { adapterKind } from '@/api/config';
 import { GroupsPanel, RolesPanel, useRoleLabel } from '@/components/admin/AccessControl';
 import { PhoneVerification } from '@/components/auth/PhoneVerification';
+import { BrandMark } from '@/components/brand/BrandMark';
+import { useDocumentTitle } from '@/lib/useDocumentTitle';
 import { PageHeader } from '@/components/common/PageHeader';
 import { SettingsSection } from '@/components/settings/SettingsSection';
 import { StatePanel } from '@/components/common/StatePanel';
@@ -175,31 +177,59 @@ export function SignInPage() {
   const resend = useEmailRequest('/auth/verify-email/resend');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [reveal, setReveal] = useState(false);
+  const [remember, setRemember] = useState(false);
+  const passwordId = useId();
+  const rememberHintId = useId();
+  const rememberId = useId();
+  useDocumentTitle(t('auth.title'));
 
-  if (adapterKind !== 'http') return <RequiresApi title={t('auth.title')} />;
+  if (adapterKind !== 'http') return <div className="w-full max-w-md"><RequiresApi title={t('auth.title')} /></div>;
 
   const unverified = login.error instanceof ApiRequestError && login.error.code === 'email_not_verified';
   const notice = params.get('notice');
   const error = params.get('error');
 
   return (
-    <>
-      <PageHeader title={t('auth.title')} intro={t('auth.intro')} />
-      <div className="surface-card flex max-w-md flex-col gap-5 p-6">
+    <div className="auth-card glass-card glass-strong enter-rise flex w-full max-w-md flex-col gap-5 rounded-2xl border p-6 shadow-raised sm:p-8" data-testid="sign-in-card">
+      <div className="flex flex-col items-center gap-3 text-center">
+        <BrandMark className="size-12" />
+        <h1 className="text-2xl font-semibold">{t('auth.welcome')}</h1>
+        <p className="text-base text-muted-foreground">{t('auth.intro')}</p>
+      </div>
         {/* Returns from Google or Microsoft (started on the other page) land here. */}
         {notice === 'link_required' ? (
           <Notice>{t('account.linkRequired', { provider: PROVIDER_LABEL[(params.get('provider') as OidcProvider) ?? 'google'] ?? '' })}</Notice>
         ) : null}
         {error ? <p role="alert" className="text-base text-destructive" data-testid="oidc-error">{t(`account.oidcError.${oidcErrorKey(error)}`)}</p> : null}
         <form
-          onSubmit={(e) => { e.preventDefault(); login.mutate({ email: username.trim(), password }, { onSuccess: () => void navigate(to('/account')) }); }}
+          onSubmit={(e) => { e.preventDefault(); login.mutate({ email: username.trim(), password, remember }, { onSuccess: () => void navigate(to('/account')) }); }}
           className="flex flex-col gap-4" noValidate data-testid="sign-in-form"
         >
           <Field label={t('account.username')} autoComplete="username" autoCapitalize="none" spellCheck={false} required
             value={username} onChange={(e) => setUsername(e.target.value)} dir="ltr" hint={t('auth.usernameOlder')}
             data-testid="sign-in-identifier" />
-          <Field label={t('auth.password')} type="password" autoComplete="current-password" required value={password}
-            onChange={(e) => setPassword(e.target.value)} dir="ltr" data-testid="sign-in-password" />
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor={passwordId} className="text-sm font-medium">{t('auth.password')}</label>
+            <span className="relative">
+              <input id={passwordId} type={reveal ? 'text' : 'password'} autoComplete="current-password" required value={password}
+                onChange={(e) => setPassword(e.target.value)} dir="ltr" data-testid="sign-in-password"
+                className="h-11 w-full rounded-lg border border-border-strong bg-card ps-3 pe-11 text-sm" />
+              <button type="button" onClick={() => setReveal((v) => !v)} aria-pressed={reveal} aria-controls={passwordId}
+                aria-label={reveal ? t('auth.hidePassword') : t('auth.showPassword')} data-testid="sign-in-reveal"
+                className="absolute inset-y-0 end-0 flex w-11 items-center justify-center rounded-e-lg text-muted-foreground hover:text-foreground">
+                {reveal ? <EyeOff aria-hidden="true" className="size-4" /> : <Eye aria-hidden="true" className="size-4" />}
+              </button>
+            </span>
+          </div>
+          <div className="flex items-start gap-2.5 text-sm">
+            <input id={rememberId} type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} aria-describedby={rememberHintId}
+              className="mt-0.5 size-4 accent-primary" data-testid="sign-in-remember" />
+            <div>
+              <label htmlFor={rememberId} className="font-medium">{t('auth.remember')}</label>
+              <p id={rememberHintId} className="text-xs text-muted-foreground">{t('auth.rememberHint')}</p>
+            </div>
+          </div>
           <ErrorText error={login.error} />
           {unverified ? (
             <Button type="button" variant="outline" size="sm" className="w-fit" onClick={() => resend.mutate(username.trim())} disabled={resend.isPending}>
@@ -207,19 +237,18 @@ export function SignInPage() {
             </Button>
           ) : null}
           {resend.isSuccess ? <Notice>{t('account.checkInbox')}</Notice> : null}
-          <Button type="submit" disabled={login.isPending || !username.trim() || !password}>
+          <Button type="submit" size="lg" className="w-full" disabled={login.isPending || !username.trim() || !password}>
             <LogIn aria-hidden="true" />{login.isPending ? t('auth.submitting') : t('auth.submit')}
           </Button>
         </form>
-        <div className="flex flex-wrap justify-between gap-2 text-base">
+        <div className="flex flex-wrap justify-between gap-2 text-sm">
           <Link to={to('/forgot-password')} className="text-primary underline underline-offset-2">{t('account.forgot')}</Link>
           <Link to={to('/register')} className="text-primary underline underline-offset-2">{t('account.createAccount')}</Link>
         </div>
-        <Link to={to('/sign-in/other')} className="text-sm text-muted-foreground underline underline-offset-2" data-testid="sign-in-other">
+        <Link to={to('/sign-in/other')} className="border-t border-border pt-4 text-center text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline" data-testid="sign-in-other">
           {t('auth.otherWays')}
         </Link>
-      </div>
-    </>
+    </div>
   );
 }
 

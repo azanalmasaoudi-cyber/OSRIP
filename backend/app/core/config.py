@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     session_cookie_secure: bool = True
     session_absolute_hours: int = 8
     session_idle_minutes: int = 30
+    # Remember me: how long a persistent session lasts on its device (no shorter idle limit).
+    session_remember_days: int = Field(default=14, ge=1, le=90)
     # Keys the hash of client addresses in login_attempt (no raw IPs are stored).
     client_hash_key: SecretStr = Field(default=SecretStr("development-only-change-me"))
 

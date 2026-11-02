@@ -356,6 +356,11 @@ export const ar: TranslationShape = {
     records: 'السجلات المنشورة',
   },
   auth: {
+    welcome: 'مرحباً بك في OSRIP',
+    remember: 'إبقائي مسجلاً على هذا الجهاز',
+    rememberHint: 'لمدة 14 يوماً. اتركه دون تحديد على جهاز مشترك، فيُسجَّل خروجك عند إغلاق المتصفح.',
+    showPassword: 'إظهار كلمة المرور',
+    hidePassword: 'إخفاء كلمة المرور',
     signIn: 'تسجيل الدخول',
     signOut: 'تسجيل الخروج',
     title: 'تسجيل الدخول',

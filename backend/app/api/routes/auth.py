@@ -71,7 +71,9 @@ def _me(principal: Principal, session: DbSession | None = None) -> MeOut:
 
 def _set_session_cookies(response: Response, new: accounts.NewSession) -> None:
     settings = get_settings()
-    max_age = settings.session_absolute_hours * 3600
+    # Remember me: a cookie that outlives the browser; otherwise a browser-session cookie.
+    # Either way the server enforces the session's own expiry and idle limit.
+    max_age = settings.session_remember_days * 86400 if new.persistent else None
     # HttpOnly session cookie: unreadable by scripts. SameSite=Strict: not sent on
     # cross-site requests. Secure: HTTPS only (disabled only for local HTTP dev).
     response.set_cookie(
@@ -121,7 +123,7 @@ def providers() -> dict[str, Any]:
 @router.post("/login", response_model=MeOut)
 def login(body: LoginIn, request: Request, response: Response, session: DbSession) -> MeOut:
     client = request.client.host if request.client else "unknown"
-    new = accounts.login(session, body.email, body.password, client)
+    new = accounts.login(session, body.email, body.password, client, remember=body.remember)
     _set_session_cookies(response, new)
     return _me(new.principal, session)
 

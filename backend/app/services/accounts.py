@@ -277,6 +277,7 @@ class NewSession:
     csrf_token: str  # goes in the readable CSRF cookie; never stored
     expires_at: datetime
     principal: Principal
+    persistent: bool = False  # remember me: the cookie outlives the browser session
 
 
 def _throttled(session: Session, email: str, client_hash: str) -> bool:
@@ -321,9 +322,17 @@ def _find_for_login(session: Session, identifier: str) -> AppUser | None:
     return find_by_username(session, identifier)
 
 
-def login(session: Session, email: str, password: str, client_address: str) -> NewSession:
+def login(
+    session: Session,
+    email: str,
+    password: str,
+    client_address: str,
+    *,
+    remember: bool = False,
+) -> NewSession:
     """Verify credentials and open a new session. Commits its own attempt record.
-    ``email`` is the sign-in identifier: an e-mail address or a username."""
+    ``email`` is the sign-in identifier: an e-mail address or a username. ``remember``
+    keeps the session on this device (session_remember_days)."""
     settings = get_settings()
     email = normalize_email(email)
     client_hash = security.keyed_digest(settings.client_hash_key.get_secret_value(), client_address)
@@ -370,7 +379,7 @@ def login(session: Session, email: str, password: str, client_address: str) -> N
             else:
                 if security.needs_rehash(user.password_hash):
                     user.password_hash = security.hash_password(password)
-                return open_session(session, user, method="password")
+                return open_session(session, user, method="password", persistent=remember)
     if unverified:
         raise ApiError(
             403,
@@ -483,16 +492,26 @@ def change_password(
         )
 
 
-def open_session(session: Session, user: AppUser, *, method: str) -> NewSession:
-    """Create a server-side session inside the caller's transaction."""
+def open_session(
+    session: Session, user: AppUser, *, method: str, persistent: bool = False
+) -> NewSession:
+    """Create a server-side session inside the caller's transaction. A persistent session
+    (remember me) lasts session_remember_days; otherwise session_absolute_hours with the
+    idle limit."""
     settings = get_settings()
     token, csrf_token = security.new_token(), security.new_token()
-    expires_at = now() + timedelta(hours=settings.session_absolute_hours)
+    lifetime = (
+        timedelta(days=settings.session_remember_days)
+        if persistent
+        else timedelta(hours=settings.session_absolute_hours)
+    )
+    expires_at = now() + lifetime
     user_session = UserSession(
         user_id=user.id,
         token_hash=security.token_digest(token),
         csrf_token_hash=security.token_digest(csrf_token),
         expires_at=expires_at,
+        persistent=persistent,
     )
     session.add(user_session)
     session.flush()
@@ -503,9 +522,9 @@ def open_session(session: Session, user: AppUser, *, method: str) -> NewSession:
         "auth.login",
         entity_type="session",
         entity_id=user_session.id,
-        metadata={"method": method},
+        metadata={"method": method, "remember": persistent},
     )
-    return NewSession(token, csrf_token, expires_at, principal)
+    return NewSession(token, csrf_token, expires_at, principal, persistent)
 
 
 def resolve_session(session: Session, token: str | None) -> Principal | None:
@@ -523,7 +542,12 @@ def resolve_session(session: Session, token: str | None) -> Principal | None:
         if row is None:
             return None
         user_session, user = row
-        idle_limit = user_session.last_seen_at + timedelta(minutes=settings.session_idle_minutes)
+        idle = (
+            timedelta(days=settings.session_remember_days)
+            if user_session.persistent
+            else timedelta(minutes=settings.session_idle_minutes)
+        )
+        idle_limit = user_session.last_seen_at + idle
         if (
             user_session.revoked_at is not None
             or user_session.expires_at <= current

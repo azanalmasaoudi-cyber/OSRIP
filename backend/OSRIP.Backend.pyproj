@@ -257,6 +257,7 @@
     <Compile Include="tests\test_decision_brief_integration.py" />
     <Compile Include="tests\test_documents.py" />
     <Compile Include="tests\test_openai_sdk.py" />
+    <Compile Include="tests\test_remember_me_integration.py" />
     <Compile Include="tests\test_reports_export_integration.py" />
     <Compile Include="tests\test_auth_integration.py" />
     <Compile Include="tests\test_balance.py" />
@@ -358,6 +359,7 @@
     <Compile Include="alembic\versions\0024_datasets_reports.py" />
     <Compile Include="alembic\versions\0025_username_recovery.py" />
     <Compile Include="alembic\versions\0026_groups_custom_roles.py" />
+    <Compile Include="alembic\versions\0027_session_remember.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="alembic\sql\0001_core_down.sql" />
@@ -408,6 +410,12 @@
     <Content Include="alembic\sql\0023_research_save_up.sql" />
     <Content Include="alembic\sql\0024_datasets_reports_down.sql" />
     <Content Include="alembic\sql\0024_datasets_reports_up.sql" />
+    <Content Include="alembic\sql\0025_username_recovery_down.sql" />
+    <Content Include="alembic\sql\0025_username_recovery_up.sql" />
+    <Content Include="alembic\sql\0026_groups_custom_roles_down.sql" />
+    <Content Include="alembic\sql\0026_groups_custom_roles_up.sql" />
+    <Content Include="alembic\sql\0027_session_remember_down.sql" />
+    <Content Include="alembic\sql\0027_session_remember_up.sql" />
     <Content Include="app\knowledge\assistant_profile_v1.json" />
     <Content Include="app\knowledge\assistant_profile_v2.json" />
     <Content Include="app\knowledge\assistant_profile_v3.json" />

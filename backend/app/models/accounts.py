@@ -147,6 +147,8 @@ class UserSession(Base):
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), **NOW)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Remember me (migration 0027): kept on this device for session_remember_days.
+    persistent: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
 
 
 class LoginAttempt(Base):

@@ -460,6 +460,37 @@ details > summary:hover { color: var(--color-primary); }
   .topbar-glass { background: var(--background); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
 
+/* The sign-in stage: two soft lights that drift slowly behind the glass card. */
+.auth-light {
+  position: absolute;
+  z-index: -1;
+  width: 46rem;
+  height: 46rem;
+  border-radius: 9999px;
+  filter: blur(64px);
+  opacity: 0.9;
+  pointer-events: none;
+}
+.auth-light-1 {
+  inset-block-start: -18rem;
+  inset-inline-end: -12rem;
+  background: radial-gradient(closest-side, var(--ambient-1), transparent);
+  animation: auth-drift 18s ease-in-out infinite alternate;
+}
+.auth-light-2 {
+  inset-block-end: -20rem;
+  inset-inline-start: -14rem;
+  background: radial-gradient(closest-side, color-mix(in oklab, var(--brand-2) 26%, transparent), transparent);
+  animation: auth-drift 22s ease-in-out infinite alternate-reverse;
+}
+@keyframes auth-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(-3rem, 2rem, 0) scale(1.08); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-light { animation: none; }
+}
+
 /* A navigation module opening: a short fade and drop (none under reduced motion). */
 .nav-expand { animation: osrip-enter 180ms cubic-bezier(0.2, 0, 0, 1) both; }
 

@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate, useLocation } from 'react-router';
 
+import { AuthLayout } from '@/components/layout/AuthLayout';
 import { AppShell } from '@/components/layout/AppShell';
 import { DesignReferencePage } from '@/pages/DesignReferencePage';
 import { EnergyIndexRedirect, EnergyLayout } from '@/pages/EnergyLayout';
@@ -50,6 +51,11 @@ function MethodologyRedirect() {
 
 export const router = createBrowserRouter([
   {
+    path: '/sign-in',
+    element: <AuthLayout />,
+    children: [{ index: true, element: <SignInPage /> }],
+  },
+  {
     path: '/',
     element: <AppShell />,
     children: [
@@ -84,7 +90,6 @@ export const router = createBrowserRouter([
       { path: 'settings', element: <SettingsPage /> },
       { path: 'methodology', element: <MethodologyRedirect /> },
       { path: 'data-management', element: <DataManagementPage /> },
-      { path: 'sign-in', element: <SignInPage /> },
       // Older e-mail and phone accounts, Google and Microsoft: off the main sign-in screen.
       { path: 'sign-in/other', element: <OtherSignInPage /> },
       { path: 'register', element: <RegisterPage /> },

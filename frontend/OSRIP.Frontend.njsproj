@@ -201,6 +201,7 @@
     <TypeScriptCompile Include="src\components\geography\OmanMap.tsx" />
     <TypeScriptCompile Include="src\components\layout\AccountControl.tsx" />
     <TypeScriptCompile Include="src\components\layout\AppShell.tsx" />
+    <TypeScriptCompile Include="src\components\layout\AuthLayout.tsx" />
     <TypeScriptCompile Include="src\components\layout\DataModeSelector.tsx" />
     <TypeScriptCompile Include="src\components\layout\Entrance.tsx" />
     <TypeScriptCompile Include="src\components\layout\entranceControl.ts" />

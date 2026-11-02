@@ -10,6 +10,8 @@ class LoginIn(BaseModel):
     # compatibility with existing clients).
     email: str = Field(min_length=3, max_length=320)
     password: str = Field(min_length=1, max_length=1024)
+    # Remember me: keep the session on this device; otherwise it ends with the browser.
+    remember: bool = False
 
 
 class UsernameRegisterIn(BaseModel):

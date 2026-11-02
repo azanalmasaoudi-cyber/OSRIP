@@ -351,6 +351,11 @@ export const en = {
     records: 'Published records',
   },
   auth: {
+    welcome: 'Welcome to OSRIP',
+    remember: 'Keep me signed in on this device',
+    rememberHint: 'For 14 days. Leave it unticked on a shared computer: you are then signed out when the browser closes.',
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
     signIn: 'Sign in',
     signOut: 'Sign out',
     title: 'Sign in',
