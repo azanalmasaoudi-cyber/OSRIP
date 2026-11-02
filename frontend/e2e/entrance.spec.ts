@@ -129,7 +129,7 @@ test('the page behind loads its data while the opening plays', async ({ page }) 
   await page.goto('/?mode=synthetic');
   await expect(page.getByTestId('entrance')).toBeVisible();
   // The latest figures have finished loading (with mock data, the headline figures are unavailable).
-  await expect(page.getByTestId('latest-card').first().locator('.tabular-nums, [data-state="data-unavailable"]')).toBeAttached();
+  await expect(page.getByTestId('latest-card').first().locator('[data-testid="kpi-value"], [data-state="data-unavailable"]')).toBeAttached();
 });
 
 test('Skip works at once, keeps the page and the data mode', async ({ page }) => {

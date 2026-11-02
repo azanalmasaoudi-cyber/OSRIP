@@ -69,7 +69,7 @@ export function KpiCard({ title, value, unit, period, change, trend, freshness, 
       ) : (
         <>
           <p className="flex flex-wrap items-baseline gap-x-2">
-            <span className="text-3xl font-semibold tracking-tight tabular-nums" dir="ltr">{value}</span>
+            <span className="text-3xl font-semibold tracking-tight tabular-nums" dir="ltr" data-testid="kpi-value">{value}</span>
             {unit ? <span className="text-sm text-muted-foreground">{unit}</span> : null}
           </p>
           {period ? <p className="text-sm text-muted-foreground">{period}</p> : null}
