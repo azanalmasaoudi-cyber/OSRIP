@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { MAP_STYLE_URL } from './Basemap';
+import { resolveTheme, useThemePreference } from '@/lib/theme';
 import { Segmented } from '@/components/ui/segmented';
 import { formatDecimal } from '@/lib/format';
 import { useAppLanguage } from '@/lib/useAppLanguage';
@@ -15,6 +16,11 @@ import { useAppLanguage } from '@/lib/useAppLanguage';
  * coloured as zero. The provider's basemap is used when it loads; without it the boundaries are
  * drawn on a plain background so the shading still works offline. The table on the page remains
  * the accessible, complete view.
+ *
+ * Relief: a hillshade from the open Terrain Tiles (Mapzen; SRTM on land, ETOPO1 under the sea)
+ * shades mountains such as Al Hajar and Dhofar and the sea floor off the coast, over the shading,
+ * whenever the basemap is in use. The basemap follows the theme (OpenFreeMap Positron or Dark)
+ * unless VITE_MAP_STYLE_URL names another style.
  */
 
 export type MapLevel = 'governorate' | 'wilayat';
@@ -25,15 +31,28 @@ const FILES: Record<MapLevel, string> = {
   wilayat: '/geo/oman-wilayats.geojson',
 };
 const BOUNDS: [[number, number], [number, number]] = [[51.8, 16.6], [59.9, 26.5]];
-// Sequential greens (light to dark), readable in both themes; "No data" is a separate grey.
-const RAMP = ['#d9ede1', '#a9d3ba', '#6db48f', '#378c66', '#195f45'];
-const NO_DATA = '#d4d4d8';
-const FALLBACK: StyleSpecification = {
-  version: 8,
-  sources: {},
-  layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#eef2f1' } }],
-};
+// A warm sequential ramp (light peach to burnt umber), readable in both themes; "No data" is a
+// separate neutral grey and never part of the ramp.
+const RAMP = ['#f6e3d3', '#efc3a1', '#e19a6d', '#c06f43', '#8a4523'];
+const NO_DATA = '#bdbcb8';
+const CUSTOM_STYLE = import.meta.env.VITE_MAP_STYLE_URL;
+const THEMED_STYLE = { light: 'https://tiles.openfreemap.org/styles/positron', dark: 'https://tiles.openfreemap.org/styles/dark' } as const;
+/** The basemap for the theme: a configured style in both themes, or OpenFreeMap's matching one. */
+function styleFor(theme: 'light' | 'dark'): string | null {
+  if (!MAP_STYLE_URL) return null;
+  return CUSTOM_STYLE ? MAP_STYLE_URL : THEMED_STYLE[theme];
+}
+function fallback(theme: 'light' | 'dark'): StyleSpecification {
+  return {
+    version: 8,
+    sources: {},
+    layers: [{ id: 'background', type: 'background', paint: { 'background-color': theme === 'dark' ? '#191d20' : '#efe9e1' } }],
+  };
+}
 const SOURCE = 'osrip-areas';
+const TERRAIN = 'osrip-terrain';
+const TERRAIN_TILES = 'https://elevation-tiles-prod.s3.amazonaws.com/terrarium/{z}/{x}/{y}.png';
+const TERRAIN_CREDIT = '<a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md">Terrain Tiles: Mapzen, SRTM, ETOPO1 and others</a>';
 
 function breaks(values: number[]): number[] {
   const sorted = [...new Set(values)].sort((a, b) => a - b);
@@ -63,6 +82,9 @@ export function OmanMap({ label, level, onLevelChange, shades, names, legendTitl
   const mapRef = useRef<MapLibreMap | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'unavailable'>('loading');
   const [basemap, setBasemap] = useState(Boolean(MAP_STYLE_URL));
+  const [preference] = useThemePreference();
+  const theme = resolveTheme(preference);
+  const themeRef = useRef(theme);
   const [hover, setHover] = useState<{ code: string; x: number; y: number } | null>(null);
   const listening = useRef(false);
   // Redraws the boundary layers; called again after every style load (provider or fallback).
@@ -94,7 +116,7 @@ export function OmanMap({ label, level, onLevelChange, shades, names, legendTitl
         ensureRtlTextPlugin();
         const map = new maplibregl.Map({
           container: container.current,
-          style: MAP_STYLE_URL ?? FALLBACK,
+          style: styleFor(themeRef.current) ?? fallback(themeRef.current),
           bounds: BOUNDS,
           fitBoundsOptions: { padding: 16 },
           attributionControl: { compact: false, customAttribution: '© OpenStreetMap contributors (boundaries, ODbL)' },
@@ -114,7 +136,7 @@ export function OmanMap({ label, level, onLevelChange, shades, names, legendTitl
         map.on('error', () => {
           if (cancelled || styled) return;
           setBasemap(false);
-          map.setStyle(FALLBACK, { diff: false }); // a full replacement: the first style never loaded
+          map.setStyle(fallback(themeRef.current), { diff: false }); // a full replacement: the first style never loaded
         });
       })
       .catch(() => {
@@ -126,6 +148,16 @@ export function OmanMap({ label, level, onLevelChange, shades, names, legendTitl
       mapRef.current = null;
     };
   }, []);
+
+  // The basemap follows the theme (layers are redrawn on the new style's load).
+  useEffect(() => {
+    if (themeRef.current === theme) return;
+    themeRef.current = theme;
+    const map = mapRef.current;
+    if (!map || state !== 'ready') return;
+    const next = basemap ? styleFor(theme) : null;
+    map.setStyle(next ?? fallback(theme), { diff: false });
+  }, [theme, state, basemap]);
 
   // (Re)draw the boundary layers for the level, after every style load.
   useEffect(() => {
@@ -140,9 +172,24 @@ export function OmanMap({ label, level, onLevelChange, shades, names, legendTitl
       const layers = map.getStyle().layers;
       const before = layers.find((l) => l.id.startsWith('water'))?.id ?? layers.find((l) => l.type === 'symbol')?.id;
       if (!map.getLayer('osrip-fill')) {
-        map.addLayer({ id: 'osrip-fill', type: 'fill', source: SOURCE, paint: { 'fill-color': NO_DATA, 'fill-opacity': 0.85 } }, before);
-        map.addLayer({ id: 'osrip-line', type: 'line', source: SOURCE, paint: { 'line-color': '#475569', 'line-width': 0.8 } });
-        map.addLayer({ id: 'osrip-selected', type: 'line', source: SOURCE, filter: ['==', ['get', 'code'], ''], paint: { 'line-color': '#b8860b', 'line-width': 3 } });
+        map.addLayer({ id: 'osrip-fill', type: 'fill', source: SOURCE, paint: { 'fill-color': NO_DATA, 'fill-opacity': 0.82 } }, before);
+        // Relief over land and sea, under the labels, only with the provider's basemap (online).
+        if (basemap && !map.getSource(TERRAIN)) {
+          map.addSource(TERRAIN, { type: 'raster-dem', tiles: [TERRAIN_TILES], tileSize: 256, encoding: 'terrarium', maxzoom: 12, attribution: TERRAIN_CREDIT });
+          const label = layers.find((l) => l.type === 'symbol')?.id;
+          map.addLayer({
+            id: 'osrip-hillshade', type: 'hillshade', source: TERRAIN,
+            paint: {
+              'hillshade-exaggeration': 0.45,
+              'hillshade-shadow-color': themeRef.current === 'dark' ? 'rgba(0,0,0,0.55)' : 'rgba(70,45,25,0.42)',
+              'hillshade-highlight-color': themeRef.current === 'dark' ? 'rgba(255,240,225,0.10)' : 'rgba(255,255,255,0.30)',
+              'hillshade-accent-color': 'rgba(70,45,25,0.25)',
+            },
+          }, label);
+        }
+        const dark = themeRef.current === 'dark';
+        map.addLayer({ id: 'osrip-line', type: 'line', source: SOURCE, paint: { 'line-color': dark ? '#d9cfc4' : '#5d4636', 'line-width': 0.8, 'line-opacity': 0.8 } });
+        map.addLayer({ id: 'osrip-selected', type: 'line', source: SOURCE, filter: ['==', ['get', 'code'], ''], paint: { 'line-color': dark ? '#f4a873' : '#8a4523', 'line-width': 3 } });
       }
       if (!listening.current) {
         // Attached once the layer exists; they stay with the map across style changes.
@@ -169,7 +216,7 @@ export function OmanMap({ label, level, onLevelChange, shades, names, legendTitl
     return () => {
       drawRef.current = null;
     };
-  }, [state, level, colour, selected]);
+  }, [state, level, colour, selected, basemap]);
 
   if (state === 'unavailable') {
     return (
