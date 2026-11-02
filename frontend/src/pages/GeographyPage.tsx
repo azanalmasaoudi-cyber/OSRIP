@@ -324,7 +324,7 @@ function AreaTable({ areas, byCode, coverage, selected, onSelect }: {
 export function GeographyPage() {
   const { t } = useTranslation();
   const language = useAppLanguage();
-  const [mode] = useDataMode();
+  const [mode, setMode] = useDataMode();
   const registry = useAreaRegistry();
   const coverage = useAreaCoverage(mode);
   const detailRef = useRef<HTMLDivElement>(null);
@@ -344,7 +344,9 @@ export function GeographyPage() {
   const [shadeBy, setShadeBy] = useState<'coverage' | 'indicator'>('coverage');
   const [compared, setCompared] = useState<AreaComparison | undefined>(undefined);
   const onCompared = useCallback((result: AreaComparison | undefined) => setCompared(result), []);
-  const byIndicator = shadeBy === 'indicator' && mapLevel === 'governorate' && Boolean(compared?.rows?.length);
+  // The compared indicator shades the map at the level it was compared at (governorates or
+  // wilayats); each area's own value only, never a share of a parent's total.
+  const byIndicator = shadeBy === 'indicator' && (compared?.level ?? 'governorate') === mapLevel && Boolean(compared?.rows?.length);
 
   // Map shading: published values per area (coverage), or the compared indicator's values.
   // Areas without a published value are "No data", never zero.
@@ -401,9 +403,9 @@ export function GeographyPage() {
     return true;
   });
   const selectedArea = selected === NONE ? undefined : byCode.get(selected);
-  // Indicators that at least one governorate publishes on its own (from coverage).
-  const governorateIndicators = [...new Map(
-    governorates.flatMap((g) => coverage.data?.areas[g.code]?.indicators ?? []).map((i) => [i.code, i]),
+  // Indicators that at least one area of the map's level publishes on its own (from coverage).
+  const levelIndicators = [...new Map(
+    areas.filter((a) => a.level === mapLevel).flatMap((a) => coverage.data?.areas[a.code]?.indicators ?? []).map((i) => [i.code, i]),
   ).values()].sort((a, b) => a.code.localeCompare(b.code));
 
   const select = (code: string) => {
@@ -427,13 +429,17 @@ export function GeographyPage() {
 
           <section aria-labelledby="map-heading" className="flex flex-col gap-3">
             <h2 id="map-heading" className="text-xl font-semibold">{t('pages.geography.mapHeading')}</h2>
-            {compared?.rows?.length ? (
-              <Segmented label={t('omanMap.shadeBy')} value={byIndicator ? 'indicator' : 'coverage'} testId="map-shade-by" className="w-full max-w-md"
-                onChange={(v) => { setShadeBy(v); if (v === 'indicator') setMapLevel('governorate'); }}
-                options={[{ value: 'coverage', label: t('omanMap.shadeCoverage') }, { value: 'indicator', label: t('omanMap.shadeIndicator') }]} />
-            ) : null}
+            <div className="flex flex-wrap items-end gap-3">
+              <Segmented label={t('dataMode.label')} value={mode} onChange={setMode} testId="map-data-mode" className="w-full max-w-sm"
+                options={[{ value: 'verified_source', label: t('dataMode.verified_source') }, { value: 'synthetic', label: t('dataMode.synthetic') }]} />
+              {compared?.rows?.length ? (
+                <Segmented label={t('omanMap.shadeBy')} value={byIndicator ? 'indicator' : 'coverage'} testId="map-shade-by" className="w-full max-w-md"
+                  onChange={setShadeBy}
+                  options={[{ value: 'coverage', label: t('omanMap.shadeCoverage') }, { value: 'indicator', label: t('omanMap.shadeIndicator') }]} />
+              ) : null}
+            </div>
             <OmanMap label={t('pages.geography.mapLabel')} level={mapLevel} names={mapNames} shades={shades} legendTitle={legendTitle}
-              onLevelChange={(l) => { setMapLevel(l); if (l === 'wilayat') setShadeBy('coverage'); }}
+              onLevelChange={setMapLevel}
               selected={selected === NONE ? null : selected} onSelect={select} />
             <ul className="flex max-w-4xl list-disc flex-col gap-1 ps-5 text-xs text-muted-foreground" data-testid="map-notes">
               <li>{language === 'ar' ? registry.data.geometry.ar : registry.data.geometry.en}</li>
@@ -444,8 +450,8 @@ export function GeographyPage() {
           </section>
 
           <section aria-labelledby="compare-heading" className="flex flex-col gap-3">
-            <h2 id="compare-heading" className="text-xl font-semibold">{t('compare.title')}</h2>
-            <GovernorateComparison mode={mode} indicators={governorateIndicators} onResult={onCompared} />
+            <h2 id="compare-heading" className="text-xl font-semibold">{mapLevel === 'wilayat' ? t('omanMap.compareWilayats') : t('compare.title')}</h2>
+            <GovernorateComparison mode={mode} level={mapLevel} indicators={levelIndicators} onResult={onCompared} />
           </section>
 
           <section aria-labelledby="areas-heading" className="flex flex-col gap-4">

@@ -289,13 +289,14 @@ const COMPARE_PERIOD_KINDS = ['annual', 'year_to_date', 'quarterly', 'monthly', 
 
 export function useAreaComparison(
   mode: DataMode, indicator: string | null, periodStart: string | null, flow: string | null, periodKind = 'annual',
+  level: 'governorate' | 'wilayat' = 'governorate',
 ) {
-  const params = new URLSearchParams({ data_mode: mode, indicator: indicator ?? '' });
+  const params = new URLSearchParams({ data_mode: mode, indicator: indicator ?? '', level });
   if (COMPARE_PERIOD_KINDS.includes(periodKind)) params.set('period_kind', periodKind);
   if (periodStart) params.set('period_start', periodStart);
   if (flow) params.set('flow', flow);
   return useQuery({
-    queryKey: ['areas', 'compare', mode, indicator, periodKind, periodStart, flow],
+    queryKey: ['areas', 'compare', mode, indicator, periodKind, periodStart, flow, level],
     queryFn: () => apiJson(`/areas/compare?${params.toString()}`, compareSchema),
     enabled: adapterKind === 'http' && Boolean(indicator),
     placeholderData: keepPreviousData,
