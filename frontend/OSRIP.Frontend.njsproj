@@ -193,6 +193,9 @@
     <TypeScriptCompile Include="src\components\common\SourceDetails.tsx" />
     <TypeScriptCompile Include="src\components\common\StatePanel.tsx" />
     <TypeScriptCompile Include="src\components\common\WatchButton.tsx" />
+    <TypeScriptCompile Include="src\components\dashboard\DashboardPanels.tsx" />
+    <TypeScriptCompile Include="src\components\dashboard\KpiCard.tsx" />
+    <TypeScriptCompile Include="src\components\dashboard\TrendChart.tsx" />
     <TypeScriptCompile Include="src\components\forecast\DevelopmentConditions.tsx" />
     <TypeScriptCompile Include="src\components\forecast\ForecastChart.tsx" />
     <TypeScriptCompile Include="src\components\geography\Basemap.tsx" />

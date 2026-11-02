@@ -110,7 +110,7 @@ export function DecisionBrief({ section }: { section: SectionCode }) {
   const id = (part: string) => `${uid}-${part}`;
 
   return (
-    <section aria-labelledby={`${uid}-h`} className="flex flex-col gap-4" data-testid="decision-brief" data-section={section}>
+    <section id="decision-brief" tabIndex={-1} aria-labelledby={`${uid}-h`} className="flex scroll-mt-24 flex-col gap-4 outline-none" data-testid="decision-brief" data-section={section}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         {heading}
         <label className="flex min-h-10 items-center gap-2 text-sm">

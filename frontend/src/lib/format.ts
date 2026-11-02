@@ -45,6 +45,21 @@ export function formatDateTime(value: string, language: AppLanguage): string {
   return new Intl.DateTimeFormat(LOCALES[language], { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 }
 
+/** A compact period for cards and charts: "2025" for a calendar year, "Jan–Aug 2026" for whole
+ * months of one year, otherwise the full range (formatPeriod). */
+export function formatPeriodShort(start: string, end: string, language: AppLanguage): string {
+  const s = new Date(`${start}T00:00:00Z`);
+  const e = new Date(`${end}T00:00:00Z`);
+  const sameYear = s.getUTCFullYear() === e.getUTCFullYear();
+  const lastDay = new Date(Date.UTC(e.getUTCFullYear(), e.getUTCMonth() + 1, 0)).getUTCDate();
+  if (!sameYear || s.getUTCDate() !== 1 || e.getUTCDate() !== lastDay) return formatPeriod(start, end, language);
+  if (s.getUTCMonth() === 0 && e.getUTCMonth() === 11) return formatPeriod(start, end, language);
+  const month = new Intl.DateTimeFormat(LOCALES[language], { month: 'short', timeZone: 'UTC' });
+  const year = new Intl.DateTimeFormat(LOCALES[language], { year: 'numeric', timeZone: 'UTC' }).format(e);
+  if (s.getUTCMonth() === e.getUTCMonth()) return `${month.format(e)} ${year}`;
+  return `${month.format(s)}–${month.format(e)} ${year}`;
+}
+
 export function formatPeriod(start: string, end: string, language: AppLanguage): string {
   const s = new Date(`${start}T00:00:00Z`);
   const e = new Date(`${end}T00:00:00Z`);
