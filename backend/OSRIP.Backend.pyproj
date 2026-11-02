@@ -319,6 +319,7 @@
     <Compile Include="tests\workflow_helpers.py" />
     <Compile Include="scripts\backup_restore_drill.py" />
     <Compile Include="scripts\build_boundaries.py" />
+    <Compile Include="scripts\dev_cli.py" />
     <Compile Include="scripts\devdb.py" />
     <Compile Include="scripts\live_assistant_check.py" />
     <Compile Include="scripts\ncsi_import.py" />
