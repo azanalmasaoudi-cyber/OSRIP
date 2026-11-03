@@ -1,7 +1,7 @@
 import { LogIn, Menu, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
 import { MotionConfig, motion } from 'motion/react';
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
-import { Link, Outlet, useLocation } from 'react-router';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
 import { useMe } from '@/api/auth';
@@ -129,23 +129,30 @@ function PasswordChangeBanner() {
 
 export function AppShell() {
   const { t } = useTranslation();
-  const { pathname, hash } = useLocation();
+  const location = useLocation();
+  const { pathname, hash } = location;
+  const navigate = useNavigate();
   const to = usePreservedSearch();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [collapsed, toggleCollapsed] = useSidebarCollapsed();
-  // The opening (about 3 s) plays on the home page once per browser session: a direct link (a
-  // study, the workspace, sign-in, the account) opens straight away. Replayable from the footer
-  // and Settings.
-  const [entranceOpen, setEntranceOpen] = useState(() => pathname === '/' && introDue());
+  // The welcome opens the home page once per browser session: a direct link (a study, the
+  // workspace, sign-in, the account) opens straight away. Shown again from the footer, Settings
+  // and the sign-in page's "Back to introduction" (which navigates here with { welcome: true }).
+  const welcomeAsked = (location.state as { welcome?: boolean } | null)?.welcome === true;
+  const [entranceOpen, setEntranceOpen] = useState(() => pathname === '/' && (welcomeAsked || introDue()));
   const replayEntrance = useCallback(() => setEntranceOpen(true), []);
   // Arriving at the home page later in the session (after a direct link) also opens it, once
   // (adjusting state while rendering, as React recommends instead of an effect).
   const [introPath, setIntroPath] = useState(pathname);
   if (introPath !== pathname) {
     setIntroPath(pathname);
-    if (pathname === '/' && introDue()) setEntranceOpen(true);
+    if (pathname === '/' && (welcomeAsked || introDue())) setEntranceOpen(true);
   }
+  // The request is used once: a reload of the home page does not show the welcome again.
+  useEffect(() => {
+    if (welcomeAsked) void navigate({ pathname, search: location.search, hash }, { replace: true, state: null });
+  }, [welcomeAsked, navigate, pathname, location.search, hash]);
   const mainRef = useRef<HTMLElement>(null);
   const handledLocation = useRef<string | null>(null);
   const isHome = pathname === '/';
