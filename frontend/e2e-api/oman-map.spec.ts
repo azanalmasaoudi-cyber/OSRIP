@@ -88,6 +88,8 @@ test('an unreachable basemap falls back to the boundaries on a plain background'
 
 test('with a basemap: views, relief and 3D, hover, selection and the wilayat level', async ({ page }) => {
   const external = await offline(page);
+  const warnings: string[] = [];
+  page.on('console', (m) => { if (m.type() === 'warning') warnings.push(m.text()); });
   await page.route('**/__no_map_style__.json', (route) => route.fulfill({ json: STUB_STYLE }));
   test.skip(!(await openMap(page)), 'this browser cannot draw WebGL maps');
   const map = page.getByTestId('oman-map');
@@ -108,6 +110,8 @@ test('with a basemap: views, relief and 3D, hover, selection and the wilayat lev
   await expect(map).toHaveAttribute('data-3d', 'true');
   await expect(page.getByTestId('map-3d')).toHaveAttribute('aria-pressed', 'true');
   await expect.poll(() => external.some((u) => u.startsWith('https://elevation-tiles-prod.s3.amazonaws.com/terrarium/'))).toBe(true);
+  // The relief and the 3D terrain have separate sources, as MapLibre advises.
+  expect(warnings.filter((w) => w.includes('same source for a hillshade'))).toEqual([]);
   await page.getByTestId('map-3d').click();
   await expect(map).not.toHaveAttribute('data-3d', 'true');
   await page.getByTestId('map-reset').click();

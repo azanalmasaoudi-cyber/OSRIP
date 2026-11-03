@@ -45,7 +45,10 @@ const LABELS_FILE = '/geo/oman-labels.geojson';
 const RAMP = ['#f6e3d3', '#efc3a1', '#e19a6d', '#c06f43', '#8a4523'];
 const NO_DATA = '#bdbcb8';
 const SOURCE = 'osrip-areas';
+// Elevation: one source for the relief shading and another for 3D terrain, as MapLibre advises
+// (sharing one lowers the quality of both). The terrain source is added only while 3D is on.
 const DEM = 'osrip-dem';
+const TERRAIN = 'osrip-terrain';
 const VIEW_KEY = 'osrip.map.view';
 const VIEWS: readonly MapView[] = ['topographic', 'satellite', 'terrain'];
 
@@ -296,12 +299,12 @@ export function OmanMap({ label, level, onLevelChange, shades, names, legendTitl
       const source = map.getSource<GeoJSONSource>(SOURCE);
       if (source) void source.setData(FILES[level]);
       else map.addSource(SOURCE, { type: 'geojson', data: FILES[level], promoteId: 'code' });
-      if (dem && !map.getSource(DEM)) map.addSource(DEM, dem);
       if (!map.getLayer('osrip-fill')) {
         // Under the provider's water, so the sea covers boundaries drawn to the territorial limit.
         map.addLayer({ id: 'osrip-fill', type: 'fill', source: SOURCE, paint: { 'fill-color': NO_DATA, 'fill-opacity': view === 'satellite' ? 0.55 : 0.82 } }, water);
         // Relief over the shading where the basemap has none of its own.
         if (dem && !provider.styleHasRelief(view)) {
+          if (!map.getSource(DEM)) map.addSource(DEM, dem);
           map.addLayer({
             id: 'osrip-hillshade', type: 'hillshade', source: DEM,
             paint: {
@@ -350,7 +353,8 @@ export function OmanMap({ label, level, onLevelChange, shades, names, legendTitl
       map.setFilter('osrip-selected', ['==', ['get', 'code'], selected ?? '']);
       // 3D only on request: the terrain source adds tile requests and GPU work.
       if (threeD && dem) {
-        map.setTerrain({ source: DEM, exaggeration: 1.4 });
+        if (!map.getSource(TERRAIN)) map.addSource(TERRAIN, dem);
+        map.setTerrain({ source: TERRAIN, exaggeration: 1.4 });
         map.dragRotate.enable();
         map.touchPitch.enable();
       } else {
