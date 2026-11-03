@@ -118,6 +118,7 @@
     <TypeScriptCompile Include="e2e-api\upgrade.spec.ts" />
     <TypeScriptCompile Include="e2e-api\verification-change.spec.ts" />
     <TypeScriptCompile Include="e2e-api\voice-gender.spec.ts" />
+    <TypeScriptCompile Include="e2e-api\welcome-sign-in.spec.ts" />
     <TypeScriptCompile Include="e2e-api\whatsapp.spec.ts" />
     <TypeScriptCompile Include="e2e-api\workflow.spec.ts" />
     <TypeScriptCompile Include="e2e-api\workspace-phone.spec.ts" />
@@ -235,6 +236,7 @@
     <TypeScriptCompile Include="src\components\layout\SidebarNav.tsx" />
     <TypeScriptCompile Include="src\components\layout\StatusBanners.tsx" />
     <TypeScriptCompile Include="src\components\layout\ThemeSelector.tsx" />
+    <TypeScriptCompile Include="src\components\layout\WelcomeChrome.tsx" />
     <TypeScriptCompile Include="src\components\research\ResearchQueue.tsx" />
     <TypeScriptCompile Include="src\components\results\model.ts" />
     <TypeScriptCompile Include="src\components\results\ResultsPanel.tsx" />
@@ -437,7 +439,7 @@
     <Content Include="public\images\sectors\osrip_water.png" />
     <Content Include="public\theme-init.js" />
     <Content Include="scripts\check-contrast.mjs" />
-    <Content Include="src\components\layout\opening.css" />
+    <Content Include="src\components\layout\welcome.css" />
     <Content Include="src\index.css" />
     <Content Include="tests\export-results.test.mjs" />
     <Content Include="tests\research-brief.test.mjs" />
