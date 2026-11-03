@@ -13,10 +13,10 @@
  * pending, missing) always come with a text label; colour is never the only signal.
  *
  * Requested palette and where it is used:
- *   dark  #101315 page, #191D20 card, glass rgba(255,255,255,.055), accent #F4A873 / #D98A61,
- *         text #F6F3EF / #A9AAA8, positive #72C6A1, warning #E4B765, critical #E67F7F.
- *   light #F7F3EE page, #EEE8E0 secondary, glass rgba(255,255,255,.78), accent #B9683F / #D99163,
- *         text #292623 / #706A65, positive #287A5B, warning #9C6A1D, critical #B94C4C.
+ *   dark  #101315 page, #1B2023 card, glass rgba(255,255,255,.055), accent #F2A875 / #E7B18F,
+ *         text #F5F2ED / #A9AAA8, positive #72C6A1, warning #E4B765, critical #E67F7F.
+ *   light #F7F4EF page, #FFFFFF surface, #EEE8E0 secondary, glass rgba(255,255,255,.78), accent #B96942 / #DFAD86,
+ *         text #292825 / #706A65, positive #287A5B, warning #9C6A1D, critical #B94C4C.
  * Where a requested colour is too light for small text on these surfaces it is kept for marks,
  * rules and charts, and a slightly deeper shade of the same hue carries text and buttons
  * (light: links and buttons #99532E, secondary text #655F5A, warning text #7A5216, critical
@@ -36,12 +36,12 @@
   color-scheme: light;
 
   /* Surfaces and ink */
-  --background: #f7f3ee; /* warm ivory */
+  --background: #f7f4ef; /* warm ivory */
   --background-2: #eee8e0; /* soft beige: bands and the sidebar's base */
-  --card: #fdfbf8; /* solid card (print, reduced transparency) */
+  --card: #ffffff; /* solid card (print, reduced transparency) */
   --card-foreground: var(--foreground);
   --muted: #eee8e0; /* sunken surfaces, hover */
-  --foreground: #292623;
+  --foreground: #292825;
   --muted-foreground: #655f5a;
   --border: #e3d9cd;
   --border-strong: #948a80; /* form-control outlines (>= 3:1) */
@@ -51,22 +51,22 @@
   --glass-strong: rgb(255 255 255 / 0.9);
   --glass-border: rgb(255 255 255 / 0.7);
   --glass-edge: rgb(120 84 52 / 0.12); /* the hairline that separates glass from the page */
-  --ambient-1: rgb(217 145 99 / 0.22); /* peach light, top corner */
-  --ambient-2: rgb(185 104 63 / 0.12); /* deeper peach, opposite corner */
+  --ambient-1: rgb(223 173 134 / 0.22); /* peach light, top corner */
+  --ambient-2: rgb(185 105 66 / 0.12); /* deeper peach, opposite corner */
   --ambient-3: rgb(238 214 180 / 0.45); /* cream wash */
 
   /* Actions */
-  --brand: #b9683f; /* the requested accent: marks, rules, charts, active bars */
-  --brand-2: #d99163;
+  --brand: #b96942; /* the requested accent: marks, rules, charts, active bars */
+  --brand-2: #dfad86;
   --primary: #99532e; /* text links and buttons (deeper shade for contrast) */
   --primary-hover: #7f4425;
   --primary-foreground: #ffffff;
-  --primary-soft: rgb(185 104 63 / 0.12); /* selected pills, active rows */
+  --primary-soft: rgb(185 105 66 / 0.12); /* selected pills, active rows */
   --ring: #7a4220;
 
   /* The sidebar follows the theme */
   --sidebar: #f1ebe3;
-  --sidebar-foreground: #292623;
+  --sidebar-foreground: #292825;
   --sidebar-muted: #625c56;
   --sidebar-active: #e6d9cb;
   --sidebar-border: #e0d5c8;
@@ -75,18 +75,18 @@
 
   /* The dark stage (introduction, hero bands, photo credits) */
   --nav: #171a1d;
-  --nav-foreground: #f6f3ef;
+  --nav-foreground: #f5f2ed;
   --nav-muted: #bdb9b3;
   --nav-active: #262b2f;
-  --nav-ring: #f4a873;
-  --nav-accent: #f4a873;
+  --nav-ring: #f2a875;
+  --nav-accent: #f2a875;
 
   /* Accents and details */
   --accent: #8f4f2b; /* accent text */
-  --copper: #b9683f; /* decorative rules and the avatar ring (not text) */
+  --copper: #b96942; /* decorative rules and the avatar ring (not text) */
   --copper-subtle: #f6e8de;
   --copper-foreground: #743f1f;
-  --sand: #d99163;
+  --sand: #dfad86;
   --sand-subtle: #f7eadf;
   --sand-foreground: #6a3c1d;
 
@@ -109,7 +109,7 @@
   --missing-border: #948a80;
 
   /* Charts: peach for single-series marks, a cool slate blue for comparison */
-  --chart-1: #b9683f;
+  --chart-1: #b96942;
   --chart-2: #3d6b8c;
   --chart-3: #287a5b;
   --chart-4: #9c6a1d;
@@ -132,10 +132,10 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
   --background: #101315;
-  --background-2: #191d20;
-  --card: #191d20;
+  --background-2: #1b2023;
+  --card: #1b2023;
   --muted: #22272b;
-  --foreground: #f6f3ef;
+  --foreground: #f5f2ed;
   --muted-foreground: #a9aaa8;
   --border: #2b3135;
   --border-strong: #6e7478;
@@ -143,34 +143,34 @@
   --glass-strong: rgb(255 255 255 / 0.085);
   --glass-border: rgb(255 255 255 / 0.09);
   --glass-edge: rgb(255 255 255 / 0.06);
-  --ambient-1: rgb(244 168 115 / 0.13);
-  --ambient-2: rgb(217 138 97 / 0.08);
+  --ambient-1: rgb(242 168 117 / 0.13);
+  --ambient-2: rgb(231 177 143 / 0.08);
   --ambient-3: rgb(120 96 74 / 0.12);
-  --brand: #f4a873;
-  --brand-2: #d98a61;
-  --primary: #f4a873;
+  --brand: #f2a875;
+  --brand-2: #e7b18f;
+  --primary: #f2a875;
   --primary-hover: #f7bc93;
   --primary-foreground: #1f140d;
-  --primary-soft: rgb(244 168 115 / 0.14);
-  --ring: #f6f3ef;
+  --primary-soft: rgb(242 168 117 / 0.14);
+  --ring: #f5f2ed;
   --sidebar: #14171a;
-  --sidebar-foreground: #f6f3ef;
+  --sidebar-foreground: #f5f2ed;
   --sidebar-muted: #a9aaa8;
   --sidebar-active: #262a2e;
   --sidebar-border: #22272b;
-  --sidebar-accent: #f4a873;
-  --sidebar-ring: #f4a873;
+  --sidebar-accent: #f2a875;
+  --sidebar-ring: #f2a875;
   --nav: #14171a;
-  --nav-foreground: #f6f3ef;
+  --nav-foreground: #f5f2ed;
   --nav-muted: #a9aaa8;
   --nav-active: #262a2e;
-  --nav-ring: #f4a873;
-  --nav-accent: #f4a873;
-  --accent: #f4a873;
-  --copper: #d98a61;
+  --nav-ring: #f2a875;
+  --nav-accent: #f2a875;
+  --accent: #f2a875;
+  --copper: #e7b18f;
   --copper-subtle: #2b2019;
   --copper-foreground: #f3c6a6;
-  --sand: #d98a61;
+  --sand: #e7b18f;
   --sand-subtle: #2a211b;
   --sand-foreground: #f0c8a9;
   --positive: #72c6a1;
@@ -189,7 +189,7 @@
   --missing: #1f2427;
   --missing-foreground: #c3c2bf;
   --missing-border: #6e7478;
-  --chart-1: #f4a873;
+  --chart-1: #f2a875;
   --chart-2: #8db7d4;
   --chart-3: #72c6a1;
   --chart-4: #e4b765;

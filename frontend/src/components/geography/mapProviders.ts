@@ -77,7 +77,7 @@ export function plainStyle(theme: MapTheme): StyleSpecification {
     version: 8,
     glyphs: OPEN_DISABLED ? undefined : 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
     sources: {},
-    layers: [{ id: 'background', type: 'background', paint: { 'background-color': theme === 'dark' ? '#191d20' : '#efe9e1' } }],
+    layers: [{ id: 'background', type: 'background', paint: { 'background-color': theme === 'dark' ? '#1b2023' : '#efe9e1' } }],
   };
 }
 
