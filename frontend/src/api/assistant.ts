@@ -93,7 +93,8 @@ export type AssistantCalculation = z.infer<typeof calculationSchema>;
 // calculations without AI interpretation (never charged, can be retried).
 export const MESSAGE_STATUSES = [
   'answered', 'clarification', 'no_evidence', 'unverified', 'unavailable', 'lookup', 'profile', 'cancelled',
-  'data_report',
+  // 'sources': the sources of the previous answer, listed because the person asked for them.
+  'data_report', 'sources',
 ] as const;
 
 /** Ask: a direct answer. Analyze: calculations and recommendation cards. Research: web and
@@ -238,6 +239,8 @@ const structuredSchema = z.object({
   })).optional(),
   // Parts the server dropped because the cited evidence did not support them.
   withheld: z.record(z.string(), z.number()).optional(),
+  // Sentences of the answer left out because their figures did not match the evidence.
+  omitted_claims: z.number().optional(),
   // Deterministic studies cited by the reply; each is stored and opens at /studies/:id.
   studies: z.array(z.object({ id: z.string(), kind: z.string(), title: bilingual, status: z.string() })).optional(),
   // Google Search grounded results (via Gemini): shown verbatim with Google's search

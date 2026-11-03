@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ClipboardList,
   DatabaseZap,
+  Download,
   Droplets,
   FileText,
   FlaskConical,
@@ -59,6 +60,7 @@ export type NavKey =
   | 'nav.geoCompare'
   | 'nav.reports'
   | 'nav.savedReports'
+  | 'nav.exportCenter'
   | 'nav.profile'
   | 'nav.settings'
   | 'nav.appearance'
@@ -119,11 +121,11 @@ export const NAV_MODULES: readonly NavModule[] = [
   },
   {
     id: 'research', label: 'nav.moduleResearch', icon: FlaskConical, items: [
+      { path: '/assistant', key: 'nav.aiAssistant', icon: Bot },
       { path: '/workspace', key: 'nav.workspace', icon: LayoutDashboard },
       { path: '/datasets', key: 'nav.datasets', icon: Sheet },
       { path: '/forecasts', hash: '#scenarios', key: 'nav.scenarios', icon: SlidersHorizontal },
       { path: '/forecasts', key: 'nav.forecasting', icon: LineChart },
-      { path: '/assistant', key: 'nav.aiAssistant', icon: Bot },
       { path: '/studies', key: 'nav.studies', icon: ClipboardList },
       { path: '/library', key: 'nav.library', icon: LibraryBig },
       { path: '/sources', key: 'nav.sourcesShort', icon: BookOpen },
@@ -139,6 +141,7 @@ export const NAV_MODULES: readonly NavModule[] = [
     id: 'reports', label: 'nav.moduleReports', icon: FileText, items: [
       { path: '/reports', key: 'nav.reports', icon: FileText },
       { path: '/reports', hash: '#saved-reports', key: 'nav.savedReports', icon: FolderOpen },
+      { path: '/reports', hash: '#export-center', key: 'nav.exportCenter', icon: Download },
     ],
   },
   {

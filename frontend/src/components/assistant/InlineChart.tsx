@@ -1,3 +1,4 @@
+import { useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Evidence } from '@/api/assistant';
@@ -5,6 +6,7 @@ import { formatDecimal, formatPeriod } from '@/lib/format';
 import { useAppLanguage } from '@/lib/useAppLanguage';
 
 import { pick } from './Evidence';
+import { SourcesShown } from './StructuredReply';
 
 /** The words that ask for a chart, in English and Arabic. */
 const CHART_REQUEST = /\b(chart|graph|plot|visuali[sz]e|visuali[sz]ation)\b|رسم|مخطط|بياني|ارسم/i;
@@ -34,6 +36,7 @@ export function chartPoints(evidence: Evidence[]): Evidence[] | null {
 export function InlineChart({ points, messageId }: { points: Evidence[]; messageId: number }) {
   const { t } = useTranslation();
   const language = useAppLanguage();
+  const sourcesShown = useContext(SourcesShown);
   const first = points[0]!;
   const values = points.map((p) => Number(p.value));
   const max = Math.max(...values, 0);
@@ -67,13 +70,17 @@ export function InlineChart({ points, messageId }: { points: Evidence[]; message
                 {formatDecimal(p.value ?? null, language, 1)}
               </text>
               <text x={cx} y={height - pad.bottom + 16} textAnchor="middle" className="fill-muted-foreground text-[11px]">{label(p)}</text>
-              <text x={cx} y={height - pad.bottom + 30} textAnchor="middle" className="fill-muted-foreground font-mono text-[10px]">[{p.id}]</text>
+              {sourcesShown ? (
+                <text x={cx} y={height - pad.bottom + 30} textAnchor="middle" className="fill-muted-foreground font-mono text-[10px]">[{p.id}]</text>
+              ) : null}
             </g>
           );
         })}
       </svg>
       <p className="text-xs text-muted-foreground" dir="auto" data-testid="inline-chart-sources">
-        {t('chat.chartSources', { sources: sources.join(' · '), ids: points.map((p) => p.id).join(', ') })}
+        {sourcesShown
+          ? t('chat.chartSources', { sources: sources.join(' · '), ids: points.map((p) => p.id).join(', ') })
+          : t('chat.chartPublishedOnly')}
       </p>
     </figure>
   );
