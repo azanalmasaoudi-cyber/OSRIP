@@ -10,6 +10,8 @@ provider readiness (migration 0018, `docs/AI_PROVIDERS.md`), and the analytical 
 live study events (migration 0019, `docs/WORKSPACE.md`). 11 October 2026: integrated
 verification of all of these together, with nine demonstrations, an allowance-rules test,
 a frequency filter in the workspace and startup evidence (`docs/VERIFICATION_REPORT.md`).
+2 November 2026: the status against the complete development brief, section by section, with
+what still needs the owner, is in `docs/MASTER_BRIEF_STATUS.md`.
 
 **Requirements reference.** `docs/OSRIP_Academic_Booklet_English_60_Pages.docx`, *Revised
 English edition, 8 October 2026*. The file attached to the Stage 1 request,

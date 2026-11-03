@@ -1,5 +1,21 @@
 # Test results
 
+## 2026-11-03: sources on request, partial answers, internet research (branch `feature/osrip-complete-development`)
+
+What changed (status against the whole brief in MASTER_BRIEF_STATUS.md):
+- Answers show no sources, citation markers, evidence ids, search logs or method notes until asked for (Show sources, or asking in words, which gets a `sources` reply; migration 0028).
+- An unsupported figure no longer withholds the whole answer: its sentence is left out and the rest shown with a note.
+- Internet research searches the web first.
+- The brief's exact palette; AI Assistant first in the navigation; an Export Center.
+
+| Check | Result |
+|---|---|
+| `ruff`, backend `pytest` with database tests | Pass; **978 passed**. New: `test_partial_answers.py` (7), `test_sources_on_request.py` (23), and integration tests for a partly kept answer, sources on request (not charged) and web-first internet research. The 0028 migration applied to the development database |
+| `npm run typecheck`, `npm run lint`, `npm run check:contrast`, `npm run build` | Pass; 0 failing contrast pairs with the new palette |
+| Mock-data browser tests (Chrome) | **38 passed, 3 skipped, 2 failed** in the full run. One failure was the theme test still expecting the old page colour (now #F7F4EF); the other was the phone-width entrance check, which passed on rerun. The entrance and shell spec files rerun: **33 passed, 3 skipped** |
+| Full-stack browser tests (Chrome) | **197 passed, 3 skipped, 3 failed** in the full run. The 3 were the Talk layout checks: the longer "Internet research" chip wrapped the mode row. The chip is "Research" again and the answer's badge says "Internet research". The Talk spec files rerun: **15 passed, 2 skipped**. The assistant, chat, governed-AI, upgrade and research specs, updated for hidden sources: **49 passed**, then **38 passed** with screenshots |
+| Live answer service | Not called (no model call was needed; the tests use the scripted provider). DeepSeek's last recorded health check: ok, 2 November 2026 |
+
 ## 2026-11-02 (night): premium Oman map (branch `feature/oman-premium-map`)
 
 What changed (details in MAP.md):

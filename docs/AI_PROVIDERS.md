@@ -129,8 +129,13 @@ The AI Assistant page is one conversation, centred and at most 800px wide (2026-
   example questions, hidden once a question is sent.
 - **Messages:** the question is shown at once; the answer below it is rendered as Markdown
   (headings, paragraphs, lists, tables, **bold**, links: built as page elements, never as HTML),
-  with its citation chips, a one-line "Sources (n)" list that opens at a cited source, Copy, Read
-  aloud, and Retry when the answer service failed.
+  with Copy, Read aloud, and Retry when the answer service failed. Sources are not shown by
+  default: no citation markers, evidence ids, source lists, search logs or method notes. **Show
+  sources** under an answer reveals them (citation chips, the list of sources, the search log,
+  Google's grounded results). Asking in words ("Show sources", "Where did you get this?",
+  "اعرض المصادر", "أعطني المراجع") gets a reply listing the previous answer's sources from its
+  stored evidence (status `sources`; no model call, not charged). The evidence, its addresses,
+  dates and versions stay stored with every answer.
 - **Message box:** Enter sends, Shift+Enter is a new line (never mid-composition), one submission
   at a time, Send becomes Stop while answering, and a question that could not be sent goes back
   into the box. The microphone and an optional Tools drawer are beside it; the remaining guest
@@ -165,9 +170,10 @@ sources are named under it. Otherwise the page says what a chart would need.
 
 ## Routing policy (decided by rules, not by a model)
 
-1. **Numbers start with approved OSRIP data.**
+1. **Numbers start with approved OSRIP data, except in Internet research.**
    - A question asking for a figure, quantity, rate, share, change or comparison is classified as numerical (`backend/app/services/assistant/routing.py`, English and Arabic patterns).
    - Web search is refused (`data_first`) until a platform data tool has run in that answer (`list_indicators`, `get_observations`, `latest_period`, ...).
+   - **Internet research** (the Research mode) is the exception: it searches the current web first and is told not to substitute OSRIP's stored data for new research; the platform's data serve only to compare, and the reply says which figures came from where. The other modes (Ask, Analyze, Compare, Scenario) are internal data analysis over the approved datasets. The mode is shown with every answer.
 2. **Missing or recent context may use the web.**
    - The web may fill what the data do not cover.
    - A question about recent events ("latest news", "this week", "اليوم", ...) may search first.
@@ -215,7 +221,7 @@ What each item states:
     - They are **never given to the answering model**, never used as evidence for the answer and never queued as figures. The model only learns that results were "shown separately".
     - They are removed from stored replies after `OSRIP_GROUNDED_RETENTION_DAYS` (730, the two-year limit in the terms) by `python -m app.cli purge-grounded`.
 - **New observations need review.** Figures the model reports from cited page text go to the data managers' review queue (`research_candidate`) with all their metadata. Accepting one never publishes it: it must go through the normal upload, validation, approval and publication workflow. Nothing found on the web is written into approved data.
-- **No invented statistics.** Every number in a reply must appear in the evidence its `[E#]` marker cites. Otherwise the reply is withheld (`unverified`), and so are the recommendation cards. A grounded panel cannot back a number in the answer, because it is not evidence.
+- **No invented statistics.** Every number in a reply must appear in the evidence its `[E#]` marker cites. A sentence (or table row) whose figure fails is left out and the rest of the answer is shown, with a note that some statements were left out (`structured.omitted_claims`); nothing is reworded or added. Only when too little is left is the reply withheld (`unverified`). Recommendation cards are checked the same way. A grounded panel cannot back a number in the answer, because it is not evidence.
 
 ## Safety
 
@@ -228,7 +234,7 @@ What each item states:
     - the connection pinned to the checked address;
     - at most 3 redirects, each re-checked;
     - 2 MB and a timeout.
-- **Valid abstention.** With no evidence the reply says so (`no_evidence`). With unsupported numbers it is withheld (`unverified`). If every search failed, the failures are listed and nothing is claimed. If no model is configured, a labelled non-AI record lookup is given instead.
+- **Valid abstention.** With no evidence the reply says so (`no_evidence`). Unsupported numbers are left out; a reply with nothing supported left is withheld (`unverified`) and says how to ask more precisely. If every search failed, the failures are listed and nothing is claimed. If no model is configured, a labelled non-AI record lookup is given instead.
 
 ## Limits and spending
 
