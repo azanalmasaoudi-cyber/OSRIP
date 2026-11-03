@@ -62,6 +62,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{951A985D-D
 		docs\implementation-status.md = docs\implementation-status.md
 		docs\INTEGRATIONS.md = docs\INTEGRATIONS.md
 		docs\MAP.md = docs\MAP.md
+		docs\MASTER_BRIEF_STATUS.md = docs\MASTER_BRIEF_STATUS.md
 		docs\OFFICIAL_SOURCES.md = docs\OFFICIAL_SOURCES.md
 		docs\Oman_Statistics_References_and_Images_English.docx = docs\Oman_Statistics_References_and_Images_English.docx
 		docs\OSRIP_Academic_Booklet_English_60_Pages-2.docx = docs\OSRIP_Academic_Booklet_English_60_Pages-2.docx
