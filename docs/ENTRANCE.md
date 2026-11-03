@@ -1,116 +1,126 @@
-# Opening introduction
+# Welcome and sign-in screens
 
-Status, 18 October 2026: **implemented and locally tested** (mock and full-stack browser
-suites, Edge desktop and Pixel 7 emulation), on branch `redesign/dark-dashboard`. Not deployed.
+Status, 3 November 2026: **implemented and locally tested** (mock and full-stack browser
+suites, Chrome desktop and Pixel 7 emulation), on branch `feature/welcome-login-design`. Not
+deployed.
 
 ## Source
 
-The project owner's own design, `docs/OSRIP_Intro_Single_File.html`: a standalone page with
-the two assistants' portraits, the OSRIP sign, the name, three resource images and three
-goals. It is rebuilt natively in React (`frontend/src/components/layout/Entrance.tsx`, styles
-`.intro*` in `src/index.css`), not embedded, so it shares the app's languages, themes, focus
-handling, replay and tests.
+The project owner's design, `OSRIP_Welcome_Login_Design` (an HTML prototype, four screenshots
+and the four sector images). It is rebuilt natively in React, not embedded, so it shares the
+application's languages, themes, focus handling, routes and tests:
 
-**Its images are the five embedded in that file:**
-- They were extracted unchanged into `frontend/assets/editorial/masters/`:
-  - `omani-man-courtyard.png`, Al Mulhim (also the master of his assistant portraits);
-  - `omani-woman-courtyard.jpg`, Ilham (the same picture as `omani-woman-professional.jpg`,
-    encoded differently);
-  - `intro-electricity.jpg`, `intro-water.jpg` and `intro-trade.jpg`, on white.
-- `tools/build_intro_images.py` checks them by SHA-256 and writes 600 px JPEGs to
-  `frontend/public/images/intro/` (50–67 KB each), served as `/images/intro/*.jpg`.
-- They are downscaled whole: no cropping, retouching or upscaling.
-- They are recorded in `frontend/assets/editorial/sources.json`.
-- No path points to a temporary folder, a ZIP preview or a local drive.
+- `frontend/src/components/layout/Entrance.tsx`: the welcome;
+- `frontend/src/components/layout/AuthLayout.tsx` and `frontend/src/pages/SignInPage.tsx`: the
+  sign-in screen;
+- `frontend/src/components/layout/WelcomeChrome.tsx`: what both share (background, top bar,
+  footer);
+- `frontend/src/components/layout/welcome.css`: the styles.
 
-**Framing:**
-- **Portraits:** the file's own framing: arch frames 164 × 280 px (110 × 200 on phones), the
-  image covering the frame from the top centre.
-- **Illustrations:** shown complete (`object-fit: contain`) at one height, 112 px (82 px on
-  phones), never cropped or stretched.
+The colours are the design's own (charcoal and peach in the dark theme, warm cream in the light
+theme), scoped to these two screens and switched with the application's theme. Two light-theme
+values are a shade deeper than in the design so small text keeps 4.5:1 contrast: muted text
+`#5F5E5C` (design `#6B6A68`) and the button gradient `#A95833` to `#9C4D2F` (design `#B4623B`
+to `#A25132`).
 
-## What a first-time visitor sees
+Text uses the application's typefaces (IBM Plex Sans and IBM Plex Sans Arabic); the large OSRIP
+wordmark keeps the design's heavy Arial. The sector images are the supplied PNGs, already in
+`frontend/public/images/sectors/` (byte-identical) and served as WebP
+(`components/brand/SectorArtwork.tsx`).
 
-1. **Arrival.** Al Mulhim slides in from the left and Ilham from the right (1.8 s). Their portraits
-   are framed in arches with their names below (Arabic and English).
-2. **The sign.** The OSRIP sign ("Insight for a resilient Oman") is set down between them (2.2 s).
-3. **The rest appears** after about 1.4 to 2.3 s:
-   - the line "Resources we understand. Decisions built on knowledge.";
-   - the platform's name in both languages;
-   - the three resources: Electricity and energy, Water resources, Trade and logistics;
-   - the three goals:
-     - Understand Oman's resources / افهم موارد عُمان;
-     - Analyse reliable data / حلّل البيانات الموثوقة;
-     - Support informed decisions / ادعم القرار بالمعلومة.
+The prototype's own footer line ("no real authentication") and its demonstration submit are
+not used: the form signs in through the real API. The footer carries the application's
+academic-prototype notice instead.
 
-**Explore / استكشف** and **Skip / تخطّي** are labelled in both languages and work from the
-first moment. Both enter the dashboard (the Overview). The dark theme uses the design's deep
-teal. The light theme uses the same layout on warm ivory with teal ink.
+## The welcome
 
-**Arabic name.** The owner's file writes «منصة عُمان الذكية لذكاء الموارد». The project owner
-chose «…لمعلومات الموارد» on 8 October 2026 (SPEC_CONFLICTS C58), and the whole app uses that
-name, so the introduction does too. Changing it is a one-line edit in `Entrance.tsx`
-(`NAME.ar`).
+- **Top bar:** the brand ("O" sign, OSRIP, OMAN RESOURCE INTELLIGENCE), the language chip
+  (switches the application to the other language) and the theme chip (light or dark).
+- **Hero:**
+  - "Resource intelligence platform";
+  - the OSRIP wordmark (always left to right, never mirrored);
+  - the platform's name in the visitor's language, with the other language below it (Arabic:
+    «منصة عُمان الذكية لمعلومات الموارد», the name chosen on 8 October 2026, SPEC_CONFLICTS
+    C58);
+  - the lead line;
+  - **Enter platform** and **Skip introduction**;
+  - three notes (premium interface, Arabic and English, four research domains).
+- **Panel:** the four sector images, whole, each a link to its sector page, and **Explore**
+  (the Overview).
+- **Right to left:** the hero at the right and the panel at the left, as in the design. Below
+  790 px, one column: the text, then the panel.
 
 ## Behaviour
 
 | Requirement | How |
 |---|---|
-| Once per browser session | `sessionStorage` `osrip.entrance = shown`, set as soon as it opens, so a reload never shows it again in that session and there is no loop. A new browser session shows it again. Nothing is sent to the server. If storage is blocked, it is not shown, so nobody is trapped. |
-| Home page only | It opens on `/` only, including when the home page is reached later in the session. A direct link (a study, the workspace, sign-in, the account) opens its page at once and is never interrupted. |
-| Switch | Account → Settings → *Show it when the home page opens*. Turning it off sets `localStorage` `osrip.intro.autoplay = off` for this browser. The browser test configurations use the same switch. |
-| Replay | Footer → *Replay introduction*, and Account → Settings → *Replay introduction*, on every page. A replay starts the animation from the beginning. |
-| Explore and Skip | Both enter the dashboard (`/overview`, keeping the data mode). Escape only closes. |
-| Keyboard and focus | A native modal `<dialog>`. Focus starts on Explore without scrolling, so a phone starts at the top; Skip is one Shift+Tab away. Escape closes and returns focus to the element that opened it (on a first visit, the page's main content). |
-| Themes | Dark: the design's deep teal. Light: warm ivory with teal ink. The focus ring follows. |
-| Reduced motion | The final frame at once, with no movement (`data-mode="static"`, `data-fallback="reduced-motion"`). |
-| Low power | Data saver, at most 2 CPU cores or at most 2 GB device memory: the final frame (`low-power`). |
-| Missing images | A portrait that cannot load becomes the neutral "AI" badge (`PersonaImage`). A resource image keeps its caption. Everything else works. |
+| Once per browser session | `sessionStorage` `osrip.entrance = shown`, set as soon as it opens: a reload never shows it again in that session. A new session shows it again. If storage is blocked it is not shown, so nobody is trapped. Nothing is sent to the server. |
+| Home page only | It opens on `/` only, including when the home page is reached later in the session. A direct link (a sector, the workspace, sign-in, the account) opens its page at once. |
+| It waits | Nothing closes it on a timer: the visitor chooses. |
+| Enter platform, Skip introduction, Escape | Close it onto the home page, keeping the data mode. Guests stay guests: nobody is sent to sign in. Focus goes to the page's main content, or back to the button that showed it again. |
+| A sector card, Explore | Close it and open that sector page, or the Overview. |
+| Switch | Account → Settings → *Show it when the home page opens* (`localStorage` `osrip.intro.autoplay = off`). The test configurations use the same switch. |
+| Shown again | Footer *Replay opening*, Settings, and the sign-in page's *Back to introduction*. That last one navigates home with `{ welcome: true }`, used once, so a reload does not show it again. |
+| Keyboard and focus | A native modal `<dialog>`: focus starts on Enter platform and stays inside it, and every control is reachable with Tab. |
+| Reduced motion | No transitions and no hover lift. There is no other movement. |
+| Application data not delayed | The page behind renders and loads its data while the welcome is open. |
 | No sound | No audio or video elements and no audio API (tested). |
-| Application data not delayed | The page behind renders and loads its data while the introduction is open (`showModal` makes it inert, not unmounted). |
-| Right to left | Texts and buttons follow the language. The stage keeps the owner's order (Al Mulhim left, Ilham right) and the OSRIP lettering is never mirrored. |
+
+## The sign-in screen
+
+- The design's showcase (OSRIP, "Data provides the picture. Analysis reveals the insight.", the
+  four domains) and the form box ("Welcome back").
+- **Required: a username and a password, nothing else.** Accounts made with an e-mail address
+  type that address in the same field (the hint says so).
+- **Show/Hide** reveals the password. It is named "Show password" for screen readers, so the
+  Password label still finds only the field.
+- Kept from before:
+  - Remember me (off by default; a 14-day session on this device);
+  - Forgot password and Create account;
+  - "Other ways to sign in" (e-mail link, phone, Google, Microsoft: optional, never required);
+  - the notices for an unconfirmed e-mail address and for Google and Microsoft returns.
+- The real `POST /auth/login` is unchanged, with the same password hashing, sessions, CSRF
+  protection, rate limits and server-side roles. A username alone grants nothing, and
+  administration still comes only from the role checked by the API.
+- *Back to introduction* shows the welcome again.
 
 ## Tests
 
-`frontend/e2e/entrance.spec.ts`: 15 tests on desktop and 1 on Pixel 7.
-
-1. **First visit:**
-   - the five `/images/intro/` images load at 600 px;
-   - the portraits cover their frames from the top centre;
-   - the illustrations are complete (`contain`) and all the same height;
-   - the sign is centred between the portraits;
-   - the names and the six goal texts are shown, and no audio is used;
-   - Explore enters the dashboard, and neither the home page nor a reload shows it again in that session.
-2. A new browser session shows it again; a reload in the same session does not.
-3. The home page's latest figures load while it is open.
-4. Skip at once enters the dashboard, keeping the data mode; going back home does not show it again.
-5. Direct links:
-   - sign-in and `/trade` are never interrupted;
-   - reaching the home page later (the brand link) shows it once;
-   - Escape only closes.
-6. Footer replay: Escape returns focus; Explore from another page enters the dashboard.
-7. Keyboard: focus on Explore, Shift+Tab to Skip, focus stays inside, Enter on Skip enters the dashboard.
-8. Settings: replay and Skip; the switch turns the automatic showing off.
-9. Arabic: right to left, «استكشف · Explore» and «تخطّي · Skip», the stage order kept, the lettering left to right.
-10. Arabic Settings label «إعادة عرض المقدمة».
-11. The light theme: ivory background, teal ink and button.
-12. Reduced motion: the final frame, no animation; Skip still enters the dashboard.
-13. Low-power device (2 cores): the final frame.
-14. Images blocked: AI badges for the portraits, captions kept, Explore works.
-15. Phone (Pixel 7):
-    - portraits, sign and Skip within the screen, starting at the top;
-    - no sideways scrolling;
-    - equal illustration heights;
-    - Explore enters the dashboard.
-
-`frontend/e2e-api/accounts.spec.ts` (full stack) checks with the introduction switched on that
-Skip enters the dashboard, that a real sign-in is not blocked, and that the home page does not
-show it again in the session.
+- **`frontend/e2e/entrance.spec.ts`** (mock data, 14 tests on desktop, the phone test also on
+  Pixel 7):
+  - the first visit in English: names in both languages, the four images loaded, no sound, no
+    timer, Enter platform enters the dashboard, and a reload does not show it again;
+  - once per session;
+  - the data behind loads;
+  - Skip keeps the page and data mode;
+  - a sector card and Explore open their pages;
+  - direct links are never interrupted;
+  - the footer shows it again, with focus returned;
+  - focus is trapped and every control is reachable;
+  - the chips change the application's language and theme (remembered);
+  - the Settings switch;
+  - Arabic and dark: right to left, hero at the right, OSRIP left to right;
+  - reduced motion;
+  - phone: one column, everything within the screen.
+- **`frontend/e2e-api/welcome-sign-in.spec.ts`** (full stack):
+  - only two fields to type in, Show/Hide, Remember me off;
+  - a new username account signs in, and a wrong password is refused;
+  - an ordinary account has no administration;
+  - the administrator keeps it, and the API refuses its request to a visitor;
+  - Back to introduction;
+  - Arabic and dark layout;
+  - phone layout.
+- **`frontend/e2e-api/accounts.spec.ts`** (full stack): registration with a username and
+  password, the recovery code, older e-mail accounts, and the welcome never blocking sign-in.
 
 ## History
 
-Until 15 October 2026 the introduction was a code-driven 2D vector scene: an illustrated Omani
-man carried the OSRIP sign in and set it down (`EntranceScene.tsx`, `entranceRig.ts`). The
-owner's design replaced it on 16 October. The old files are in git history (commit `24c0cca`),
-and so are their evidence images in `docs/evidence/entrance/` and the measurements in
-`docs/TEST_RESULTS.md`.
+- **Until 15 October 2026:** a code-driven 2D vector scene, an illustrated Omani man carrying
+  the OSRIP sign in (`EntranceScene.tsx`, `entranceRig.ts`; git commit `24c0cca`).
+- **16 October 2026:** the owner's first introduction design, with the two assistants' portraits
+  and three resource images (`docs/OSRIP_Intro_Single_File.html`).
+- **Later:** a three-second CSS opening, OSRIP's letters rising on a navy and emerald field
+  (`opening.css`, removed now).
+- **3 November 2026:** the welcome in this document.
+
+The earlier files and their evidence images are in git history.
