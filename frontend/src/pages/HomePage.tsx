@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useReferencePack } from '@/api/referencePack';
 import type { Sector } from '@/components/brand/SectorIllustration';
-import { SectorImage } from '@/components/brand/SectorImage';
+import { SectorArtwork } from '@/components/brand/SectorArtwork';
 import { AxisAnalysis, LatestFigures } from '@/components/dashboard/DashboardPanels';
 import { PhotoCaption } from '@/components/common/Photo';
 import { buttonVariants } from '@/components/ui/button';
@@ -99,18 +99,19 @@ export function HomePage() {
         {/* The four sectors */}
         <section aria-labelledby="domains-heading" className="flex flex-col gap-4">
           <h2 id="domains-heading" className="gold-rule text-xl font-semibold sm:text-2xl">{t('overviewIntro.sectorsHeading')}</h2>
-          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {/* Each card is the sector's artwork (its title is in the image, so none is laid over
+              it) and opens the sector's page; the alt text names the sector for screen readers. */}
+          <ul className="grid gap-5 sm:grid-cols-2">
             {SECTORS.map((s) => (
-              <li key={s.section} className="surface-card card-link flex flex-col overflow-hidden" data-testid="home-sector" data-section={s.section}>
-                <SectorImage sector={s.image} />
-                <div className="flex flex-1 flex-col gap-2 p-5">
-                  <h3 className="text-lg font-semibold">{t(s.title)}</h3>
-                  <Link to={to(s.path)}
-                    className="mt-auto inline-flex w-fit items-center gap-1.5 pt-2 text-base font-medium text-primary underline-offset-4 hover:underline">
+              <li key={s.section} className="flex">
+                <Link to={to(s.path)} data-testid="home-sector" data-section={s.section}
+                  className="group glass-card flex w-full flex-col overflow-hidden rounded-2xl border p-2 shadow-card transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-brand/45 hover:shadow-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none motion-reduce:hover:translate-y-0">
+                  <SectorArtwork sector={s.image} sizes="(min-width: 640px) 46vw, 100vw" className="overflow-hidden rounded-xl" />
+                  <span className="flex items-center justify-between gap-2 px-2 pt-2.5 pb-1 text-base font-medium text-primary">
                     {t('pages.home.explore', { domain: t(s.title) })}
-                    <ArrowRight aria-hidden="true" className="size-4 rtl:-scale-x-100" />
-                  </Link>
-                </div>
+                    <ArrowRight aria-hidden="true" className="size-4 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none rtl:-scale-x-100 rtl:group-hover:-translate-x-0.5" />
+                  </span>
+                </Link>
               </li>
             ))}
           </ul>

@@ -1,5 +1,17 @@
 # Test results
 
+## 2026-11-03: premium sector images (branch `feature/premium-sector-images`)
+
+What changed: the four supplied sector images (1672 × 941, kept as supplied, served as WebP 836
+or 1672 px) are the dashboard's sector cards, each a link to its sector page, and the image in
+each sector page header (details in assets.md).
+
+| Check | Result |
+|---|---|
+| `npm run typecheck`, `npm run lint`, `npm run build` | Pass |
+| Mock-data browser tests (Chrome): new `sector-cards.spec.ts` with `shell.spec.ts` | **23 passed, 3 skipped** (desktop and phone projects). The new spec checks each image loads, is the right file and is drawn at 1672:941 with `object-contain`; cards lazy, headers eager; each card opens its sector page (pointer and keyboard), with an accessible name; Arabic (RTL) with the dark theme; one column at phone width; no sideways scrolling |
+| By hand (screenshots from the tests) | Light English and dark Arabic dashboard, the Electricity and Trade headers, the Food Security page at phone width: whole images, no text over them, arrows mirrored in Arabic |
+
 ## 2026-11-02 (night): premium Oman map (branch `feature/oman-premium-map`)
 
 What changed (details in MAP.md):

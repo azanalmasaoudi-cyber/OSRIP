@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import type { Sector } from '@/components/brand/SectorIllustration';
-import { SectorImage } from '@/components/brand/SectorImage';
+import { SectorArtwork } from '@/components/brand/SectorArtwork';
 import { CommodityRegistry } from '@/components/common/CommodityRegistry';
 import { DecisionBrief } from '@/components/sector/DecisionBrief';
 import { SectorNav } from '@/components/sector/SectorNav';
@@ -9,7 +9,8 @@ import { SectorWorkflow } from '@/components/sector/SectorWorkflow';
 import type { SectionCode } from '@/domain/types';
 import { useDocumentTitle } from '@/lib/useDocumentTitle';
 
-/** One sector page: the sector's name and image with the four sectors as tabs (step 1), then the
+/** One sector page: the sector's name and artwork (whole, at the top, on every screen width;
+ * below the text on phones) with the four sectors as tabs (step 1), then the
  * selection, results and insights (components/sector/SectorWorkflow). Results appear only after
  * "Show results"; a chart only after "Show chart". Then the decision brief of the axis. */
 function SectorPage({ section, page, image, registry = false }: {
@@ -24,13 +25,15 @@ function SectorPage({ section, page, image, registry = false }: {
   return (
     <div className="flex flex-col gap-6 lg:gap-8" data-testid="sector-page" data-sector={page}>
       <header className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
-        <div className="grid md:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
+        <div className="grid items-center md:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)]">
           <div className="gold-rule flex flex-col justify-center gap-2 p-5 sm:p-6 lg:p-8">
             <p className="text-sm font-semibold text-primary ltr:tracking-wider ltr:uppercase">{t('sectorFlow.eyebrow')}</p>
             <h1 className="text-2xl leading-tight font-semibold sm:text-3xl 3xl:text-4xl">{title}</h1>
             <p className="max-w-2xl text-base text-muted-foreground">{t(`pages.${page}.lead`)}</p>
           </div>
-          <SectorImage sector={image} variant="banner" eager className="max-md:hidden" />
+          <div className="px-3 pb-3 md:py-3 md:ps-0">
+            <SectorArtwork sector={image} eager sizes="(min-width: 768px) 46vw, 100vw" className="overflow-hidden rounded-xl shadow-card" />
+          </div>
         </div>
         <SectorNav />
       </header>
