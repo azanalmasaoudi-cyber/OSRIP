@@ -52,6 +52,7 @@
     <Folder Include="public\images\illustrations\" />
     <Folder Include="public\images\intro\" />
     <Folder Include="public\images\photos\" />
+    <Folder Include="public\images\sectors\" />
     <Folder Include="scripts\" />
     <Folder Include="src\" />
     <Folder Include="src\api\" />
@@ -126,6 +127,7 @@
     <TypeScriptCompile Include="e2e-demo\integrated.demo.spec.ts" />
     <TypeScriptCompile Include="e2e\entrance.spec.ts" />
     <TypeScriptCompile Include="e2e\review-upgrade.spec.ts" />
+    <TypeScriptCompile Include="e2e\sector-cards.spec.ts" />
     <TypeScriptCompile Include="e2e\shell.spec.ts" />
     <TypeScriptCompile Include="playwright.api.config.ts" />
     <TypeScriptCompile Include="playwright.config.ts" />
@@ -188,6 +190,7 @@
     <TypeScriptCompile Include="src\components\auth\PhoneVerification.tsx" />
     <TypeScriptCompile Include="src\components\brand\BrandMark.tsx" />
     <TypeScriptCompile Include="src\components\brand\EditorialImage.tsx" />
+    <TypeScriptCompile Include="src\components\brand\SectorArtwork.tsx" />
     <TypeScriptCompile Include="src\components\brand\SectorIllustration.tsx" />
     <TypeScriptCompile Include="src\components\brand\SectorImage.tsx" />
     <TypeScriptCompile Include="src\components\common\Charts.tsx" />
@@ -420,6 +423,18 @@
     <Content Include="public\images\photos\falaj-misfah.jpg" />
     <Content Include="public\images\photos\misfat-al-abriyeen-village.jpg" />
     <Content Include="public\images\photos\wahiba-sands.jpg" />
+    <Content Include="public\images\sectors\osrip_electricity-1672.webp" />
+    <Content Include="public\images\sectors\osrip_electricity-836.webp" />
+    <Content Include="public\images\sectors\osrip_electricity.png" />
+    <Content Include="public\images\sectors\osrip_food_security-1672.webp" />
+    <Content Include="public\images\sectors\osrip_food_security-836.webp" />
+    <Content Include="public\images\sectors\osrip_food_security.png" />
+    <Content Include="public\images\sectors\osrip_trade-1672.webp" />
+    <Content Include="public\images\sectors\osrip_trade-836.webp" />
+    <Content Include="public\images\sectors\osrip_trade.png" />
+    <Content Include="public\images\sectors\osrip_water-1672.webp" />
+    <Content Include="public\images\sectors\osrip_water-836.webp" />
+    <Content Include="public\images\sectors\osrip_water.png" />
     <Content Include="public\theme-init.js" />
     <Content Include="scripts\check-contrast.mjs" />
     <Content Include="src\components\layout\opening.css" />

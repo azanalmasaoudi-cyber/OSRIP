@@ -578,6 +578,12 @@ export const en = {
     food: 'Illustration: a date palm with fruit, wheat and a woven basket',
     trade: 'Illustration: a dhow at sea beside a port crane and shipping containers',
   },
+  sectorArt: {
+    electricity: 'Electricity (الكهرباء). Illustration: a power station, a transmission tower, wind turbines and solar panels below mountains at dusk',
+    water: 'Water (المياه). Illustration: a dam releasing water from a mountain reservoir, beside a water treatment plant',
+    food: 'Food Security (الأمن الغذائي). Illustration: date palms, fields and greenhouses below a hilltop fort, with vegetables and a sack of grain',
+    trade: 'Trade (التجارة). Illustration: a container port with cranes and a container ship, below a fort flying the flag of Oman',
+  },
   phone: {
     methodPhone: 'Phone',
     unavailableShort: '(unavailable)',
