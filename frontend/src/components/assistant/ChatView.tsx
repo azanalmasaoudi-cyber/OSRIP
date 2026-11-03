@@ -1,5 +1,5 @@
 import {
-  ArrowDown, BarChart3, Check, CircleHelp, Copy, EyeOff, Loader2, MessageSquarePlus, Mic, MicOff, RotateCcw, Send, Settings2,
+  ArrowDown, BarChart3, BookOpen, Check, CircleHelp, Copy, EyeOff, Loader2, MessageSquarePlus, Mic, MicOff, RotateCcw, Send, Settings2,
   SlidersHorizontal, Sparkles, Square, Trash2, Volume2, VolumeX, X,
 } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
@@ -9,7 +9,6 @@ import { useTranslation } from 'react-i18next';
 import { useAssistantUi } from './AssistantContext';
 import { AssistantAvatar } from './AssistantAvatar';
 import { AssistantStatusBar } from './AssistantStatusBar';
-import { ConversationSources } from './ConversationSources';
 import type { ChatVoice } from './AssistantPanel';
 import {
   EvidenceItem, GroundedContext, pick, SAVEABLE, SaveResearchButton, SearchLog, STATUS_BADGE, WebEvidenceItem,
@@ -22,7 +21,9 @@ import { Markdown } from './Markdown';
 import { AboutMulhim, MemoryPanel } from './MulhimPanels';
 import { PersonaSwitch, usePersona } from './persona';
 import { PersonaImage } from './PersonaImage';
-import { CitationChip, DataReportNotice, evidenceAnchor, StructuredParts, WebNotice } from './StructuredReply';
+import {
+  CitationChip, DataReportNotice, evidenceAnchor, SourcesShown, StructuredParts, WebNotice, withoutMarkers,
+} from './StructuredReply';
 import { VoicePanel } from './VoicePanel';
 import { VoiceVolume } from './VoiceVolume';
 import {
@@ -91,8 +92,9 @@ const NEAR_BOTTOM = 96; // px: closer than this to the end counts as reading the
  * scrolling area, and one message box at the bottom with Send, Speak and an optional Tools
  * drawer. Before the first message only a welcome and up to three examples are shown. The answer
  * service's status, explanations, voice and conversation settings, research modes, the research
- * brief and the analysis forms are in Settings and the drawers, not in the conversation. On wide
- * screens the conversation's sources stand in a column beside it (ConversationSources).
+ * brief and the analysis forms are in Settings and the drawers, not in the conversation. Answers
+ * show no sources, citation markers or search logs until the person asks for them (Show sources
+ * under the answer, or asking in words).
  */
 export function ChatView({ chat }: { chat: ChatModel }) {
   const { t } = useTranslation();
@@ -231,7 +233,6 @@ export function ChatView({ chat }: { chat: ChatModel }) {
         }} />
       </Dialog>
     </div>
-    <ConversationSources messages={chat.messages} className="hidden w-[22rem] shrink-0 3xl:flex" />
     </div>
   );
 }
@@ -258,6 +259,9 @@ function ChatMessage({ message, question, chat, onAsk }: {
   const language = useAppLanguage();
   const { byCode } = usePersona();
   const [copied, setCopied] = useState(false);
+  // Sources, citation markers and the search log are shown only when asked for: with the Show
+  // sources button, or by asking in words (a 'sources' reply, shown with its list).
+  const [sourcesOpen, setSourcesOpen] = useState(message.status === 'sources');
   // A chart is offered under an answer that has chartable figures, and drawn only when the
   // person asks: in words ("show a chart of …") or with the Show chart button.
   const [chartOpen, setChartOpen] = useState(() => asksForChart(question) && message.status !== 'clarification');
@@ -284,16 +288,22 @@ function ChatMessage({ message, question, chat, onAsk }: {
   const points = chartable && !dataCharts.length ? chartPoints(shown) : null;
   const canChart = dataCharts.length > 0 || points !== null;
   const sourceNames = [...new Set(shown.map((e) => e.source?.title ?? (typeof e.title === 'string' ? e.title : pick(e.title, language))).filter(Boolean))];
+  const hasSources = shown.length > 0 || searches.length > 0 || Boolean(message.structured.grounded_context?.length)
+    || Boolean(message.structured.research?.sources_read.length);
+  const research = message.structured.research;
   const copy = () => {
-    const text = [message.content, ...(sourceNames.length ? ['', `${t('assistant.sources')}: ${sourceNames.join(' · ')}`] : [])].join('\n');
+    const text = sourcesOpen
+      ? [message.content, ...(sourceNames.length ? ['', `${t('assistant.sources')}: ${sourceNames.join(' · ')}`] : [])].join('\n')
+      : withoutMarkers(message.content);
     void navigator.clipboard?.writeText(text).then(() => {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     });
   };
   return (
+    <SourcesShown.Provider value={sourcesOpen}>
     <li className="glass-card flex flex-col gap-2 rounded-2xl rounded-es-md border p-4 text-base leading-relaxed shadow-card sm:p-5" data-testid="assistant-message" data-status={message.status ?? ''}
-      data-persona={author.code}>
+      data-persona={author.code} data-sources={sourcesOpen ? 'shown' : 'hidden'}>
       <p className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
         <span className="inline-flex items-center gap-1.5 font-semibold text-foreground" data-testid="message-persona">
           <PersonaImage src={author.avatar.portrait} alt="" width={20} height={20} className="size-5 rounded-full object-cover object-top" draggable={false} />
@@ -304,16 +314,21 @@ function ChatMessage({ message, question, chat, onAsk }: {
         ) : (
           <span data-testid="non-ai-label">
             {message.status === 'lookup' ? t('assistant.lookupLabel') : message.status === 'profile' ? t('assistant.profileLabel')
-              : message.status === 'data_report' ? t('assistant.dataReportLabel') : t('assistant.systemLabel')}
+              : message.status === 'data_report' ? t('assistant.dataReportLabel')
+                : message.status === 'sources' ? t('assistant.sourcesLabel') : t('assistant.systemLabel')}
           </span>
         )}
         {badge ? <Badge variant="sand">{t(badge)}</Badge> : null}
         {/* Which kind of answer was given (chosen automatically unless picked in Tools). */}
-        {message.mode && message.mode !== 'ask' ? <Badge variant="outline" data-testid="reply-mode">{t(`assistant.mode.${message.mode}`)}</Badge> : null}
+        {message.mode && message.mode !== 'ask' ? <Badge variant="outline" data-testid="reply-mode">{t(message.mode === 'research' ? 'assistant.mode.researchLong' : `assistant.mode.${message.mode}`)}</Badge> : null}
       </p>
       <div className="flex flex-col gap-3" data-testid="assistant-text">
-        <Markdown text={message.content} cite={(id) => <CitationChip messageId={message.id} id={id} known={known.has(id)} />} />
+        <Markdown text={sourcesOpen ? message.content : withoutMarkers(message.content)}
+          cite={(id) => <CitationChip messageId={message.id} id={id} known={known.has(id)} />} />
       </div>
+      {message.structured.omitted_claims ? (
+        <p className="text-sm text-muted-foreground" data-testid="omitted-claims">{t('assistant.omittedClaims', { count: message.structured.omitted_claims })}</p>
+      ) : null}
       {message.structured.data_tables?.length ? <ChatDataTables blocks={message.structured.data_tables} messageId={message.id} /> : null}
       {canChart ? (
         <Button type="button" variant="outline" size="sm" className="w-fit" aria-expanded={chartOpen} onClick={() => setChartOpen(!chartOpen)}
@@ -327,16 +342,19 @@ function ChatMessage({ message, question, chat, onAsk }: {
       {wantsChart && !canChart && message.status === 'answered' ? (
         <p className="text-sm text-muted-foreground" data-testid="chart-unavailable">{t('chat.chartUnavailable')}</p>
       ) : null}
-      {message.structured.research ? <ResearchSummary summary={message.structured.research} /> : null}
+      {research && sourcesOpen ? <ResearchSummary summary={research} /> : null}
+      {research && !sourcesOpen && research.submitted > 0 ? (
+        <p className="text-sm text-muted-foreground" data-testid="research-review-note">{t('chat.research.sentForReview', { count: research.submitted })}</p>
+      ) : null}
       {message.structured.data_report ? <DataReportNotice report={message.structured.data_report} /> : null}
       {message.structured.web_notice ? <WebNotice notice={message.structured.web_notice} /> : null}
       {message.structured && Object.keys(message.structured).length ? (
         <StructuredParts structured={message.structured} messageId={message.id} known={known} />
       ) : null}
-      <SearchLog items={searches} />
-      {message.structured.grounded_context?.length ? <GroundedContext entries={message.structured.grounded_context} /> : null}
-      {shown.length > 0 ? (
-        <details className="group text-sm" data-testid="chat-sources" open={message.status === 'unverified'}>
+      {sourcesOpen ? <SearchLog items={searches} /> : null}
+      {sourcesOpen && message.structured.grounded_context?.length ? <GroundedContext entries={message.structured.grounded_context} /> : null}
+      {sourcesOpen && shown.length > 0 ? (
+        <details className="group text-sm" data-testid="chat-sources" open>
           <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
             <span className="font-semibold">{t('chat.sourcesCount', { count: shown.length })}</span>
             {sourceNames.length ? <span className="ms-1" dir="auto">· {sourceNames.slice(0, 2).join(' · ')}{sourceNames.length > 2 ? ' …' : ''}</span> : null}
@@ -354,7 +372,7 @@ function ChatMessage({ message, question, chat, onAsk }: {
           <ul className="mt-2 flex flex-col gap-2">
             {message.calculations.map((c) => (
               <li key={c.id} id={anchor(c.id)} tabIndex={-1} className="scroll-mt-4 focus-visible:outline-2">
-                <p className="font-mono">[{c.id}] {c.calculation}</p>
+                <p className="font-mono">{sourcesOpen ? `[${c.id}] ` : ''}{c.calculation}</p>
                 <p>{pick(c.formula, language)}</p>
                 {c.value != null ? (
                   <p>{t('analysis.result')}: <span className="tabular-nums" dir="ltr">{formatDecimal(c.value, language, 4)}</span> {c.unit === 'percent' ? '%' : c.unit}</p>
@@ -366,6 +384,12 @@ function ChatMessage({ message, question, chat, onAsk }: {
         </details>
       ) : null}
       <div className="flex flex-wrap items-center gap-1 text-xs" data-testid="message-actions">
+        {hasSources && message.status !== 'sources' ? (
+          <Button type="button" variant="ghost" size="sm" aria-expanded={sourcesOpen} onClick={() => setSourcesOpen(!sourcesOpen)}
+            data-testid="toggle-sources">
+            <BookOpen aria-hidden="true" />{sourcesOpen ? t('chat.hideSources') : t('chat.showSources')}
+          </Button>
+        ) : null}
         {message.content ? (
           <Button type="button" variant="ghost" size="sm" onClick={copy} data-testid="copy-answer">
             {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}{copied ? t('chat.copied') : t('chat.copy')}
@@ -397,6 +421,7 @@ function ChatMessage({ message, question, chat, onAsk }: {
         </div>
       ) : null}
     </li>
+    </SourcesShown.Provider>
   );
 }
 

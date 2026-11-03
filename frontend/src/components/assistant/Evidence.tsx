@@ -15,6 +15,8 @@ import { usePreservedSearch } from '@/state/usePreservedSearch';
  * A reply's evidence, as shown under it in the assistant panel and on the conversation page:
  * published observations and calculations, web pages with their class and dates, the search
  * log (failures included), Google Search grounded results shown apart, and saving a reply.
+ * All of it stays with the reply but is shown only when the person asks for the sources
+ * (the Show sources button, or asking in words, which gets a 'sources' reply).
  */
 
 export const STATUS_BADGE = {
@@ -27,6 +29,7 @@ export const STATUS_BADGE = {
   profile: 'assistant.statusProfile',
   cancelled: 'assistant.statusCancelled',
   data_report: 'assistant.statusDataReport',
+  sources: null,
 } as const;
 
 export const EVIDENCE_CLASS_KEY = {

@@ -13,14 +13,16 @@ requested palette and structure are the reference. The identity is original to O
 All colours, radii, shadows, glass and chart colours are CSS variables in
 `frontend/src/index.css`. Tailwind reads them through `@theme`. No component hard-codes a theme
 colour. `npm run check:contrast` checks 47 text and control pairings in each theme, and all pass.
+The values are the brief's palette exactly (set on 2 November 2026; before, a few were a shade
+apart).
 
 | Role | Light | Dark |
 |---|---|---|
-| Page | `#F7F3EE` warm ivory | `#101315` charcoal |
-| Secondary band / card | `#EEE8E0` beige; cards `rgba(255,255,255,.78)` glass over `#FDFBF8` | `#191D20`; glass `rgba(255,255,255,.055)` |
-| Accent (marks, rules, charts) | `#B9683F` / `#D99163` | `#F4A873` / `#D98A61` |
-| Links and buttons | `#99532E` (a deeper shade of the accent, for 4.5:1) | `#F4A873` with dark text |
-| Text / secondary text | `#292623` / `#655F5A` | `#F6F3EF` / `#A9AAA8` |
+| Page | `#F7F4EF` warm ivory | `#101315` charcoal |
+| Secondary band / card | `#EEE8E0` beige; cards `rgba(255,255,255,.78)` glass over `#FFFFFF` | `#1B2023`; glass `rgba(255,255,255,.055)` |
+| Accent (marks, rules, charts) | `#B96942` / `#DFAD86` | `#F2A875` / `#E7B18F` |
+| Links and buttons | `#99532E` (a deeper shade of the accent, for 4.5:1) | `#F2A875` with dark text |
+| Text / secondary text | `#292825` / `#655F5A` | `#F5F2ED` / `#A9AAA8` |
 | Positive / warning / critical | `#287A5B` / `#9C6A1D` (text `#7A5216`) / `#B94C4C` (text `#A94141`) | `#72C6A1` / `#E4B765` / `#E67F7F` |
 
 Where a requested colour is too light for small text on these surfaces, it is kept for marks,

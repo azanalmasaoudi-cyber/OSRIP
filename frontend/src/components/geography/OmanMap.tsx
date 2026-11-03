@@ -314,17 +314,17 @@ export function OmanMap({ label, level, onLevelChange, shades, names, legendTitl
         }
         // Outside Oman: dimmed, labels included.
         map.addSource('osrip-mask', { type: 'geojson', data: MASK_FILE });
-        map.addLayer({ id: 'osrip-mask', type: 'fill', source: 'osrip-mask', paint: { 'fill-color': dark ? '#101315' : '#f7f3ee', 'fill-opacity': 0.62 } });
+        map.addLayer({ id: 'osrip-mask', type: 'fill', source: 'osrip-mask', paint: { 'fill-color': dark ? '#101315' : '#f7f4ef', 'fill-opacity': 0.62 } });
         map.addSource('osrip-national', { type: 'geojson', data: NATIONAL_FILE });
-        map.addLayer({ id: 'osrip-national', type: 'line', source: 'osrip-national', paint: { 'line-color': dark ? '#f4a873' : '#8a4523', 'line-width': 1.6 } });
+        map.addLayer({ id: 'osrip-national', type: 'line', source: 'osrip-national', paint: { 'line-color': dark ? '#f2a875' : '#8a4523', 'line-width': 1.6 } });
         map.addLayer({ id: 'osrip-line', type: 'line', source: SOURCE, paint: { 'line-color': dark ? '#d9cfc4' : '#5d4636', 'line-width': 0.8, 'line-opacity': 0.8 } });
-        map.addLayer({ id: 'osrip-hover', type: 'line', source: SOURCE, filter: ['==', ['get', 'code'], ''], paint: { 'line-color': dark ? '#f6f3ef' : '#292623', 'line-width': 2 } });
-        map.addLayer({ id: 'osrip-selected', type: 'line', source: SOURCE, filter: ['==', ['get', 'code'], ''], paint: { 'line-color': dark ? '#f4a873' : '#8a4523', 'line-width': 3 } });
+        map.addLayer({ id: 'osrip-hover', type: 'line', source: SOURCE, filter: ['==', ['get', 'code'], ''], paint: { 'line-color': dark ? '#f5f2ed' : '#292825', 'line-width': 2 } });
+        map.addLayer({ id: 'osrip-selected', type: 'line', source: SOURCE, filter: ['==', ['get', 'code'], ''], paint: { 'line-color': dark ? '#f2a875' : '#8a4523', 'line-width': 3 } });
         map.addSource('osrip-labels', { type: 'geojson', data: LABELS_FILE });
         map.addLayer({
           id: 'osrip-labels', type: 'symbol', source: 'osrip-labels',
           layout: { 'text-font': textFont(map), 'text-size': 12, 'text-max-width': 8, 'text-padding': 4 },
-          paint: { 'text-color': dark ? '#f6f3ef' : '#292623', 'text-halo-color': dark ? 'rgba(16,19,21,0.85)' : 'rgba(247,243,238,0.9)', 'text-halo-width': 1.4 },
+          paint: { 'text-color': dark ? '#f5f2ed' : '#292825', 'text-halo-color': dark ? 'rgba(16,19,21,0.85)' : 'rgba(247,243,238,0.9)', 'text-halo-width': 1.4 },
         });
       }
       if (!listening.current) {

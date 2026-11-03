@@ -1,4 +1,5 @@
 import {
+  BookOpen,
   BookOpenCheck,
   Calculator,
   CircleHelp,
@@ -33,7 +34,7 @@ import { PersonaPicker, usePersona } from './persona';
 import { PersonaImage } from './PersonaImage';
 import { ResearchBriefBuilder } from './ResearchBriefBuilder';
 import { ResearchProgress } from './ResearchProgress';
-import { CitedText, DataReportNotice, evidenceAnchor, ModeSelector, StructuredParts, WebNotice } from './StructuredReply';
+import { CitedText, DataReportNotice, evidenceAnchor, ModeSelector, SourcesShown, StructuredParts, WebNotice } from './StructuredReply';
 import { VoiceVolume } from './VoiceVolume';
 import {
   ASSISTANT_MODES,
@@ -140,6 +141,8 @@ function MessageView({ message, onAsk, onRetry, onSpeak, canSave, onOpenStudy, a
   const { t } = useTranslation();
   const language = useAppLanguage();
   const { byCode } = usePersona();
+  // Sources, markers and the search log only when asked for (see ChatView).
+  const [sourcesOpen, setSourcesOpen] = useState(message.status === 'sources');
   if (message.role === 'user') {
     return (
       <li className="ms-auto max-w-[85%] rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground" dir="auto" data-testid="user-message">
@@ -158,9 +161,11 @@ function MessageView({ message, onAsk, onRetry, onSpeak, canSave, onOpenStudy, a
   // Chips link only to evidence listed below this reply (or to its calculations).
   const known = new Set([...shown.map((e) => e.id), ...message.calculations.map((c) => c.id)]);
   const anchor = (id: string) => evidenceAnchor(message.id, id);
+  const hasSources = shown.length > 0 || searches.length > 0 || Boolean(message.structured.grounded_context?.length);
   return (
+    <SourcesShown.Provider value={sourcesOpen}>
     <li className="me-auto flex max-w-[95%] flex-col gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm"
-      data-testid="assistant-message" data-status={message.status ?? ''} data-persona={author.code}>
+      data-testid="assistant-message" data-status={message.status ?? ''} data-persona={author.code} data-sources={sourcesOpen ? 'shown' : 'hidden'}>
       <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1 font-semibold text-foreground" data-testid="message-persona">
           <PersonaImage src={author.avatar.portrait} alt="" width={20} height={20} className="size-5 rounded-full object-cover object-top" draggable={false} />
@@ -170,10 +175,11 @@ function MessageView({ message, onAsk, onRetry, onSpeak, canSave, onOpenStudy, a
           <Badge variant="accent" data-testid="ai-label"><Sparkles aria-hidden="true" />{t('assistant.aiLabel')}</Badge>
         ) : <Badge variant="muted" data-testid="non-ai-label">
           {message.status === 'lookup' ? t('assistant.lookupLabel') : message.status === 'profile' ? t('assistant.profileLabel')
-            : message.status === 'data_report' ? t('assistant.dataReportLabel') : t('assistant.systemLabel')}
+            : message.status === 'data_report' ? t('assistant.dataReportLabel')
+              : message.status === 'sources' ? t('assistant.sourcesLabel') : t('assistant.systemLabel')}
         </Badge>}
         {badge ? <Badge variant="sand">{t(badge)}</Badge> : null}
-        {message.mode && message.mode !== 'ask' ? <Badge variant="outline" data-testid="reply-mode">{t(`assistant.mode.${message.mode}`)}</Badge> : null}
+        {message.mode && message.mode !== 'ask' ? <Badge variant="outline" data-testid="reply-mode">{t(message.mode === 'research' ? 'assistant.mode.researchLong' : `assistant.mode.${message.mode}`)}</Badge> : null}
         {onSpeak && message.content ? (
           <button type="button" onClick={() => onSpeak(message)} className="ms-auto inline-flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-muted"
             data-testid="read-aloud">
@@ -184,6 +190,9 @@ function MessageView({ message, onAsk, onRetry, onSpeak, canSave, onOpenStudy, a
       <p className="whitespace-pre-wrap" dir="auto" data-testid="assistant-text">
         <CitedText text={message.content} messageId={message.id} known={known} />
       </p>
+      {message.structured.omitted_claims ? (
+        <p className="text-xs text-muted-foreground" data-testid="omitted-claims">{t('assistant.omittedClaims', { count: message.structured.omitted_claims })}</p>
+      ) : null}
       {message.structured.data_report ? <DataReportNotice report={message.structured.data_report} /> : null}
       {message.structured.web_notice ? <WebNotice notice={message.structured.web_notice} /> : null}
       {message.status === 'unavailable' || message.status === 'data_report' ? (
@@ -194,9 +203,15 @@ function MessageView({ message, onAsk, onRetry, onSpeak, canSave, onOpenStudy, a
       {message.structured && Object.keys(message.structured).length ? (
         <StructuredParts structured={message.structured} messageId={message.id} known={known} />
       ) : null}
-      <SearchLog items={searches} />
-      {shown.length > 0 ? (
-        <div>
+      {hasSources && message.status !== 'sources' ? (
+        <button type="button" aria-expanded={sourcesOpen} onClick={() => setSourcesOpen(!sourcesOpen)} data-testid="toggle-sources"
+          className="inline-flex w-fit items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground">
+          <BookOpen aria-hidden="true" className="size-3.5" />{sourcesOpen ? t('chat.hideSources') : t('chat.showSources')}
+        </button>
+      ) : null}
+      {sourcesOpen ? <SearchLog items={searches} /> : null}
+      {sourcesOpen && shown.length > 0 ? (
+        <div data-testid="panel-sources">
           <p className="mb-1 text-xs font-semibold">
             {message.status === 'unverified' ? t('assistant.retrievedEvidence') : message.status === 'lookup' || message.status === 'data_report' ? t('assistant.records') : t('assistant.sources')}
           </p>
@@ -205,19 +220,20 @@ function MessageView({ message, onAsk, onRetry, onSpeak, canSave, onOpenStudy, a
               ? <WebEvidenceItem key={e.id} item={e} anchor={anchor(e.id)} />
               : <EvidenceItem key={e.id} item={e} anchor={anchor(e.id)} />))}
           </ul>
-          {hasWeb ? <p className="mt-1.5 flex items-start gap-1 text-xs text-muted-foreground"><Globe aria-hidden="true" className="mt-0.5 size-3 shrink-0" />{t('web.reviewNote')}</p> : null}
         </div>
       ) : null}
-      {message.structured.grounded_context?.length ? <GroundedContext entries={message.structured.grounded_context} /> : null}
+      {/* Where web figures go (the review workflow), with or without the sources shown. */}
+      {hasWeb ? <p className="flex items-start gap-1 text-xs text-muted-foreground"><Globe aria-hidden="true" className="mt-0.5 size-3 shrink-0" />{t('web.reviewNote')}</p> : null}
+      {sourcesOpen && message.structured.grounded_context?.length ? <GroundedContext entries={message.structured.grounded_context} /> : null}
       {message.calculations.length > 0 ? (
         <details className="rounded-md border border-border p-2 text-xs" data-testid="how-calculated">
           <summary className="flex cursor-pointer items-center gap-1 font-semibold"><Calculator aria-hidden="true" className="size-3.5" />{t('assistant.howCalculated')}</summary>
           <ul className="mt-2 flex flex-col gap-2">
             {message.calculations.map((c) => (
               <li key={c.id} id={anchor(c.id)} tabIndex={-1} className="scroll-mt-4 focus-visible:outline-2">
-                <p className="font-mono">[{c.id}] {c.calculation}</p>
+                <p className="font-mono">{sourcesOpen ? `[${c.id}] ` : ''}{c.calculation}</p>
                 <p>{pick(c.formula, language)}</p>
-                {c.inputs?.length ? <p className="text-muted-foreground">{t('assistant.inputs')}: {c.inputs.map((i) => `[${i}]`).join(' ')}</p> : null}
+                {sourcesOpen && c.inputs?.length ? <p className="text-muted-foreground">{t('assistant.inputs')}: {c.inputs.map((i) => `[${i}]`).join(' ')}</p> : null}
                 {c.value != null ? (
                   <p>{t('analysis.result')}: <span className="tabular-nums" dir="ltr">{formatDecimal(c.value, language, 4)}</span> {c.unit === 'percent' ? '%' : c.unit}</p>
                 ) : c.reason ? <p className="text-muted-foreground">{pick(c.reason, language)}</p> : null}
@@ -244,6 +260,7 @@ function MessageView({ message, onAsk, onRetry, onSpeak, canSave, onOpenStudy, a
         </div>
       ) : null}
     </li>
+    </SourcesShown.Provider>
   );
 }
 

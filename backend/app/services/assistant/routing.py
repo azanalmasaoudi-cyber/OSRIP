@@ -2,7 +2,8 @@
 
 * A numerical question (a figure, quantity, rate, share, change or comparison) starts with
   OSRIP's approved data: web search is refused until the platform's data have been looked up
-  in this answer. The web may then fill a gap the data leave.
+  in this answer. The web may then fill a gap the data leave. Internet research (the Research
+  mode) is the exception: it searches the web first and uses OSRIP's data only to compare.
 * A question about recent events ("latest news", "this week", "now", ...) may use web research
   from the start, where web research is available.
 * One provider answers; a second only as a fallback after a failure, or for a cross-check the

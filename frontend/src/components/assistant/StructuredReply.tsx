@@ -1,5 +1,5 @@
 import { AlertTriangle, Database, FlaskConical, Lightbulb, Scale } from 'lucide-react';
-import { Fragment, useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { createContext, Fragment, useContext, useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
@@ -27,9 +27,23 @@ function focusEvidence(messageId: number, evidenceId: string): void {
   target.focus({ preventScroll: true });
 }
 
+/**
+ * Whether a reply's sources are shown. Answers do not show citation markers, evidence ids or
+ * source lists until the person asks (the Show sources button, or asking in words); the
+ * evidence stays with the reply. Elsewhere (studies, reports) the default shows them.
+ */
+export const SourcesShown = createContext(true);
+
+/** The text without its evidence markers ("[E3]"), as shown while the sources are hidden. */
+export function withoutMarkers(text: string): string {
+  return text.replace(/[ \t]*\[E\d+\]/g, '');
+}
+
 /** A citation chip: moves focus to the cited evidence below the reply. */
 export function CitationChip({ messageId, id, known }: { messageId: number; id: string; known: boolean }) {
   const { t } = useTranslation();
+  const shown = useContext(SourcesShown);
+  if (!shown) return null;
   if (!known) return <span className="font-mono text-xs text-muted-foreground">[{id}]</span>;
   return (
     <a href={`#${evidenceAnchor(messageId, id)}`} data-testid="citation-chip" data-evidence={id}
@@ -43,7 +57,8 @@ export function CitationChip({ messageId, id, known }: { messageId: number; id: 
 
 /** Reply text with each "[E3]" marker shown as a chip next to the claim it supports. */
 export function CitedText({ text, messageId, known }: { text: string; messageId: number; known: Set<string> }) {
-  const parts = text.split(/\[(E\d+)\]/);
+  const shown = useContext(SourcesShown);
+  const parts = (shown ? text : withoutMarkers(text)).split(/\[(E\d+)\]/);
   return (
     <>
       {parts.map((part, i) => (i % 2 === 1
@@ -54,7 +69,8 @@ export function CitedText({ text, messageId, known }: { text: string; messageId:
 }
 
 function Chips({ ids, messageId, known }: { ids: string[]; messageId: number; known: Set<string> }) {
-  if (!ids.length) return null;
+  const shown = useContext(SourcesShown);
+  if (!ids.length || !shown) return null;
   return <span className="ms-1 inline-flex flex-wrap gap-0.5">{ids.map((id) => <CitationChip key={id} messageId={messageId} id={id} known={known.has(id)} />)}</span>;
 }
 
@@ -124,6 +140,7 @@ export function StructuredParts({ structured, messageId, known }: { structured: 
   const { t } = useTranslation();
   const language = useAppLanguage();
   const to = usePreservedSearch();
+  const sourcesShown = useContext(SourcesShown);
   const { recommendations, drivers, evidence_points: points, hypotheses, assumptions, conflicts, withheld, studies } = structured;
   const withheldCount = withheld ? Object.values(withheld).reduce((a, b) => a + b, 0) : 0;
   return (
@@ -212,7 +229,8 @@ export function StructuredParts({ structured, messageId, known }: { structured: 
           <AlertTriangle aria-hidden="true" className="mt-0.5 size-3 shrink-0" />{t('assistant.withheld', { count: withheldCount })}
         </p>
       ) : null}
-      {structured.method ? <MethodSummary method={structured.method} /> : null}
+      {/* How the answer was made (steps, providers, searches): with the sources, on request. */}
+      {structured.method && sourcesShown ? <MethodSummary method={structured.method} /> : null}
     </div>
   );
 }
