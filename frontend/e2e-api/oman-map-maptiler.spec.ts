@@ -74,6 +74,8 @@ test('a MapTiler key: MapTiler styles for each view, its logo, and MapTiler terr
   await page.getByTestId('map-view-terrain').click();
   await expect.poll(() => traffic.styles.at(-1)).toContain('/maps/landscape-v4/style.json');
 
+  // MapTiler's styles carry their own relief, so no terrain is requested until 3D is switched on.
+  expect(traffic.terrain).toEqual([]);
   await page.getByTestId('map-3d').click();
   await expect(map).toHaveAttribute('data-3d', 'true');
   await expect.poll(() => traffic.terrain.length).toBeGreaterThan(0);
