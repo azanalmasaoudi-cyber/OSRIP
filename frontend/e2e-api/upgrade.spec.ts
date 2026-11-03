@@ -34,6 +34,8 @@ test('web research cites a labelled official source and failures are shown, not 
   await page.getByTestId('assistant-send').click();
   const reply = page.getByTestId('assistant-message').last();
   await expect(reply).toHaveAttribute('data-status', 'answered');
+  await expect(reply).toContainText('review queue'); // where web figures go, sources shown or not
+  await reply.getByTestId('toggle-sources').click();
   const citation = reply.getByTestId('web-citation');
   await expect(citation).toHaveAttribute('data-class', 'official');
   await expect(citation.getByTestId('evidence-class')).toHaveText('Official data');
@@ -48,6 +50,7 @@ test('web research cites a labelled official source and failures are shown, not 
   await page.getByTestId('assistant-send').click();
   const failed = page.getByTestId('assistant-message').last();
   await expect(failed).toHaveAttribute('data-status', 'no_evidence');
+  await failed.getByTestId('toggle-sources').click(); // the search log is shown with the sources
   const failures = failed.getByTestId('search-log').locator('[data-status="failed"]');
   await expect(failures).toHaveCount(2);
   await expect(failures.first()).toContainText('Web search failed');

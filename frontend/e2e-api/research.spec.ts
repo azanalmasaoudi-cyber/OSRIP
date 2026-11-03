@@ -40,7 +40,8 @@ test('Analyze mode shows checked recommendation cards, inline citations, and sav
   await expect(reply).not.toContainText('25%'); // the invented saving was withheld by the server
   await expect(reply.getByTestId('reply-withheld')).toContainText('2');
   await expect(reply.getByTestId('reply-drivers')).toContainText('Hypothesis');
-  // An inline citation moves focus to the cited evidence.
+  // With the sources shown, an inline citation moves focus to the cited evidence.
+  await reply.getByTestId('toggle-sources').click();
   const chip = reply.getByTestId('assistant-text').getByTestId('citation-chip').first();
   const id = await chip.getAttribute('data-evidence');
   await chip.click();

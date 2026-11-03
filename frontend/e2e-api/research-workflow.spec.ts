@@ -96,7 +96,8 @@ test('when the answer service fails, the reply is a data-based report, labelled,
   const notice = reply.getByTestId('data-report-notice');
   await expect(notice).toContainText('nothing was written or interpreted by AI');
   await expect(notice.getByTestId('data-report-updated')).toContainText('Data last updated');
-  // Figures come with their evidence and OSRIP's own calculation.
+  // Figures come with their evidence and OSRIP's own calculation (shown with the sources).
+  await reply.getByTestId('toggle-sources').click();
   await expect(reply.getByTestId('citation-chip').first()).toBeVisible();
   await expect(reply.getByTestId('how-calculated')).toBeVisible();
   await expect(reply.getByTestId('retry-answer')).toHaveText(/Try the AI answer again/);
@@ -172,9 +173,9 @@ test('navigation and Settings: the main destinations in order, services and sche
   expect(names.map((n) => n.trim())).toEqual([
     'Dashboard', 'Overview',
     'Electricity', 'Water', 'Food Security', 'Trade',
-    'Analysis Workspace', 'Datasets', 'Scenarios', 'Forecasting', 'AI Research Assistant', 'Studies', 'Research library', 'Sources',
+    'AI Research Assistant', 'Analysis Workspace', 'Datasets', 'Scenarios', 'Forecasting', 'Studies', 'Research library', 'Sources',
     'Interactive Oman Map', 'Geographic Comparisons',
-    'Reports Dashboard', 'Saved Reports',
+    'Reports Dashboard', 'Saved Reports', 'Export Center',
     'My Profile', 'Settings', 'Appearance', 'Language',
     'Data Management', 'Users and Roles', 'Groups and Permissions', 'Service Health', 'Audit Logs',
   ]);

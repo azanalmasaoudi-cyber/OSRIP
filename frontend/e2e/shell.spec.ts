@@ -125,7 +125,7 @@ test('theme: Light by default, Dark and System from the top bar, remembered afte
   await page.goto('/overview?mode=synthetic');
   const html = page.locator('html');
   await expect(html).toHaveAttribute('data-theme', 'light');
-  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(247, 243, 238)'); // warm ivory
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(247, 244, 239)'); // warm ivory #F7F4EF
   const theme = page.getByTestId('theme-selector');
   await theme.getByRole('radio', { name: 'Dark' }).click();
   await expect(html).toHaveAttribute('data-theme', 'dark');

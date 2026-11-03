@@ -82,7 +82,10 @@ test('answers cite the published source and are labelled AI-generated', async ({
   await expect(reply).toHaveAttribute('data-status', 'answered');
   await expect(reply.getByTestId('ai-label')).toHaveText('AI-generated');
   await expect(reply.getByTestId('assistant-text')).toContainText('50100');
+  // The sources stay with the answer and are shown only when asked for.
   const citation = reply.getByTestId('citation');
+  await expect(citation).toHaveCount(0);
+  await reply.getByTestId('toggle-sources').click();
   await expect(citation).toContainText('50,100');
   await expect(citation).toContainText('OSRIP booklet worked-example fixtures (synthetic)');
   await expect(citation).toContainText('Synthetic demonstration data');
@@ -97,7 +100,10 @@ test('an unsupported number is withheld; failures and ambiguity are explained', 
   const withheld = page.getByTestId('assistant-message').last();
   await expect(withheld).toHaveAttribute('data-status', 'unverified');
   await expect(withheld).not.toContainText('123456789');
-  await expect(withheld.getByTestId('citation')).toContainText('50,100'); // the evidence is shown instead
+  await expect(withheld).toContainText('ask for the sources to see what was found');
+  await expect(withheld.getByTestId('citation')).toHaveCount(0);
+  await withheld.getByTestId('toggle-sources').click();
+  await expect(withheld.getByTestId('citation')).toContainText('50,100'); // what was found, on request
 
   await ask(page, 'please fail');
   const failed = page.getByTestId('assistant-message').last();
@@ -106,6 +112,27 @@ test('an unsupported number is withheld; failures and ambiguity are explained', 
 
   await ask(page, 'How did it change?');
   await expect(page.getByTestId('assistant-message').last()).toHaveAttribute('data-status', 'clarification');
+});
+
+test('one unsupported figure leaves the rest of the answer; sources are listed when asked for', async ({ page }) => {
+  await signIn(page);
+  await openAssistant(page);
+  await ask(page, 'Partly invent the latest electricity generation');
+  const partial = page.getByTestId('assistant-message').last();
+  await expect(partial).toHaveAttribute('data-status', 'answered');
+  await expect(partial.getByTestId('assistant-text')).toContainText('50100');
+  await expect(partial.getByTestId('assistant-text')).toContainText('completeness');
+  await expect(partial).not.toContainText('987654321');
+  await expect(partial.getByTestId('omitted-claims')).toContainText('could not be matched to the evidence (1)');
+
+  await ask(page, 'Show sources');
+  const listed = page.getByTestId('assistant-message').last();
+  await expect(listed).toHaveAttribute('data-status', 'sources');
+  await expect(listed.getByTestId('non-ai-label')).toHaveText('Sources, as asked');
+  await expect(listed.getByTestId('assistant-text')).toContainText('Sources of the previous answer:');
+  await expect(listed.getByTestId('assistant-text')).toContainText('OSRIP booklet worked-example fixtures (synthetic)');
+  await expect(listed.getByTestId('citation').first()).toBeVisible(); // the details, shown at once
+  await expect(listed.getByTestId('toggle-sources')).toHaveCount(0);
 });
 
 test('missing verified data is reported as unavailable, not zero', async ({ page }) => {
