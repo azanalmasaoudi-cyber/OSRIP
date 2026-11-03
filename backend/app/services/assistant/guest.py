@@ -323,10 +323,10 @@ def ask(
             session.add(conv)
             session.flush()
 
-        approved = service.profile_turn(session, conv, question, language, persona)
+        approved = service.fixed_turn(session, conv, question, language, persona)
         if approved is not None:
-            # A greeting or a question about the assistant: the approved reply, never charged
-            # (a fixed welcome is not an answer) and no provider call.
+            # A greeting, a question about the assistant or a request for sources: a fixed
+            # reply, never charged (it is not an answer) and no provider call.
             if request is None:
                 session.add(
                     AssistantMessage(conversation_id=conv.id, role="user", content=question)
@@ -346,7 +346,8 @@ def ask(
                     reserved_until=accounts.now(),
                 )
                 session.add(request)
-            request.state, request.charged, request.outcome = "completed", False, "profile"
+            request.state, request.charged = "completed", False
+            request.outcome = approved.outcome
             request.response_message_id, request.completed_at = message.id, accounts.now()
             session.flush()
             return {

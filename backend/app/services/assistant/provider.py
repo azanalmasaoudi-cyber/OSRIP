@@ -895,13 +895,22 @@ class FakeProvider:
             )
         latest = result["latest_by_series"][0]
         value = latest["value"]
-        if "invent" in question:
+        partly = "partly invent" in question
+        if "invent" in question and not partly:
             value = "123456789"  # deliberately unsupported, to exercise the evidence check
         text = (
             f"آخر قيمة منشورة هي {value} {latest['unit']} للفترة التي تبدأ في {latest['period_start']} [{latest['id']}]."
             if arabic
             else f"The latest published value is {value} {latest['unit']} for the period starting {latest['period_start']} [{latest['id']}]."
         )
+        if partly:
+            # One supported figure, one invented figure, and a sentence without figures: the
+            # evidence check keeps the first and the last.
+            text += (
+                f" وقدّر مصدر آخر القيمة بنحو 987654321 [{latest['id']}]. يجب قراءة هذا الرقم مع مراعاة اكتمال الفترة وتعريف المؤشر."
+                if arabic
+                else f" Another estimate put it at 987654321 [{latest['id']}]. The figure should be read with the period's completeness and the indicator's definition in mind."
+            )
         return self._final("answered", text, [latest["id"]])
 
     def _web(
