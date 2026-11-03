@@ -1,4 +1,4 @@
-import { CheckCircle2, Copy, Eye, EyeOff, KeyRound, LogIn, Mail, ShieldCheck, Trash2, UserPlus } from 'lucide-react';
+import { CheckCircle2, Copy, KeyRound, LogIn, Mail, ShieldCheck, Trash2, UserPlus } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type InputHTMLAttributes, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
@@ -36,7 +36,6 @@ import { ApiRequestError } from '@/api/client';
 import { adapterKind } from '@/api/config';
 import { GroupsPanel, RolesPanel, useRoleLabel } from '@/components/admin/AccessControl';
 import { PhoneVerification } from '@/components/auth/PhoneVerification';
-import { BrandMark } from '@/components/brand/BrandMark';
 import { useDocumentTitle } from '@/lib/useDocumentTitle';
 import { PageHeader } from '@/components/common/PageHeader';
 import { SettingsSection } from '@/components/settings/SettingsSection';
@@ -72,7 +71,7 @@ const ERROR_CODES = [
   'too_many_attempts', 'email_not_verified', 'no_password', 'own_account',
 ] as const;
 
-function ErrorText({ error }: { error: unknown }) {
+function ErrorText({ error, className = 'text-sm text-destructive' }: { error: unknown; className?: string }) {
   const { t } = useTranslation();
   if (!error) return null;
   let message = error instanceof Error ? error.message : 'Request failed.';
@@ -80,7 +79,7 @@ function ErrorText({ error }: { error: unknown }) {
     const details = (error.details ?? {}) as { minutes?: number };
     message = t(`auth.errors.${error.code as (typeof ERROR_CODES)[number]}`, { minutes: details.minutes ?? 10 });
   }
-  return <p role="alert" className="text-sm text-destructive">{message}</p>;
+  return <p role="alert" className={className}>{message}</p>;
 }
 
 function Notice({ tone = 'info', children }: { tone?: 'info' | 'success'; children: ReactNode }) {
@@ -165,9 +164,9 @@ function useTokenFromUrl(): string | null {
 /** Usernames: the rule the server applies (accounts.USERNAME_PATTERN), checked as people type. */
 const USERNAME_RULE = /^[A-Za-z][A-Za-z0-9_.-]{2,31}$/;
 
-/** Sign-in with a username and password. Accounts created with an e-mail address type that
- * address in the same field; phone, e-mail-link, Google and Microsoft sign-in are on
- * /sign-in/other, off the main screen. */
+/** Sign-in with a username and password (the owner's design: AuthLayout and welcome.css). Accounts
+ * created with an e-mail address type that address in the same field; phone, e-mail-link, Google
+ * and Microsoft sign-in are on /sign-in/other, off the main screen. Nothing else is required. */
 export function SignInPage() {
   const { t } = useTranslation();
   const login = useLogin();
@@ -179,76 +178,98 @@ export function SignInPage() {
   const [password, setPassword] = useState('');
   const [reveal, setReveal] = useState(false);
   const [remember, setRemember] = useState(false);
+  const usernameId = useId();
+  const usernameHintId = useId();
   const passwordId = useId();
   const rememberHintId = useId();
-  const rememberId = useId();
   useDocumentTitle(t('auth.title'));
 
-  if (adapterKind !== 'http') return <div className="w-full max-w-md"><RequiresApi title={t('auth.title')} /></div>;
+  if (adapterKind !== 'http') return <div className="ow-box"><RequiresApi title={t('auth.title')} /></div>;
 
   const unverified = login.error instanceof ApiRequestError && login.error.code === 'email_not_verified';
   const notice = params.get('notice');
   const error = params.get('error');
+  const sectors = ['nav.electricity', 'nav.water', 'nav.foodSecurity', 'nav.trade'] as const;
 
   return (
-    <div className="auth-card glass-card glass-strong enter-rise flex w-full max-w-md flex-col gap-5 rounded-2xl border p-6 shadow-raised sm:p-8" data-testid="sign-in-card">
-      <div className="flex flex-col items-center gap-3 text-center">
-        <BrandMark className="size-12" />
-        <h1 className="text-2xl font-semibold">{t('auth.welcome')}</h1>
-        <p className="text-base text-muted-foreground">{t('auth.intro')}</p>
+    <div className="ow-login" data-testid="sign-in-stage">
+      {/* The design's showcase: the name, a line about the platform and the four domains. */}
+      <div className="ow-showcase" data-testid="sign-in-showcase">
+        <div>
+          <p className="ow-showcase-name" lang="en" dir="ltr">OSRIP</p>
+          <p className="ow-showcase-caption">{t('welcome.showcaseCaption')}</p>
+          <p className="ow-showcase-small">{t('welcome.showcaseSmall')}</p>
+        </div>
+        <ul className="ow-badges">
+          {sectors.map((key) => <li key={key}>{t(key)}</li>)}
+        </ul>
       </div>
+      <div className="ow-box" data-testid="sign-in-card">
+        <span aria-hidden="true" className="ow-symbol">O</span>
+        <h1 className="ow-heading">{t('auth.welcome')}</h1>
+        <p className="ow-intro">{t('auth.intro')}</p>
         {/* Returns from Google or Microsoft (started on the other page) land here. */}
         {notice === 'link_required' ? (
-          <Notice>{t('account.linkRequired', { provider: PROVIDER_LABEL[(params.get('provider') as OidcProvider) ?? 'google'] ?? '' })}</Notice>
+          <p role="status" className="ow-notice">
+            {t('account.linkRequired', { provider: PROVIDER_LABEL[(params.get('provider') as OidcProvider) ?? 'google'] ?? '' })}
+          </p>
         ) : null}
-        {error ? <p role="alert" className="text-base text-destructive" data-testid="oidc-error">{t(`account.oidcError.${oidcErrorKey(error)}`)}</p> : null}
+        {error ? <p role="alert" className="ow-error" data-testid="oidc-error">{t(`account.oidcError.${oidcErrorKey(error)}`)}</p> : null}
         <form
           onSubmit={(e) => { e.preventDefault(); login.mutate({ email: username.trim(), password, remember }, { onSuccess: () => void navigate(to('/account')) }); }}
-          className="flex flex-col gap-4" noValidate data-testid="sign-in-form"
+          noValidate data-testid="sign-in-form"
         >
-          <Field label={t('account.username')} autoComplete="username" autoCapitalize="none" spellCheck={false} required
-            value={username} onChange={(e) => setUsername(e.target.value)} dir="ltr" hint={t('auth.usernameOlder')}
-            data-testid="sign-in-identifier" />
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor={passwordId} className="text-sm font-medium">{t('auth.password')}</label>
-            <span className="relative">
+          <div className="ow-field">
+            <label htmlFor={usernameId}>{t('account.username')}</label>
+            <input id={usernameId} className="ow-input" autoComplete="username" autoCapitalize="none" spellCheck={false} required
+              maxLength={320} value={username} onChange={(e) => setUsername(e.target.value)} dir="ltr" aria-describedby={usernameHintId}
+              data-testid="sign-in-identifier" />
+            <p id={usernameHintId} className="ow-hint">{t('auth.usernameOlder')}</p>
+          </div>
+          <div className="ow-field">
+            <label htmlFor={passwordId}>{t('auth.password')}</label>
+            <div className="ow-field-wrap">
               <input id={passwordId} type={reveal ? 'text' : 'password'} autoComplete="current-password" required value={password}
-                onChange={(e) => setPassword(e.target.value)} dir="ltr" data-testid="sign-in-password"
-                className="h-11 w-full rounded-lg border border-border-strong bg-card ps-3 pe-11 text-sm" />
+                onChange={(e) => setPassword(e.target.value)} dir="ltr" data-testid="sign-in-password" className="ow-input ow-input-reveal" />
               {/* Named by its text (not aria-label), so "Password" still finds only the field. */}
               <button type="button" onClick={() => setReveal((v) => !v)} aria-pressed={reveal} aria-controls={passwordId} data-testid="sign-in-reveal"
-                className="absolute inset-y-0 end-0 flex w-11 items-center justify-center rounded-e-lg text-muted-foreground hover:text-foreground">
-                {reveal ? <EyeOff aria-hidden="true" className="size-4" /> : <Eye aria-hidden="true" className="size-4" />}
+                className="ow-show">
+                <span aria-hidden="true">{reveal ? t('auth.hide') : t('auth.show')}</span>
                 <span className="sr-only">{reveal ? t('auth.hidePassword') : t('auth.showPassword')}</span>
               </button>
-            </span>
-          </div>
-          <div className="flex items-start gap-2.5 text-sm">
-            <input id={rememberId} type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} aria-describedby={rememberHintId}
-              className="mt-0.5 size-4 accent-primary" data-testid="sign-in-remember" />
-            <div>
-              <label htmlFor={rememberId} className="font-medium">{t('auth.remember')}</label>
-              <p id={rememberHintId} className="text-xs text-muted-foreground">{t('auth.rememberHint')}</p>
             </div>
           </div>
-          <ErrorText error={login.error} />
+          <div className="ow-row">
+            <label className="ow-check">
+              <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} aria-describedby={rememberHintId}
+                data-testid="sign-in-remember" />
+              {t('auth.remember')}
+            </label>
+            <Link to={to('/forgot-password')} className="ow-link">{t('account.forgot')}</Link>
+          </div>
+          <p id={rememberHintId} className="ow-hint" style={{ margin: '-10px 0 16px' }}>{t('auth.rememberHint')}</p>
+          <ErrorText error={login.error} className="ow-error" />
           {unverified ? (
-            <Button type="button" variant="outline" size="sm" className="w-fit" onClick={() => resend.mutate(username.trim())} disabled={resend.isPending}>
-              <Mail aria-hidden="true" />{t('account.resend')}
-            </Button>
+            <button type="button" className="ow-secondary" style={{ minHeight: 40, marginBottom: 12 }}
+              onClick={() => resend.mutate(username.trim())} disabled={resend.isPending}>
+              <Mail aria-hidden="true" className="size-4" />{t('account.resend')}
+            </button>
           ) : null}
-          {resend.isSuccess ? <Notice>{t('account.checkInbox')}</Notice> : null}
-          <Button type="submit" size="lg" className="w-full" disabled={login.isPending || !username.trim() || !password}>
-            <LogIn aria-hidden="true" />{login.isPending ? t('auth.submitting') : t('auth.submit')}
-          </Button>
+          {resend.isSuccess ? <p role="status" className="ow-notice">{t('account.checkInbox')}</p> : null}
+          <button type="submit" className="ow-primary ow-submit" disabled={login.isPending || !username.trim() || !password}>
+            {login.isPending ? t('auth.submitting') : t('auth.submit')}<span aria-hidden="true" className="ow-arrow">→</span>
+          </button>
         </form>
-        <div className="flex flex-wrap justify-between gap-2 text-sm">
-          <Link to={to('/forgot-password')} className="text-primary underline underline-offset-2">{t('account.forgot')}</Link>
-          <Link to={to('/register')} className="text-primary underline underline-offset-2">{t('account.createAccount')}</Link>
+        <p className="ow-fine" data-testid="sign-in-only-username">{t('auth.onlyUsername')}</p>
+        <div className="ow-links">
+          <Link to={to('/register')} className="ow-link">{t('account.createAccount')}</Link>
+          <Link to={to('/sign-in/other')} className="ow-link" data-testid="sign-in-other">{t('auth.otherWays')}</Link>
         </div>
-        <Link to={to('/sign-in/other')} className="border-t border-border pt-4 text-center text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline" data-testid="sign-in-other">
-          {t('auth.otherWays')}
-        </Link>
+        {/* The welcome again (AppShell shows it for { welcome: true }), not only once per session. */}
+        <button type="button" className="ow-back" onClick={() => void navigate(to('/'), { state: { welcome: true } })} data-testid="sign-in-back">
+          <span aria-hidden="true" className="ow-arrow">←</span> {t('auth.backToIntro')}
+        </button>
+      </div>
     </div>
   );
 }
