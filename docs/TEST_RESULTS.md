@@ -1,5 +1,20 @@
 # Test results
 
+## 2026-11-03 (later): welcome and sign-in design (branch `feature/welcome-login-design`)
+
+What changed (details in ENTRANCE.md):
+- The owner's welcome and sign-in design, rebuilt in React with the design's colours in both themes and both languages.
+- The welcome waits for the visitor (no timer) and keeps its lifecycle: once per session, home page only, Skip/Enter/Escape, shown again from the footer, Settings and "Back to introduction".
+- Sign-in requires only a username and a password, through the unchanged login API.
+
+| Check | Result |
+|---|---|
+| `npm run typecheck`, `npm run lint`, `npm run check:contrast`, `npm run build` | Pass; 0 failing contrast pairs. The design's colours on these screens were also measured, all at least 4.5:1 for text |
+| Mock-data browser tests (Chrome): rewritten `entrance.spec.ts` with `shell.spec.ts` | **33 passed, 3 skipped** (desktop and phone projects), before and after the last CSS fixes |
+| Full-stack browser tests (Chrome): new `welcome-sign-in.spec.ts` with `accounts.spec.ts` | **19 passed**. Real sign-in with a username and password, a wrong password refused, an ordinary account without administration, the administrator with it (and the API refusing that request to a visitor), registration with a username and password, recovery code, older e-mail accounts |
+| Full-stack after the CSS fixes: `welcome-sign-in.spec.ts` with `quality.spec.ts` | **18 passed** (no page scrolls sideways in either language, error states) |
+| By hand (screenshots from the tests) | Welcome: dark Arabic, light English, phone. Sign-in: dark Arabic, light English, phone. Compared with the design's own screenshots |
+
 ## 2026-11-03: premium sector images (branch `feature/premium-sector-images`)
 
 What changed: the four supplied sector images (1672 × 941, kept as supplied, served as WebP 836
