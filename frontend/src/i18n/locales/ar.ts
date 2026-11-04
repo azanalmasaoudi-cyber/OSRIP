@@ -1,10 +1,10 @@
-import type { TranslationShape } from './en';
+import type { ArabicTranslationShape } from './en';
 
 /**
  * Arabic UI strings. Drafted by the development team; must be reviewed by a
  * qualified Arabic speaker before any release or usability session.
  */
-export const ar: TranslationShape = {
+export const ar: ArabicTranslationShape = {
   app: {
     shortName: 'OSRIP',
     fullName: 'منصة عُمان الذكية لمعلومات الموارد',
@@ -172,8 +172,12 @@ export const ar: TranslationShape = {
   table: {
     search: 'بحث',
     exportCsv: 'تصدير CSV',
+    rowsShown_zero: 'لا صفوف',
     rowsShown_one: 'صف واحد',
-    rowsShown_other: '{{count}} صفوف',
+    rowsShown_two: 'صفّان',
+    rowsShown_few: '{{count}} صفوف',
+    rowsShown_many: '{{count}} صفًا',
+    rowsShown_other: '{{count}} صف',
     pages: 'الصفحات',
     previous: 'الصفحة السابقة',
     next: 'الصفحة التالية',
@@ -812,8 +816,12 @@ export const ar: TranslationShape = {
     editGroup: 'تعديل المجموعة',
     deleteGroup: 'إزالة المجموعة',
     groupName: 'اسم المجموعة',
+    members_zero: 'لا أعضاء',
     members_one: 'عضو واحد',
-    members_other: '{{count}} أعضاء',
+    members_two: 'عضوان',
+    members_few: '{{count}} أعضاء',
+    members_many: '{{count}} عضوًا',
+    members_other: '{{count}} عضو',
     addMember: 'إضافة عضو',
     chooseUser: 'اختر شخصاً…',
     removeMember: 'إزالة {{name}} من المجموعة',
@@ -1886,10 +1894,18 @@ export const ar: TranslationShape = {
       off: 'متوقف',
       autoPublish: 'يُنشر تلقائياً',
       approval: 'يحتاج إلى موافقة',
+      failures_zero: 'لا فحوص فاشلة متتالية',
       failures_one: 'فحص فاشل واحد متتالٍ',
-      failures_other: '{{count}} فحوص فاشلة متتالية',
+      failures_two: 'فحصان فاشلان متتاليان',
+      failures_few: '{{count}} فحوص فاشلة متتالية',
+      failures_many: '{{count}} فحصًا فاشلًا متتاليًا',
+      failures_other: '{{count}} فحص فاشل متتالٍ',
+      awaiting_zero: 'لا إصدارات بانتظار الموافقة',
       awaiting_one: 'إصدار واحد بانتظار الموافقة',
-      awaiting_other: '{{count}} إصدارات بانتظار الموافقة',
+      awaiting_two: 'إصداران بانتظار الموافقة',
+      awaiting_few: '{{count}} إصدارات بانتظار الموافقة',
+      awaiting_many: '{{count}} إصدارًا بانتظار الموافقة',
+      awaiting_other: '{{count}} إصدار بانتظار الموافقة',
       lastSuccess: 'آخر فحص ناجح',
       lastChecked: 'آخر فحص',
       nextCheck: 'الفحص التالي',

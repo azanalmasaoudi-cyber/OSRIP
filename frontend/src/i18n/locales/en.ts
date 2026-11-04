@@ -3202,3 +3202,18 @@ type Widen<T> = { -readonly [K in keyof T]: T[K] extends string ? string : Widen
 
 /** Every locale must provide exactly these keys. */
 export type TranslationShape = Widen<typeof en>;
+
+/** The base of a plural key ("rowsShown" for "rowsShown_other"). */
+type PluralBase<K> = K extends `${infer Base}_other` ? Base : never;
+
+/**
+ * Arabic has six plural forms (zero, one, two, few for 3–10, many for 11–99, other for 100 and
+ * more), English two. i18next looks for the form of the count, and without it shows the English
+ * text: so every plural key ("_one"/"_other" in English) must have all six in Arabic.
+ */
+type WithArabicPlurals<T> = {
+  -readonly [K in keyof T]: T[K] extends string ? string : WithArabicPlurals<T[K]>;
+} & { [K in keyof T as `${PluralBase<K>}_${'zero' | 'two' | 'few' | 'many'}`]: string };
+
+/** The Arabic strings: the same keys, with Arabic's extra plural forms. */
+export type ArabicTranslationShape = WithArabicPlurals<typeof en>;

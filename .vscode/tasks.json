@@ -95,6 +95,15 @@
             "group": "test"
         },
         {
+            "label": "OSRIP: frontend unit tests",
+            "detail": "Research brief templates, report exports, voices, and Arabic plural forms (every count resolves in Arabic, never in English).",
+            "type": "shell",
+            "command": "Get-ChildItem tests\\*.test.mjs | ForEach-Object { node --test $_.FullName; if (-not $?) { exit 1 } }",
+            "options": { "cwd": "${workspaceFolder}/frontend", "shell": { "executable": "powershell.exe", "args": ["-NoProfile", "-Command"] } },
+            "problemMatcher": [],
+            "group": "test"
+        },
+        {
             "label": "OSRIP: map tests (full stack, no map service contacted)",
             "detail": "The Oman map and geography browser tests in Chrome: boundary files against the registry, fallback, views, 3D, Arabic, and MapTiler with stand-in responses. Starts its own API and web servers (ports 8765, 5174, 5176); the dev database must be running.",
             "type": "shell",

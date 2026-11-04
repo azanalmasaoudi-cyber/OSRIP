@@ -1,5 +1,16 @@
 # Test results
 
+## 2026-11-04 (later): Arabic plural forms (branch `fix/arabic-plurals`)
+
+What changed: Arabic has six plural forms (none, one, two, 3–10, 11–99, 100 and more); the Arabic strings had only English's two. For a count without its Arabic form, i18next showed the English text: the audit log read "16 rows" in Arabic. The other plural labels (group members, failed sync checks, releases awaiting approval) had the same problem; all four are on administration pages. Every plural key now has all six Arabic forms. The Arabic type (`ArabicTranslationShape`) requires them for any plural key added later.
+
+| Check | Result |
+|---|---|
+| New `tests/arabic-plurals.test.mjs` | 4 passed: every plural key resolves in Arabic for 0, 1, 2, 3, 7, 10, 11, 25, 99, 100, 101, 102 and 1000, with the number written from 3 up, distinct forms for 2, 3, 11 and 100, and no English fallback. Against the previous Arabic file it fails ("table.rowsShown (0) fell back to English") |
+| Type check | Passes. With one Arabic form removed (`members_two`), `tsc` refuses the file ("Property 'members_two' is missing") |
+| `npm run lint`, the other frontend unit tests | Pass (12 unit tests in all) |
+| Full-stack browser test (Chrome), new in `interface.spec.ts` | Passes: the audit log's row count in Arabic, "لا صفوف" for an empty search, back to English. Against the previous Arabic file it fails with "· 16 rows". The neighbouring interface and datasets tests pass |
+
 ## 2026-11-04: Quick answer, Deep internet research and Data analysis (branch `feature/ai-research-intelligence`)
 
 What changed (modes in AI_PROVIDERS.md, "Answer modes"; status in MASTER_BRIEF_STATUS.md):
