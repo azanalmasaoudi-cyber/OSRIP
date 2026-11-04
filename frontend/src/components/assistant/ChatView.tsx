@@ -15,6 +15,7 @@ import {
 } from './Evidence';
 import { AnswerReportButton } from './AnswerReportButton';
 import { ChatDataCharts, ChatDataTables, ResearchSummary } from './ChatData';
+import { GeneratedImages, ResearchCharts, ResearchDiagrams, ResearchPlan, ResearchTables } from './ResearchVisuals';
 import { asksForChart, chartPoints, InlineChart } from './InlineChart';
 import { IntroPlayer } from './IntroPlayer';
 import { Markdown } from './Markdown';
@@ -27,7 +28,7 @@ import {
 import { VoicePanel } from './VoicePanel';
 import { VoiceVolume } from './VoiceVolume';
 import {
-  ASSISTANT_MODES, PROGRESS_STAGES, useAssistantStatus, useCancelRequest, useRequestProgress, useVoiceStatus,
+  DATA_MODES, INTERNET_MODES, isInternetMode, PROGRESS_STAGES, useAssistantStatus, useCancelRequest, useRequestProgress, useVoiceStatus,
   type Allowance, type AskSelection, type AssistantMessage, type ConversationSummary, type Evidence, type RequestMode,
 } from '@/api/assistant';
 import { ApiRequestError } from '@/api/client';
@@ -330,6 +331,12 @@ function ChatMessage({ message, question, chat, onAsk }: {
         <p className="text-sm text-muted-foreground" data-testid="omitted-claims">{t('assistant.omittedClaims', { count: message.structured.omitted_claims })}</p>
       ) : null}
       {message.structured.data_tables?.length ? <ChatDataTables blocks={message.structured.data_tables} messageId={message.id} /> : null}
+      {/* Deep research: tables, charts and diagrams from verified web figures; illustrations. */}
+      {message.structured.research_tables?.length ? <ResearchTables tables={message.structured.research_tables} messageId={message.id} /> : null}
+      {message.structured.research_charts?.length ? <ResearchCharts charts={message.structured.research_charts} messageId={message.id} /> : null}
+      {message.structured.diagrams?.length ? <ResearchDiagrams diagrams={message.structured.diagrams} messageId={message.id} /> : null}
+      {message.structured.images?.length ? <GeneratedImages images={message.structured.images} messageId={message.id} /> : null}
+      {message.structured.plan?.length ? <ResearchPlan plan={message.structured.plan} /> : null}
       {canChart ? (
         <Button type="button" variant="outline" size="sm" className="w-fit" aria-expanded={chartOpen} onClick={() => setChartOpen(!chartOpen)}
           data-testid={chartOpen ? 'chat-hide-chart' : 'chat-show-chart'}>
@@ -645,25 +652,39 @@ function SettingsSheet({ chat }: { chat: ChatModel }) {
 /** Optional: an answer mode instead of automatic, web search, a research brief, page tools. */
 function ToolsSheet({ chat, onClose, onBriefUsed }: { chat: ChatModel; onClose: () => void; onBriefUsed: () => void }) {
   const { t } = useTranslation();
-  const modes: RequestMode[] = ['auto', ...ASSISTANT_MODES];
+  // Automatic; then the internet modes; then the modes that work from OSRIP's data.
+  const groups: { key: 'auto' | 'web' | 'data'; modes: readonly RequestMode[] }[] = [
+    { key: 'auto', modes: ['auto'] },
+    { key: 'web', modes: INTERNET_MODES },
+    { key: 'data', modes: DATA_MODES },
+  ];
+  const chip = (mode: RequestMode) => (
+    <button key={mode} type="button" role="radio" aria-checked={chat.mode.value === mode} data-value={mode}
+      onClick={() => chat.mode.set(mode)}
+      className={cn('min-h-9 rounded-full border px-3 py-1 text-xs font-medium transition-colors motion-reduce:transition-none',
+        chat.mode.value === mode ? 'border-primary bg-primary text-primary-foreground' : 'border-border-strong/60 hover:bg-muted')}>
+      {mode === 'auto' ? t('chat.modeAuto') : t(`assistant.mode.${mode}`)}
+    </button>
+  );
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 py-4 text-sm" data-testid="chat-tools-sheet">
       <section className="flex flex-col gap-2">
         <h3 className="text-xs font-semibold text-muted-foreground">{t('chat.modeHeading')}</h3>
-        <div role="radiogroup" aria-label={t('assistant.mode.label')} data-testid="assistant-mode" className="flex flex-wrap gap-1.5">
-          {modes.map((mode) => (
-            <button key={mode} type="button" role="radio" aria-checked={chat.mode.value === mode} data-value={mode}
-              onClick={() => chat.mode.set(mode)}
-              className={cn('min-h-9 rounded-full border px-3 py-1 text-xs font-medium transition-colors motion-reduce:transition-none',
-                chat.mode.value === mode ? 'border-primary bg-primary text-primary-foreground' : 'border-border-strong/60 hover:bg-muted')}>
-              {mode === 'auto' ? t('chat.modeAuto') : t(`assistant.mode.${mode}`)}
-            </button>
+        <div role="radiogroup" aria-label={t('assistant.mode.label')} data-testid="assistant-mode" className="flex flex-col gap-2">
+          {groups.map((group) => (
+            <div key={group.key} role={group.key === 'auto' ? undefined : 'group'} data-group={group.key}
+              aria-label={group.key === 'auto' ? undefined : t(`assistant.mode.group.${group.key}`)} className="flex flex-wrap items-center gap-1.5">
+              {group.key === 'auto' ? null : (
+                <span aria-hidden="true" className="w-full text-[11px] font-medium text-muted-foreground">{t(`assistant.mode.group.${group.key}`)}</span>
+              )}
+              {group.modes.map(chip)}
+            </div>
           ))}
         </div>
         <p className="text-xs text-muted-foreground" data-testid="assistant-mode-hint">
           {chat.mode.value === 'auto' ? t('chat.modeAutoHint') : t(`assistant.modeHint.${chat.mode.value}`)}
         </p>
-        {chat.mode.value === 'research' && !chat.web.available ? (
+        {isInternetMode(chat.mode.value) && !chat.web.available ? (
           <p className="text-xs text-destructive" role="status" data-testid="research-unavailable">{t('assistant.researchNeedsSearch')}</p>
         ) : null}
       </section>

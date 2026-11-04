@@ -3,7 +3,9 @@ import { createContext, Fragment, useContext, useId, useRef, type KeyboardEvent,
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
-import { ASSISTANT_MODES, type AssistantMode, type StructuredReply as Structured } from '@/api/assistant';
+import {
+  ASSISTANT_MODES, DATA_MODES, INTERNET_MODES, type AssistantMode, type StructuredReply as Structured,
+} from '@/api/assistant';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/format';
 import { useAppLanguage } from '@/lib/useAppLanguage';
@@ -235,7 +237,8 @@ export function StructuredParts({ structured, messageId, known }: { structured: 
   );
 }
 
-/** The five answer modes as a wrapping radio group (arrow keys move the choice). */
+/** The answer modes as a wrapping radio group (arrow keys move the choice): the internet modes,
+ * then the modes that work from OSRIP's data. */
 export function ModeSelector({ value, onChange, compact = false }: {
   value: AssistantMode;
   onChange: (mode: AssistantMode) => void;
@@ -262,14 +265,22 @@ export function ModeSelector({ value, onChange, compact = false }: {
   return (
     <div className="flex flex-col gap-1">
       <div role="radiogroup" aria-label={t('assistant.mode.label')} aria-describedby={hintId} data-testid="assistant-mode"
-        className="flex flex-wrap gap-1">
-        {ASSISTANT_MODES.map((mode, i) => (
-          <button key={mode} ref={(el) => { refs.current[i] = el; }} type="button" role="radio" aria-checked={mode === value}
-            tabIndex={mode === value ? 0 : -1} data-value={mode} onClick={() => onChange(mode)} onKeyDown={onKeyDown}
-            className={cn('min-h-9 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
-              mode === value ? 'border-primary bg-primary text-primary-foreground' : 'border-border-strong/60 bg-card hover:bg-muted')}>
-            {t(`assistant.mode.${mode}`)}
-          </button>
+        className="flex flex-wrap items-center gap-1">
+        {([['web', INTERNET_MODES], ['data', DATA_MODES]] as const).map(([group, modes], g) => (
+          <div key={group} role="group" aria-label={t(`assistant.mode.group.${group}`)} data-group={group} className="contents">
+            {g > 0 ? <span aria-hidden="true" className="mx-0.5 h-5 w-px bg-border-strong/60" /> : null}
+            {modes.map((mode) => {
+              const i = ASSISTANT_MODES.indexOf(mode);
+              return (
+                <button key={mode} ref={(el) => { refs.current[i] = el; }} type="button" role="radio" aria-checked={mode === value}
+                  tabIndex={mode === value ? 0 : -1} data-value={mode} onClick={() => onChange(mode)} onKeyDown={onKeyDown}
+                  className={cn('min-h-9 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                    mode === value ? 'border-primary bg-primary text-primary-foreground' : 'border-border-strong/60 bg-card hover:bg-muted')}>
+                  {t(`assistant.mode.${mode}`)}
+                </button>
+              );
+            })}
+          </div>
         ))}
       </div>
       <p id={hintId} className={cn('text-xs text-muted-foreground', compact && 'sr-only')} data-testid="assistant-mode-hint">{t(`assistant.modeHint.${value}`)}</p>

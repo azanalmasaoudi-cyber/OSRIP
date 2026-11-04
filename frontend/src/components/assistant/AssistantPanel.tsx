@@ -34,10 +34,12 @@ import { PersonaPicker, usePersona } from './persona';
 import { PersonaImage } from './PersonaImage';
 import { ResearchBriefBuilder } from './ResearchBriefBuilder';
 import { ResearchProgress } from './ResearchProgress';
+import { GeneratedImages, ResearchCharts, ResearchDiagrams, ResearchPlan, ResearchTables } from './ResearchVisuals';
 import { CitedText, DataReportNotice, evidenceAnchor, ModeSelector, SourcesShown, StructuredParts, WebNotice } from './StructuredReply';
 import { VoiceVolume } from './VoiceVolume';
 import {
   ASSISTANT_MODES,
+  isInternetMode,
   speakMessage,
   transcribe,
   useAsk,
@@ -193,6 +195,11 @@ function MessageView({ message, onAsk, onRetry, onSpeak, canSave, onOpenStudy, a
       {message.structured.omitted_claims ? (
         <p className="text-xs text-muted-foreground" data-testid="omitted-claims">{t('assistant.omittedClaims', { count: message.structured.omitted_claims })}</p>
       ) : null}
+      {message.structured.research_tables?.length ? <ResearchTables tables={message.structured.research_tables} messageId={message.id} /> : null}
+      {message.structured.research_charts?.length ? <ResearchCharts charts={message.structured.research_charts} messageId={message.id} /> : null}
+      {message.structured.diagrams?.length ? <ResearchDiagrams diagrams={message.structured.diagrams} messageId={message.id} /> : null}
+      {message.structured.images?.length ? <GeneratedImages images={message.structured.images} messageId={message.id} /> : null}
+      {message.structured.plan?.length ? <ResearchPlan plan={message.structured.plan} /> : null}
       {message.structured.data_report ? <DataReportNotice report={message.structured.data_report} /> : null}
       {message.structured.web_notice ? <WebNotice notice={message.structured.web_notice} /> : null}
       {message.status === 'unavailable' || message.status === 'data_report' ? (
@@ -650,7 +657,8 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
   const chatPage = variant === 'chat';
   const [chatMode, setChatMode] = useState<RequestMode>('auto');
   const effectiveMode: RequestMode = chatPage ? chatMode : answerMode;
-  const webResearch = webAvailable && (webOn || effectiveMode === 'research');
+  // The internet modes always search the web; the data modes only with the switch on.
+  const webResearch = webAvailable && (webOn || isInternetMode(effectiveMode));
   // Research mode only: a second search route as a cross-check, when the person asks for one
   // (never on by default; it uses more of the limits and is not independent evidence).
   const crossCheckAvailable = Boolean(status.data?.cross_check_available) && effectiveMode === 'research';
@@ -871,11 +879,11 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
       </div>
       {/* Talk: the answer modes and the toolbar share one wrapped row (elsewhere `contents`). */}
       <div className={talk ? 'flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-3 py-2' : 'contents'} data-testid="assistant-controls">
-      {/* Answer mode: the same assistant (and the same avatar) for all five modes. */}
+      {/* Answer mode: the same assistant (and the same avatar) for every mode. */}
       {canAsk ? (
         <div className={talk ? 'min-w-0' : 'border-b border-border px-4 py-2.5'}>
           <ModeSelector value={answerMode} onChange={setAnswerMode} compact={talk} />
-          {answerMode === 'research' && status.data && !webAvailable ? (
+          {isInternetMode(answerMode) && status.data && !webAvailable ? (
             <p className="mt-1 text-xs text-destructive" role="status" data-testid="research-unavailable">{t('assistant.researchNeedsSearch')}</p>
           ) : null}
           {crossCheckAvailable ? (
