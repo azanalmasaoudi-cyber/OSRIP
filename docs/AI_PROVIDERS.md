@@ -21,6 +21,7 @@ This arrived with migration `0018_provider_calls`. The vendor documentation was 
 | OpenAI | Responses API `POST https://api.openai.com/v1/responses`, through the official `openai` Python SDK (`app/services/openai_api.py`) | Answering (function tools; streamed and closed when the person stops the question; strict structured outputs); web search (`web_search` tool, consulted sources included). See [AI_RESEARCH_PLATFORM.md](AI_RESEARCH_PLATFORM.md) | `OSRIP_OPENAI_API_KEY`, `OSRIP_OPENAI_MODEL`, `OSRIP_OPENAI_SEARCH_MODEL` |
 | Google Gemini | Interactions API `POST https://generativelanguage.googleapis.com/v1beta/interactions` | Answering (function tools); Grounding with Google Search (`google_search` tool) | `OSRIP_GEMINI_API_KEY`, `OSRIP_GEMINI_MODEL`, `OSRIP_GEMINI_SEARCH_MODEL` |
 | Brave Search | Search API `GET https://api.search.brave.com/res/v1/web/search` (existing adapter) | Web search | `OSRIP_RESEARCH_API_KEY` |
+| OpenAI Images (optional, **usage-billed**, off by default) | Images API `POST https://api.openai.com/v1/images/generations`, official SDK | Illustrations a signed-in person asks for (never data) | `OSRIP_IMAGES_PROVIDER=openai`, `OSRIP_IMAGES_MODEL`, `OSRIP_IMAGES_DETAILED_MODEL` |
 | DeepSeek (optional, **usage-billed**) | Chat Completions API `POST https://api.deepseek.com/chat/completions` (OpenAI-compatible) | Answering (function tools; thinking switched off so a tool call can be required) | `OSRIP_DEEPSEEK_API_KEY`, `OSRIP_DEEPSEEK_MODEL`, `OSRIP_DEEPSEEK_BILLING_ACKNOWLEDGED=true` |
 
 - **No consumer website is automated.** OSRIP never drives chatgpt.com, gemini.google.com, claude.ai or any other chat website, in a browser or otherwise.
@@ -31,6 +32,90 @@ This arrived with migration `0018_provider_calls`. The vendor documentation was 
 - **Keys stay on the server.** They live in `backend/.env` (development) or `deploy/.env` (hosting secrets).
   - They are never sent to a browser, logged or stored in the database.
   - The readiness view and `/assistant/status` report setting *names* only.
+
+## Answer modes, models per mode and illustrations (2026-11-04)
+
+The assistant has three kinds of answer. Each has its own tools, budgets and model, and the
+backend enforces them: the tools a mode is not given are refused, even if a model asks for them
+(`tools.tool_specs`, `tools.run_tool`).
+
+| Mode (code) | Works from | Tools | Budget | Model setting |
+|---|---|---|---|---|
+| **Quick answer** (`quick`) | The live web | Web search, page reading, calculations, research tables and charts, diagrams | 4 model rounds, 2 searches, 1 page (`OSRIP_ASSISTANT_QUICK_MAX_ROUNDS`, `OSRIP_RESEARCH_MAX_SEARCHES_QUICK`, `OSRIP_RESEARCH_MAX_PAGES_QUICK`) | `OSRIP_ASSISTANT_QUICK_MODEL` |
+| **Deep internet research** (`research`) | The live web | The Quick tools plus the research plan (`plan_research`) | The research budgets (`OSRIP_RESEARCH_MAX_ROUNDS`, `OSRIP_RESEARCH_MAX_SEARCHES_RESEARCH`, `OSRIP_RESEARCH_MAX_PAGES_RESEARCH`) | `OSRIP_ASSISTANT_DEEP_MODEL`, `OSRIP_ASSISTANT_DEEP_REASONING_EFFORT` |
+| **Data analysis and visualisation** (`analyze`; also `ask`, `compare`, `scenario`) | OSRIP's approved datasets | OSRIP's data tools, tables and charts from published rows, diagrams; web search only if the person switches it on | The standard budgets | The provider's own model |
+
+- **No internal data in the internet modes.** Quick and Deep research never receive OSRIP's
+  dataset tools, unless the question asks for the platform's own data ("compare with OSRIP data",
+  "بيانات المنصة"; `routing.asks_for_project_data`).
+- **No silent fallback.** Without a web search service, an internet mode says so and answers
+  nothing from OSRIP's records. The same applies when the answering service fails. Neither case
+  is charged.
+- **Calculations are the backend's.** `calculate` works on figures that the cited web evidence
+  actually contains: percentage change, CAGR, share, difference, ratio, sum, average and
+  Herfindahl-Hirschman concentration (`web_analysis.py`). A value the source does not give is
+  refused.
+- **Tables and charts are checked.** `research_table` keeps only the rows whose figures are in
+  the sources they cite. `research_chart` draws only those rows, and a diagram may carry no
+  figure the evidence does not hold.
+- **Unset per-mode settings change nothing.** Every mode then uses the configured provider's own
+  model.
+
+### Recommended OpenAI setup (prepared, not active: needs the owner's key and billing approval)
+
+Checked on 2026-11-03 against OpenAI's model pages (<https://developers.openai.com/api/docs/models>,
+each model's page gives its prices) and Brave's API page (<https://brave.com/search/api/>):
+
+| Use | Model or service | Price |
+|---|---|---|
+| Deep internet research, data analysis | `gpt-6.1-sol` (Responses API, function tools, reasoning effort low to max) | $2 input / $10 output per 1M tokens |
+| The hardest reports (optional) | `gpt-6-astra` | $10 / $50 per 1M tokens |
+| Quick answers | `gpt-6-luna` | $0.10 / $0.50 per 1M tokens |
+| Web search | OpenAI Responses `web_search` tool, or the Brave Search API | Brave: $5 per 1,000 requests, with $5 of monthly credit; a card is required |
+| Illustrations | `gpt-image-2.5-flare` (fast); `gpt-image-2.5-sunburst` (detailed) | $30 per 1M image output tokens |
+
+```
+OSRIP_ASSISTANT_PROVIDER=openai
+OSRIP_OPENAI_MODEL=gpt-6.1-sol
+OSRIP_ASSISTANT_QUICK_MODEL=gpt-6-luna
+OSRIP_ASSISTANT_DEEP_MODEL=gpt-6.1-sol
+OSRIP_ASSISTANT_DEEP_REASONING_EFFORT=high
+OSRIP_RESEARCH_PROVIDER=brave          # or openai
+OSRIP_ASSISTANT_FALLBACK_PROVIDER=gemini   # optional, after the primary fails
+OSRIP_IMAGES_PROVIDER=openai           # optional; off when unset
+```
+
+The keys are set by the owner in a terminal, never in chat or in the repository:
+
+```
+.venv\Scripts\python.exe scripts\set_provider_keys.py
+```
+
+It writes only the key lines in `backend/.env` (git-ignored) and tests each key with one free
+request. Then restart the API and press **Test** in Settings › AI and search providers.
+
+**On this machine:**
+- DeepSeek (`deepseek-flash`) stays the configured provider for answers and web research. The
+  per-mode settings apply to it too, for example `OSRIP_ASSISTANT_DEEP_MODEL=deepseek-v4-pro`.
+  That is a usage-billed model, so set it only deliberately.
+- OpenAI, Brave and Gemini are **not configured**. No paid call was made for this work.
+
+### Illustrations (`OSRIP_IMAGES_PROVIDER`, migration 0029)
+
+- **Off by default.** With `openai`, the Images API (`images.generate`, official SDK) makes
+  original illustrations, infographic-style visuals and concept images, and only when a signed-in
+  person asks for a picture. Guests never get one.
+- **Never statistics.** Each prompt asks for no numbers, charts or readable text. Each picture is
+  labelled "AI illustration — not data". Statistical charts come only from validated figures.
+- **Cost bounds:**
+  - two pictures per answer;
+  - `OSRIP_IMAGES_DAILY_LIMIT_PER_USER` per person per day (default 10);
+  - the providers' shared daily limit and budget;
+  - each call is metered as capability `image`.
+- **Storage.** Pictures are stored for their owner only (`generated_image`) and served by
+  `GET /api/v1/assistant/images/{id}`.
+- **Stand-in.** `fake` draws one for tests outside production. Production refuses to start with
+  it.
 
 ## Cost: the recommended free-tier setup, and paid providers
 

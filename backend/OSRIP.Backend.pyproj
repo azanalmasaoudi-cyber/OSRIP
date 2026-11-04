@@ -162,6 +162,7 @@
     <Compile Include="app\services\assistant\sources.py" />
     <Compile Include="app\services\assistant\study_events.py" />
     <Compile Include="app\services\assistant\tools.py" />
+    <Compile Include="app\services\assistant\web_analysis.py" />
     <Compile Include="app\services\audit.py" />
     <Compile Include="app\services\comparisons.py" />
     <Compile Include="app\services\conditions.py" />
@@ -185,6 +186,7 @@
     <Compile Include="app\services\geography.py" />
     <Compile Include="app\services\groups.py" />
     <Compile Include="app\services\identity.py" />
+    <Compile Include="app\services\images.py" />
     <Compile Include="app\services\imports\__init__.py" />
     <Compile Include="app\services\imports\csv_file.py" />
     <Compile Include="app\services\imports\validation.py" />
@@ -295,6 +297,8 @@
     <Compile Include="tests\test_research.py" />
     <Compile Include="tests\test_research_assistant_units.py" />
     <Compile Include="tests\test_research_jobs_integration.py" />
+    <Compile Include="tests\test_research_modes.py" />
+    <Compile Include="tests\test_research_modes_integration.py" />
     <Compile Include="tests\test_research_parallel.py" />
     <Compile Include="tests\test_research_progress_integration.py" />
     <Compile Include="tests\test_research_workflow.py" />
@@ -326,6 +330,7 @@
     <Compile Include="scripts\dev_cli.py" />
     <Compile Include="scripts\devdb.py" />
     <Compile Include="scripts\live_assistant_check.py" />
+    <Compile Include="scripts\mode_timing.py" />
     <Compile Include="scripts\ncsi_import.py" />
     <Compile Include="scripts\perf_workload.py" />
     <Compile Include="scripts\research_timing.py" />
@@ -366,6 +371,7 @@
     <Compile Include="alembic\versions\0026_groups_custom_roles.py" />
     <Compile Include="alembic\versions\0027_session_remember.py" />
     <Compile Include="alembic\versions\0028_sources_on_request.py" />
+    <Compile Include="alembic\versions\0029_generated_images.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="alembic\sql\0001_core_down.sql" />
@@ -424,6 +430,8 @@
     <Content Include="alembic\sql\0027_session_remember_up.sql" />
     <Content Include="alembic\sql\0028_sources_on_request_down.sql" />
     <Content Include="alembic\sql\0028_sources_on_request_up.sql" />
+    <Content Include="alembic\sql\0029_generated_images_down.sql" />
+    <Content Include="alembic\sql\0029_generated_images_up.sql" />
     <Content Include="app\knowledge\assistant_profile_v1.json" />
     <Content Include="app\knowledge\assistant_profile_v2.json" />
     <Content Include="app\knowledge\assistant_profile_v3.json" />
