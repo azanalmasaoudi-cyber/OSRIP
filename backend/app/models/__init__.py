@@ -29,6 +29,7 @@ from app.models.assistant import (
     AssistantProfileVersion,
     AssistantRequest,
     AssistantUsage,
+    GeneratedImage,
     GuestSession,
     ProviderCall,
     StudyEvent,
@@ -81,6 +82,7 @@ from app.models.research import (
 from app.models.sync import SourceFeed, SourceRelease, SourceSyncRun
 
 __all__ = [
+    "GeneratedImage",
     "AnalysisDataset",
     "AnalysisReport",
     "SourceFeed",

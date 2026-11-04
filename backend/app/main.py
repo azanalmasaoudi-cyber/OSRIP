@@ -71,6 +71,8 @@ def _check_production_settings() -> None:
             problems.append(f"{name}={value} is for automated tests only")
     if settings.speech_provider == "fake":
         problems.append("OSRIP_SPEECH_PROVIDER=fake is for automated tests only")
+    if settings.images_provider == "fake":
+        problems.append("OSRIP_IMAGES_PROVIDER=fake is for automated tests only")
     if any(o.strip() in ("*", "") or not o.startswith("https://") for o in settings.cors_origins):
         problems.append("OSRIP_CORS_ORIGINS must list explicit https:// origins only")
     if settings.sms_provider == "test":

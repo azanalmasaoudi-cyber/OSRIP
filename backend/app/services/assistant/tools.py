@@ -166,6 +166,14 @@ class Ledger:
     tables: list[dict[str, Any]] = field(default_factory=list)
     charts: list[dict[str, Any]] = field(default_factory=list)
     previous_tables: list[dict[str, Any]] = field(default_factory=list)
+    # Built from web figures in this answer (web_analysis.py), and generated illustrations
+    # (images.py: ids of stored images, never statistics).
+    research_tables: list[dict[str, Any]] = field(default_factory=list)
+    research_charts: list[dict[str, Any]] = field(default_factory=list)
+    diagrams: list[dict[str, Any]] = field(default_factory=list)
+    images: list[dict[str, Any]] = field(default_factory=list)
+    # Who may have an illustration made (a signed-in user's id; None: nobody) and the mode.
+    image_owner: Any = field(default=None, repr=False)
     # Web steps fetched at the same time (research/parallel.py): pages read for this answer
     # by address (read once, reused), prefetched pages and searches not yet taken by their
     # tool, queries whose rate-limit check was already counted, and for a question about the
@@ -1106,6 +1114,67 @@ class Tools:
             "evidence ids. Missing values stay missing.",
         }
 
+    # -------------------------------------------------------------- web figures (web_analysis.py)
+    def plan_research(self, questions: list[Any]) -> dict[str, Any]:
+        from app.services.assistant import web_analysis
+
+        return web_analysis.plan(self.ledger, list(questions or []))
+
+    def calculate(
+        self,
+        kind: str,
+        inputs: list[Any],
+        label: str | None = None,
+        unit: str | None = None,
+        years: int | None = None,
+    ) -> dict[str, Any]:
+        from app.services.assistant import web_analysis
+
+        return web_analysis.calculate(
+            self.ledger, str(kind), list(inputs or []), label=label, unit=unit, years=years
+        )
+
+    def research_table(
+        self, title: str, columns: list[Any], rows: list[Any], note: str | None = None
+    ) -> dict[str, Any]:
+        from app.services.assistant import web_analysis
+
+        return web_analysis.research_table(
+            self.ledger, str(title), list(columns or []), list(rows or []), note
+        )
+
+    def research_chart(
+        self,
+        table_id: str,
+        label_column: int = 0,
+        value_columns: list[int] | None = None,
+        kind: str = "bar",
+        title: str | None = None,
+        unit: str | None = None,
+    ) -> dict[str, Any]:
+        from app.services.assistant import web_analysis
+
+        return web_analysis.research_chart(
+            self.ledger, str(table_id), label_column=int(label_column), value_columns=value_columns,
+            kind=str(kind), title=title, unit=unit,
+        )  # fmt: skip
+
+    def diagram(
+        self, kind: str, title: str, nodes: list[Any], edges: list[Any] | None = None
+    ) -> dict[str, Any]:
+        from app.services.assistant import web_analysis
+
+        return web_analysis.diagram(
+            self.ledger, str(kind), str(title), list(nodes or []), list(edges or [])
+        )
+
+    def generate_image(
+        self, prompt: str, purpose: str = "illustration", quality: str = "fast"
+    ) -> dict[str, Any]:
+        from app.services import images
+
+        return images.generate_for_answer(self.ledger, str(prompt), str(purpose), str(quality))
+
     def make_chart(self, table: str = "latest", title: str | None = None) -> dict[str, Any]:
         """A chart over the rows of a table built in this answer, or of the previous answer's
         table (rebuilt from published data), only when the person asked for a chart."""
@@ -1823,8 +1892,146 @@ STRUCTURED_PROPERTIES: dict[str, dict[str, Any]] = {
     },
 }
 
-MODES = ("ask", "analyze", "research", "compare", "scenario")
+WEB_ANALYSIS_TOOL_SPECS: list[dict[str, Any]] = [
+    {
+        "name": "plan_research",
+        "description": "Deep research only, first: write the research questions this answer must settle "
+        "(1-8, specific: what, where, which period). Then search for several of them at once.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"questions": {"type": "array", "items": {"type": "string"}, "maxItems": 8}},
+            "required": ["questions"],
+        },
+    },
+    {
+        "name": "calculate",
+        "description": "Calculate with figures from cited web evidence; never calculate yourself. Each input "
+        "names its evidence id and the value exactly as that source writes it. Kinds: percent_change and "
+        "difference [old, new], cagr [first, last] with years, share [part, total], ratio [a, b], sum, average, "
+        "hhi (market or partner concentration from the values or shares). The result is new evidence to cite.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "kind": {"type": "string", "enum": ["percent_change", "cagr", "share", "difference", "ratio", "sum", "average", "hhi"]},
+                "inputs": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                        "type": "object",
+                        "properties": {"evidence_id": {"type": "string"}, "value": {"type": "string"}},
+                        "required": ["evidence_id", "value"],
+                    },
+                },
+                "years": {"type": "integer", "description": "For cagr: years between the two values"},
+                "label": {"type": "string"},
+                "unit": {"type": "string"},
+            },
+            "required": ["kind", "inputs"],
+        },
+    },
+    {
+        "name": "research_table",
+        "description": "A table of figures found on the web (2-6 columns, up to 40 rows). Each row cites the "
+        "evidence its figures come from; rows whose figures are not in their citations are left out. Write "
+        "column names and labels in the reply's language; keep units in the column names.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string"},
+                "columns": {"type": "array", "items": {"type": "string"}, "minItems": 2, "maxItems": 6},
+                "rows": {
+                    "type": "array",
+                    "maxItems": 40,
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "cells": {"type": "array", "items": {"type": "string"}},
+                            "citations": {"type": "array", "items": {"type": "string"}},
+                        },
+                        "required": ["cells", "citations"],
+                    },
+                },
+                "note": {"type": "string"},
+            },
+            "required": ["title", "columns", "rows"],
+        },
+    },
+    {
+        "name": "research_chart",
+        "description": "A bar chart (categories) or line chart (years) of a research_table's validated rows: "
+        "one label column and one to three value columns with the same unit.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "table_id": {"type": "string"},
+                "label_column": {"type": "integer", "default": 0},
+                "value_columns": {"type": "array", "items": {"type": "integer"}, "maxItems": 3},
+                "kind": {"type": "string", "enum": ["bar", "line"]},
+                "title": {"type": "string"},
+                "unit": {"type": "string"},
+            },
+            "required": ["table_id"],
+        },
+    },
+    {
+        "name": "diagram",
+        "description": "A diagram explaining the analysis (not figures): flowchart (a process or supply "
+        "chain), cycle, hierarchy or mindmap (drivers, options). Up to 14 nodes with short labels in the "
+        "reply's language and up to 20 links. Figures on it must be in this answer's evidence.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "kind": {"type": "string", "enum": ["flowchart", "cycle", "hierarchy", "mindmap"]},
+                "title": {"type": "string"},
+                "nodes": {
+                    "type": "array",
+                    "maxItems": 14,
+                    "items": {
+                        "type": "object",
+                        "properties": {"id": {"type": "string"}, "label": {"type": "string"}, "detail": {"type": "string"}},
+                        "required": ["id", "label"],
+                    },
+                },
+                "edges": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                        "type": "object",
+                        "properties": {"from": {"type": "string"}, "to": {"type": "string"}, "label": {"type": "string"}},
+                        "required": ["from", "to"],
+                    },
+                },
+            },
+            "required": ["kind", "title", "nodes"],
+        },
+    },
+]  # fmt: skip
+
+IMAGE_TOOL_SPEC: dict[str, Any] = {
+    "name": "generate_image",
+    "description": "Because the person asked for a picture: an original illustration, infographic-style "
+    "visual or concept image. It is labelled as an AI illustration, never as data: put no statistics, "
+    "figures or charts in it (use research_table and research_chart for those). Describe the subject, style "
+    "and composition in English.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "prompt": {"type": "string"},
+            "purpose": {
+                "type": "string",
+                "enum": ["illustration", "infographic", "concept", "diagram_art"],
+            },
+            "quality": {"type": "string", "enum": ["fast", "detailed"]},
+        },
+        "required": ["prompt"],
+    },
+}
+
+# "quick": a fast internet answer; "research": deep internet research. The other modes work from
+# OSRIP's published data (routing.INTERNET_MODES, routing.DATA_MODES).
+MODES = ("ask", "analyze", "research", "compare", "scenario", "quick")
 MODE_PARTS = {
+    "quick": ("conflicts",),
     "ask": ("conflicts",),
     "analyze": tuple(STRUCTURED_PROPERTIES),
     "research": tuple(STRUCTURED_PROPERTIES),
@@ -1842,25 +2049,67 @@ def _final_answer_spec(mode: str) -> dict[str, Any]:
 
 
 def tool_specs(
-    web: bool, mode: str = "ask", *, can_submit: bool = False, chart: bool = False
+    web: bool,
+    mode: str = "ask",
+    *,
+    can_submit: bool = False,
+    chart: bool = False,
+    project_data: bool = False,
+    images: bool = False,
 ) -> list[dict[str, Any]]:
-    """Tools per mode. The scenario tool exists only in Scenario mode, which keeps
-    hypothetical scenarios apart from forecasts and observations. Submitting figures needs
-    web research and a person allowed to submit; the chart tool exists only when the
-    question asks for a chart."""
-    core = [
-        t
-        for t in TOOL_SPECS
-        if t["name"] != "final_answer"
-        and (t["name"] != "scenario_projection" or mode == "scenario")
-    ]
-    extra = [TABLE_TOOL_SPEC, *([CHART_TOOL_SPEC] if chart else [])]
-    tools = [*core, *ANALYSIS_TOOL_SPECS, *extra, _final_answer_spec(mode)]
+    """Tools per mode.
+
+    * Quick answer and Deep internet research work from the live web: web search and page
+      reading, calculations, tables, charts and diagrams of web figures (the research plan in
+      Deep research only), and never OSRIP's datasets, unless the question asks for the
+      platform's own data (``project_data``).
+    * The data modes work from OSRIP's published data. The scenario tool exists only in
+      Scenario mode, which keeps hypothetical scenarios apart from forecasts and observations;
+      the chart tool only when the question asks for a chart.
+    * Submitting figures needs web research and a person allowed to submit; an illustration
+      needs the image service and a request for one (``images``)."""
+    from app.services.assistant.routing import INTERNET_MODES
+
     research = RESEARCH_TOOL_SPECS if can_submit else RESEARCH_TOOL_SPECS[1:]
-    return [*WEB_TOOL_SPECS, *research, *tools] if web else [*RESEARCH_TOOL_SPECS[1:], *tools]
+    image = [IMAGE_TOOL_SPEC] if images else []
+    diagram = [t for t in WEB_ANALYSIS_TOOL_SPECS if t["name"] == "diagram"]
+    web_analysis = [t for t in WEB_ANALYSIS_TOOL_SPECS if t["name"] != "plan_research"]
+
+    def internal(scenario: bool) -> list[dict[str, Any]]:
+        core = [
+            t
+            for t in TOOL_SPECS
+            if t["name"] != "final_answer" and (t["name"] != "scenario_projection" or scenario)
+        ]
+        return [*core, *ANALYSIS_TOOL_SPECS, TABLE_TOOL_SPEC, *([CHART_TOOL_SPEC] if chart else [])]
+
+    if mode in INTERNET_MODES:
+        analysis = WEB_ANALYSIS_TOOL_SPECS if mode == "research" else web_analysis
+        own = internal(False) if project_data else []
+        return [*WEB_TOOL_SPECS, *research, *analysis, *own, *image, _final_answer_spec(mode)]
+    data = [*internal(mode == "scenario"), *diagram, *image, _final_answer_spec(mode)]
+    if web:
+        extra = [t for t in web_analysis if t["name"] != "diagram"]
+        return [*WEB_TOOL_SPECS, *research, *extra, *data]
+    return [*RESEARCH_TOOL_SPECS[1:], *data]
 
 
-def run_tool(tools: Tools, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+def allowed_tools(specs: list[dict[str, Any]]) -> frozenset[str]:
+    """The names a mode's model may call; run_tool refuses any other."""
+    return frozenset(str(t["name"]) for t in specs)
+
+
+def run_tool(
+    tools: Tools, name: str, arguments: dict[str, Any], allowed: frozenset[str] | None = None
+) -> dict[str, Any]:
+    """Runs one tool the model asked for. With ``allowed`` (the mode's tools), any other tool
+    is refused without running: Internet research cannot reach OSRIP's datasets even if the
+    model asks for them."""
+    if allowed is not None and name not in allowed:
+        return {
+            "error": "not_allowed",
+            "message": f"{name} is not available in this mode. Use the tools offered.",
+        }
     handler = {
         "web_search": tools.web_search,
         "read_web_page": tools.read_web_page,
@@ -1882,6 +2131,12 @@ def run_tool(tools: Tools, name: str, arguments: dict[str, Any]) -> dict[str, An
         "research_status": tools.research_status,
         "make_table": tools.make_table,
         "make_chart": tools.make_chart,
+        "plan_research": tools.plan_research,
+        "calculate": tools.calculate,
+        "research_table": tools.research_table,
+        "research_chart": tools.research_chart,
+        "diagram": tools.diagram,
+        "generate_image": tools.generate_image,
     }.get(name)
     if handler is None:
         return {"error": "unknown_tool"}

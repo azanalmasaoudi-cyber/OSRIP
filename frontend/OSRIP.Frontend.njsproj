@@ -107,6 +107,7 @@
     <TypeScriptCompile Include="e2e-api\phone.spec.ts" />
     <TypeScriptCompile Include="e2e-api\quality.spec.ts" />
     <TypeScriptCompile Include="e2e-api\research-brief.spec.ts" />
+    <TypeScriptCompile Include="e2e-api\research-modes.spec.ts" />
     <TypeScriptCompile Include="e2e-api\research-workflow.spec.ts" />
     <TypeScriptCompile Include="e2e-api\research.spec.ts" />
     <TypeScriptCompile Include="e2e-api\sector-voice.spec.ts" />
@@ -185,6 +186,7 @@
     <TypeScriptCompile Include="src\components\assistant\PersonaImage.tsx" />
     <TypeScriptCompile Include="src\components\assistant\ResearchBriefBuilder.tsx" />
     <TypeScriptCompile Include="src\components\assistant\ResearchProgress.tsx" />
+    <TypeScriptCompile Include="src\components\assistant\ResearchVisuals.tsx" />
     <TypeScriptCompile Include="src\components\assistant\StructuredReply.tsx" />
     <TypeScriptCompile Include="src\components\assistant\VoicePanel.tsx" />
     <TypeScriptCompile Include="src\components\assistant\VoiceVolume.tsx" />

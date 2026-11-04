@@ -835,6 +835,10 @@ class FakeProvider:
         # Scripted research-assistant behaviours (each exercises one backend safeguard).
         if ("conflict" in question or "تعارض" in question) and "web_search" in names:
             return self._conflict(question, tool_results, arabic)
+        if ("report" in question or "تقرير" in question) and "plan_research" in names:
+            return self._deep_report(tool_results, arabic, "generate_image" in names)
+        if "Mode: Quick answer" in system and "web_search" in names:
+            return self._web(question, tool_results, arabic)
         if ("study" in question or "دراسة" in question) and "run_study" in names:
             return self._study(tool_results, arabic)
         chosen = self.SELECTION.search(system)
@@ -966,10 +970,12 @@ class FakeProvider:
         return final
 
     @staticmethod
-    def _call(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    def _call(name: str, arguments: dict[str, Any], call_id: str | None = None) -> dict[str, Any]:
         return {
             "stop_reason": "tool_use",
-            "content": [{"type": "tool_use", "id": f"t-{name}", "name": name, "input": arguments}],
+            "content": [
+                {"type": "tool_use", "id": call_id or f"t-{name}", "name": name, "input": arguments}
+            ],
         }
 
     def _data_first(
@@ -1316,6 +1322,142 @@ class FakeProvider:
         ]
         return final
 
+    def _deep_report(
+        self, tool_results: list[dict[str, Any]], arabic: bool, illustrate: bool
+    ) -> dict[str, Any]:
+        """Deep internet research, step by step: plan; two searches in one step (fetched in
+        parallel); a calculation on two cited figures; a table of them; a chart of the table; a
+        diagram; an illustration if one was asked for; then the structured report."""
+        done = {str(b.get("tool_use_id")) for b in tool_results}
+        results = {str(b.get("tool_use_id")): json.loads(b["content"]) for b in tool_results}
+        if "t-plan" not in done:
+            questions = (
+                ["كم بلغ توليد الكهرباء في عُمان عام 2023؟", "هل تختلف المصادر في الرقم؟"]
+                if arabic
+                else ["How much electricity did Oman generate in 2023?", "Do the sources agree?"]
+            )
+            return self._call("plan_research", {"questions": questions}, "t-plan")
+        if "t-search-en" not in done:
+            search = {"domain": "electricity"}
+            return {
+                "stop_reason": "tool_use",
+                "content": [
+                    {"type": "tool_use", "id": "t-search-en", "name": "web_search",
+                     "input": {**search, "query": "Oman electricity generated 2023"}},
+                    {"type": "tool_use", "id": "t-search-ar", "name": "web_search",
+                     "input": {**search, "query": "الكهرباء المولدة في عمان 2023"}},
+                ],
+            }  # fmt: skip
+        found = results.get("t-search-en", {})
+        if found.get("status") != "ok" or len(found.get("results", [])) < 2:
+            return self._final(
+                "no_evidence",
+                "فشل البحث على الإنترنت، لذلك لا توجد نتائج لعرضها."
+                if arabic
+                else "The web search failed, so there are no web findings to report.",
+                [],
+            )
+        official, other = found["results"][0], found["results"][1]
+        a, b = official["evidence_id"], other["evidence_id"]
+        if "t-calc" not in done:
+            return self._call(
+                "calculate",
+                {
+                    "kind": "difference",
+                    "inputs": [{"evidence_id": b, "value": "40,000"}, {"evidence_id": a, "value": "41,234"}],
+                    "label": "Official minus news figure",
+                    "unit": "GWh",
+                },
+                "t-calc",
+            )  # fmt: skip
+        calc = results["t-calc"].get("evidence_id")
+        if "t-table" not in done:
+            return self._call(
+                "research_table",
+                {
+                    "title": "توليد الكهرباء في عُمان 2023" if arabic else "Electricity generated in Oman, 2023",
+                    "columns": ["المصدر", "التوليد (غيغاواط ساعة)"] if arabic else ["Source", "Generation (GWh)"],
+                    "rows": [
+                        {"cells": [official["publisher"], "41,234"], "citations": [a]},
+                        {"cells": [other["publisher"], "40,000"], "citations": [b]},
+                    ],
+                },
+                "t-table",
+            )  # fmt: skip
+        if "t-chart" not in done:
+            table_id = results["t-table"].get("table_id", "RT1")
+            return self._call(
+                "research_chart",
+                {"table_id": table_id, "label_column": 0, "value_columns": [1], "kind": "bar", "unit": "GWh"},
+                "t-chart",
+            )  # fmt: skip
+        if "t-diagram" not in done:
+            labels = (
+                ["التوليد", "النقل", "التوزيع", "المستهلكون"]
+                if arabic
+                else ["Generation", "Transmission", "Distribution", "Consumers"]
+            )
+            ids = ["generation", "transmission", "distribution", "consumers"]
+            return self._call(
+                "diagram",
+                {
+                    "kind": "flowchart",
+                    "title": "سلسلة إمداد الكهرباء" if arabic else "The electricity supply chain",
+                    "nodes": [{"id": i, "label": label} for i, label in zip(ids, labels, strict=True)],
+                    "edges": [{"from": f, "to": t} for f, t in zip(ids, ids[1:], strict=False)],
+                },
+                "t-diagram",
+            )  # fmt: skip
+        if illustrate and "t-image" not in done:
+            return self._call(
+                "generate_image",
+                {"prompt": "A power station by the sea at dusk, with transmission lines.",
+                 "purpose": "illustration", "quality": "fast"},
+                "t-image",
+            )  # fmt: skip
+        if arabic:
+            text = (
+                "## الملخص\n"
+                f"تقدّر الإحصاءات الرسمية توليد الكهرباء في عُمان عام 2023 بنحو 41,234 غيغاواط ساعة [{a}]، "
+                f"بينما يذكر تقرير إخباري 40,000 غيغاواط ساعة [{b}].\n\n"
+                "## النتائج\n"
+                f"- الرقم الرسمي أعلى من الرقم الإخباري بمقدار 1,234 غيغاواط ساعة [{calc}].\n\n"
+                "## العوامل المؤثرة\n- نمو الطلب في الصيف وتوسع الشبكة.\n\n"
+                "## الفرص والمخاطر\n- فرصة: توحيد مصادر البيانات. خطر: الاعتماد على أرقام غير رسمية.\n\n"
+                "## التوصيات\n- اعتماد الرقم الرسمي ومراجعة مصدر الفرق.\n\n"
+                "## الأدلة والافتراضات\n- الأرقام أعلاه من المصادر المذكورة؛ العوامل افتراضات للتحقق.\n\n"
+                "## القيود والمعلومات الناقصة\n- لا يوضح التقرير الإخباري منهجيته."
+            )
+        else:
+            text = (
+                "## Summary\n"
+                f"Official statistics put Oman's electricity generation in 2023 at 41,234 GWh [{a}], "
+                f"while a news report gives 40,000 GWh [{b}].\n\n"
+                "## Findings\n"
+                f"- The official figure is 1,234 GWh higher than the news figure [{calc}].\n\n"
+                "## Influencing factors\n- Summer demand and the growth of the grid.\n\n"
+                "## Opportunities and risks\n- Opportunity: one agreed source of figures. "
+                "Risk: relying on unofficial numbers.\n\n"
+                "## Recommendations\n- Use the official figure and ask where the gap comes from.\n\n"
+                "## Evidence and assumptions\n- The figures above come from the cited sources; the "
+                "factors are assumptions to verify.\n\n"
+                "## Limitations and missing information\n- The news report does not give its method."
+            )
+        final = self._final("answered", text, [a, b, calc])
+        final["content"][0]["input"]["conflicts"] = [
+            {
+                "topic": "توليد الكهرباء 2023" if arabic else "Electricity generated in 2023",
+                "values": [
+                    {"evidence_id": a, "value_text": "41,234"},
+                    {"evidence_id": b, "value_text": "40,000"},
+                ],
+                "note": "الإحصاءات الرسمية وتقرير إخباري يختلفان."
+                if arabic
+                else "Official statistics and a news report differ.",
+            }
+        ]
+        return final
+
     @staticmethod
     def _final(status: str, text: str, citations: list[str]) -> dict[str, Any]:
         return {
@@ -1336,8 +1478,12 @@ class FakeProvider:
         }
 
 
-def build_provider(name: str) -> Provider | None:
-    """The answering provider called ``name`` when it is fully configured, else None."""
+def build_provider(
+    name: str, model: str | None = None, effort: str | None = None
+) -> Provider | None:
+    """The answering provider called ``name`` when it is fully configured, else None.
+    ``model`` and ``effort`` replace the provider's configured model and reasoning effort for
+    one mode (a lighter model for Quick answers, a stronger one for Deep research)."""
     s = get_settings()
     timeout = s.assistant_timeout_seconds
     if name == "fake" and s.environment != "production":
@@ -1345,23 +1491,27 @@ def build_provider(name: str) -> Provider | None:
     if registry.missing(name, "answer"):
         return None
     if name == "anthropic" and s.anthropic_api_key:
-        return AnthropicProvider(s.anthropic_api_key.get_secret_value(), s.assistant_model, timeout)
+        return AnthropicProvider(
+            s.anthropic_api_key.get_secret_value(), model or s.assistant_model, timeout
+        )
     if name == "openai" and s.openai_api_key and s.openai_model:
         return OpenAIProvider(
             s.openai_api_key.get_secret_value(),
-            s.openai_model,
+            model or s.openai_model,
             max(timeout, s.openai_timeout_seconds),
-            s.openai_reasoning_effort,
+            effort or s.openai_reasoning_effort,
         )
     if name == "gemini" and s.gemini_api_key and s.gemini_model:
-        return GeminiProvider(s.gemini_api_key.get_secret_value(), s.gemini_model, timeout)
+        return GeminiProvider(s.gemini_api_key.get_secret_value(), model or s.gemini_model, timeout)
     if (
         name == "deepseek"
         and s.deepseek_api_key
         and s.deepseek_model
         and s.deepseek_billing_acknowledged
     ):
-        return DeepSeekProvider(s.deepseek_api_key.get_secret_value(), s.deepseek_model, timeout)
+        return DeepSeekProvider(
+            s.deepseek_api_key.get_secret_value(), model or s.deepseek_model, timeout
+        )
     return None
 
 
@@ -1389,9 +1539,18 @@ def structured_reply(
     raise ProviderError("no_tool_call")
 
 
-def get_provider() -> Provider | None:
-    """The primary answering provider (one per question)."""
-    return build_provider(get_settings().assistant_provider)
+def get_provider(mode: str | None = None) -> Provider | None:
+    """The primary answering provider (one per question), with the model set for ``mode``:
+    ``assistant_quick_model`` for Quick answers, ``assistant_deep_model`` (and its reasoning
+    effort) for Deep internet research; otherwise the provider's own model."""
+    s = get_settings()
+    if mode == "quick" and s.assistant_quick_model:
+        return build_provider(s.assistant_provider, s.assistant_quick_model)
+    if mode == "research" and (s.assistant_deep_model or s.assistant_deep_reasoning_effort):
+        return build_provider(
+            s.assistant_provider, s.assistant_deep_model, s.assistant_deep_reasoning_effort
+        )
+    return build_provider(s.assistant_provider)
 
 
 def answering_available() -> bool:

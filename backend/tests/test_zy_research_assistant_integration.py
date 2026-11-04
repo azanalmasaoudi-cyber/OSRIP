@@ -285,15 +285,12 @@ def test_unavailable_services_are_reported_honestly(app, monkeypatch) -> None:  
     from app.core.config import get_settings
 
     s = get_settings()
-    # Research mode without a search provider: the reply records that no search was made.
+    # Internet research without a search provider says so plainly: nothing is answered from
+    # OSRIP's own records instead (the person asked for the web).
     monkeypatch.setattr(s, "research_provider", "none")
     msg = guest_ask(app, "Research electricity generation in Oman", mode="research")
-    searches = [e for e in msg["evidence"] if e["kind"] == "search"]
-    assert [e["status"] for e in searches] == ["not_configured"]
-    assert not [e for e in msg["evidence"] if e["kind"] == "web"]
-    # The answer says it rests on verified data only, and when that data was updated.
-    notice = msg["structured"]["web_notice"]
-    assert notice["web_search"] == "not_configured" and "data_last_updated" in notice
+    assert msg["status"] == "unavailable" and "no web search service" in msg["content"]
+    assert msg["evidence"] == []
     # A failing search (the provider is configured but the call fails).
     monkeypatch.setattr(s, "research_provider", "fake")
     failed = guest_ask(app, "web search please fail", mode="research")

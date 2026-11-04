@@ -37,3 +37,26 @@ done: every "Met" points at code and tests.
 - **MapTiler**: an account and a browser key restricted to the site (free plan for testing; a paid plan for commercial use is the owner's decision).
 - **2026 annual statistics**: approval to run internet research (billed provider usage), and a data manager to review the figures found.
 - **Public deployment**: a server, a domain and the production settings.
+
+## Status against "Complete the AI Research and Intelligence System" (4 November 2026)
+
+Branch `feature/ai-research-intelligence`, built on `feature/welcome-login-design`. The model and
+search services were the backend's scripted stand-ins, as the owner chose: no paid call was made.
+The details of each mode are in AI_PROVIDERS.md, "Answer modes".
+
+| § | Requirement | Status | Evidence / what remains |
+|---|---|---|---|
+| 1 | Internet Research mode: the live web, no internal tools, no silent fallback | **Met** | Quick and Deep research get no OSRIP dataset tools (`tools.tool_specs`); `run_tool` refuses any tool outside the mode (`not_allowed`). Without web search, or when the answering service fails, the reply says so and answers nothing from OSRIP's records (`MESSAGES["no_web"]`, `["research_failed"]`), not charged. Internal data only when the question asks for the platform's data (`routing.asks_for_project_data`). Tests: `test_research_modes.py`, `test_research_modes_integration.py` |
+| 2 | Three modes with their own tools, workflow and interface | **Met** | Quick answer (`quick`, new; migration 0029 allows it), Deep internet research (`research`), Data analysis and visualisation (`analyze`, with Ask, Compare, Scenario). Each has its own tools, model, budgets, rules (`MODE_RULES`) and progress stages. The Tools drawer and the panel group the internet modes apart from the data modes, each with its own description |
+| 3 | Research before writing; structured reports; tables and charts from verified numbers | **Met** | Deep research plans first (`plan_research`), searches several questions at once in both languages and reads original pages. It writes Summary, Findings, Influencing factors, Opportunities and risks, Recommendations, Evidence and assumptions, Limitations. Figures are calculated by the backend (`calculate`), tables keep only rows matching their sources, charts are drawn from those rows, diagrams carry no unsupported figure (`web_analysis.py`). Progress is shown by real stage (planning, searching, reading, calculating, building visuals, checking) |
+| 4 | Trade intelligence; Oman-specific; no invented statistics or profitability claims | **Met as rules and tools** | `TRADE_RULE`: imports and exports by product and partner, logistics and ports, concentration (`calculate hhi`), barriers, opportunities only with cited evidence of demand, cost and capacity. The answers' quality with a live model is **not verified** (no live model was used) |
+| 5 | Images and diagrams through an official API; statistical charts separate | **Met; live API not verified** | Diagrams (flowchart, cycle, hierarchy, mind map) drawn as SVG with download. Illustrations through the OpenAI Images API (`images.py`): off by default, for signed-in users who ask, labelled "AI illustration — not data", limited and metered. Tested with the drawn stand-in only |
+| 6 | Speed: streaming, routing, light and heavy models, parallel searches, caching, cancellation, retries; measured | **Met; measured with stand-ins** | Model per mode (`get_provider(mode)`); Quick budgets; parallel prefetch of one step's searches and pages; existing caching, stop and retries kept. `scripts/mode_timing.py`: Quick 2.0 s against Deep 5.0 s; parallel searches 5.0 s against 5.8 s sequential (TEST_RESULTS.md). Live timings need keys (`scripts/research_timing.py`) |
+| 7 | Arabic and English, RTL/LTR, bilingual tables, number formats | **Met** | Reports, tables, diagram labels and progress in both languages; Latin digits in both (existing design decision); Arabic RTL browser test; counts worded without plural forms |
+| 8 | No automatic Sources sections; references on request | **Met (kept)** | Research tables show their sources column only after "Show sources"; the CSV includes it only then. Google's required attribution is unchanged |
+| 9 | DeepSeek kept; OpenAI and Brave prepared; no keys in chat or GitHub; no billing | **Met** | DeepSeek stays configured. OpenAI per-mode models, Brave and Images are documented settings (`.env.example`, AI_PROVIDERS.md), set by the owner with `scripts/set_provider_keys.py`. Production refuses the image stand-in. Nothing billed |
+| 10 | Verification | **Met with stand-ins** | Partial answers still kept (`test_partial_answers.py`); internet modes never call internal tools; structured output with tables and charts; Arabic and English; informative errors; provider failure without a fabricated answer. Backend, browser tests and screenshots in TEST_RESULTS.md |
+| 11 | Stages, tests, measurements, branch and PR; no merge | Followed | Commits on `feature/ai-research-intelligence`, a PR against `feature/welcome-login-design`; nothing merged |
+
+**Needs the owner:** an OpenAI key (and Brave, if preferred for search), with billing approved,
+to run the same checks live; then `scripts/research_timing.py` for live latency.

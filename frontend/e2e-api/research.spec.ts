@@ -25,17 +25,17 @@ test('Analyze mode shows checked recommendation cards, inline citations, and sav
   await openTools(page);
   const modes = page.getByTestId('assistant-mode');
   await expect(modes.getByRole('radio', { name: 'Automatic' })).toHaveAttribute('aria-checked', 'true');
-  await modes.getByRole('radio', { name: 'Analyze' }).click();
-  await expect(modes.getByRole('radio', { name: 'Analyze' })).toHaveAttribute('aria-checked', 'true');
+  await modes.getByRole('radio', { name: 'Data analysis' }).click();
+  await expect(modes.getByRole('radio', { name: 'Data analysis' })).toHaveAttribute('aria-checked', 'true');
   await expect(page.getByTestId('assistant-mode-hint')).toContainText('recommendation cards');
   await closeDrawer(page);
-  await expect(page.getByTestId('chat-mode-chip')).toContainText('Analyze');
+  await expect(page.getByTestId('chat-mode-chip')).toContainText('Data analysis');
   await page.getByTestId('assistant-input').fill('What do you recommend for electricity generation?');
   await page.getByTestId('assistant-send').click();
 
   const reply = page.getByTestId('assistant-message').last();
   await expect(reply).toHaveAttribute('data-status', 'answered');
-  await expect(reply.getByTestId('reply-mode')).toHaveText('Analyze');
+  await expect(reply.getByTestId('reply-mode')).toHaveText('Data analysis');
   await expect(reply.getByTestId('recommendation-card')).toHaveCount(1);
   await expect(reply).not.toContainText('25%'); // the invented saving was withheld by the server
   await expect(reply.getByTestId('reply-withheld')).toContainText('2');

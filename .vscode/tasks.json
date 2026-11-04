@@ -102,6 +102,24 @@
             "options": { "cwd": "${workspaceFolder}/frontend", "shell": { "executable": "powershell.exe", "args": ["-NoProfile", "-Command"] } },
             "problemMatcher": [],
             "group": "test"
+        },
+        {
+            "label": "OSRIP: answer mode tests (full stack, stand-ins, no paid calls)",
+            "detail": "Quick answer, Deep research (plan, searches, calculation, checked table, chart, diagram), Arabic and a signed-in illustration in Chrome, with the scripted model, search and image stand-ins. Starts its own API and web servers (ports 8765, 5174, 5176); the dev database must be running.",
+            "type": "shell",
+            "command": "$env:OSRIP_TEST_ADMIN_URL = (& ..\\backend\\.venv\\Scripts\\python.exe ..\\backend\\scripts\\devdb.py url); $env:PW_CHANNEL = 'chrome'; npx playwright test -c playwright.api.config.ts --project=chromium research-modes",
+            "options": { "cwd": "${workspaceFolder}/frontend", "shell": { "executable": "powershell.exe", "args": ["-NoProfile", "-Command"] } },
+            "problemMatcher": [],
+            "group": "test"
+        },
+        {
+            "label": "OSRIP: measure the answer modes (stand-ins, no paid calls)",
+            "detail": "scripts/mode_timing.py on a throwaway database: model calls, searches and time per mode, parallel against sequential searches; writes docs/evaluation/mode-timing.json.",
+            "type": "shell",
+            "command": "$env:OSRIP_TEST_ADMIN_URL = (& .venv\\Scripts\\python.exe scripts\\devdb.py url); .venv\\Scripts\\python.exe scripts\\mode_timing.py --runs 3",
+            "options": { "cwd": "${workspaceFolder}/backend", "shell": { "executable": "powershell.exe", "args": ["-NoProfile", "-Command"] } },
+            "problemMatcher": [],
+            "group": "test"
         }
     ],
     "inputs": [
