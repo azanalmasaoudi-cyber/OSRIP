@@ -210,3 +210,13 @@ def test_production_refuses_the_image_stand_in(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setattr(s, "images_provider", "fake")
     with pytest.raises(RuntimeError, match="OSRIP_IMAGES_PROVIDER=fake"):
         _check_production_settings()
+
+
+def test_the_internet_modes_prompt_does_not_prefer_platform_data() -> None:
+    from app.services.assistant import service
+
+    assert "Prefer the platform's published data" in service.WEB_RULES
+    assert "Prefer the platform's published data" not in service.INTERNET_WEB_RULES
+    assert "not available here unless the person asked" in service.INTERNET_WEB_RULES
+    # The other web rules (untrusted text, dates, conflicts) are the same.
+    assert service.INTERNET_WEB_RULES.split("\n", 1)[1] == service.WEB_RULES.split("\n", 1)[1]
