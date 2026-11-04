@@ -128,6 +128,21 @@ test('service health: administrators only; integrations and errors are listed wi
   await expect(page.locator('[data-testid="integration"][data-name="google"]')).toHaveAttribute('data-status', 'not_configured');
 });
 
+test('counts in Arabic take Arabic plural forms, never the English text (audit log)', async ({ page }) => {
+  await signIn(page, 'admin@e2e.invalid');
+  await page.goto('/admin/audit');
+  const table = page.getByTestId('audit-table');
+  const caption = table.locator('caption');
+  await expect(caption).toContainText(/\d+ rows?\b/);
+  await page.getByRole('button', { name: 'العربية' }).first().click();
+  await expect(caption).toContainText(/صف/);
+  await expect(caption).not.toContainText(/\brows?\b/);
+  await table.getByTestId('table-search').fill('no such entry in the log');
+  await expect(caption).toContainText('لا صفوف');
+  await page.getByRole('button', { name: 'English' }).first().click();
+  await expect(caption).toContainText('0 rows');
+});
+
 const WIDTHS = [360, 390, 768, 1024, 1366, 1920];
 const ROUTES = ['/', '/overview', '/workspace', '/energy/electricity', '/trade', '/forecasts', '/assistant', '/reports'];
 

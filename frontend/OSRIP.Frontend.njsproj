@@ -443,6 +443,7 @@
     <Content Include="scripts\check-contrast.mjs" />
     <Content Include="src\components\layout\welcome.css" />
     <Content Include="src\index.css" />
+    <Content Include="tests\arabic-plurals.test.mjs" />
     <Content Include="tests\export-results.test.mjs" />
     <Content Include="tests\research-brief.test.mjs" />
     <Content Include="tsconfig.app.json" />
