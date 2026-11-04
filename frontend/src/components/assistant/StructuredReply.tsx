@@ -279,9 +279,11 @@ export function ModeSelector({ value, onChange, compact = false }: {
               return (
                 <button key={mode} ref={(el) => { refs.current[i] = el; }} type="button" role="radio" aria-checked={mode === value}
                   tabIndex={mode === value ? 0 : -1} data-value={mode} onClick={() => onChange(mode)} onKeyDown={onKeyDown}
+                  aria-label={compact ? t(`assistant.mode.${mode}`) : undefined}
                   className={cn('min-h-9 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
                     mode === value ? 'border-primary bg-primary text-primary-foreground' : 'border-border-strong/60 bg-card hover:bg-muted')}>
-                  {t(`assistant.mode.${mode}`)}
+                  {/* Talk: short words keep the choice on one row; the full name is the accessible one. */}
+                  {compact ? t(`assistant.mode.short.${mode}`) : t(`assistant.mode.${mode}`)}
                 </button>
               );
             })}

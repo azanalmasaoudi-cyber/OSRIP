@@ -1111,6 +1111,7 @@ export const en = {
       compare: 'Compare',
       scenario: 'Scenario',
       group: { web: 'On the internet', data: 'With OSRIP data' },
+      short: { quick: 'Quick', research: 'Research', analyze: 'Analysis', ask: 'Ask', compare: 'Compare', scenario: 'Scenario' },
     },
     modeHint: {
       quick: 'Quick answer: one or two web searches for a short, current answer. OSRIP’s datasets are not used unless you ask for the platform’s data.',

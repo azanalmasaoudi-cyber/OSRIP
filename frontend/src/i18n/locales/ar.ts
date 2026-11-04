@@ -1113,6 +1113,7 @@ export const ar: TranslationShape = {
       compare: 'مقارنة',
       scenario: 'سيناريو',
       group: { web: 'على الإنترنت', data: 'من بيانات OSRIP' },
+      short: { quick: 'سريعة', research: 'بحث', analyze: 'تحليل', ask: 'سؤال', compare: 'مقارنة', scenario: 'سيناريو' },
     },
     modeHint: {
       quick: 'إجابة سريعة: بحث أو بحثان في الويب لإجابة قصيرة وحديثة. لا تُستخدم مجموعات بيانات OSRIP إلا إذا طلبت بيانات المنصة.',

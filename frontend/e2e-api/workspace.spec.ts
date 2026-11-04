@@ -138,7 +138,7 @@ test('a failed search is a visible partial failure; sources open and close by ke
   await page.goto('/workspace?mode=synthetic');
   await startChat(page);
   const panel = page.getByTestId('workspace-assistant');
-  await panel.getByTestId('assistant-mode').getByRole('radio', { name: 'Research' }).click();
+  await panel.getByTestId('assistant-mode').getByRole('radio', { name: 'Deep research' }).click();
   await ask(page, 'web search that will fail');
   const study = page.getByTestId('live-study');
   await expect(study).toHaveAttribute('data-status', 'completed');
@@ -146,6 +146,8 @@ test('a failed search is a visible partial failure; sources open and close by ke
   await expect(study.locator('[data-testid="study-search"][data-status="failed"]')).toBeVisible();
   await expect(study.getByTestId('study-datasets')).toHaveCount(0);
 
+  // Deep research works from the web only: OSRIP's published data are asked in Data analysis.
+  await panel.getByTestId('assistant-mode').getByRole('radio', { name: 'Data analysis' }).click();
   await ask(page, 'What is the latest electricity generation?');
   await expect(study).toHaveAttribute('data-status', 'completed');
   const source = study.getByTestId('study-source').first().getByRole('button');
