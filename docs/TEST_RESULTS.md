@@ -1,5 +1,36 @@
 # Test results
 
+## 2026-11-04: Quick answer, Deep internet research and Data analysis (branch `feature/ai-research-intelligence`)
+
+What changed (modes in AI_PROVIDERS.md, "Answer modes"; status in MASTER_BRIEF_STATUS.md):
+- Three kinds of answer, each with its own tools, model, budgets and rules, enforced by the backend. Quick answer and Deep research work from the live web and never reach OSRIP's datasets unless asked; without web search, or when the answering service fails, they say so instead of answering from OSRIP's records.
+- Deep research plans, searches several questions at once and has its figures built by the backend: calculations on cited values, tables that keep only rows matching their sources, charts from those rows, and diagrams. Illustrations come through the Images API, off by default.
+- The interface groups the internet modes apart from the data modes and shows the tables, charts, diagrams, illustrations and research plan under a reply.
+- As chosen by the owner, every model, search and image service was the backend's scripted stand-in: **no paid call was made**.
+
+| Check | Result |
+|---|---|
+| `ruff`, backend `pytest` with database tests | Pass; **1002 passed** (whole suite). New: `test_research_modes.py` (19) and `test_research_modes_integration.py` (7). The last two unit tests (production refuses the image stand-in; the internet modes' prompt) were added after that run and pass with their module. One older test changed for the no-fallback rule. A bug found by the new tests was fixed: the internet-mode failure path logged an attribute `ProviderError` does not have |
+| Migration 0029 | Applied to the development database by the launcher (`alembic_version` 0029_generated_images); the 'quick' mode and the `generated_image` table are present |
+| `npm run typecheck`, `npm run lint`, `npm run check:contrast`, `npm run build`, frontend unit tests | Pass; 0 failing contrast pairs; 8 unit tests. Type check and lint were repeated on the files changed after the full lint |
+| Full-stack browser tests (Chrome), whole suite, desktop and phone | 202 passed, 9 failed, 3 skipped (33 min). Of the 9: four Talk layout checks on the phone failed because the longer mode names wrapped to a second row (fixed: Talk shows the three main modes in short words); one workspace test asked a published-data question in Research mode, which no longer reads OSRIP's datasets (it now uses Data analysis); two phone sign-in and two interface tests timed out while the machine was also running the backend tests and restarting the app |
+| The same spec files after the fixes | `phone`, `interface`, `workspace`, `talk-phone`, `talk`, `research-modes`: **all pass** (41 + 20 passed, 4 skipped as designed) |
+| New `research-modes.spec.ts` | 5 passed: the Tools drawer's two groups; a Deep research report with its sections, a two-row table checked against its sources (sources column only after "Show sources"), CSV and SVG downloads, the chart drawn from that table, the four-step diagram and the plan; a Quick answer; the report in Arabic, right to left; an illustration for a signed-in person, labelled "AI illustration — not data". At phone width the page does not scroll sideways and the flowchart runs top to bottom |
+| By hand (screenshots from the tests) | English desktop report, Arabic report, phone, illustration. Two problems seen there and fixed: the Arabic plan count fell back to English (plural forms; now worded without them), and the flowchart was unreadably small at phone width |
+
+**Measurements with stand-ins** (`scripts/mode_timing.py`, 3 runs each, a model call given 0.6 s and a search 0.8 s; `docs/evaluation/mode-timing.json`):
+
+| Case | Time (median) | Model calls | Searches | Internal data tools | Evidence check | Built |
+|---|---|---|---|---|---|---|
+| Quick answer | 2.0 s | 2 | 1 | none | passed | – |
+| Deep research, searches one after the other | 5.8 s | 7 | 2 | none | passed | plan, 2 table rows, chart, diagram |
+| Deep research, searches together | 5.0 s | 7 | 2 | none | passed | the same |
+| Deep research in Arabic | 5.0 s | 7 | 2 | none | passed | the same |
+
+These show what the modes' design costs or saves with fixed delays; they are not live timings. Live timings need the owner's keys (`scripts/research_timing.py`, billed).
+
+**Not verified:** live OpenAI, Brave or Images behaviour, and the quality of real reports. No key is configured for them, and the configured DeepSeek service was not called.
+
 ## 2026-11-03 (later): welcome and sign-in design (branch `feature/welcome-login-design`)
 
 What changed (details in ENTRANCE.md):
