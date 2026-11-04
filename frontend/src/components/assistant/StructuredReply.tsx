@@ -237,8 +237,12 @@ export function StructuredParts({ structured, messageId, known }: { structured: 
   );
 }
 
+/** The three main modes, which a compact selector (Talk) shows; the others are in Tools. */
+const MAIN_MODES: readonly AssistantMode[] = ['quick', 'research', 'analyze'];
+
 /** The answer modes as a wrapping radio group (arrow keys move the choice): the internet modes,
- * then the modes that work from OSRIP's data. */
+ * then the modes that work from OSRIP's data. Compact (Talk): the three main modes on one row,
+ * and the current mode if it is another one. */
 export function ModeSelector({ value, onChange, compact = false }: {
   value: AssistantMode;
   onChange: (mode: AssistantMode) => void;
@@ -248,17 +252,18 @@ export function ModeSelector({ value, onChange, compact = false }: {
   const { t } = useTranslation();
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   const hintId = useId();
-  const index = ASSISTANT_MODES.indexOf(value);
+  const shown = ASSISTANT_MODES.filter((m) => !compact || MAIN_MODES.includes(m) || m === value);
+  const index = shown.indexOf(value);
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     const rtl = getComputedStyle(event.currentTarget).direction === 'rtl';
     let next = index;
-    if (event.key === (rtl ? 'ArrowLeft' : 'ArrowRight') || event.key === 'ArrowDown') next = (index + 1) % ASSISTANT_MODES.length;
-    else if (event.key === (rtl ? 'ArrowRight' : 'ArrowLeft') || event.key === 'ArrowUp') next = (index - 1 + ASSISTANT_MODES.length) % ASSISTANT_MODES.length;
+    if (event.key === (rtl ? 'ArrowLeft' : 'ArrowRight') || event.key === 'ArrowDown') next = (index + 1) % shown.length;
+    else if (event.key === (rtl ? 'ArrowRight' : 'ArrowLeft') || event.key === 'ArrowUp') next = (index - 1 + shown.length) % shown.length;
     else if (event.key === 'Home') next = 0;
-    else if (event.key === 'End') next = ASSISTANT_MODES.length - 1;
+    else if (event.key === 'End') next = shown.length - 1;
     else return;
     event.preventDefault();
-    const mode = ASSISTANT_MODES[next];
+    const mode = shown[next];
     if (mode) onChange(mode);
     refs.current[next]?.focus();
   };
@@ -269,8 +274,8 @@ export function ModeSelector({ value, onChange, compact = false }: {
         {([['web', INTERNET_MODES], ['data', DATA_MODES]] as const).map(([group, modes], g) => (
           <div key={group} role="group" aria-label={t(`assistant.mode.group.${group}`)} data-group={group} className="contents">
             {g > 0 ? <span aria-hidden="true" className="mx-0.5 h-5 w-px bg-border-strong/60" /> : null}
-            {modes.map((mode) => {
-              const i = ASSISTANT_MODES.indexOf(mode);
+            {modes.filter((mode) => shown.includes(mode)).map((mode) => {
+              const i = shown.indexOf(mode);
               return (
                 <button key={mode} ref={(el) => { refs.current[i] = el; }} type="button" role="radio" aria-checked={mode === value}
                   tabIndex={mode === value ? 0 : -1} data-value={mode} onClick={() => onChange(mode)} onKeyDown={onKeyDown}
