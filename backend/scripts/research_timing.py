@@ -64,10 +64,10 @@ def main() -> int:
 
     original_run_tool = tools.run_tool
 
-    def timed_run_tool(t, name, arguments):  # noqa: ANN001, ANN202
+    def timed_run_tool(t, name, arguments, *rest):  # noqa: ANN001, ANN002, ANN202
         t0 = time.perf_counter()
         try:
-            return original_run_tool(t, name, arguments)
+            return original_run_tool(t, name, arguments, *rest)
         finally:
             timings[f"tool:{name}"].append(time.perf_counter() - t0)
 

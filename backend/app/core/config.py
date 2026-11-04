@@ -91,11 +91,29 @@ class Settings(BaseSettings):
     openai_search_model: str | None = None  # web search route (Responses API web_search tool)
     # Reasoning models may need longer than other providers: each OpenAI call may run this long.
     openai_timeout_seconds: float = 60.0
-    # Reasoning effort (none, minimal, low, medium, high, xhigh; the model's default when unset):
-    # lower is faster and cheaper. Which values a model accepts is in its model page.
-    openai_reasoning_effort: Literal["none", "minimal", "low", "medium", "high", "xhigh"] | None = (
-        None
-    )
+    # Reasoning effort (none, minimal, low, medium, high, xhigh, max; the model's default when
+    # unset): lower is faster and cheaper. Which values a model accepts is in its model page
+    # (GPT-6.1 Sol and GPT-6 Astra: low to max, not none or minimal).
+    openai_reasoning_effort: (
+        Literal["none", "minimal", "low", "medium", "high", "xhigh", "max"] | None
+    ) = None
+    # Per mode, on the answering provider above (docs/AI_PROVIDERS.md): a lighter model for Quick
+    # answers (e.g. gpt-6-luna) and a stronger one for Deep internet research (e.g. gpt-6.1-sol
+    # or gpt-6-astra), with its own reasoning effort. Unset: the provider's model for every mode.
+    assistant_quick_model: str | None = None
+    assistant_deep_model: str | None = None
+    assistant_deep_reasoning_effort: Literal["low", "medium", "high", "xhigh", "max"] | None = None
+    # A Quick answer: few model rounds, two searches and one page at most.
+    assistant_quick_max_rounds: int = 4
+    research_max_searches_quick: int = 2
+    research_max_pages_quick: int = 1
+    # Generated illustrations (services/images.py): off unless a provider is named ("openai";
+    # "fake" outside production). Images are billed per use: a per-user daily limit applies.
+    images_provider: str | None = None
+    images_model: str = "gpt-image-2.5-flare"  # fast
+    images_detailed_model: str = "gpt-image-2.5-sunburst"  # slower, more precise
+    images_size: str = "1024x1024"
+    images_daily_limit_per_user: int = 10
     # Web search route: how much context the search gathers, and optionally only these domains
     # (at most 100, without https://; subdomains included). Empty: the whole web, with official
     # Omani sources preferred by the instructions.

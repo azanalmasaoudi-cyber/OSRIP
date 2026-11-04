@@ -55,7 +55,14 @@ from app.services.assistant.provider import (
     stop_check,
     transient,
 )
-from app.services.assistant.tools import MODES, Ledger, Tools, run_tool, tool_specs
+from app.services.assistant.tools import (
+    MODES,
+    Ledger,
+    Tools,
+    allowed_tools,
+    run_tool,
+    tool_specs,
+)
 from app.services.principal import Principal
 from app.services.research import parallel
 from app.services.research import service as research
@@ -173,21 +180,46 @@ CARD_RULE = (
     "a cited source states the figure. Recommendations are options for people to examine, not "
     "decisions.\n"
 )
+TRADE_RULE = (
+    "- Trade and economic intelligence: imports and exports by product and partner, supply chains "
+    "and logistics (ports, routes, transit times, free zones), diversification (partner and product "
+    "concentration with calculate hhi), market opportunities, shortages and surpluses, "
+    "competitiveness, trade barriers (tariffs, standards, non-tariff measures) and infrastructure "
+    "constraints, and development strategies. For Oman, make the analysis geographically specific "
+    "(governorates, ports such as Sohar, Duqm and Salalah, free zones, GCC and FTA partners) using "
+    "current research. Never invent statistics, and never call an opportunity profitable or "
+    "feasible without cited evidence of demand, cost and capacity: say what would have to be "
+    "verified.\n"
+)
 MODE_RULES = {
     "ask": "- Mode: Ask. Answer directly from the platform's published data. No recommendation cards.\n",
     "analyze": "- Mode: Analyze. Use the platform's calculations for every derived number and explain "
     "what the numbers show and do not show (definitions, units, periods, missing values).\n"
     + DRIVER_RULE
     + CARD_RULE,
-    "research": "- Mode: Internet research. Search the current web first and base the answer on "
-    "what you find there: do not substitute the platform's stored data for new external research, "
-    "and use them only to compare with what you found, saying which figures come from the web and "
-    "which from OSRIP. Search in Arabic and English (give `query` and "
-    "`query_other_language`). Read the most relevant official pages and tables with read_web_page "
-    "instead of relying on snippets. Prefer original Omani official sources, then international "
-    "organisations, then research papers; news is secondary. Use statistical observations from "
-    "2022 onward (older material only as background). For every source give the publication date "
-    "and the period the figures cover separately.\n" + DRIVER_RULE + CARD_RULE,
+    "quick": "- Mode: Quick answer. Answer simple questions fast and well: one or two web searches "
+    "(several at once in one step), a page read only if a figure must be confirmed, then answer. "
+    "No research plan, no recommendation cards. OSRIP's datasets are not used unless the person "
+    "asks for the platform's data. If the evidence does not settle it, say so briefly.\n",
+    "research": "- Mode: Deep internet research. Research before writing; never answer from the first "
+    "search result. Work from the live web, not from OSRIP's datasets (they are not available "
+    "here unless the person asks for the platform's own data):\n"
+    "  1. plan_research: the questions this report must settle.\n"
+    "  2. Search several of them at once (several web_search calls in one step), in Arabic and "
+    "English (`query` and `query_other_language`). Prefer original sources: Omani official bodies "
+    "(NCSI, ministries, authorities), then international organisations (UN Comtrade, World Bank, "
+    "IMF, WTO, FAO, IEA), then research papers; news is secondary.\n"
+    "  3. read_web_page the most relevant original pages and tables (not snippets); compare "
+    "publishers; note conflicts (`conflicts`) and what is missing.\n"
+    "  4. calculate every derived figure (changes, growth, shares, concentration) from cited "
+    "values; research_table for the figures (each row citing its sources); research_chart where "
+    "a trend or comparison helps; diagram for a process, supply chain or set of drivers.\n"
+    "  5. Write the report in the person's language with headings: Summary; Findings; Influencing "
+    "factors; Opportunities and risks; Recommendations; Evidence and assumptions (say which is "
+    "which); Limitations and missing information. Original analysis, not a list of quotes.\n"
+    "  Use statistical observations from 2022 onward (older only as background); give each "
+    "source's publication date and the period its figures cover separately; full calendar years "
+    "are never mixed with partial-year totals.\n" + DRIVER_RULE + CARD_RULE + TRADE_RULE,
     "compare": "- Mode: Compare. Compare like with like: the same indicator definition, unit, period "
     "kind and period. Use compare_areas, compare_periods and growth_rate. If two things are not "
     "comparable (different units, definitions or periods, or a year-to-date total against a full "
@@ -215,6 +247,14 @@ SUGGESTIONS = {
 }
 
 MESSAGES = {
+    "no_web": {
+        "en": "Internet research is not available: no web search service is configured on this server. Choose Data analysis to work from OSRIP's published data, or ask an administrator to set up web search.",
+        "ar": "البحث على الإنترنت غير متاح: لا توجد خدمة بحث في الويب مُعدّة على هذا الخادم. اختر «تحليل البيانات» للعمل من بيانات OSRIP المنشورة، أو اطلب من المسؤول إعداد البحث.",
+    },
+    "research_failed": {
+        "en": "The internet research could not be completed: the answer service did not respond or refused the request. Nothing was answered from OSRIP's own records instead. Try again in a moment.",
+        "ar": "تعذّر إكمال البحث على الإنترنت: لم تستجب خدمة الإجابة أو رفضت الطلب. لم تُستخدم سجلات OSRIP بديلاً عن ذلك. حاول مرة أخرى بعد قليل.",
+    },
     "unavailable": {
         "en": "The assistant is not available right now. Try again in a moment.",
         "ar": "المساعد غير متاح حالياً. حاول مرة أخرى بعد قليل.",
@@ -725,10 +765,12 @@ def _run_model(
     submitter: Any = None,
     previous_tables: list[dict[str, Any]] | None = None,
     job_id: uuid.UUID | None = None,
+    image_owner: uuid.UUID | None = None,
 ) -> tuple[dict[str, Any], Ledger, str]:
     tracker = tracker or Tracker(None)
     s = get_settings()
-    provider = get_provider()
+    # Quick answers may use a lighter model and Deep research a stronger one (provider.py).
+    provider = get_provider(mode)
     fallback = get_fallback_provider()
     switched: dict[str, Any] | None = None
     if provider is None and fallback is not None:
@@ -744,9 +786,9 @@ def _run_model(
     wanted_web = web
     web = web and research.available()
     route = routing.classify(question)
-    if mode == "research":
-        # Internet research searches the web first; the other modes start numerical questions
-        # with the platform's approved data (routing.py). Recorded as such with the answer.
+    if mode in routing.INTERNET_MODES:
+        # Internet modes search the web first; the data modes start numerical questions with
+        # the platform's approved data (routing.py). Recorded as such with the answer.
         route = dataclasses.replace(route, web_first=True)
     ledger = Ledger(
         data_mode,
@@ -772,9 +814,19 @@ def _run_model(
     if mode == "research":
         ledger.max_searches = s.research_max_searches_research
         ledger.max_pages = s.research_max_pages_research
+    elif mode == "quick":
+        ledger.max_searches = s.research_max_searches_quick
+        ledger.max_pages = s.research_max_pages_quick
+    # Illustrations only for a signed-in person who asked for one, where a service exists.
+    ledger.image_owner = image_owner
+    from app.services import images as image_service
+
+    wants_image = (
+        image_owner is not None and routing.asks_for_image(question) and image_service.available()
+    )
     if tracker.stream is not None:
         ledger.on_add = tracker.stream.on_evidence  # sources appear as they are retrieved
-    if wanted_web and not web and mode == "research":
+    if wanted_web and not web and mode in routing.INTERNET_MODES:
         # Research mode was chosen but no search provider is configured: recorded, so the
         # reply shows that no search was made instead of implying one.
         ledger.add(
@@ -790,8 +842,18 @@ def _run_model(
         mode,
         can_submit=ledger.submitter is not None,
         chart=routing.asks_for_chart(question),
+        project_data=routing.asks_for_project_data(question),
+        images=wants_image,
     )
-    rounds = s.research_max_rounds if mode == "research" else MAX_ROUNDS
+    # The mode's tools only: run_tool refuses any other the model asks for.
+    allowed = allowed_tools(specs)
+    rounds = (
+        s.research_max_rounds
+        if mode == "research"
+        else s.assistant_quick_max_rounds
+        if mode == "quick"
+        else MAX_ROUNDS
+    )
     if history and history[-1]["role"] == "user":
         history = [*history, {"role": "assistant", "content": UNANSWERED}]  # see _turns
     messages: list[dict[str, Any]] = [
@@ -897,7 +959,7 @@ def _run_model(
                         }
                     else:
                         tracker.tool(name)  # a stage is shown only for a step really taken
-                        output = run_tool(tools, name, dict(c.get("input") or {}))
+                        output = run_tool(tools, name, dict(c.get("input") or {}), allowed)
                         if tracker.stream is not None:
                             # Validated tables from OSRIP's own tools, or a partial failure.
                             tracker.stream.on_tool(name, output, ledger.by_id(), tracker)
@@ -1118,6 +1180,7 @@ def generate_reply(
     submitter: Any = None,
     previous_tables: list[dict[str, Any]] | None = None,
     job_id: uuid.UUID | None = None,
+    image_owner: uuid.UUID | None = None,
 ) -> Reply:
     """The grounded answer, the labelled non-AI lookup when no provider is configured,
     a retryable 'unavailable' reply, or 'cancelled' when the person stopped the question.
@@ -1129,6 +1192,16 @@ def generate_reply(
     ``cross_check`` (Research mode, asked for by the person): a second search route too."""
     mode = normalise_mode(mode)
     tracker = tracker or Tracker(None)
+    internet = mode in routing.INTERNET_MODES
+    if internet and (
+        not research.available() or (get_provider(mode) is None and get_fallback_provider() is None)
+    ):
+        # Internet research never answers from OSRIP's datasets instead: it says what is missing.
+        key = "no_web" if not research.available() else "not_configured"
+        return Reply(
+            content=MESSAGES[key][language], status="unavailable", outcome="unavailable",
+            mode=mode, persona=persona,
+        )  # fmt: skip
     if get_provider() is None and get_fallback_provider() is None:
         found = lookup.reply(_with_topic(question, history), language, data_mode)
         return Reply(
@@ -1146,7 +1219,7 @@ def generate_reply(
             history,
             language,
             data_mode,
-            web=web or mode == "research",
+            web=web or mode in routing.INTERNET_MODES,
             client_key=client_key,
             mode=mode,
             tracker=tracker,
@@ -1156,6 +1229,7 @@ def generate_reply(
             submitter=submitter,
             previous_tables=previous_tables,
             job_id=job_id,
+            image_owner=image_owner,
         )
     except Cancelled:
         return Reply(
@@ -1166,6 +1240,13 @@ def generate_reply(
             persona=persona,
         )
     except ProviderError as exc:
+        if internet:
+            # No data report from OSRIP's own records here: the person asked for the web.
+            log.warning("internet research failed provider=%s code=%s", exc.provider, exc)
+            return Reply(
+                content=MESSAGES["research_failed"][language], status="unavailable",
+                outcome="unavailable", mode=mode, persona=persona,
+            )  # fmt: skip
         return degraded_reply(
             exc, _with_topic(question, history), language, data_mode, mode, tracker, persona
         )
@@ -1227,6 +1308,10 @@ def generate_reply(
                     v["evidence_id"] for v in entry.get("values", [])
                 ]
                 citations.extend(i for i in ids if i not in citations)
+        # So are the sources behind each row of a research table (checked in web_analysis.py).
+        for table in ledger.research_tables:
+            for row in table.get("rows", []):
+                citations.extend(i for i in row.get("citations", []) if i not in citations)
     cited = set(citations)
     evidence = (
         list(visible) if status_ == "unverified" else [i for i in visible if i["id"] in cited]
@@ -1279,6 +1364,18 @@ def generate_reply(
         structured["data_tables"] = ledger.tables
     if ledger.charts and routing.asks_for_chart(question):
         structured["data_charts"] = ledger.charts
+    # From web figures (web_analysis.py): each row checked against its citations, charts from
+    # those rows, diagrams without unsupported figures; and the research plan.
+    if ledger.research_tables:
+        structured["research_tables"] = ledger.research_tables
+    if ledger.research_charts:
+        structured["research_charts"] = ledger.research_charts
+    if ledger.diagrams:
+        structured["diagrams"] = ledger.diagrams
+    if ledger.images:
+        structured["images"] = ledger.images
+    if ledger.meta.get("plan"):
+        structured["plan"] = ledger.meta["plan"]
     summary = research_summary(ledger)
     if summary is not None:
         structured["research"] = summary
@@ -1579,6 +1676,8 @@ def ask(
         submitter=principal if principal.has(Permission.RESEARCH_SUBMIT) else None,
         previous_tables=tables,
         selection=selection,
+        # Illustrations (when the service is on) for signed-in people only, never guests.
+        image_owner=principal.user_id,
     )
     with_study(reply, tracker, request_id)
 
