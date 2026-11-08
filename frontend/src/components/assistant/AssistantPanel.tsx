@@ -1048,7 +1048,9 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
           <label htmlFor={inputId} className="sr-only">{t('assistant.question')}</label>
           <textarea id={inputId} value={draft} onChange={(e) => { setDraft(e.target.value.slice(0, max)); setViaVoice(false); }} onKeyDown={onKeyDown}
             rows={2} dir="auto" placeholder={needsAccount ? t('guest.inputLocked') : t('assistant.placeholder')} disabled={needsAccount}
-            className={cn('w-full resize-none rounded-md border border-border-strong bg-card px-3 py-2 text-sm', talk && 'short:h-10')} data-testid="assistant-input" />
+            className={cn('w-full resize-none rounded-md border border-border-strong bg-card px-3 py-2 text-sm',
+              // Short windows: when scrolled to (focus, Talk's column), keep a little room below the box.
+              talk && 'short:h-10 short:scroll-mb-3')} data-testid="assistant-input" />
           {voice.notice ? (
             <p className="text-xs text-destructive" role="alert" data-testid="voice-notice">{t(`voice.notice.${voice.notice}`)}</p>
           ) : null}

@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 // The Talk page as one centred column, on the desktop and the Pixel 7 projects: the name, a
 // compact still portrait (180–220px tall on desktop, 120–160px on a phone, never stretched),
-// the persona choice, then the conversation with Send and Speak. No setup or technical notes
+// then the conversation with Send and Speak. One persona, so no persona choice. No setup or technical notes
 // on the page (they are in Settings), one scrolling region, English and Arabic, light and dark.
 
 /** With OSRIP_SCREENSHOT_DIR set, keeps a screenshot for the test report. */
@@ -29,14 +29,13 @@ async function checkColumn(page: Page, phone: boolean): Promise<void> {
   const column = await rect(page, 'talk-column');
   expect(column.width).toBeLessThanOrEqual(900);
   expect(Math.abs(column.x + column.width / 2 - viewport.width / 2)).toBeLessThan(2);
-  // Name, portrait, persona choice and conversation, top to bottom.
+  // Name, portrait and conversation, top to bottom; no persona choice.
   const name = await rect(page, 'talk-persona-name');
   const portrait = await rect(page, 'assistant-avatar');
-  const picker = await rect(page, 'persona-picker');
   const sheet = await rect(page, 'talk-sheet');
   expect(name.y + name.height).toBeLessThanOrEqual(portrait.y);
-  expect(portrait.y + portrait.height).toBeLessThanOrEqual(picker.y);
-  expect(picker.y + picker.height).toBeLessThanOrEqual(sheet.y);
+  expect(portrait.y + portrait.height).toBeLessThanOrEqual(sheet.y);
+  await expect(page.getByTestId('talk-workspace').getByTestId('persona-picker')).toHaveCount(0);
   // The portrait: compact, 3:4 like the image itself, cropped never stretched.
   const [low, high] = phone ? [120, 160] : [180, 220];
   expect(portrait.height).toBeGreaterThanOrEqual(low - 0.5);
@@ -60,7 +59,7 @@ async function checkColumn(page: Page, phone: boolean): Promise<void> {
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
 }
 
-test('Talk is one centred column: name, portrait, persona choice, then the conversation', async ({ page }, info) => {
+test('Talk is one centred column: name, portrait, then the conversation', async ({ page }, info) => {
   const phone = info.project.name === 'mobile';
   await page.addInitScript(() => {
     const store = window as unknown as { __media: number };
@@ -124,9 +123,9 @@ test.describe('short screens', () => {
     await openTalk(page, 'dark');
     const workspace = page.getByTestId('talk-workspace');
     await expect(workspace.getByTestId('talk-figure')).toBeHidden();
-    await expect(workspace.getByTestId('persona-picker')).toBeVisible(); // still shows both faces
+    await expect(workspace.getByTestId('persona-picker')).toHaveCount(0); // one persona, no choice
     await expect(page.getByRole('heading', { level: 1, name: 'Talk to Al Mulhim' })).toBeVisible();
-    // Name and choice share one row; the conversation has the rest, with no scrolling needed.
+    // Name and state share one row; the conversation has the rest, with no scrolling needed.
     const identity = await rect(page, 'talk-identity');
     const sheet = await rect(page, 'talk-sheet');
     expect(identity.height).toBeLessThan(60);
@@ -189,5 +188,5 @@ test('the setup notes moved to Settings: live avatar status and help', async ({ 
   await page.getByTestId('help-talk').locator('summary').click();
   await expect(page.getByTestId('help-talk')).toContainText('push-to-talk');
   await page.getByTestId('help-browserVoices').locator('summary').click();
-  await expect(page.getByTestId('help-browserVoices')).toContainText('Microsoft Abdullah or Aysha');
+  await expect(page.getByTestId('help-browserVoices')).toContainText('Microsoft Abdullah for Arabic');
 });
