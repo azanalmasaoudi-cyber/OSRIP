@@ -53,7 +53,7 @@ function useResultLabels(): Labels {
 }
 
 /**
- * The AI Assistant page: one conversation with Al Mulhim or Ilham, centred, filling the
+ * The AI Assistant page: one conversation with Al Mulhim, centred, filling the
  * window, with the message box at the bottom (components/assistant/ChatView). The shortage and
  * surplus analysis and a full study are optional tools (the Tools drawer), not part of the
  * conversation. A question passed as ?q= is prefilled, not sent; ?sector= chooses the

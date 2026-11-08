@@ -33,38 +33,26 @@ test('research briefs cover each domain and language within the existing message
 
 const loaded = (img: HTMLImageElement) => (img.complete ? img.naturalWidth : 0);
 
-test('a missing persona portrait shows the AI badge in the same box and recovers when the source changes @mobile', async ({ page }) => {
-  // Ilham's images cannot be loaded here, as in a copy shared without them.
-  await page.route(/\/images\/assistant\/ilham-/, (route) => route.fulfill({ status: 404, body: '' }));
+test('the portrait loads; a missing one shows the AI badge in the same box @mobile', async ({ page }) => {
   await page.goto('/assistant?mode=synthetic');
-  // The conversation header: the chosen persona's portrait and the Al Mulhim / Ilham switch.
+  // The conversation header: Al Mulhim's portrait, and no persona choice (one persona).
   const identity = page.getByTestId('chat-header');
+  await expect(identity.getByTestId('persona-picker')).toHaveCount(0);
   const portrait = identity.getByTestId('assistant-avatar').locator('img');
-  await expect.poll(() => portrait.evaluate(loaded)).toBeGreaterThan(0); // Al Mulhim's portrait loads
+  await expect(portrait).toHaveAttribute('src', /mulhim-portrait-432\.jpg$/);
+  await expect.poll(() => portrait.evaluate(loaded)).toBeGreaterThan(0);
   const box = await portrait.boundingBox();
 
-  await identity.getByTestId('persona-option-ilham').click();
-  await expect(portrait).toHaveAttribute('data-testid', 'persona-image-fallback');
-  await expect(portrait).toHaveAttribute('alt', 'AI assistant');
-  await expect.poll(() => portrait.evaluate(loaded)).toBeGreaterThan(0); // the badge itself renders
-  const fallbackBox = await portrait.boundingBox();
+  // A copy shared without the portrait: the badge takes its place, same size and shape.
+  await page.route(/\/images\/assistant\/mulhim-/, (route) => route.fulfill({ status: 404, body: '' }));
+  await page.reload();
+  const fallback = page.getByTestId('chat-header').getByTestId('assistant-avatar').locator('img');
+  await expect(fallback).toHaveAttribute('data-testid', 'persona-image-fallback');
+  await expect(fallback).toHaveAttribute('alt', 'AI assistant');
+  await expect.poll(() => fallback.evaluate(loaded)).toBeGreaterThan(0); // the badge itself renders
+  const fallbackBox = await fallback.boundingBox();
   expect(fallbackBox?.width).toBeCloseTo(box?.width ?? 0, 0);
   expect(fallbackBox?.height).toBeCloseTo(box?.height ?? 0, 0);
-
-  // Choosing Al Mulhim again (a new source) shows his portrait.
-  await identity.getByTestId('persona-option-mulhim').click();
-  await expect(identity.getByTestId('assistant-avatar').getByTestId('persona-image-fallback')).toHaveCount(0);
-  await expect(portrait).toHaveAttribute('src', /mulhim-portrait-432\.jpg$/);
-});
-
-test('an available Ilham portrait still loads', async ({ page }) => {
-  await page.goto('/assistant?mode=synthetic');
-  const identity = page.getByTestId('chat-header');
-  await identity.getByTestId('persona-option-ilham').click();
-  const portrait = identity.getByTestId('assistant-avatar').locator('img');
-  await expect(portrait).toHaveAttribute('src', /ilham-portrait-432\.jpg$/);
-  await expect.poll(() => portrait.evaluate(loaded)).toBeGreaterThan(0);
-  await expect(identity.getByTestId('persona-image-fallback')).toHaveCount(0);
 });
 
 test('unknown browser voices are not misrepresented as female', async ({ page }) => {

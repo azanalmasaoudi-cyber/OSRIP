@@ -82,7 +82,7 @@ def save_persona_choice(
     """Save the signed-in person's persona (a preference: it changes who speaks, never the
     knowledge, tools, permissions, sources, history or limits)."""
     with session.begin():
-        code = service.resolve_persona(session, body.persona)
+        code = service.resolve_persona(session, body.persona, retired_ok=False)
         user = session.get(AppUser, principal.user_id)
         if user is None:
             raise ApiError(401, "authentication_required", "Sign in to continue.")

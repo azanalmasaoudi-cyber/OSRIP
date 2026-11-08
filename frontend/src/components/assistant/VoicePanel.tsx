@@ -16,7 +16,7 @@ import { PersonaPicker, usePersona } from './persona';
 
 /**
  * The persona and its voices: the Azure voice configured for each language (Al Mulhim
- * ar-OM-AbdullahNeural / en-GB-RyanNeural, Ilham ar-OM-AyshaNeural / en-GB-SoniaNeural), whether
+ * ar-OM-AbdullahNeural / en-GB-RyanNeural), whether
  * the speech service actually lists it, and a fixed test sentence with play, pause and stop.
  * Without the service it says so plainly; it never presents a browser voice as the Azure voice.
  * Nothing plays until the person presses Test voice, and the microphone is not involved here.

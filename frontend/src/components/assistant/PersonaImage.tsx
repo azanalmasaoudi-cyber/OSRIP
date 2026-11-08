@@ -9,7 +9,7 @@ const FALLBACK_SRC = `data:image/svg+xml,${encodeURIComponent(
 
 /**
  * A persona portrait that never shows as a broken image. When it cannot be loaded (for example
- * a copy shared without Ilham's portrait), a neutral "AI" badge takes its place in the same box,
+ * a copy shared without a portrait, or a reply by a retired persona), a neutral "AI" badge takes its place in the same box,
  * with the same size and shape, and the conversation carries on. The badge is not anyone's
  * likeness. A new source is tried again.
  */

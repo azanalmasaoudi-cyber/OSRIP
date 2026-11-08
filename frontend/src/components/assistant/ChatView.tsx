@@ -89,7 +89,7 @@ const NEAR_BOTTOM = 96; // px: closer than this to the end counts as reading the
 
 /**
  * The AI Assistant page: one conversation, centred and at most 50rem (800px) wide. A compact
- * header (portrait, name, Al Mulhim / Ilham, New conversation, Settings), the messages in one
+ * header (portrait, name Al Mulhim, New conversation, Settings), the messages in one
  * scrolling area, and one message box at the bottom with Send, Speak and an optional Tools
  * drawer. Before the first message only a welcome and up to three examples are shown. The answer
  * service's status, explanations, voice and conversation settings, research modes, the research
@@ -101,7 +101,7 @@ export function ChatView({ chat }: { chat: ChatModel }) {
   const { t } = useTranslation();
   const language = useAppLanguage();
   const ui = useAssistantUi();
-  const { persona } = usePersona();
+  const { persona, personas } = usePersona();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
 
@@ -157,8 +157,10 @@ export function ChatView({ chat }: { chat: ChatModel }) {
           <h1 className="text-lg font-semibold" data-testid="mulhim-name" data-persona={persona.code}>{persona.name[language]}</h1>
           <span className="text-sm text-muted-foreground">{t('assistant.aiAssistant')}</span>
         </div>
-        {/* Phones: the choice gets its own row under the name. */}
-        <div className="max-sm:order-last max-sm:flex max-sm:w-full max-sm:justify-center"><PersonaSwitch /></div>
+        {/* Phones: a persona choice (only when the profile offers more than one) gets its own row. */}
+        {personas.length > 1 ? (
+          <div className="max-sm:order-last max-sm:flex max-sm:w-full max-sm:justify-center"><PersonaSwitch /></div>
+        ) : null}
         <div className="flex items-center gap-1">
           <Button type="button" variant="ghost" size="sm" onClick={() => { chat.newConversation(); toEnd(); }} data-testid="chat-new"
             title={t('chat.newConversation')}>

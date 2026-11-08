@@ -88,30 +88,7 @@ test('answers are read with a man’s voice in Arabic and in English', async ({ 
   await expect(page.getByTestId('voice-no-male')).toHaveCount(0);
 });
 
-test('Ilham reads with a woman’s voice in Arabic and in English', async ({ page }) => {
-  await setUp(page, MIXED);
-  await openPanel(page);
-  await page.getByTestId('persona-picker').first().getByTestId('persona-option-ilham').click();
-  await page.getByTestId('assistant-language').getByRole('radio', { name: 'العربية' }).click();
-  expect(await askAndReadAloud(page, 'ما نمو توليد الكهرباء؟')).toBe('Microsoft Aysha Online (Natural) - Arabic (Oman)');
-  await page.getByTestId('assistant-language').getByRole('radio', { name: 'English' }).click();
-  expect(await askAndReadAloud(page, 'What was the growth of electricity generation?')).toBe('Microsoft Sonia Online (Natural) - English (United Kingdom)');
-  // An earlier reply keeps the voice of the persona that gave it.
-  await page.getByTestId('persona-picker').first().getByTestId('persona-option-mulhim').click();
-  await page.getByTestId('assistant-message').last().getByTestId('read-aloud').click();
-  await expect.poll(() => page.evaluate(() => (window as unknown as { __spoken: string[] }).__spoken.at(-1)))
-    .toBe('Microsoft Sonia Online (Natural) - English (United Kingdom)');
-});
-
-test('Ilham with only male voices installed reads nothing aloud and says why', async ({ page }) => {
-  await setUp(page, MIXED.filter((v) => /Naayf|Abdullah|Ryan/.test(v.name)));
-  await openPanel(page);
-  await page.getByTestId('persona-picker').first().getByTestId('persona-option-ilham').click();
-  await expect(page.getByTestId('voice-no-female')).toContainText('only with a woman’s voice');
-  await expect(page.getByTestId('voice-no-male')).toHaveCount(0);
-});
-
-test('with no Arabic voice installed, Arabic answers are shown as text and the panel says why, for both personas', async ({ page }) => {
+test('with no Arabic voice installed, Arabic answers are shown as text and the panel says why', async ({ page }) => {
   // As on a Windows laptop with only English voices (David, Mark, Zira).
   await setUp(page, MIXED.filter((v) => v.lang.startsWith('en')));
   await openPanel(page);
@@ -125,10 +102,7 @@ test('with no Arabic voice installed, Arabic answers are shown as text and the p
   await expect(page.getByTestId('assistant-message').last()).toHaveAttribute('data-status', /answered|no_evidence/);
   await expect(page.getByTestId('read-aloud')).toHaveCount(0);
   expect(await page.evaluate(() => (window as unknown as { __spoken: string[] }).__spoken.length)).toBe(0);
-  // Ilham has no Arabic voice either; in English both can speak, and the notice goes.
-  await page.getByTestId('persona-picker').first().getByTestId('persona-option-ilham').click();
-  await expect(notice).toBeVisible();
-  await expect(page.getByTestId('voice-no-female')).toHaveCount(0);
+  // In English Al Mulhim can speak, and the notice goes.
   await page.getByTestId('assistant-language').getByRole('radio', { name: 'English' }).click();
   await expect(notice).toHaveCount(0);
   await expect(page.getByTestId('voice-mute')).toBeVisible();

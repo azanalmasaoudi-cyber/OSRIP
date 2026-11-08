@@ -2073,7 +2073,7 @@ export const en = {
     languageTitle: 'Language',
     languageBody: 'English or Arabic, for the whole interface. Arabic reads right to left; numbers keep Latin digits in both.',
     assistantTitle: 'Assistant',
-    assistantBody: 'Who answers your questions and speaks in Talk: Al Mulhim (a man’s voice) or Ilham (a woman’s voice).',
+    assistantBody: 'Al Mulhim answers your questions and speaks in Talk, with a man’s voice.',
     title: 'Settings',
     introTitle: 'Opening',
     introBody: 'The project name in a three-second opening on the home page, once per browser session. Skip ends it at once.',
@@ -2931,7 +2931,7 @@ export const en = {
       public: { title: 'Journalists and the public', body: 'Read the figures in Arabic or English, with clear labels for what is verified, provisional or missing.' },
     },
     aiHeading: 'The AI Assistant’s role',
-    aiLead: 'Al Mulhim and Ilham answer questions in a conversation. They work from published records first and say plainly when a figure is missing or unverified.',
+    aiLead: 'Al Mulhim answers questions in a conversation. It searches the web in its internet modes and works from published records in Data analysis, and says plainly when a figure is missing or unverified.',
     aiSteps: {
       ask: { title: 'You ask', body: 'In Arabic or English, in your own words.' },
       research: { title: 'It researches', body: 'Published OSRIP records first; official web sources only when web research is set up.' },
@@ -3020,7 +3020,7 @@ export const en = {
       },
       voices: {
         q: 'Which voices read the answers?',
-        a: 'Al Mulhim uses a male voice and Ilham a female voice from the server’s speech service. A browser voice is used only when the service is not set up, and it is labelled.',
+        a: 'Al Mulhim uses a male voice from the server’s speech service. A browser voice is used only when the service is not set up, and it is labelled.',
       },
       talk: {
         q: 'What does Talk do without a live avatar?',
@@ -3028,7 +3028,7 @@ export const en = {
       },
       browserVoices: {
         q: 'Why are answers not read aloud?',
-        a: 'Without the server speech service, answers are read with a voice installed in your browser, and only with the persona’s own kind of voice: a man’s voice for Al Mulhim and a woman’s for Ilham, in the answer’s language. If the browser has none, answers are shown as text. Install a voice (for example Microsoft Abdullah or Aysha for Arabic, Ryan or Sonia for English), or ask an administrator to set up Azure AI Speech (OSRIP_SPEECH_KEY and OSRIP_SPEECH_REGION).',
+        a: 'Without the server speech service, answers are read with a voice installed in your browser, and only with the persona’s own kind of voice: a man’s voice for Al Mulhim, in the answer’s language. If the browser has none, answers are shown as text. Install a voice (for example Microsoft Abdullah for Arabic, Ryan for English), or ask an administrator to set up Azure AI Speech (OSRIP_SPEECH_KEY and OSRIP_SPEECH_REGION).',
       },
       introClips: {
         q: 'What are the recorded introductions?',

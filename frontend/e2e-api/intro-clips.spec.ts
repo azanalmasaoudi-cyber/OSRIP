@@ -84,31 +84,6 @@ test('a listed clip plays only after a click, with stop, volume and transcript',
   expect(await page.evaluate(() => window.localStorage.getItem('osrip.intro.volume'))).toBe('70');
 });
 
-test('choosing the other persona stops the playing introduction', async ({ page }) => {
-  await serveClips(page);
-  await page.goto('/assistant?mode=synthetic');
-  const header = page.getByTestId('chat-header');
-  await header.getByTestId('persona-option-mulhim').click();
-  await openChatSettings(page);
-  await page.getByTestId('intro-play').click();
-  await expect(page.getByTestId('intro-player')).toHaveAttribute('data-state', 'playing');
-  // Switching in the conversation header (the settings drawer closed first).
-  await closeDrawer(page);
-  await header.getByTestId('persona-option-ilham').click();
-  await openChatSettings(page);
-  const player = page.getByTestId('intro-player');
-  await expect(player).toHaveAttribute('data-persona', 'ilham');
-  await expect(player).toHaveAttribute('data-state', 'idle'); // Al Mulhim's clip stopped
-  await expect(page.getByTestId('assistant-status-bar')).not.toHaveAttribute('data-state', 'speaking');
-  await page.getByTestId('intro-play').click();
-  await expect(player).toHaveAttribute('data-state', 'playing');
-  await player.getByTestId('intro-transcript-toggle').click();
-  await expect(player.getByTestId('intro-transcript')).toContainText(SCRIPTS.ilham);
-  await page.getByTestId('intro-stop').click();
-  await closeDrawer(page);
-  await header.getByTestId('persona-option-mulhim').click();
-});
-
 test('a clip that cannot be loaded says so and the page keeps working', async ({ page }) => {
   await serveClips(page, { missingFile: true });
   await page.goto('/assistant?mode=synthetic');

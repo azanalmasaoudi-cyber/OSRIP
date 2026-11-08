@@ -97,10 +97,10 @@ test('Talk is one centred column: name, portrait, persona choice, then the conve
   await expect(workspace.getByTestId('assistant-input')).toBeInViewport();
   await snap(page, `talk-${info.project.name}-en-dark-conversation`);
 
-  // Switching to Ilham keeps the same layout.
-  await workspace.getByTestId('persona-option-ilham').click();
-  await expect(workspace).toHaveAttribute('data-persona', 'ilham');
-  await expect(page.getByTestId('talk-figure').locator('img')).toHaveAttribute('src', /ilham-figure/);
+  // One persona: no choice in Talk, Al Mulhim's figure.
+  await expect(workspace.getByTestId('persona-picker')).toHaveCount(0);
+  await expect(workspace).toHaveAttribute('data-persona', 'mulhim');
+  await expect(page.getByTestId('talk-figure').locator('img')).toHaveAttribute('src', /mulhim-figure/);
   await checkColumn(page, phone);
 });
 

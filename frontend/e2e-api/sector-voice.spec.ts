@@ -28,14 +28,12 @@ test('a sector result is explained in a few spoken sentences only when asked', a
   await expect(block).toHaveAttribute('data-state', 'idle');
   expect(await page.evaluate(() => window.localStorage.getItem('osrip.voice.volume'))).toBe('40');
 
-  // In Arabic with Ilham: her Omani voice.
+  // In Arabic: Al Mulhim's Omani voice.
   await page.getByRole('button', { name: 'العربية' }).first().click();
-  await page.goto('/assistant?mode=synthetic');
-  await page.getByTestId('chat-header').getByTestId('persona-option-ilham').click();
   await page.goto('/energy/electricity?mode=synthetic');
   const arabic = page.waitForResponse((r) => r.url().includes('/assistant/voice/series') && r.request().method() === 'POST');
   await page.getByTestId('sector-listen').click();
-  expect((await arabic).headers()['x-voice']).toBe('ar-OM-AyshaNeural');
+  expect((await arabic).headers()['x-voice']).toBe('ar-OM-AbdullahNeural');
   await expect(page.getByTestId('sector-listen-transcript')).toContainText('توليد الكهرباء');
   await page.getByTestId('sector-listen-stop').click();
   await page.getByRole('button', { name: 'English' }).first().click();

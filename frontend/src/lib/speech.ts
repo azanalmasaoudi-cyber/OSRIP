@@ -7,7 +7,7 @@
  * is used. Features are offered only when the browser actually provides them:
  *  - recognition: SpeechRecognition / webkitSpeechRecognition;
  *  - synthesis: speechSynthesis with an installed voice of the persona's gender for the chosen
- *    language (Al Mulhim: a man's voice; Ilham: a woman's voice; Arabic is never read with an
+ *    language (Al Mulhim: a man's voice; Arabic is never read with an
  *    English voice, and a persona never with a voice of the other gender).
  * The microphone opens only inside start(), which is called from a user's click.
  */
@@ -51,7 +51,7 @@ export function synthesisSupported(): boolean {
 }
 
 /*
- * Each persona speaks only with a voice of its own gender: Al Mulhim a man's, Ilham a woman's.
+ * Each persona speaks only with a voice of its own gender (Al Mulhim: a man's).
  * Browsers do not report a voice's gender, so voices are recognised by the given names used by
  * Windows, Edge's online voices, macOS and Chrome. A voice not known to be of the persona's
  * gender is never used: if a browser has none for a language, nothing is read aloud and the

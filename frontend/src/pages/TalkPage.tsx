@@ -18,7 +18,7 @@ import { useDocumentTitle } from '@/lib/useDocumentTitle';
 import { usePreservedSearch } from '@/state/usePreservedSearch';
 
 /**
- * Talk: one centred column (at most 900px) for the chosen persona, Al Mulhim or Ilham: the name
+ * Talk: one centred column (at most 900px) for Al Mulhim: the name
  * and live state, a compact still portrait, the persona choice, then the conversation with its
  * message box, Send and Speak. Only the message list scrolls (on phones, the conversation as
  * one column with the message box pinned), so there are no nested scrollbars. The camera is

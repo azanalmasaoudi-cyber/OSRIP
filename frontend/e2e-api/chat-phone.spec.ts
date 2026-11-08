@@ -156,17 +156,16 @@ test('Enter sends once, Shift+Enter starts a new line', async ({ page }) => {
   expect(asks).toHaveLength(1);
 });
 
-test('switching to Ilham changes who answers; the conversation stays', async ({ page }) => {
+test('Al Mulhim answers on a phone; the header offers no persona choice', async ({ page }) => {
   await page.goto('/assistant?mode=synthetic');
   await ask(page, 'Hello');
   const header = page.getByTestId('chat-header');
-  await header.getByTestId('persona-option-ilham').click();
-  await expect(page.getByTestId('mulhim-name')).toHaveText('Ilham');
-  await expect(header.getByTestId('assistant-avatar').locator('img')).toHaveAttribute('src', /ilham-portrait/);
+  await expect(header.getByTestId('persona-picker')).toHaveCount(0);
+  await expect(page.getByTestId('mulhim-name')).toHaveText('Al Mulhim');
+  await expect(header.getByTestId('assistant-avatar').locator('img')).toHaveAttribute('src', /mulhim-portrait/);
   const reply = await ask(page, 'Who are you?');
-  await expect(reply).toHaveAttribute('data-persona', 'ilham');
-  await expect(page.getByTestId('assistant-message').first()).toHaveAttribute('data-persona', 'mulhim');
-  await header.getByTestId('persona-option-mulhim').click();
+  await expect(reply).toHaveAttribute('data-persona', 'mulhim');
+  await expect(reply.getByTestId('assistant-text')).toContainText('I am Al Mulhim');
 });
 
 test('reading older messages: a new reply does not pull the page; "New messages" brings it', async ({ page }, info) => {

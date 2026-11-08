@@ -33,7 +33,7 @@ export function ServiceChip() {
 
 /**
  * Under the portrait, only what is needed: who answers (name, AI label, a compact state and
- * service status), the choice between Al Mulhim and Ilham, and the audio controls (stop,
+ * service status), a persona choice when the profile offers more than one, and the audio controls (stop,
  * the persona's recorded introduction when one is supplied, the voice test in a collapsed
  * panel). Explanations live in the conversation's Help panel and in Settings.
  */

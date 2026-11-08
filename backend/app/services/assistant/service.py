@@ -372,12 +372,17 @@ def first_turn(session: Session, conv: AssistantConversation) -> bool:
 
 
 def resolve_persona(
-    session: Session, code: str | None, *, user_id: uuid.UUID | None = None
+    session: Session,
+    code: str | None,
+    *,
+    user_id: uuid.UUID | None = None,
+    retired_ok: bool = True,
 ) -> str | None:
     """The persona that gives the next reply: the one asked for, else the signed-in person's
-    saved choice, else the profile's default. A code the active profile does not have is
-    refused. Personas change only the name, introduction, portrait and voice: knowledge, tools,
-    permissions, sources, history and the guest allowance are the same for each."""
+    saved choice, else the profile's default. A retired persona (profile.RETIRED_PERSONAS) gets
+    the default unless ``retired_ok`` is false (saving a choice); any other code the active
+    profile does not have is refused. Personas change only the name, introduction, portrait and
+    voice: knowledge, tools, permissions, sources, history and the guest allowance are shared."""
     from app.models import AppUser
 
     current = profile.active(session)
@@ -387,6 +392,8 @@ def resolve_persona(
     if code is None and user_id is not None:
         saved = session.scalar(select(AppUser.assistant_persona).where(AppUser.id == user_id))
         code = saved if saved in codes else None
+    if code is not None and code not in codes and retired_ok and code in profile.RETIRED_PERSONAS:
+        code = None
     if code is not None and code not in codes:
         raise unprocessable("unknown_persona", "This assistant persona does not exist.")
     return profile.persona(current.profile, code).code

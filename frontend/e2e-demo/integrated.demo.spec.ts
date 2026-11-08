@@ -43,25 +43,19 @@ test.describe('1-2. Opening', () => {
   });
 });
 
-test('3-4. Choosing Al Mulhim or Ilham; each has its own voice (configured ids)', async ({ page }) => {
+test('3-4. One assistant, Al Mulhim, with his own voice (configured ids)', async ({ page }) => {
   await page.goto('/assistant?mode=synthetic');
-  const picker = page.getByTestId('persona-picker').first();
-  await picker.getByTestId('persona-option-ilham').click();
-  await expect(picker).toHaveAttribute('data-selected', 'ilham');
-  await expect(page.getByTestId('mulhim-name').first()).toHaveText('Ilham');
-  await shot(page, '06-persona-ilham-selected');
-  // Talk carries the voice each persona speaks with (data-voice; the scripted speech service here).
+  await expect(page.getByTestId('persona-picker')).toHaveCount(0);
+  await expect(page.getByTestId('mulhim-name').first()).toHaveText('Al Mulhim');
+  await shot(page, '06-al-mulhim-only');
+  // Talk carries the voice he speaks with (data-voice; the scripted speech service here).
   await page.getByTestId('chat-settings').click();
   await page.getByTestId('open-talk').click();
-  await expect(page.getByTestId('talk-workspace')).toHaveAttribute('data-voice', 'en-GB-SoniaNeural');
-  await shot(page, '07-talk-ilham-female-voice');
-  await page.getByTestId('talk-workspace').getByTestId('persona-picker').getByTestId('persona-option-mulhim').click();
   await expect(page.getByTestId('talk-workspace')).toHaveAttribute('data-voice', 'en-GB-RyanNeural');
-  await shot(page, '08-talk-mulhim-male-voice');
+  await shot(page, '07-talk-mulhim-male-voice');
   const voices = await page.evaluate(async () => (await (await fetch('/api/v1/assistant/voice')).json()) as { personas: { code: string; gender: string; voices: Record<string, string> }[] });
   expect(voices.personas.map((p) => [p.code, p.gender, p.voices.ar, p.voices.en])).toEqual([
     ['mulhim', 'male', 'ar-OM-AbdullahNeural', 'en-GB-RyanNeural'],
-    ['ilham', 'female', 'ar-OM-AyshaNeural', 'en-GB-SoniaNeural'],
   ]);
 });
 
@@ -135,9 +129,8 @@ test('7. A failing provider and a denied microphone are explained; nothing is ch
   await shot(page, '14-microphone-denied-typing-works');
 });
 
-test('8. Five answers shared across personas: switching persona does not reset the count', async ({ page }) => {
+test('8. Five free answers: the count is kept on the server across questions', async ({ page }) => {
   await page.goto('/assistant?mode=synthetic');
-  const picker = page.getByTestId('persona-picker').first();
   const ask = async (text: string) => {
     const n = await page.getByTestId('assistant-message').count();
     await page.getByTestId('assistant-input').fill(text);
@@ -147,13 +140,12 @@ test('8. Five answers shared across personas: switching persona does not reset t
   await ask('Hello'); // the fixed greeting: free
   await expect(page.getByTestId('guest-allowance')).toHaveAttribute('data-remaining', '5');
   for (let i = 0; i < 5; i += 1) {
-    await picker.getByTestId(i % 2 ? 'persona-option-ilham' : 'persona-option-mulhim').click();
     await ask('What is the latest electricity generation?');
     await expect(page.getByTestId('guest-allowance')).toHaveAttribute('data-remaining', String(4 - i));
   }
   await expect(page.getByTestId('assistant-sign-in')).toBeVisible();
   await expect(page.getByTestId('assistant-input')).toBeDisabled();
-  await shot(page, '15-guest-limit-after-switching-persona');
+  await shot(page, '15-guest-limit-reached');
 });
 
 test('@phone the workspace on a phone: tabs and the study', async ({ page }) => {
