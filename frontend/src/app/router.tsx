@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate, useLocation } from 'react-router';
 
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { AppShell } from '@/components/layout/AppShell';
+import { talkRedirectSearch } from '@/lib/talkRedirect';
 import { DesignReferencePage } from '@/pages/DesignReferencePage';
 import { EnergyIndexRedirect, EnergyLayout } from '@/pages/EnergyLayout';
 import { HomePage } from '@/pages/HomePage';
@@ -20,7 +21,6 @@ import { WorkspacePage } from '@/pages/WorkspacePage';
 import { ReportPage, ReportsPage } from '@/pages/ReportsPages';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { StudiesPage } from '@/pages/StudiesPage';
-import { TalkPage } from '@/pages/TalkPage';
 import { ElectricityPage, FoodSecurityPage, TradePage, WaterPage } from '@/pages/SectionPages';
 import {
   AccountPage,
@@ -47,6 +47,12 @@ function ForecastRedirect() {
 function MethodologyRedirect() {
   const { search } = useLocation();
   return <Navigate to={{ pathname: '/sources', search }} replace />;
+}
+
+/** The old Talk screen: /talk opens the one Al Mulhim conversation (lib/talkRedirect). */
+function TalkRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={{ pathname: '/assistant', search: talkRedirectSearch(search) }} replace />;
 }
 
 export const router = createBrowserRouter([
@@ -77,7 +83,7 @@ export const router = createBrowserRouter([
       { path: 'forecasts', element: <ForecastPage /> },
       { path: 'forecast', element: <ForecastRedirect /> },
       { path: 'assistant', element: <AssistantPage /> },
-      { path: 'talk', element: <TalkPage /> },
+      { path: 'talk', element: <TalkRedirect /> },
       { path: 'library', element: <LibraryPage /> },
       { path: 'studies', element: <StudiesPage /> },
       { path: 'studies/:studyId', element: <StudiesPage /> },

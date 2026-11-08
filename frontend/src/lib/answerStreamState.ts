@@ -6,7 +6,7 @@ import { z } from 'zod';
  * again; nothing after the end. Pure, so it is tested on its own (tests/answer-stream.test.mjs).
  */
 
-export type AnswerPhase = 'starting' | 'searching' | 'reading' | 'analysing' | 'writing' | 'checking' | 'done';
+export type AnswerPhase = 'starting' | 'planning' | 'searching' | 'reading' | 'analysing' | 'preparing' | 'writing' | 'checking' | 'done';
 
 export interface AnswerStream {
   phase: AnswerPhase;
@@ -22,8 +22,12 @@ export const EMPTY_ANSWER: AnswerStream = { phase: 'starting', stage: null, text
 
 const PHASE: Record<string, AnswerPhase> = {
   received: 'starting',
+  planning: 'planning',
   web_search: 'searching',
   reading: 'reading',
+  // Tables, charts, diagrams and an illustration are prepared before the text is written.
+  visuals: 'preparing',
+  image: 'preparing',
   writing: 'writing',
   checking: 'checking',
   done: 'done',

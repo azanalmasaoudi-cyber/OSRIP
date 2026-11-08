@@ -3,6 +3,8 @@ import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
 import { WelcomeFooter, WelcomeStage, WelcomeTopBar } from './WelcomeChrome';
+import { usePersona } from '@/components/assistant/persona';
+import { PersonaImage } from '@/components/assistant/PersonaImage';
 import { SectorArtwork } from '@/components/brand/SectorArtwork';
 import type { Sector } from '@/components/brand/SectorIllustration';
 import { useAppLanguage } from '@/lib/useAppLanguage';
@@ -126,6 +128,7 @@ function WelcomeBody({ firstRef, onClose }: { firstRef: RefObject<HTMLButtonElem
   const { t, i18n } = useTranslation();
   const language = useAppLanguage();
   const to = usePreservedSearch();
+  const { persona } = usePersona();
   // The name in the other language as well, as on the screen's design.
   const other = language === 'ar' ? 'en' : 'ar';
   const tOther = i18n.getFixedT(other);
@@ -156,6 +159,16 @@ function WelcomeBody({ firstRef, onClose }: { firstRef: RefObject<HTMLButtonElem
               <li><b aria-hidden="true">◎</b>{t('welcome.meta.languages')}</li>
               <li><b aria-hidden="true">◈</b>{t('welcome.meta.domains')}</li>
             </ul>
+            {/* The one AI assistant, Al Mulhim: opens the conversation. */}
+            <Link to={to('/assistant')} onClick={() => onClose('sector')} className="ow-assistant" data-testid="welcome-assistant"
+              data-persona={persona.code}>
+              <PersonaImage src={persona.avatar.portrait} alt="" width={40} height={40} draggable={false} />
+              <span className="ow-assistant-text">
+                <b>{t('welcome.assistant', { name: persona.name[language] })}</b>
+                <span>{t('welcome.assistantSub')}</span>
+              </span>
+              <span aria-hidden="true" className="ow-arrow">→</span>
+            </Link>
           </div>
           <div className="ow-art">
             <section className="ow-panel" aria-labelledby="welcome-panel-title" data-testid="welcome-panel">

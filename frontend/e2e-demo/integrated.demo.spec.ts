@@ -48,11 +48,12 @@ test('3-4. One assistant, Al Mulhim, with his own voice (configured ids)', async
   await expect(page.getByTestId('persona-picker')).toHaveCount(0);
   await expect(page.getByTestId('mulhim-name').first()).toHaveText('Al Mulhim');
   await shot(page, '06-al-mulhim-only');
-  // Talk carries the voice he speaks with (data-voice; the scripted speech service here).
-  await page.getByTestId('chat-settings').click();
-  await page.getByTestId('open-talk').click();
-  await expect(page.getByTestId('talk-workspace')).toHaveAttribute('data-voice', 'en-GB-RyanNeural');
-  await shot(page, '07-talk-mulhim-male-voice');
+  // There is no separate Talk screen: its old address opens this conversation, whose message
+  // box has the microphone. His voices are configured on the server (scripted speech here).
+  await page.goto('/talk?mode=synthetic');
+  await expect(page).toHaveURL(/\/assistant\?mode=synthetic$/);
+  await expect(page.getByTestId('chat-composer').getByTestId('voice-start')).toBeVisible();
+  await shot(page, '07-al-mulhim-conversation-microphone');
   const voices = await page.evaluate(async () => (await (await fetch('/api/v1/assistant/voice')).json()) as { personas: { code: string; gender: string; voices: Record<string, string> }[] });
   expect(voices.personas.map((p) => [p.code, p.gender, p.voices.ar, p.voices.en])).toEqual([
     ['mulhim', 'male', 'ar-OM-AbdullahNeural', 'en-GB-RyanNeural'],
@@ -121,11 +122,9 @@ test('7. A failing provider and a denied microphone are explained; nothing is ch
   await expect(failed.getByRole('button', { name: 'Try the AI answer again' })).toBeVisible();
   await expect(page.getByTestId('guest-allowance')).toHaveAttribute('data-remaining', '5');
   await shot(page, '13-provider-unavailable-not-charged');
-  await page.getByTestId('chat-settings').click();
-  await page.getByTestId('open-talk').click();
-  const sheet = page.getByTestId('talk-sheet');
-  await sheet.getByTestId('voice-start').click(); // no microphone permission granted
-  await expect(sheet.getByTestId('voice-notice')).toBeVisible();
+  const composer = page.getByTestId('chat-composer');
+  await composer.getByTestId('voice-start').click(); // no microphone permission granted
+  await expect(composer.getByTestId('voice-notice')).toBeVisible();
   await shot(page, '14-microphone-denied-typing-works');
 });
 

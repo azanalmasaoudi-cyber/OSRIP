@@ -5,13 +5,13 @@ import { closeDrawer, openChatSettings } from './chat';
 // One assistant persona through the real stack (scripted model and speech services): Al Mulhim
 // (assistant profile version 4). There is no persona choice anywhere; a question that still names
 // the retired persona (Ilham) is answered by Al Mulhim, while an earlier reply keeps its text
-// under a neutral name. Talk shows Al Mulhim large, asks for the microphone only when the mic is
-// pressed and never for the camera.
+// under a neutral name. There is no separate Talk screen (/talk opens the conversation): the
+// microphone is in the message box, asked for only when pressed and never with the camera.
 
 const PASSWORD = process.env.OSRIP_E2E_PASSWORD ?? '';
 const API = '/api/v1';
 
-// A fake microphone device (permission is granted only in the Talk group).
+// A fake microphone device (permission is granted only in the voice group).
 test.use({ launchOptions: { args: ['--use-fake-device-for-media-stream', '--autoplay-policy=no-user-gesture-required'] } });
 
 async function ask(page: Page, text: string): Promise<void> {
@@ -82,6 +82,7 @@ test('a question naming the retired persona is answered by Al Mulhim; it cannot 
   const settings = page.getByTestId('settings-persona');
   await expect(settings).toContainText('Al Mulhim answers your questions');
   await expect(settings.getByTestId('persona-picker')).toHaveCount(0);
+  await expect(settings.getByTestId('settings-assistant')).toHaveAttribute('data-persona', 'mulhim');
 });
 
 test('an earlier reply by the retired persona keeps its text under a neutral name', async ({ page }) => {
@@ -104,10 +105,10 @@ test('an earlier reply by the retired persona keeps its text under a neutral nam
   await expect(page.getByTestId('mulhim-name')).toHaveText('Al Mulhim');
 });
 
-test.describe('Talk with Al Mulhim', () => {
+test.describe('Voice in the conversation', () => {
   test.use({ permissions: ['microphone'] });
 
-  test('Al Mulhim is shown in Talk, push-to-talk with his voice, the camera is never requested', async ({ page }) => {
+  test('the old Talk address opens the conversation; the microphone is in the message box, audio only, and answers are read with Al Mulhim’s voice', async ({ page }) => {
     await page.addInitScript(() => {
       const store = window as unknown as { __media: MediaStreamConstraints[]; __streams: MediaStream[] };
       store.__media = [];
@@ -121,60 +122,39 @@ test.describe('Talk with Al Mulhim', () => {
         return stream;
       };
     });
-    await page.goto('/assistant?mode=synthetic');
-    await openChatSettings(page); // Talk is offered in the conversation settings (Voice)
-    await page.getByTestId('open-talk').click();
-    const workspace = page.getByTestId('talk-workspace');
-    await expect(workspace).toHaveAttribute('data-persona', 'mulhim');
-    await expect(page.getByRole('heading', { level: 1, name: 'Talk to Al Mulhim' })).toBeFocused();
-    await expect(page.getByTestId('talk-figure').locator('img')).toHaveAttribute('src', /mulhim-figure/);
-    await expect(workspace.getByTestId('persona-picker')).toHaveCount(0);
-    await expect(workspace).toHaveAttribute('data-mode', 'push_to_talk');
-    await expect(workspace).toHaveAttribute('data-voice', 'en-GB-RyanNeural');
-    // Every control is there: transcript, language, microphone, mute, End call, Close.
-    const sheet = page.getByTestId('talk-sheet');
-    for (const id of ['assistant-language', 'voice-start', 'voice-mute', 'assistant-input']) {
-      await expect(sheet.getByTestId(id)).toBeVisible();
-    }
-    await expect(page.getByTestId('talk-end')).toBeVisible();
-    await expect(page.getByTestId('talk-close')).toBeVisible();
+    await page.goto('/talk?mode=synthetic');
+    await expect(page).toHaveURL(/\/assistant\?mode=synthetic$/);
+    await expect(page.getByTestId('talk-workspace')).toHaveCount(0);
+    await expect(page.getByTestId('talk-end')).toHaveCount(0);
+    const composer = page.getByTestId('chat-composer');
+    await expect(composer.getByTestId('voice-start')).toBeVisible();
     // Nothing has asked for a device yet.
     expect(await page.evaluate(() => (window as unknown as { __media: unknown[] }).__media.length)).toBe(0);
 
-    // Greeting and the purpose with the three domains.
-    await sheet.getByTestId('assistant-language').getByRole('radio', { name: 'العربية' }).click();
-    await sheet.getByTestId('assistant-input').fill('السلام عليكم');
-    await sheet.getByTestId('assistant-send').click();
-    await expect(sheet.getByTestId('assistant-message').last().getByTestId('assistant-text')).toContainText('وعليكم السلام ورحمة الله وبركاته');
-    await sheet.getByTestId('assistant-language').getByRole('radio', { name: 'English' }).click();
-    await sheet.getByTestId('assistant-input').fill('What is OSRIP?');
-    await sheet.getByTestId('assistant-send').click();
-    const about = sheet.getByTestId('assistant-message').last().getByTestId('assistant-text');
+    // The purpose with the three domains, answered by Al Mulhim.
+    await ask(page, 'What is OSRIP?');
+    const about = page.getByTestId('assistant-message').last().getByTestId('assistant-text');
     await expect(about).toContainText('decision support on Oman');
     await expect(about).toContainText('Energy and Essential Services');
     await expect(about).toContainText('Food Security');
     await expect(about).toContainText('Trade');
 
-    // Interrupt: the answer is read with Al Mulhim's configured server voice; Stop speaking ends it.
+    // The answer is read with Al Mulhim's configured server voice; Stop speaking ends it.
     const spoken = page.waitForResponse(/\/assistant\/voice\/speak/);
-    await sheet.getByTestId('assistant-message').last().getByTestId('read-aloud').click();
+    await page.getByTestId('assistant-message').last().getByTestId('read-aloud').click();
     expect((await spoken).headers()['x-voice']).toBe('en-GB-RyanNeural');
     await page.getByTestId('voice-stop-speaking').click();
     await expect(page.getByTestId('voice-stop-speaking')).toHaveCount(0);
 
-    // The microphone is asked for only now, audio only.
-    await sheet.getByTestId('voice-start').click();
-    await expect(page.getByTestId('talk-state')).toHaveAttribute('data-state', 'listening');
+    // The microphone is asked for only now, audio only; cancelling releases it.
+    await composer.getByTestId('voice-start').click();
+    await expect(page.getByTestId('chat-state')).toHaveAttribute('data-state', 'listening');
     const constraints = await page.evaluate(() => (window as unknown as { __media: MediaStreamConstraints[] }).__media);
     expect(constraints).toHaveLength(1);
     expect(constraints[0]?.audio).toBeTruthy();
     expect(constraints[0]?.video ?? false).toBe(false);
-    await sheet.getByTestId('voice-cancel').click();
-
-    // End call releases the microphone.
-    await page.getByTestId('talk-end').click();
-    await expect(page).toHaveURL(/\/assistant/);
+    await composer.getByTestId('voice-cancel').click();
     await expect.poll(() => page.evaluate(() => (window as unknown as { __streams: MediaStream[] }).__streams
-      .flatMap((s) => s.getTracks()).filter((track) => track.readyState === 'live').length)).toBe(0);
+      .flatMap((st) => st.getTracks()).filter((track) => track.readyState === 'live').length)).toBe(0);
   });
 });

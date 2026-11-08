@@ -29,7 +29,7 @@ test('a greeting is answered at once, without a lookup or a charge, and the welc
   await expect(page.getByTestId('chat-greeting')).toHaveText('How can I help you?');
   await snap(page, 'after-welcome');
   const examples = page.getByTestId('suggestion');
-  expect(await examples.count()).toBeLessThanOrEqual(3);
+  expect(await examples.count()).toBeLessThanOrEqual(4); // up to four examples under the welcome
   await page.getByTestId('assistant-input').fill('Hello');
   await page.getByTestId('assistant-input').press('Enter');
   await expect(page.getByTestId('user-message').last()).toHaveText('Hello'); // shown at once

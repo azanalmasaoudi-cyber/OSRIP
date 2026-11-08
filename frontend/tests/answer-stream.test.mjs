@@ -12,6 +12,9 @@ test('the stages map to the phases a person sees', () => {
   assert.equal(apply([stage(1, 'reading')]).phase, 'reading');
   assert.equal(apply([stage(1, 'computing')]).phase, 'analysing');
   assert.equal(apply([stage(1, 'published_data')]).phase, 'analysing');
+  assert.equal(apply([stage(1, 'planning')]).phase, 'planning');
+  assert.equal(apply([stage(1, 'visuals')]).phase, 'preparing');
+  assert.equal(apply([stage(1, 'image')]).phase, 'preparing');
   assert.equal(apply([stage(1, 'writing')]).phase, 'writing');
   assert.equal(apply([stage(1, 'checking')]).phase, 'checking');
 });

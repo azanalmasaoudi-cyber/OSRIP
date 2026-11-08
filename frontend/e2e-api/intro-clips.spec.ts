@@ -3,12 +3,12 @@ import { expect, test, type Page } from '@playwright/test';
 import { closeDrawer, openChatSettings } from './chat';
 
 // The recorded introductions (Canva AI Voice clips listed in public/audio/intro/manifest.json):
-// hidden while no clip is listed; with clips, played only after a click, stopped by Stop and
-// by choosing the other persona, with a volume control and clear loading errors. On the AI
+// hidden while no clip is listed; with a clip, played only after a click, stopped by Stop,
+// with a volume control and clear loading errors (Al Mulhim is the only persona). On the AI
 // Assistant page they are in the conversation settings (Voice). The audio here is a generated
 // test tone served in place of the clips, not a voice and not shipped.
 
-const SCRIPTS = { mulhim: 'السلام عليكم، أنا مُلهم', ilham: 'مرحبًا بك، أنا إلهام' };
+const SCRIPTS = { mulhim: 'السلام عليكم، أنا مُلهم' };
 
 /** A short WAV tone (PCM 16-bit mono) as bytes. */
 function tone(seconds: number, hz: number): Buffer {
@@ -28,12 +28,11 @@ async function serveClips(page: Page, { missingFile = false } = {}): Promise<voi
     contentType: 'application/json',
     body: JSON.stringify({ clips: {
       mulhim: { ar: { src: 'mulhim-intro-ar.wav', transcript: SCRIPTS.mulhim } },
-      ilham: { ar: { src: 'ilham-intro-ar.wav', transcript: SCRIPTS.ilham } },
     } }),
   }));
   await page.route('**/audio/intro/*.wav', (route) => (missingFile
     ? route.fulfill({ status: 404, body: '' })
-    : route.fulfill({ contentType: 'audio/wav', body: tone(6, route.request().url().includes('ilham') ? 330 : 220) })));
+    : route.fulfill({ contentType: 'audio/wav', body: tone(6, 220) })));
   // Record what the page does with audio volume (the element is not in the document).
   await page.addInitScript(() => {
     const desc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'volume');

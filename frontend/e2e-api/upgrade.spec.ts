@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import { closeDrawer, openChatSettings, openTools } from './chat';
+
 // Release 0.8 through the real stack: Al Mulhim's labelled face, web research with
 // labelled sources (scripted search provider, refused in production), the review queue,
 // and a username account that must replace its temporary password first.
@@ -11,16 +13,18 @@ test('the floating control is Al Mulhim, labelled as an AI assistant, in English
   const open = page.getByTestId('open-assistant');
   await expect(open).toContainText('Al Mulhim');
   await expect(open.getByTestId('assistant-avatar').first()).toHaveAttribute('data-state', 'idle');
-  await open.click();
-  const identity = page.getByTestId('assistant-identity');
+  await open.click(); // the one conversation
+  const identity = page.getByTestId('chat-header');
   await expect(identity).toContainText('AI assistant');
   await expect(identity).not.toContainText('not a real person'); // no long notes under the portrait
+  await expect(identity.getByRole('img', { name: /generated image of a fictional Omani man/i })).toBeVisible();
+  await openChatSettings(page);
   const help = page.getByTestId('assistant-help');
   await help.locator('summary').click();
   await expect(help).toContainText('not a real person');
   await expect(help).toContainText('not lip synchronisation');
-  await expect(identity.getByRole('img', { name: /generated image of a fictional Omani man/i })).toBeVisible();
-  await page.keyboard.press('Escape');
+  await closeDrawer(page);
+  await page.goto('/energy/electricity?mode=synthetic');
   await page.getByRole('button', { name: 'العربية' }).click();
   await expect(page.getByTestId('open-assistant')).toContainText('المُلْهِم');
   await page.getByRole('button', { name: 'English' }).click();
@@ -29,7 +33,11 @@ test('the floating control is Al Mulhim, labelled as an AI assistant, in English
 test('web research cites a labelled official source and failures are shown, not hidden', async ({ page }) => {
   await page.goto('/energy/electricity?mode=synthetic');
   await page.getByTestId('open-assistant').click();
+  // Answers from OSRIP's data with web search on (the default), chosen in Tools.
+  await openTools(page);
   await expect(page.getByTestId('web-toggle')).toBeChecked();
+  await page.getByTestId('assistant-mode').locator('[data-value="ask"]').click();
+  await closeDrawer(page);
   await page.getByTestId('assistant-input').fill('Search the web for electricity generation 2023');
   await page.getByTestId('assistant-send').click();
   const reply = page.getByTestId('assistant-message').last();

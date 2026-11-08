@@ -26,7 +26,7 @@ test('research briefs cover each domain and language within the existing message
   expect(result).toHaveLength(32);
   for (const item of result) {
     expect(item.text.length).toBeLessThanOrEqual(1000);
-    expect(item.text).toContain(item.language === 'ar' ? '٢٠٢٢' : '2022');
+    expect(item.text).toContain(item.language === 'ar' ? '٢٠٢١' : '2021'); // the verified scope starts in 2021
     expect(item.text).toContain(item.language === 'ar' ? 'المراجع' : 'source links');
   }
 });

@@ -329,6 +329,55 @@
   font-size: 14px;
 }
 
+/* Al Mulhim, the one AI assistant: a compact link to the conversation. */
+.ow-assistant {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 28px;
+  padding: 6px 18px 6px 6px;
+  border: 1px solid var(--ow-glass-line);
+  border-radius: 999px;
+  background: var(--ow-glass);
+  color: var(--ow-ink);
+  text-decoration: none;
+  backdrop-filter: blur(14px);
+  transition: border-color 0.2s, transform 0.2s;
+}
+[dir='rtl'] .ow-assistant {
+  padding: 6px 6px 6px 18px;
+}
+.ow-assistant:hover {
+  border-color: var(--ow-peach);
+  transform: translateY(-1px);
+}
+.ow-assistant:focus-visible {
+  outline: 3px solid var(--ow-peach);
+  outline-offset: 3px;
+}
+.ow-assistant img {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  object-fit: cover;
+  object-position: top;
+  box-shadow: 0 0 0 2px var(--ow-glass-line);
+}
+.ow-assistant-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  text-align: start;
+}
+.ow-assistant-text b {
+  font-size: 14px;
+  font-weight: 800;
+}
+.ow-assistant-text span {
+  color: var(--ow-muted);
+  font-size: 12px;
+}
+
 .ow-art {
   position: relative;
   display: flex;
@@ -856,7 +905,8 @@
   .ow-chip:hover,
   .ow-primary:hover:not(:disabled),
   .ow-secondary:hover,
-  .ow-sector:hover {
+  .ow-sector:hover,
+  .ow-assistant:hover {
     transform: none;
   }
 }

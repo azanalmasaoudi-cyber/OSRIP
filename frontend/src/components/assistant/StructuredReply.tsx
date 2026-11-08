@@ -1,15 +1,12 @@
 import { AlertTriangle, Database, FlaskConical, Lightbulb, Scale } from 'lucide-react';
-import { createContext, Fragment, useContext, useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { createContext, Fragment, useContext, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
-import {
-  ASSISTANT_MODES, DATA_MODES, INTERNET_MODES, type AssistantMode, type StructuredReply as Structured,
-} from '@/api/assistant';
+import type { StructuredReply as Structured } from '@/api/assistant';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/format';
 import { useAppLanguage } from '@/lib/useAppLanguage';
-import { cn } from '@/lib/utils';
 import { usePreservedSearch } from '@/state/usePreservedSearch';
 
 import { MethodSummary } from './ResearchProgress';
@@ -233,64 +230,6 @@ export function StructuredParts({ structured, messageId, known }: { structured: 
       ) : null}
       {/* How the answer was made (steps, providers, searches): with the sources, on request. */}
       {structured.method && sourcesShown ? <MethodSummary method={structured.method} /> : null}
-    </div>
-  );
-}
-
-/** The three main modes, which a compact selector (Talk) shows; the others are in Tools. */
-const MAIN_MODES: readonly AssistantMode[] = ['quick', 'research', 'analyze'];
-
-/** The answer modes as a wrapping radio group (arrow keys move the choice): the internet modes,
- * then the modes that work from OSRIP's data. Compact (Talk): the three main modes on one row,
- * and the current mode if it is another one. */
-export function ModeSelector({ value, onChange, compact = false }: {
-  value: AssistantMode;
-  onChange: (mode: AssistantMode) => void;
-  /** The mode's one-line description is read by screen readers only (Talk). */
-  compact?: boolean;
-}) {
-  const { t } = useTranslation();
-  const refs = useRef<(HTMLButtonElement | null)[]>([]);
-  const hintId = useId();
-  const shown = ASSISTANT_MODES.filter((m) => !compact || MAIN_MODES.includes(m) || m === value);
-  const index = shown.indexOf(value);
-  const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    const rtl = getComputedStyle(event.currentTarget).direction === 'rtl';
-    let next = index;
-    if (event.key === (rtl ? 'ArrowLeft' : 'ArrowRight') || event.key === 'ArrowDown') next = (index + 1) % shown.length;
-    else if (event.key === (rtl ? 'ArrowRight' : 'ArrowLeft') || event.key === 'ArrowUp') next = (index - 1 + shown.length) % shown.length;
-    else if (event.key === 'Home') next = 0;
-    else if (event.key === 'End') next = shown.length - 1;
-    else return;
-    event.preventDefault();
-    const mode = shown[next];
-    if (mode) onChange(mode);
-    refs.current[next]?.focus();
-  };
-  return (
-    <div className="flex flex-col gap-1">
-      <div role="radiogroup" aria-label={t('assistant.mode.label')} aria-describedby={hintId} data-testid="assistant-mode"
-        className="flex flex-wrap items-center gap-1">
-        {([['web', INTERNET_MODES], ['data', DATA_MODES]] as const).map(([group, modes], g) => (
-          <div key={group} role="group" aria-label={t(`assistant.mode.group.${group}`)} data-group={group} className="contents">
-            {g > 0 ? <span aria-hidden="true" className="mx-0.5 h-5 w-px bg-border-strong/60" /> : null}
-            {modes.filter((mode) => shown.includes(mode)).map((mode) => {
-              const i = shown.indexOf(mode);
-              return (
-                <button key={mode} ref={(el) => { refs.current[i] = el; }} type="button" role="radio" aria-checked={mode === value}
-                  tabIndex={mode === value ? 0 : -1} data-value={mode} onClick={() => onChange(mode)} onKeyDown={onKeyDown}
-                  aria-label={compact ? t(`assistant.mode.${mode}`) : undefined}
-                  className={cn('min-h-9 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
-                    mode === value ? 'border-primary bg-primary text-primary-foreground' : 'border-border-strong/60 bg-card hover:bg-muted')}>
-                  {/* Talk: short words keep the choice on one row; the full name is the accessible one. */}
-                  {compact ? t(`assistant.mode.short.${mode}`) : t(`assistant.mode.${mode}`)}
-                </button>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-      <p id={hintId} className={cn('text-xs text-muted-foreground', compact && 'sr-only')} data-testid="assistant-mode-hint">{t(`assistant.modeHint.${value}`)}</p>
     </div>
   );
 }

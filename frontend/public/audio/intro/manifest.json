@@ -1,7 +1,6 @@
 {
-  "about": "Pre-recorded Arabic introductions made with Canva AI Voice, one for each persona. They are recordings of a fixed welcome, never live speech, and play only when the person presses Play. Canva downloads AI Voice only inside an MP4 video; add a clip with: backend\\.venv\\Scripts\\python.exe tools\\import_canva_intro.py --persona mulhim|ilham --input <the MP4> --voice \"<voice name in Canva>\". The tool copies the audio track out without re-encoding, refuses silent or broken files, and fills in 'src', 'transcript' and 'provenance' here. While 'src' is null the introduction is not offered.",
+  "about": "Pre-recorded Arabic introduction made with Canva AI Voice, for Al Mulhim (the only assistant persona). It is a recording of a fixed welcome, never live speech, and plays only when the person presses Play. Canva downloads AI Voice only inside an MP4 video; add the clip with: backend\\.venv\\Scripts\\python.exe tools\\import_canva_intro.py --persona mulhim --input <the MP4> --voice \"<voice name in Canva>\". The tool copies the audio track out without re-encoding, refuses silent or broken files, and fills in 'src', 'transcript' and 'provenance' here. While 'src' is null the introduction is not offered.",
   "clips": {
-    "mulhim": { "ar": { "src": null, "transcript": null } },
-    "ilham": { "ar": { "src": null, "transcript": null } }
+    "mulhim": { "ar": { "src": null, "transcript": null } }
   }
 }

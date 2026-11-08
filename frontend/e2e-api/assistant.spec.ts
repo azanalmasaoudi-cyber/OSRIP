@@ -1,9 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { openHistory, setAnswerLanguage } from './chat';
+
 // The assistant through the real stack. The model is the backend's scripted test
 // double (OSRIP_ASSISTANT_PROVIDER=fake, refused in production): it answers only
 // from tool results, unless asked to "invent" (to exercise the evidence check) or
-// to "fail" (to exercise the model-failure path). Runs on desktop and phone.
+// to "fail" (to exercise the model-failure path). Runs on desktop and phone. There is one
+// conversation, on the AI Assistant page; the floating orb on other pages is a shortcut to it.
 
 const PASSWORD = process.env.OSRIP_E2E_PASSWORD ?? '';
 
@@ -18,6 +21,7 @@ async function signIn(page: Page): Promise<void> {
 async function openAssistant(page: Page, path = '/energy/electricity?mode=synthetic'): Promise<void> {
   await page.goto(path);
   await page.getByTestId('open-assistant').first().click();
+  await expect(page).toHaveURL(/\/assistant/);
   await expect(page.getByTestId('assistant-panel')).toBeVisible();
 }
 
@@ -33,8 +37,8 @@ test('guests get five answers across languages, then a sign-in prompt that survi
   const questions = ['What is the latest electricity generation?', 'ما آخر قيمة لتوليد الكهرباء؟'];
   for (let n = 1; n <= 5; n += 1) {
     const arabic = n % 2 === 0;
-    // The panel's own language selector; the interface stays in English.
-    await page.getByTestId('assistant-language').getByRole('radio', { name: arabic ? 'العربية' : 'English' }).click();
+    // The conversation's own answer language (Settings); the interface stays in English.
+    await setAnswerLanguage(page, arabic ? 'العربية' : 'English');
     await ask(page, questions[arabic ? 1 : 0] ?? '');
     await expect(page.getByTestId('assistant-message')).toHaveCount(n);
     await expect(page.getByTestId('assistant-message').last()).toHaveAttribute('data-status', 'answered');
@@ -46,31 +50,29 @@ test('guests get five answers across languages, then a sign-in prompt that survi
   await expect(page.getByTestId('assistant-input')).toBeDisabled();
   // Reloading (or another tab) keeps the server-side count and the conversation.
   await page.reload();
-  await page.getByTestId('open-assistant').first().click();
   await expect(page.getByTestId('guest-allowance')).toHaveAttribute('data-remaining', '0');
   await expect(page.getByTestId('assistant-sign-in')).toBeVisible();
   await expect(page.getByTestId('assistant-message')).toHaveCount(5);
   // Public statistics stay open.
-  await page.keyboard.press('Escape');
   await page.goto('/energy/electricity?mode=synthetic');
   await expect(page.getByTestId('sector-form')).toBeVisible();
 });
 
-test('the orb shows real states and the panel works by keyboard', async ({ page }) => {
+test('the orb is a keyboard shortcut to the one conversation, never a second chat', async ({ page }) => {
   await page.goto('/energy/electricity?mode=synthetic');
   const orb = page.getByTestId('open-assistant').first();
   await expect(orb).toHaveAttribute('data-state', 'idle');
+  await expect(page.getByTestId('assistant-panel')).toHaveCount(0); // no chat on this page
   await orb.focus();
   await page.keyboard.press('Enter');
-  await expect(page.getByTestId('assistant-panel')).toBeVisible();
+  await expect(page).toHaveURL(/\/assistant\?mode=synthetic$/); // the data mode is kept
+  await expect(page.getByTestId('assistant-panel')).toHaveCount(1);
+  await expect(page.getByTestId('open-assistant')).toHaveCount(0); // the conversation is on screen
   await page.getByTestId('assistant-input').fill('please fail');
   await page.keyboard.press('Enter');
   // The answer service failed: a data-based report (no topic named, so no figures), not charged.
   await expect(page.getByTestId('assistant-message').last()).toHaveAttribute('data-status', 'data_report');
   await expect(page.getByTestId('guest-allowance')).toHaveAttribute('data-remaining', '5');
-  await page.keyboard.press('Escape');
-  await expect(page.getByTestId('assistant-panel')).toBeHidden();
-  await expect(orb).toBeFocused(); // focus returns to the orb
 });
 
 test('answers cite the published source and are labelled AI-generated', async ({ page }) => {
@@ -144,7 +146,7 @@ test('missing verified data is reported as unavailable, not zero', async ({ page
   await expect(reply).toContainText('no published data');
 });
 
-test('Arabic questions get Arabic answers in a right-to-left panel', async ({ page }) => {
+test('Arabic questions get Arabic answers in a right-to-left conversation', async ({ page }) => {
   await signIn(page);
   await page.goto('/energy/electricity?mode=synthetic');
   await page.getByRole('button', { name: 'العربية' }).first().click();
@@ -154,21 +156,32 @@ test('Arabic questions get Arabic answers in a right-to-left panel', async ({ pa
   const reply = page.getByTestId('assistant-message').last();
   await expect(reply.getByTestId('assistant-text')).toContainText('آخر قيمة منشورة');
   await expect(reply.getByTestId('ai-label')).toHaveText('مولّد بالذكاء الاصطناعي');
-  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'English' }).first().click();
 });
 
-test('a conversation can be deleted', async ({ page }) => {
+test('conversations are listed in the history, reopened and deleted there', async ({ page }) => {
   await signIn(page);
   await openAssistant(page);
-  await ask(page, 'How did it change?');
+  const question = `How did it change? ${Date.now()}`;
+  await ask(page, question);
   await expect(page.getByTestId('assistant-message')).toHaveCount(1);
-  const select = page.getByTestId('conversation-select');
-  const id = await select.inputValue();
-  expect(id).not.toBe('');
-  await page.getByTestId('delete-conversation').click();
-  await page.getByTestId('delete-conversation').click(); // confirm
-  await expect(select).toHaveValue('');
-  await expect(select.locator(`option[value="${id}"]`)).toHaveCount(0);
+  let history = await openHistory(page);
+  await expect(history.locator('[data-testid="conversation-item"][data-active="true"]')).toHaveCount(1);
+  if (await page.locator('dialog[open]').count()) await page.keyboard.press('Escape');
+  // A new conversation empties the chat; the earlier one is reopened from the history.
+  await page.getByTestId('chat-new').click();
+  await expect(page.getByTestId('assistant-message')).toHaveCount(0);
+  await expect(page.getByTestId('chat-welcome')).toBeVisible();
+  history = await openHistory(page);
+  await history.getByTestId('conversation-item').first().getByTestId('conversation-open').click();
+  await expect(page.getByTestId('assistant-message')).toHaveCount(1);
+  await expect(page.getByTestId('user-message').first()).toHaveText(question);
+  // Deleting asks once more, then removes it from the list and the chat.
+  history = await openHistory(page);
+  const count = await history.getByTestId('conversation-item').count();
+  const current = history.locator('[data-testid="conversation-item"][data-active="true"]');
+  await current.getByTestId('conversation-delete').click();
+  await current.getByTestId('conversation-delete-confirm').click();
+  await expect(history.getByTestId('conversation-item')).toHaveCount(count - 1);
   await expect(page.getByTestId('assistant-message')).toHaveCount(0);
 });

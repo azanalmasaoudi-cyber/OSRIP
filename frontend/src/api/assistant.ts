@@ -897,26 +897,6 @@ export function useAssistantProfile(enabled = true) {
   });
 }
 
-const personaChoiceSchema = z.object({ persona: z.string().nullable(), stored: z.enum(['account', 'browser']) });
-
-/** The signed-in person's saved persona (visitors keep theirs in this browser only). */
-export function usePersonaChoice(enabled: boolean) {
-  return useQuery({
-    queryKey: ['assistant', 'persona'],
-    queryFn: () => apiJson('/assistant/persona', personaChoiceSchema),
-    enabled: adapterKind === 'http' && enabled,
-    staleTime: 5 * 60_000,
-  });
-}
-
-export function useSavePersonaChoice() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: (persona: string) => apiJson('/assistant/persona', personaChoiceSchema, jsonBody('PUT', { persona })),
-    onSuccess: (result) => client.setQueryData(['assistant', 'persona'], result),
-  });
-}
-
 const memorySchema = z.object({
   profile_version: z.number().nullable(),
   retention: z.object({ policy: z.string(), en: z.string(), ar: z.string() }),

@@ -1,63 +1,11 @@
-import { Check, Loader2, Square } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Markdown } from './Markdown';
-import { withoutMarkers } from './StructuredReply';
-import { PROGRESS_STAGES, useCancelRequest, useRequestProgress, type StructuredReply } from '@/api/assistant';
-import { Button } from '@/components/ui/button';
-import { useAnswerStream } from '@/state/answerStream';
+import { PROGRESS_STAGES, type StructuredReply } from '@/api/assistant';
 
 type Stage = (typeof PROGRESS_STAGES)[number];
 const isStage = (s: string): s is Stage => (PROGRESS_STAGES as readonly string[]).includes(s);
 const ANSWER_PROVIDERS = { anthropic: 1, openai: 1, gemini: 1, fake: 1 } as const;
 const SEARCH_ROUTES = ['brave', 'openai', 'gemini', 'fake-search', 'fake-openai', 'fake-gemini'] as const;
-
-/**
- * The stages a question has actually reached while it is answered, read from the server,
- * with a Stop button. A stopped question ends at its next step and is not counted.
- */
-export function ResearchProgress({ requestId, guest }: { requestId: string | null; guest: boolean }) {
-  const { t } = useTranslation();
-  const progress = useRequestProgress(requestId, guest);
-  const cancel = useCancelRequest();
-  // The answer as it is written (checked sentences, streamed by the server).
-  const stream = useAnswerStream(requestId, guest);
-  const stages = (progress.data?.stages ?? []).map((s) => s.stage).filter(isStage);
-  const stopping = cancel.isPending || cancel.isSuccess || Boolean(progress.data?.cancel_requested);
-  return (
-    <li className="me-auto flex w-full max-w-md flex-col gap-2 rounded-md border border-border bg-muted/30 p-3 text-sm" data-testid="assistant-loading">
-      <p className="flex items-center gap-2 font-medium" role="status">
-        <Loader2 aria-hidden="true" className="size-4 animate-spin motion-reduce:animate-none" />
-        {stopping ? t('workflow.stopping') : t('workflow.working')}
-      </p>
-      {stages.length ? (
-        <ol className="flex flex-col gap-1 text-xs text-muted-foreground" data-testid="assistant-progress">
-          {stages.map((stage, i) => {
-            const current = i === stages.length - 1;
-            return (
-              <li key={`${stage}-${i}`} className="flex items-center gap-1.5" data-stage={stage} aria-current={current ? 'step' : undefined}>
-                {current ? <Loader2 aria-hidden="true" className="size-3 animate-spin motion-reduce:animate-none" /> : <Check aria-hidden="true" className="size-3" />}
-                <span className={current ? 'font-medium text-foreground' : undefined}>{t(`workflow.stage.${stage}`)}</span>
-              </li>
-            );
-          })}
-        </ol>
-      ) : null}
-      {stream.text ? (
-        <div className="flex flex-col gap-2 text-sm text-foreground" data-testid="answer-stream-text" aria-busy="true">
-          <Markdown text={withoutMarkers(stream.text)} cite={() => null} />
-        </div>
-      ) : null}
-      {requestId ? (
-        <Button type="button" variant="outline" size="sm" className="w-fit" disabled={stopping} data-testid="assistant-stop"
-          onClick={() => cancel.mutate({ requestId, guest })}>
-          <Square aria-hidden="true" />{stopping ? t('workflow.stopping') : t('workflow.stop')}
-        </Button>
-      ) : null}
-      {cancel.isError ? <p className="text-xs text-destructive" role="alert">{t('workflow.stopFailed', { message: cancel.error.message })}</p> : null}
-    </li>
-  );
-}
 
 /** "How this answer was prepared": counts the server took from what was actually done. */
 export function MethodSummary({ method }: { method: NonNullable<StructuredReply['method']> }) {

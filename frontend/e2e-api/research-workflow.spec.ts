@@ -30,12 +30,12 @@ async function noHorizontalScroll(page: Page): Promise<void> {
 }
 
 /** The conversation page: header, messages and message box, one under another, in one centred
- * column at most 800px wide; only the message list scrolls. */
+ * column at most 52rem (832px) wide; only the message list scrolls. */
 async function oneColumn(page: Page): Promise<void> {
   const header = (await page.getByTestId('chat-header').boundingBox())!;
   const messages = (await page.getByTestId('assistant-messages').boundingBox())!;
   const composer = (await page.getByTestId('chat-composer').boundingBox())!;
-  for (const box of [header, composer]) expect(box.width).toBeLessThanOrEqual(800.5);
+  for (const box of [header, composer]) expect(box.width).toBeLessThanOrEqual(832.5);
   expect(header.y + header.height).toBeLessThanOrEqual(messages.y + 1);
   expect(messages.y + messages.height).toBeLessThanOrEqual(composer.y + 1);
   expect(Math.abs((header.x + header.width / 2) - (composer.x + composer.width / 2))).toBeLessThan(2);
@@ -55,7 +55,9 @@ test('desktop: one centred conversation without the profile card, analysis or no
     if (language === 'العربية') await page.getByRole('button', { name: 'العربية' }).first().click();
     await expect(page.getByTestId('assistant-workspace')).toHaveAttribute('data-layout', 'conversation');
     await expect(page.getByTestId('chat-greeting')).toHaveText(language === 'English' ? 'How can I help you?' : 'كيف يمكنني مساعدتك؟');
-    await expect(page.getByTestId('suggestion')).toHaveCount(3);
+    // Up to four examples to start from, under a centred welcome.
+    expect(await page.getByTestId('suggestion').count()).toBeGreaterThanOrEqual(3);
+    expect(await page.getByTestId('suggestion').count()).toBeLessThanOrEqual(4);
     await expect(page.getByTestId('assistant-input')).toHaveAttribute('placeholder', language === 'English' ? 'Ask your question…' : 'اكتب سؤالك هنا…');
     await oneColumn(page);
     // Moved out of the conversation: the profile card, the analysis form, the results, the

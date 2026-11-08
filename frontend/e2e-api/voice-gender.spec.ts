@@ -1,12 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { openChatSettings } from './chat';
+import { closeDrawer, openChatSettings, setAnswerLanguage } from './chat';
 
-// Al Mulhim speaks only with a man's voice and Ilham only with a woman's. When the server
-// speech service is not configured, the browser's own voices are used: the test installs a
-// realistic mix of male and female voices (as Windows and Edge provide) and checks which one
-// reads the answer. Without a voice of the persona's gender, nothing is read aloud and the
-// panel says why.
+// Al Mulhim speaks only with a man's voice. When the server speech service is not configured,
+// the browser's own voices are used: the test installs a realistic mix of male and female
+// voices (as Windows and Edge provide) and checks which one reads the answer. Without a
+// suitable voice nothing is read aloud, and the conversation's settings say so in one line
+// with a link to the fix (the conversation itself carries no voice notes).
 
 type FakeVoice = { name: string; lang: string };
 
@@ -60,12 +60,19 @@ async function setUp(page: Page, voices: FakeVoice[]): Promise<void> {
   }, voices);
 }
 
-/** The assistant side panel (from the orb on a sector page), which explains missing voices in
- * full; the AI Assistant page keeps one line in its settings (last test). */
-async function openPanel(page: Page): Promise<void> {
-  await page.goto('/energy/electricity?mode=synthetic');
-  await page.getByTestId('open-assistant').first().click();
+/** The one conversation (the AI Assistant page). */
+async function openChat(page: Page): Promise<void> {
+  await page.goto('/assistant?mode=synthetic');
   await expect(page.getByTestId('assistant-panel')).toBeVisible();
+}
+
+/** The one-line notice in the conversation settings (null when there is none). */
+async function voiceNotice(page: Page): Promise<string | null> {
+  await openChatSettings(page);
+  const notice = page.getByTestId('talk-no-voice');
+  const text = (await notice.count()) ? await notice.innerText() : null;
+  await closeDrawer(page);
+  return text;
 }
 
 async function askAndReadAloud(page: Page, question: string): Promise<string> {
@@ -80,71 +87,57 @@ async function askAndReadAloud(page: Page, question: string): Promise<string> {
 
 test('answers are read with a man’s voice in Arabic and in English', async ({ page }) => {
   await setUp(page, MIXED);
-  await openPanel(page);
-  await page.getByTestId('assistant-language').getByRole('radio', { name: 'العربية' }).click();
+  await openChat(page);
+  await setAnswerLanguage(page, 'العربية');
   expect(await askAndReadAloud(page, 'ما نمو توليد الكهرباء؟')).toBe('Microsoft Abdullah Online (Natural) - Arabic (Oman)');
-  await page.getByTestId('assistant-language').getByRole('radio', { name: 'English' }).click();
+  await setAnswerLanguage(page, 'English');
   expect(await askAndReadAloud(page, 'What was the growth of electricity generation?')).toBe('Microsoft Ryan Online (Natural) - English (United Kingdom)');
-  await expect(page.getByTestId('voice-no-male')).toHaveCount(0);
+  expect(await voiceNotice(page)).toBeNull();
 });
 
-test('with no Arabic voice installed, Arabic answers are shown as text and the panel says why', async ({ page }) => {
+test('with no Arabic voice installed, Arabic answers are shown as text and the settings say why', async ({ page }) => {
   // As on a Windows laptop with only English voices (David, Mark, Zira).
   await setUp(page, MIXED.filter((v) => v.lang.startsWith('en')));
-  await openPanel(page);
-  await page.getByTestId('assistant-language').getByRole('radio', { name: 'العربية' }).click();
-  const notice = page.getByTestId('voice-no-language');
-  await expect(notice).toHaveAttribute('data-language', 'ar');
-  await expect(notice).toContainText('This browser has no Arabic voice installed');
-  await expect(page.getByTestId('voice-no-male')).toHaveCount(0); // not a gender problem
+  await openChat(page);
+  await setAnswerLanguage(page, 'العربية');
   await page.getByTestId('assistant-input').fill('ما نمو توليد الكهرباء؟');
   await page.getByTestId('assistant-send').click();
   await expect(page.getByTestId('assistant-message').last()).toHaveAttribute('data-status', /answered|no_evidence/);
   await expect(page.getByTestId('read-aloud')).toHaveCount(0);
   expect(await page.evaluate(() => (window as unknown as { __spoken: string[] }).__spoken.length)).toBe(0);
+  expect(await voiceNotice(page)).toContain('No suitable voice in this browser');
   // In English Al Mulhim can speak, and the notice goes.
-  await page.getByTestId('assistant-language').getByRole('radio', { name: 'English' }).click();
-  await expect(notice).toHaveCount(0);
+  await setAnswerLanguage(page, 'English');
+  expect(await voiceNotice(page)).toBeNull();
+  await openChatSettings(page);
   await expect(page.getByTestId('voice-mute')).toBeVisible();
 });
 
 test('the missing-voice notice is in Arabic in the Arabic interface', async ({ page }) => {
   await page.addInitScript(() => window.localStorage.setItem('osrip.language', 'ar'));
   await setUp(page, MIXED.filter((v) => v.lang.startsWith('en')));
-  await openPanel(page);
+  await openChat(page);
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-  await expect(page.getByTestId('voice-no-language')).toContainText('لا يوجد في هذا المتصفح صوت عربي مثبّت');
+  expect(await voiceNotice(page)).toContain('لا يوجد صوت مناسب في هذا المتصفح');
 });
 
 test('with no voices listed yet, no missing-voice notice is shown', async ({ page }) => {
   await setUp(page, []); // some browsers load their voices later
-  await openPanel(page);
-  await page.getByTestId('assistant-language').getByRole('radio', { name: 'العربية' }).click();
-  await expect(page.getByTestId('voice-support')).toBeVisible();
-  await expect(page.getByTestId('voice-no-language')).toHaveCount(0);
+  await openChat(page);
+  await setAnswerLanguage(page, 'العربية');
+  expect(await voiceNotice(page)).toBeNull();
 });
 
-test('with only female voices installed, nothing is read aloud and the panel says why', async ({ page }) => {
+test('with only female voices installed, nothing is read aloud and the settings say why, with a link to the fix', async ({ page }) => {
   await setUp(page, FEMALE_ONLY);
-  await openPanel(page);
-  await expect(page.getByTestId('voice-no-male')).toContainText('only with a man’s voice');
-  await page.getByTestId('assistant-input').fill('Hello');
-  await page.getByTestId('assistant-send').click();
-  await expect(page.getByTestId('assistant-message').last()).toHaveAttribute('data-status', 'profile');
-  await expect(page.getByTestId('read-aloud')).toHaveCount(0);
-  expect(await page.evaluate(() => (window as unknown as { __spoken: string[] }).__spoken.length)).toBe(0);
-});
-
-test('on the AI Assistant page a missing voice is one line in the settings, with a link to the fix', async ({ page }) => {
-  await setUp(page, FEMALE_ONLY);
-  await page.goto('/assistant?mode=synthetic');
+  await openChat(page);
   // The conversation itself carries no voice explanations.
-  await expect(page.getByTestId('voice-no-male')).toHaveCount(0);
-  await expect(page.getByTestId('voice-support')).toHaveCount(0);
+  await expect(page.getByTestId('assistant-messages')).not.toContainText('voice');
   await page.getByTestId('assistant-input').fill('Hello');
   await page.getByTestId('assistant-input').press('Enter');
   await expect(page.getByTestId('assistant-message').last()).toHaveAttribute('data-status', 'profile');
   await expect(page.getByTestId('read-aloud')).toHaveCount(0); // Al Mulhim has no man's voice here
+  expect(await page.evaluate(() => (window as unknown as { __spoken: string[] }).__spoken.length)).toBe(0);
   await openChatSettings(page);
   const notice = page.getByTestId('talk-no-voice');
   await expect(notice).toContainText('No suitable voice in this browser');

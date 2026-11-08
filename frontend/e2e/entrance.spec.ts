@@ -99,6 +99,26 @@ test('a sector card opens its sector page; Explore opens the overview', async ({
   await expect(page).toHaveURL(/\/overview\?mode=synthetic$/);
 });
 
+test('the one AI assistant, Al Mulhim, is offered on the welcome and opens the conversation', async ({ page }) => {
+  await page.goto('/?mode=synthetic');
+  const entrance = page.getByTestId('entrance');
+  const assistant = page.getByTestId('welcome-assistant');
+  await expect(assistant).toHaveText(/Ask Al Mulhim/);
+  await expect(assistant).toHaveAttribute('data-persona', 'mulhim');
+  await expect(assistant.locator('img')).toHaveAttribute('src', /mulhim-portrait/);
+  await expect(entrance).not.toContainText(/Ilham|إلهام/);
+  await expect(page.getByTestId('welcome-sector')).toHaveCount(4); // the four sector images stay
+  await assistant.click();
+  await expect(entrance).toBeHidden();
+  await expect(page).toHaveURL(/\/assistant\?mode=synthetic$/);
+  // In Arabic, with the other theme.
+  await page.getByTestId('replay-entrance').click();
+  await page.getByTestId('welcome-language').click();
+  await page.getByTestId('welcome-theme').click();
+  await expect(page.getByTestId('welcome-assistant')).toHaveText(/اسأل المُلْهِم/);
+  await expect(page.getByTestId('welcome-assistant')).toBeVisible();
+});
+
 test('direct links are never interrupted (sign-in included); reaching the home page later shows it once', async ({ page }) => {
   await page.goto('/sign-in'); // without the API: the page says sign-in needs it (e2e-api signs in)
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();

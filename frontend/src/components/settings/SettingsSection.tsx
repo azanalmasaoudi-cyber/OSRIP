@@ -3,15 +3,32 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { adapterKind } from '@/api/config';
-import { PersonaPicker } from '@/components/assistant/persona';
+import { usePersona } from '@/components/assistant/persona';
+import { PersonaImage } from '@/components/assistant/PersonaImage';
 import { introAutoplay, setIntroAutoplay } from '@/components/layout/Entrance';
 import { useReplayEntrance } from '@/components/layout/entranceControl';
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher';
 import { ThemeSelector } from '@/components/layout/ThemeSelector';
 import { Button } from '@/components/ui/button';
 
+/** The assistant, Al Mulhim (the only one: nothing to choose), in both languages. */
+function AssistantIdentity() {
+  const { t } = useTranslation();
+  const { persona } = usePersona();
+  return (
+    <p className="flex w-fit items-center gap-2.5 rounded-full border border-border-strong/50 py-1 ps-1 pe-4" data-testid="settings-assistant"
+      data-persona={persona.code}>
+      <PersonaImage src={persona.avatar.portrait} alt="" width={36} height={36} className="size-9 rounded-full object-cover object-top" draggable={false} />
+      <span className="flex flex-col text-sm leading-tight">
+        <span className="font-semibold" lang="en">{persona.name.en}</span>
+        <span className="text-xs text-muted-foreground" lang="ar" dir="rtl">{persona.name.ar} · {t('assistant.aiAssistant')}</span>
+      </span>
+    </p>
+  );
+}
+
 /** Settings (shown whether or not you are signed in): the appearance (#appearance), the language
- * (#language), who answers as the assistant, and the first-visit introduction. */
+ * (#language), the assistant, and the first-visit introduction. */
 export function SettingsSection() {
   const { t } = useTranslation();
   const replay = useReplayEntrance();
@@ -39,7 +56,7 @@ export function SettingsSection() {
             <h3 className="font-medium">{t('settings.assistantTitle')}</h3>
             <p className="text-sm text-muted-foreground">{t('settings.assistantBody')}</p>
           </div>
-          <PersonaPicker />
+          <AssistantIdentity />
         </div>
       ) : null}
       {replay ? (

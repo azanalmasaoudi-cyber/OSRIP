@@ -12,7 +12,7 @@ import { playAudio, type Playback } from '@/lib/voicePlayer';
 
 import { useAssistantUi } from './AssistantContext';
 import { VoiceVolume } from './VoiceVolume';
-import { PersonaPicker, usePersona } from './persona';
+import { usePersona } from './persona';
 
 /**
  * The persona and its voices: the Azure voice configured for each language (Al Mulhim
@@ -29,7 +29,7 @@ function VerifiedBadge({ check }: { check: VoiceCheck | undefined }) {
       : <Badge variant="muted" data-testid="voice-unchecked">{t('voicePanel.unchecked')}</Badge>;
 }
 
-export function VoicePanel({ showPicker = true }: { showPicker?: boolean }) {
+export function VoicePanel() {
   const { t } = useTranslation();
   const appLanguage = useAppLanguage();
   const { persona } = usePersona();
@@ -89,7 +89,6 @@ export function VoicePanel({ showPicker = true }: { showPicker?: boolean }) {
     <section className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3" aria-labelledby="voice-panel-heading" data-testid="voice-panel"
       data-configured={configured ? 'true' : 'false'}>
       <h3 id="voice-panel-heading" className="flex items-center gap-1.5 text-sm font-semibold"><Volume2 aria-hidden="true" className="size-4" />{t('voicePanel.heading')}</h3>
-      {showPicker ? <PersonaPicker compact /> : null}
       {configured ? (
         <p className="text-xs"><Badge variant="verified">{t('voicePanel.configured')}</Badge></p>
       ) : (

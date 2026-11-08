@@ -91,6 +91,8 @@
     <TypeScriptCompile Include="e2e-api\accounts.spec.ts" />
     <TypeScriptCompile Include="e2e-api\analysis-workspace.spec.ts" />
     <TypeScriptCompile Include="e2e-api\analysis.spec.ts" />
+    <TypeScriptCompile Include="e2e-api\answer-stream.spec.ts" />
+    <TypeScriptCompile Include="e2e-api\assistant-chat.spec.ts" />
     <TypeScriptCompile Include="e2e-api\assistant.spec.ts" />
     <TypeScriptCompile Include="e2e-api\chat-phone.spec.ts" />
     <TypeScriptCompile Include="e2e-api\chat.ts" />
@@ -114,8 +116,6 @@
     <TypeScriptCompile Include="e2e-api\sector.ts" />
     <TypeScriptCompile Include="e2e-api\source-feeds.spec.ts" />
     <TypeScriptCompile Include="e2e-api\studies.spec.ts" />
-    <TypeScriptCompile Include="e2e-api\talk-phone.spec.ts" />
-    <TypeScriptCompile Include="e2e-api\talk.spec.ts" />
     <TypeScriptCompile Include="e2e-api\upgrade.spec.ts" />
     <TypeScriptCompile Include="e2e-api\verification-change.spec.ts" />
     <TypeScriptCompile Include="e2e-api\voice-gender.spec.ts" />
@@ -187,6 +187,7 @@
     <TypeScriptCompile Include="src\components\assistant\ResearchBriefBuilder.tsx" />
     <TypeScriptCompile Include="src\components\assistant\ResearchProgress.tsx" />
     <TypeScriptCompile Include="src\components\assistant\ResearchVisuals.tsx" />
+    <TypeScriptCompile Include="src\components\assistant\StreamingAnswer.tsx" />
     <TypeScriptCompile Include="src\components\assistant\StructuredReply.tsx" />
     <TypeScriptCompile Include="src\components\assistant\VoicePanel.tsx" />
     <TypeScriptCompile Include="src\components\assistant\VoiceVolume.tsx" />
@@ -286,6 +287,7 @@
     <TypeScriptCompile Include="src\i18n\languages.ts" />
     <TypeScriptCompile Include="src\i18n\locales\ar.ts" />
     <TypeScriptCompile Include="src\i18n\locales\en.ts" />
+    <TypeScriptCompile Include="src\lib\answerStreamState.ts" />
     <TypeScriptCompile Include="src\lib\exportResults.ts" />
     <TypeScriptCompile Include="src\lib\format.ts" />
     <TypeScriptCompile Include="src\lib\introClips.ts" />
@@ -293,6 +295,7 @@
     <TypeScriptCompile Include="src\lib\recorder.ts" />
     <TypeScriptCompile Include="src\lib\researchBrief.ts" />
     <TypeScriptCompile Include="src\lib\speech.ts" />
+    <TypeScriptCompile Include="src\lib\talkRedirect.ts" />
     <TypeScriptCompile Include="src\lib\theme.ts" />
     <TypeScriptCompile Include="src\lib\useAppLanguage.ts" />
     <TypeScriptCompile Include="src\lib\useDocumentTitle.ts" />
@@ -321,8 +324,8 @@
     <TypeScriptCompile Include="src\pages\SettingsPage.tsx" />
     <TypeScriptCompile Include="src\pages\SignInPage.tsx" />
     <TypeScriptCompile Include="src\pages\StudiesPage.tsx" />
-    <TypeScriptCompile Include="src\pages\TalkPage.tsx" />
     <TypeScriptCompile Include="src\pages\WorkspacePage.tsx" />
+    <TypeScriptCompile Include="src\state\answerStream.ts" />
     <TypeScriptCompile Include="src\state\liveStudy.ts" />
     <TypeScriptCompile Include="src\state\sectorSelections.ts" />
     <TypeScriptCompile Include="src\state\useDataMode.ts" />
@@ -361,8 +364,6 @@
     <Content Include="public\geo\oman-wilayats.geojson" />
     <Content Include="public\geo\README.md" />
     <Content Include="public\images\assistant\ai-assistant-face-200.jpg" />
-    <Content Include="public\images\assistant\ilham-figure-600.jpg" />
-    <Content Include="public\images\assistant\ilham-portrait-432.jpg" />
     <Content Include="public\images\assistant\mulhim-figure-600.jpg" />
     <Content Include="public\images\assistant\mulhim-portrait-432.jpg" />
     <Content Include="public\images\editorial\electricity-1200.avif" />
@@ -417,7 +418,6 @@
     <Content Include="public\images\illustrations\sector-trade.svg" />
     <Content Include="public\images\illustrations\sector-water.svg" />
     <Content Include="public\images\intro\electricity.jpg" />
-    <Content Include="public\images\intro\ilham.jpg" />
     <Content Include="public\images\intro\mulhim.jpg" />
     <Content Include="public\images\intro\trade.jpg" />
     <Content Include="public\images\intro\water.jpg" />
@@ -443,9 +443,11 @@
     <Content Include="scripts\check-contrast.mjs" />
     <Content Include="src\components\layout\welcome.css" />
     <Content Include="src\index.css" />
+    <Content Include="tests\answer-stream.test.mjs" />
     <Content Include="tests\arabic-plurals.test.mjs" />
     <Content Include="tests\export-results.test.mjs" />
     <Content Include="tests\research-brief.test.mjs" />
+    <Content Include="tests\talk-redirect.test.mjs" />
     <Content Include="tsconfig.app.json" />
     <Content Include="tsconfig.json" />
     <Content Include="tsconfig.node.json" />
