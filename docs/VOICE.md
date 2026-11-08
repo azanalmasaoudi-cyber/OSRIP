@@ -1,15 +1,20 @@
-# Voices: Al Mulhim and Ilham
+# Voice: Al Mulhim
 
 OSRIP speaks with **Azure AI Speech** (server side; the key and region never reach a browser).
+Al Mulhim is the only assistant persona (profile version 4, November 2026); Ilham and her
+voices were retired, and earlier replies keep their text under a neutral name.
 
 | Persona | Arabic voice | English voice |
 |---|---|---|
 | Al Mulhim (male) | `ar-OM-AbdullahNeural` | `en-GB-RyanNeural` |
-| Ilham (female) | `ar-OM-AyshaNeural` | `en-GB-SoniaNeural` |
 
-Microsoft's language-support page (updated 2026-10-22) lists both Arabic (Oman) voices:
-`ar-OM-AbdullahNeural` (male) and `ar-OM-AyshaNeural` (female). The voices are set per persona
-in the assistant profile; `OSRIP_SPEECH_VOICE_AR` / `_EN` apply only to a profile without personas.
+Microsoft's language-support page (updated 2026-10-22) lists `ar-OM-AbdullahNeural` (male) for
+Arabic (Oman). The voices are set in the assistant profile; `OSRIP_SPEECH_VOICE_AR` / `_EN`
+apply only to a profile without personas.
+
+There is no separate Talk screen: the microphone is in the conversation's message box
+(push-to-talk, asked for only when pressed, audio only), and an answer can be read aloud with
+Read aloud under it. The old `/talk` address opens the conversation.
 
 ## Setting it up
 

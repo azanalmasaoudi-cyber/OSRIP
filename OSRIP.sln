@@ -67,6 +67,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{951A985D-D
 		docs\Oman_Statistics_References_and_Images_English.docx = docs\Oman_Statistics_References_and_Images_English.docx
 		docs\OSRIP_Academic_Booklet_English_60_Pages-2.docx = docs\OSRIP_Academic_Booklet_English_60_Pages-2.docx
 		docs\OSRIP_Academic_Booklet_English_60_Pages.docx = docs\OSRIP_Academic_Booklet_English_60_Pages.docx
+		docs\OSRIP_Academic_Booklet_Nov_2026_60_Pages.docx = docs\OSRIP_Academic_Booklet_Nov_2026_60_Pages.docx
+		docs\OSRIP_Academic_Booklet_Nov_2026_60_Pages.pdf = docs\OSRIP_Academic_Booklet_Nov_2026_60_Pages.pdf
 		docs\PREMIUM_REDESIGN.md = docs\PREMIUM_REDESIGN.md
 		docs\progress.md = docs\progress.md
 		docs\requirements.md = docs\requirements.md
@@ -92,6 +94,17 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "backup", "backup", "{EEDDB7A6-C2B2-5952-86EC-8463417DCABF}"
 	ProjectSection(SolutionItems) = preProject
 		docs\backup\backup-drill-20260925.json = docs\backup\backup-drill-20260925.json
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "data-imports", "data-imports", "{E66CA9A1-491C-5AD2-B652-B3961587EB5D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2026-11", "2026-11", "{FBF666F4-2ACB-5270-AD5A-68B43F76FF01}"
+	ProjectSection(SolutionItems) = preProject
+		docs\data-imports\2026-11\electricity-by-governorate-jan-sep-2026.csv = docs\data-imports\2026-11\electricity-by-governorate-jan-sep-2026.csv
+		docs\data-imports\2026-11\electricity-water-jan-sep-2026.csv = docs\data-imports\2026-11\electricity-water-jan-sep-2026.csv
+		docs\data-imports\2026-11\foreign-trade-jan-aug-2026.csv = docs\data-imports\2026-11\foreign-trade-jan-aug-2026.csv
+		docs\data-imports\2026-11\ncsi-yearbook-2026-baseline.csv = docs\data-imports\2026-11\ncsi-yearbook-2026-baseline.csv
+		docs\data-imports\2026-11\README.md = docs\data-imports\2026-11\README.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "demo", "demo", "{5F4E4F17-9349-5ECE-AD7A-EB60F6948C39}"
@@ -310,6 +323,8 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{61FB2FA9-CA59-59B7-B336-3C9A25DE134C} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
 		{EEDDB7A6-C2B2-5952-86EC-8463417DCABF} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
+		{E66CA9A1-491C-5AD2-B652-B3961587EB5D} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
+		{FBF666F4-2ACB-5270-AD5A-68B43F76FF01} = {E66CA9A1-491C-5AD2-B652-B3961587EB5D}
 		{5F4E4F17-9349-5ECE-AD7A-EB60F6948C39} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
 		{30029E82-3C33-5B85-8CA1-CA87511FA6C7} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
 		{0B712951-2047-5BE0-A42C-68C45DAA3B66} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}

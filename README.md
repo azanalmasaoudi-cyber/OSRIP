@@ -51,8 +51,9 @@ booklet (design-stage edition).
 >   service is unavailable;
 > - real-time voice (LiveKit Agents) is wired but **not configured or run**: no LiveKit
 >   project, speech models or avatar provider exist, and the browser's LiveKit client is not
->   installed. Talk to Al Mulhim therefore uses push-to-talk with a labelled **static**
->   portrait; nothing claims lip synchronisation ([`docs/avatar-providers.md`](docs/avatar-providers.md));
+>   installed. Voice is therefore push-to-talk, from the microphone in the conversation's
+>   message box, with a labelled **static** portrait; nothing claims lip synchronisation
+>   ([`docs/avatar-providers.md`](docs/avatar-providers.md));
 > - official statistics: a curated reference pack (346 records, checked to 2026-09-27) is
 >   loaded; the full NCSI files still need a signed-in download by the team;
 > - Google/Microsoft sign-in and e-mail are built but not configured; **no SMS provider
@@ -223,8 +224,8 @@ Navigation:
 - Sectors: Electricity, Water, Food Security, Trade (one row of sector links on each, with
   its own remembered selection);
 - Analyse: Map, Studies, Scenarios, Sources;
-- Assistant and outputs: Al Mulhim (and Talk to Al Mulhim), the Analysis workspace, Reports,
-  Research library;
+- Assistant and outputs: Al Mulhim (one conversation, with its history; the old `/talk` address
+  opens it), the Analysis workspace, Reports, Research library;
 - Account;
 - Data Management, Users and roles, and Service health (authorized users only).
 

@@ -1,5 +1,12 @@
 # Assistant personas: Al Mulhim and Ilham
 
+> **Superseded (8 November 2026).** Al Mulhim is now the only assistant persona (profile
+> version 4, migration 0030): no persona choice is offered anywhere, a request naming Ilham is
+> answered by Al Mulhim, saving her as a choice is refused, and earlier replies keep their text
+> under a neutral "Earlier assistant persona" name. The separate Talk screen described below was
+> removed; voice is the microphone in the one conversation's message box, and `/talk` opens
+> that conversation. The rest of this page is the October 2026 record.
+
 Status, 10 October 2026: **implemented and locally tested** with the scripted model and speech
 services. **Live verification is pending**: no speech, LiveKit or avatar account is configured on
 this machine, so no real voice, real-time call or lip-synchronised avatar has been heard or seen.

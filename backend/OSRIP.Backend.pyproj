@@ -160,6 +160,7 @@
     <Compile Include="app\services\assistant\routing.py" />
     <Compile Include="app\services\assistant\service.py" />
     <Compile Include="app\services\assistant\sources.py" />
+    <Compile Include="app\services\assistant\streaming.py" />
     <Compile Include="app\services\assistant\study_events.py" />
     <Compile Include="app\services\assistant\tools.py" />
     <Compile Include="app\services\assistant\web_analysis.py" />
@@ -189,6 +190,7 @@
     <Compile Include="app\services\images.py" />
     <Compile Include="app\services\imports\__init__.py" />
     <Compile Include="app\services\imports\csv_file.py" />
+    <Compile Include="app\services\imports\owner_workbooks.py" />
     <Compile Include="app\services\imports\validation.py" />
     <Compile Include="app\services\imports\workflow.py" />
     <Compile Include="app\services\library.py" />
@@ -247,6 +249,8 @@
     <Compile Include="tests\test_ai_providers_integration.py" />
     <Compile Include="tests\test_allowance_rules_integration.py" />
     <Compile Include="tests\test_analysis_integration.py" />
+    <Compile Include="tests\test_answer_streaming.py" />
+    <Compile Include="tests\test_answer_streaming_integration.py" />
     <Compile Include="tests\test_api_foundation.py" />
     <Compile Include="tests\test_assistant_conversation.py" />
     <Compile Include="tests\test_assistant_conversation_integration.py" />
@@ -287,6 +291,7 @@
     <Compile Include="tests\test_ncsi.py" />
     <Compile Include="tests\test_oidc_integration.py" />
     <Compile Include="tests\test_openai_sdk.py" />
+    <Compile Include="tests\test_owner_workbooks.py" />
     <Compile Include="tests\test_partial_answers.py" />
     <Compile Include="tests\test_personas.py" />
     <Compile Include="tests\test_phone_integration.py" />
@@ -339,6 +344,7 @@
     <Compile Include="scripts\serve_public.py" />
     <Compile Include="scripts\set_provider_keys.py" />
     <Compile Include="scripts\sms_acceptance.py" />
+    <Compile Include="scripts\stage_owner_workbooks.py" />
     <Compile Include="scripts\sync_worker_dev.py" />
     <Compile Include="scripts\voice_acceptance.py" />
     <Compile Include="scripts\whatsapp_setup.py" />
@@ -372,6 +378,8 @@
     <Compile Include="alembic\versions\0027_session_remember.py" />
     <Compile Include="alembic\versions\0028_sources_on_request.py" />
     <Compile Include="alembic\versions\0029_generated_images.py" />
+    <Compile Include="alembic\versions\0030_single_persona.py" />
+    <Compile Include="alembic\versions\0031_answer_stream.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="alembic\sql\0001_core_down.sql" />
@@ -432,9 +440,13 @@
     <Content Include="alembic\sql\0028_sources_on_request_up.sql" />
     <Content Include="alembic\sql\0029_generated_images_down.sql" />
     <Content Include="alembic\sql\0029_generated_images_up.sql" />
+    <Content Include="alembic\sql\0030_single_persona_down.sql" />
+    <Content Include="alembic\sql\0031_answer_stream_down.sql" />
+    <Content Include="alembic\sql\0031_answer_stream_up.sql" />
     <Content Include="app\knowledge\assistant_profile_v1.json" />
     <Content Include="app\knowledge\assistant_profile_v2.json" />
     <Content Include="app\knowledge\assistant_profile_v3.json" />
+    <Content Include="app\knowledge\assistant_profile_v4.json" />
     <Content Include="db_checks\constraints_check.sql" />
     <Content Include="fixtures\booklet_synthetic_fixtures_v1.csv" />
     <Content Include="fixtures\README.md" />
