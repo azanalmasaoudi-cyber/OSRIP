@@ -498,13 +498,17 @@ export function AssistantChat({ initialDraft = '', active = true, askRef, select
       });
       return;
     }
-    guestAsk.mutate(
+    const askAsGuest = () => guestAsk.mutate(
       {
         content: text, language: chatLanguage, request_id: requestId, conversation_id: guestId, data_mode: mode,
         web_research: webResearch, mode: askMode, persona: persona.code, cross_check: checked, selection: scoped,
       },
       { onSuccess: (result) => setGuestId(result.conversation_id) },
     );
+    // A guest's first question waits for the guest session (its cookie), which a page opened a
+    // moment ago may still be requesting; it is then sent, never refused as expired.
+    if (guestStatus.data) askAsGuest();
+    else void guestStatus.refetch().finally(askAsGuest);
   };
   useEffect(() => {
     if (activeId && pendingRef.current) {
