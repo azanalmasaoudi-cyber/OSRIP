@@ -622,10 +622,11 @@ def confirm_identity(
 
 # The database enforces the same pattern (migration 0011) and case-insensitive uniqueness.
 USERNAME_PATTERN = re.compile(r"[A-Za-z][A-Za-z0-9_.-]{2,31}")
-# Names that could pass for the platform or its staff are not offered to the public.
+# Names that could pass for the platform or its staff are not offered to the public, nor the
+# owner's administrator name (Azzan), which only the operator creates (``ensure-admin``).
 RESERVED_USERNAMES = frozenset(
     {"admin", "administrator", "root", "system", "support", "osrip", "security", "moderator",
-     "owner", "staff", "help", "service", "official", "ncsi"}
+     "owner", "staff", "help", "service", "official", "ncsi", "azzan"}
 )  # fmt: skip
 # Recovery codes: 20 characters in 5 groups from an alphabet without look-alikes (0/O,
 # 1/I/L, U/V), about 97 bits; only an Argon2id hash is stored.

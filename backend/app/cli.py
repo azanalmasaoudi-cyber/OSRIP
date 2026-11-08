@@ -198,7 +198,9 @@ def ensure_admin(args: argparse.Namespace) -> None:
     """The first administrator (for example Azzan): a username account with the administrator
     role and a temporary password typed at a hidden prompt (or OSRIP_NEW_USER_PASSWORD for this
     terminal only), which must be replaced at the first sign-in. Nothing is hardcoded, printed
-    or logged. An existing account gets the administrator role only with --promote."""
+    or logged. An existing account gets the administrator role only with --promote, and never
+    one that someone created for themselves (sign-up, phone, Google or Microsoft): choosing a
+    name such as Azzan never makes anyone an administrator."""
     from app.domain.enums import Role
 
     with session_factory()() as session, session.begin():
@@ -210,6 +212,13 @@ def ensure_admin(args: argparse.Namespace) -> None:
                     "Add --promote to give it the administrator role."
                 )
                 return
+            if existing.created_via not in ("cli", "administrator"):
+                raise SystemExit(
+                    f"error: '{existing.username}' was created by its holder "
+                    f"({existing.created_via}), not by an operator or administrator, so it is "
+                    "never made an administrator. Rename or remove it in Administration, then "
+                    "run ensure-admin again to create the administrator account."
+                )
             accounts.assign_role(session, CLI, existing.id, Role.ADMINISTRATOR)
             print(f"'{existing.username}' now has the administrator role.")
             return
