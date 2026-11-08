@@ -1,5 +1,27 @@
 # Test results
 
+## 2026-11-08: one persona, streamed answers, 2021 scope, booklet synchronised (branch `feature/al-mulhim-streaming`)
+
+What changed: Al Mulhim is the only persona (profile version 4, migration 0030); answers are streamed sentence by sentence, each released only after the evidence check (migration 0031); "Azzan" is reserved and `ensure-admin --promote` refuses self-made accounts; verified statistics start in January 2021; the owner's workbooks are staged as four validated imports (`docs/data-imports/2026-11/`), nothing published. The academic booklet was then compared with the code and updated (below).
+
+| Check | Result |
+|---|---|
+| `ruff`, backend `pytest` with database tests | Pass; **1039 passed** |
+| `npm run typecheck`, `npm run lint`, `npm run check:contrast`, `npm run build`, frontend unit tests | Pass; 0 failing contrast pairs; 17 unit tests |
+| Full-stack browser tests (Chrome), whole suite, desktop and phone | **199 passed, 14 failed, 3 skipped** (4.1 h; the computer slept during the run). Six failures were `talk-phone.spec.ts` assertions still expecting the removed persona choice or the old "Abdullah or Aysha" help text; one was real: in a 411×257 window, scrolling the Talk message box into view stopped one pixel short (the column is shorter without the picker; the same test passes on `fix/arabic-plurals`); seven were page-load timeouts and an interrupted connection while asleep |
+| The failed spec files again, after the fixes (assertions updated, the message box given a scroll margin on short screens) | `talk-phone`, `phone`, `quality`, `workspace-phone`, `accounts`, `interface`: **all 14 pass**. First re-run with the assertions updated: 62 passed, 1 failed (the short window), 3 skipped as designed; after the margin fix, `talk-phone`: 10 passed, 2 skipped as designed |
+| Streaming and persona browser tests | `answer-stream.spec.ts` (3) and `personas.spec.ts` (4) pass |
+
+**Not verified:** live DeepSeek streaming. The key and model are valid, but the provider check's chat request failed on the network (about 284 s). All browser and backend tests used the scripted stand-ins. Live DeepSeek answering (not streamed) was last verified on 25 October 2026.
+
+**Academic booklet** (`docs/OSRIP_Academic_Booklet_Nov_2026_60_Pages.docx` and `.pdf`, from the supplied `OSRIP_Academic_Booklet_Rewritten_Nov_2026_60_Pages.docx`):
+- Every implementation statement was checked against the code, tests and provider settings (names only, no values) and rewritten where it differed: what exists and is tested locally, what is configured, and what is not verified (live streaming, MapTiler, Azure Speech, other providers, deployment, the usability study). The administrator wording matches the code: the first administrator comes only from `ensure-admin` (temporary password at a hidden prompt, changed at first sign-in), later grants need an administrator.
+- Corrected to the code: the 2021 scope start (Table 3.2 FR08, Table 4.3 T13), Table 3.5 (now "Implemented API routes": the real assistant, registration and recovery routes), Table 3.8 record names, the map's OpenStreetMap boundaries (not official), conversation retention ("until deleted"), the September 2026 restore drill, measured latencies, test results, and which 2026 figures are published or staged.
+- Kept: the five chapters, all statistics and periods (2025 full year, 2026 preliminary), the unsigned approval pages and the proposed (not conducted) usability study.
+- References: seven added for works cited without an entry (Canva, Microsoft, Motion) or newly cited (Argon2 RFC 9106, DeepSeek API, OpenStreetMap, WHATWG server-sent events).
+- Layout faults present in the supplied file were fixed: three contents entries without a page number, 18 stale page numbers or titles in the contents and lists (for example Table 4.5 listed on page 50, Figure "C.1" for D.1), and cells and contents entries in 12 point among 10-point ones.
+- Laid out and exported with Microsoft Word: **60 pages** (Word's count and the PDF's); chapters, references and appendices start on the same pages as before; every contents and list entry matches its page; all 60 pages rendered and inspected.
+
 ## 2026-11-04 (later): Arabic plural forms (branch `fix/arabic-plurals`)
 
 What changed: Arabic has six plural forms (none, one, two, 3–10, 11–99, 100 and more); the Arabic strings had only English's two. For a count without its Arabic form, i18next showed the English text: the audit log read "16 rows" in Arabic. The other plural labels (group members, failed sync checks, releases awaiting approval) had the same problem; all four are on administration pages. Every plural key now has all six Arabic forms. The Arabic type (`ArabicTranslationShape`) requires them for any plural key added later.
