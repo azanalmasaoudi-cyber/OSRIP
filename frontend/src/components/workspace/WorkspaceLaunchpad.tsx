@@ -1,17 +1,17 @@
-import { ArrowUpRight, AudioLines, BookOpen, FlaskConical, LineChart } from 'lucide-react';
+import { ArrowUpRight, BookOpen, FlaskConical, LineChart, MessageSquareText } from 'lucide-react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
 import { usePreservedSearch } from '@/state/usePreservedSearch';
 
 const DESTINATIONS = [
-  { path: '/talk', key: 'talk', icon: AudioLines },
+  { path: '/assistant', key: 'assistant', icon: MessageSquareText },
   { path: '/studies', key: 'studies', icon: FlaskConical },
   { path: '/forecasts', key: 'scenarios', icon: LineChart },
   { path: '/sources', key: 'sources', icon: BookOpen },
 ] as const;
 
-/** The workspace's next steps: talk to the assistant, studies, scenarios and sources. Links keep
+/** The workspace's next steps: the Al Mulhim conversation, studies, scenarios and sources. Links keep
  * the data mode and other query parameters, like the navigation. */
 export function WorkspaceLaunchpad() {
   const { t } = useTranslation();

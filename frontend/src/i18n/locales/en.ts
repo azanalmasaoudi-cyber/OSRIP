@@ -2165,7 +2165,7 @@ export const en = {
       eyebrow: 'From data to understanding',
       title: 'Choose your next step',
       intro: 'Analyse resources, discuss findings and review evidence before deciding.',
-      talk: { title: 'Talk to your assistant', note: 'Arabic & English · voice availability depends on your setup' },
+      assistant: { title: 'Ask Al Mulhim', note: 'Research, analysis, tables and charts · Arabic & English' },
       studies: { title: 'Evidence-led studies', note: 'Methods, findings and limitations' },
       scenarios: { title: 'Explore scenarios', note: 'Assumptions and uncertainty' },
       sources: { title: 'Verify the sources', note: 'Trace every statistic to its evidence' },
@@ -3004,7 +3004,7 @@ export const en = {
     retrieval: 'Page retrieval (Firecrawl)',
     realtime: 'Live avatar (real-time voice)',
     realtimeReady: 'Server ready; client not installed',
-    realtimeClientPending: 'The server side of real-time voice is configured, but this interface’s real-time client is not installed yet, so Talk uses push-to-talk.',
+    realtimeClientPending: 'The server side of real-time voice is configured, but this interface’s real-time client is not installed yet, so voice uses push-to-talk from the message box.',
     realtimeMissing: 'What real-time voice still needs on this server',
     on: 'On',
     notSetUp: 'Not set up',
@@ -3048,8 +3048,8 @@ export const en = {
         a: 'Al Mulhim uses a male voice from the server’s speech service. A browser voice is used only when the service is not set up, and it is labelled.',
       },
       talk: {
-        q: 'What does Talk do without a live avatar?',
-        a: 'Live avatar mode (a real-time call with lip-synchronised video) is not available. Talk works as push-to-talk: press Speak, check the words, then Send. The answer appears as text and is read aloud in the persona’s voice when speech is available; where no speech is available, Talk is text only. The portrait is a still image.',
+        q: 'How do I speak to Al Mulhim?',
+        a: 'Press the microphone in the message box, check the words, then Send (push-to-talk). The answer appears as text and is read aloud in Al Mulhim’s voice when speech is available; otherwise the conversation is text only. There is no live avatar or real-time call with lip-synchronised video; the portrait is a still image.',
       },
       browserVoices: {
         q: 'Why are answers not read aloud?',

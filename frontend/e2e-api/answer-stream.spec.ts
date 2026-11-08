@@ -77,7 +77,7 @@ test('the report is streamed in Arabic, right to left', async ({ page }) => {
   await send(page, 'اكتب تقريرا عن توليد الكهرباء في 2023');
   const pending = page.getByTestId('assistant-loading');
   await expect(pending.getByTestId('answer-stream-text')).toContainText('الملخص');
-  await expect(pending.getByTestId('answer-stream-phase')).toHaveText('الكتابة');
+  await expect(pending.getByTestId('answer-stream-phase')).toHaveText('كتابة الإجابة'); // "Writing the response"
   await snap(page, 'answer-streaming-ar');
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
   await expect(page.getByTestId('assistant-message').last()).toHaveAttribute('data-status', 'answered');
