@@ -126,7 +126,10 @@ def test_a_deep_research_report_is_planned_calculated_and_tabulated(app) -> None
     assert [v["value_text"] for v in structured["conflicts"][0]["values"]] == ["41,234", "40,000"]
     # No illustration: the person did not ask for one (and guests cannot have one).
     assert "images" not in structured
-    seen = [s["stage"] for s in client.get(f"{API}/assistant/guest/requests/{rid}/progress").json()["stages"]]
+    seen = [
+        s["stage"]
+        for s in client.get(f"{API}/assistant/guest/requests/{rid}/progress").json()["stages"]
+    ]
     for stage in ("planning", "web_search", "computing", "visuals", "checking", "done"):
         assert stage in seen, seen
     assert "published_data" not in seen
@@ -202,7 +205,7 @@ def test_illustrations_for_the_signed_in_owner_only(app, make_user, login, db) -
 
 
 def test_a_guest_asking_for_an_illustration_gets_none(app) -> None:  # noqa: ANN001
-    msg = _ask(_guest(app), "Write a report on electricity generation with an illustration", "research")[
-        "message"
-    ]
+    msg = _ask(
+        _guest(app), "Write a report on electricity generation with an illustration", "research"
+    )["message"]
     assert msg["status"] == "answered" and "images" not in msg["structured"]
