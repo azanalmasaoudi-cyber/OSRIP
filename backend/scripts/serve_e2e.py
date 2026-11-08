@@ -56,7 +56,10 @@ def main() -> None:
     # the cross-check a person may ask for in Research mode (shown apart from the answer).
     os.environ.setdefault("OSRIP_RESEARCH_FALLBACK_PROVIDER", "fake-gemini")
     os.environ.setdefault("OSRIP_SPEECH_PROVIDER", "fake")
-    os.environ.setdefault("OSRIP_IMAGES_PROVIDER", "fake")  # drawn stand-in pictures, never a paid call
+    # Drawn stand-in pictures: never a paid call.
+    os.environ.setdefault("OSRIP_IMAGES_PROVIDER", "fake")
+    # The scripted answer streams in pieces 25 ms apart, so browser tests see it being written.
+    os.environ.setdefault("OSRIP_FAKE_STREAM_DELAY_MS", "25")
     # Scripted SMS delivery (codes readable at /dev/sms-outbox); short cooldown for tests.
     os.environ.setdefault("OSRIP_SMS_ENABLED", "true")
     os.environ.setdefault("OSRIP_SMS_PROVIDER", "test")

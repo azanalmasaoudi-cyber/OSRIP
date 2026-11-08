@@ -48,6 +48,7 @@ STAGES: dict[str, dict[str, str]] = {
         "ar": "إعداد الجداول والرسوم والمخططات",
     },
     "image": {"en": "Making an illustration", "ar": "إنشاء رسم توضيحي"},
+    "writing": {"en": "Writing the answer", "ar": "كتابة الإجابة"},
     "checking": {"en": "Checking numbers and citations", "ar": "التحقق من الأرقام والاستشهادات"},
     "done": {"en": "Answer ready", "ar": "الإجابة جاهزة"},
     "cancelled": {"en": "Stopped at your request", "ar": "أُوقف بناءً على طلبك"},

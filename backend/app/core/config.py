@@ -114,6 +114,9 @@ class Settings(BaseSettings):
     images_detailed_model: str = "gpt-image-2.5-sunburst"  # slower, more precise
     images_size: str = "1024x1024"
     images_daily_limit_per_user: int = 10
+    # The scripted answer service only (tests): milliseconds between the pieces of its
+    # streamed answer, so a browser test sees the text arrive. 0: no pause.
+    fake_stream_delay_ms: int = 0
     # Web search route: how much context the search gathers, and optionally only these domains
     # (at most 100, without https://; subdomains included). Empty: the whole web, with official
     # Omani sources preferred by the instructions.

@@ -1952,6 +1952,7 @@ export const en = {
     testFailed: 'failed ({{code}})',
   },
   chat: {
+    askAgain: 'Ask again',
     sourcesPanel: 'Sources in this conversation',
     sourcesPanelEmpty: 'The sources of each answer are listed here, official sources first.',
     sourceClass: {
@@ -2079,6 +2080,18 @@ export const en = {
     introBody: 'The project name in a three-second opening on the home page, once per browser session. Skip ends it at once.',
     introAuto: 'Play it when the home page opens (once per session)',
   },
+  answerStream: {
+    phase: {
+      starting: 'Starting',
+      searching: 'Searching the web',
+      reading: 'Reading sources',
+      analysing: 'Analysing',
+      writing: 'Writing',
+      checking: 'Checking the whole answer',
+      done: 'Done',
+    },
+    note: 'Each sentence appears once its figures have been checked against the sources; the whole answer is checked again when it is finished.',
+  },
   workflow: {
     working: 'Working on your question',
     stop: 'Stop',
@@ -2094,6 +2107,7 @@ export const en = {
       computing: 'Calculating from the sources’ figures',
       visuals: 'Building tables, charts and diagrams',
       image: 'Making an illustration',
+      writing: 'Writing the answer',
       checking: 'Checking numbers and citations',
       done: 'Answer ready',
       cancelled: 'Stopped at your request',

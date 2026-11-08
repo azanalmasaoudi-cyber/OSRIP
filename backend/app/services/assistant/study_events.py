@@ -44,6 +44,7 @@ log = logging.getLogger("osrip.study_events")
 
 EVENT_TYPES = (
     "study.started", "stage", "search", "evidence", "dataset", "warning",
+    "answer.segment", "answer.reset",
     "study.completed", "study.cancelled", "study.failed",
 )  # fmt: skip
 TERMINAL = frozenset({"study.completed", "study.cancelled", "study.failed"})
@@ -77,6 +78,19 @@ class Started(_M):
 class Stage(_M):
     stage: str
     label: Text
+
+
+class AnswerSegment(_M):
+    """A checked piece of the answer as it is written (assistant/streaming.py), in order."""
+
+    index: int = Field(ge=0)
+    text: str = Field(max_length=4000)
+
+
+class AnswerReset(_M):
+    """The answer is being written again (an earlier attempt was cut off or refused)."""
+
+    reason: Literal["new_attempt"]
 
 
 class Search(_M):
@@ -256,6 +270,8 @@ PAYLOADS: dict[str, type[_M]] = {
     "evidence": Evidence,
     "dataset": Dataset,
     "warning": Warning_,
+    "answer.segment": AnswerSegment,
+    "answer.reset": AnswerReset,
     "study.completed": Completed,
     "study.cancelled": Cancelled_,
     "study.failed": Failed,

@@ -42,6 +42,7 @@ from app.core.config import get_settings
 from app.services import monitoring, openai_api
 from app.services import providers as registry
 from app.services.assistant.progress import Cancelled
+from app.services.assistant.streaming import answer_sink
 
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_VERSION = "2023-06-01"
@@ -322,6 +323,25 @@ def _openai_error(exc: openai_api.OpenAIFailure) -> ProviderError:
     return error
 
 
+def _openai_answer_events(sink: Any) -> Callable[[Any], None]:
+    """Forwards a Responses stream's function-call arguments to the answer sink (by call id)."""
+    calls: dict[str, str] = {}  # output item id -> call id
+
+    def handle(event: Any) -> None:
+        kind = getattr(event, "type", "")
+        if kind == "response.output_item.added":
+            item = getattr(event, "item", None)
+            if getattr(item, "type", "") == "function_call":
+                calls[str(item.id)] = str(item.call_id)
+                sink.start(str(item.call_id), str(item.name))
+        elif kind == "response.function_call_arguments.delta":
+            call_id = calls.get(str(getattr(event, "item_id", "")))
+            if call_id is not None:
+                sink.arguments(call_id, str(getattr(event, "delta", "")))
+
+    return handle
+
+
 class OpenAIProvider(_HttpProvider):
     """Responses API (POST /v1/responses) with function tools only, through the official SDK."""
 
@@ -410,6 +430,7 @@ class OpenAIProvider(_HttpProvider):
                 self._timeout,
                 lambda timeout: http_client_factory(timeout),
                 stop=stop_check.get(),
+                on_event=_openai_answer_events(sink) if (sink := answer_sink.get()) else None,
             )
         except openai_api.OpenAIFailure as exc:
             raise _openai_error(exc) from exc
@@ -623,6 +644,95 @@ class GeminiProvider(_HttpProvider):
         return self.parse(body)
 
 
+def _deepseek_stream(
+    body: dict[str, Any],
+    headers: dict[str, str],
+    timeout: float,
+    sink: Any,
+    stop: Callable[[], None] | None,
+) -> dict[str, Any]:
+    """A streamed chat completion (server-sent ``chat.completion.chunk`` events ending with
+    ``[DONE]``), assembled into the shape of an unstreamed one. Tool-call argument pieces go to
+    the answer sink as they arrive; a stopped question closes the stream at once."""
+    try:
+        with (
+            http_client_factory(timeout) as client,
+            client.stream("POST", DEEPSEEK_CHAT_URL, json=body, headers=headers) as response,
+        ):
+            if response.status_code != 200:
+                response.read()
+                try:
+                    detail = error_type(response.json())
+                except ValueError:
+                    detail = None
+                error = ProviderError(f"http_{response.status_code}", detail)
+                error.retry_after = retry_after(response)
+                raise error
+            return _assemble_chunks(response.iter_lines(), sink, stop)
+    except httpx.TimeoutException as exc:
+        raise ProviderError("timeout") from exc
+    except httpx.HTTPError as exc:
+        raise ProviderError("network") from exc
+
+
+def _assemble_chunks(lines: Any, sink: Any, stop: Callable[[], None] | None) -> dict[str, Any]:
+    content: list[str] = []
+    calls: dict[int, dict[str, Any]] = {}
+    started: set[int] = set()
+    finish: str | None = None
+    usage: dict[str, Any] = {}
+    checked = time.monotonic()
+    for line in lines:
+        if stop is not None and time.monotonic() - checked >= openai_api.STOP_CHECK_SECONDS:
+            stop()  # raises when the person stopped the question
+            checked = time.monotonic()
+        if not line.startswith("data:"):
+            continue
+        data = line[5:].strip()
+        if data == "[DONE]":
+            break
+        try:
+            chunk = json.loads(data)
+        except ValueError as exc:
+            raise ProviderError("invalid_json") from exc
+        if isinstance(chunk.get("usage"), dict):
+            usage = chunk["usage"]
+        for choice in chunk.get("choices") or []:
+            delta = choice.get("delta") or {}
+            if isinstance(delta.get("content"), str):
+                content.append(delta["content"])
+            for piece in delta.get("tool_calls") or []:
+                index = int(piece.get("index", 0))
+                call = calls.setdefault(
+                    index,
+                    {"id": None, "type": "function", "function": {"name": "", "arguments": ""}},
+                )
+                function = piece.get("function") or {}
+                if piece.get("id"):
+                    call["id"] = piece["id"]
+                if function.get("name"):
+                    call["function"]["name"] = function["name"]
+                if (
+                    sink is not None
+                    and index not in started
+                    and call["id"]
+                    and call["function"]["name"]
+                ):
+                    started.add(index)
+                    sink.start(str(call["id"]), str(call["function"]["name"]))
+                arguments = function.get("arguments")
+                if isinstance(arguments, str) and arguments:
+                    call["function"]["arguments"] += arguments
+                    if sink is not None and index in started:
+                        sink.arguments(str(call["id"]), arguments)
+            if choice.get("finish_reason"):
+                finish = choice["finish_reason"]
+    message: dict[str, Any] = {"role": "assistant", "content": "".join(content) or None}
+    if calls:
+        message["tool_calls"] = [calls[i] for i in sorted(calls)]
+    return {"choices": [{"message": message, "finish_reason": finish}], "usage": usage}
+
+
 class DeepSeekProvider(_HttpProvider):
     """Chat Completions (POST https://api.deepseek.com/chat/completions) with function tools.
 
@@ -736,13 +846,23 @@ class DeepSeekProvider(_HttpProvider):
             raise ProviderError("invalid_json")
         return [str(m["id"]) for m in data if isinstance(m, dict) and m.get("id")]
 
+    # Cleared for this process if DeepSeek refuses a streamed request (400 or 422): its
+    # documentation lists stream, stream_options and tools but shows no streamed tool call.
+    streaming = True
+
     def _call(self, body: dict[str, Any]) -> dict[str, Any]:
-        return _post_json(
-            DEEPSEEK_CHAT_URL,
-            body,
-            {"Authorization": f"Bearer {self._key}", "Content-Type": "application/json"},
-            self._timeout,
-        )
+        headers = {"Authorization": f"Bearer {self._key}", "Content-Type": "application/json"}
+        sink, stop = answer_sink.get(), stop_check.get()
+        if (sink is None and stop is None) or not DeepSeekProvider.streaming:
+            return _post_json(DEEPSEEK_CHAT_URL, body, headers, self._timeout)
+        streamed = {**body, "stream": True, "stream_options": {"include_usage": True}}
+        try:
+            return _deepseek_stream(streamed, headers, self._timeout, sink, stop)
+        except ProviderError as exc:
+            if str(exc) not in ("http_400", "http_422"):
+                raise
+            DeepSeekProvider.streaming = False
+            return _post_json(DEEPSEEK_CHAT_URL, body, headers, self._timeout)
 
     @staticmethod
     def parse(body: dict[str, Any]) -> tuple[dict[str, Any], dict[str, int | None]]:
@@ -809,6 +929,28 @@ class FakeProvider:
     )
 
     def complete(
+        self, system: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]]
+    ) -> dict[str, Any]:
+        reply = self._reply(system, messages, tools)
+        sink = answer_sink.get()
+        if sink is not None:
+            # As a model writes its answer: the final_answer call's arguments in small pieces
+            # (spaced by OSRIP_FAKE_STREAM_DELAY_MS, for browser tests).
+            delay = get_settings().fake_stream_delay_ms / 1000
+            for block in reply.get("content", []):
+                if block.get("type") == "tool_use" and block.get("name") == "final_answer":
+                    sink.start(block["id"], "final_answer")
+                    arguments = json.dumps(block.get("input") or {}, ensure_ascii=False)
+                    stop = stop_check.get()
+                    for n, i in enumerate(range(0, len(arguments), 16)):
+                        if delay:
+                            sleep(delay)
+                        if stop is not None and n % 8 == 7:
+                            stop()  # a stopped question ends here, as a streamed call does
+                        sink.arguments(block["id"], arguments[i : i + 16])
+        return reply
+
+    def _reply(
         self, system: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]]
     ) -> dict[str, Any]:
         question = ""

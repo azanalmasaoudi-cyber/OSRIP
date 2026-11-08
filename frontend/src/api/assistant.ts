@@ -612,7 +612,7 @@ export function useAsk(conversationId: string | null) {
 
 export const PROGRESS_STAGES = [
   'received', 'planning', 'published_data', 'calculating', 'web_search', 'reading', 'computing', 'visuals',
-  'image', 'checking', 'done', 'cancelled',
+  'image', 'writing', 'checking', 'done', 'cancelled',
 ] as const;
 
 const progressSchema = z.object({

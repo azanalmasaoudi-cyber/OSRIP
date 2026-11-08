@@ -1969,6 +1969,7 @@ export const ar: ArabicTranslationShape = {
     testFailed: 'فشل ({{code}})',
   },
   chat: {
+    askAgain: 'اسأل مرة أخرى',
     sourcesPanel: 'مصادر هذه المحادثة',
     sourcesPanelEmpty: 'تُذكر هنا مصادر كل إجابة، والمصادر الرسمية أولاً.',
     sourceClass: {
@@ -2096,6 +2097,18 @@ export const ar: ArabicTranslationShape = {
     introBody: 'اسم المشروع في افتتاحية مدتها ثلاث ثوانٍ في الصفحة الرئيسية، مرة واحدة في كل جلسة تصفح. «تخطّي» ينهيها فوراً.',
     introAuto: 'اعرضها عند فتح الصفحة الرئيسية (مرة في كل جلسة)',
   },
+  answerStream: {
+    phase: {
+      starting: 'البدء',
+      searching: 'البحث في الإنترنت',
+      reading: 'قراءة المصادر',
+      analysing: 'التحليل',
+      writing: 'الكتابة',
+      checking: 'التحقق من الإجابة كاملة',
+      done: 'اكتملت',
+    },
+    note: 'تظهر كل جملة بعد التحقق من أرقامها مقابل المصادر، ويُعاد التحقق من الإجابة كاملة عند اكتمالها.',
+  },
   workflow: {
     working: 'جارٍ العمل على سؤالك',
     stop: 'إيقاف',
@@ -2111,6 +2124,7 @@ export const ar: ArabicTranslationShape = {
       computing: 'الحساب من أرقام المصادر',
       visuals: 'إعداد الجداول والرسوم والمخططات',
       image: 'إنشاء رسم توضيحي',
+      writing: 'كتابة الإجابة',
       checking: 'التحقق من الأرقام والاستشهادات',
       done: 'الإجابة جاهزة',
       cancelled: 'أُوقف بناءً على طلبك',

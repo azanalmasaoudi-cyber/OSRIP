@@ -22,13 +22,14 @@ import { Markdown } from './Markdown';
 import { AboutMulhim, MemoryPanel } from './MulhimPanels';
 import { PersonaSwitch, usePersona } from './persona';
 import { PersonaImage } from './PersonaImage';
+import { StreamingAnswer } from './StreamingAnswer';
 import {
   CitationChip, DataReportNotice, evidenceAnchor, SourcesShown, StructuredParts, WebNotice, withoutMarkers,
 } from './StructuredReply';
 import { VoicePanel } from './VoicePanel';
 import { VoiceVolume } from './VoiceVolume';
 import {
-  DATA_MODES, INTERNET_MODES, isInternetMode, PROGRESS_STAGES, useAssistantStatus, useCancelRequest, useRequestProgress, useVoiceStatus,
+  DATA_MODES, INTERNET_MODES, isInternetMode, useAssistantStatus, useCancelRequest, useVoiceStatus,
   type Allowance, type AskSelection, type AssistantMessage, type ConversationSummary, type Evidence, type RequestMode,
 } from '@/api/assistant';
 import { ApiRequestError } from '@/api/client';
@@ -203,7 +204,7 @@ export function ChatView({ chat }: { chat: ChatModel }) {
                 <li className="ms-auto max-w-[85%] rounded-2xl rounded-ee-md border border-brand/25 bg-primary-soft px-4 py-2.5 text-base whitespace-pre-wrap shadow-card" dir="auto"
                   data-testid="user-message" data-pending="true">{echo.text}</li>
               ) : null}
-              {chat.pending ? <Thinking requestId={chat.asking?.requestId ?? null} guest={chat.guest} /> : null}
+              {chat.pending ? <StreamingAnswer requestId={chat.asking?.requestId ?? null} guest={chat.guest} /> : null}
             </ol>
             {chat.needsAccount ? chat.signInPrompt : null}
             {chat.error ? (
@@ -237,21 +238,6 @@ export function ChatView({ chat }: { chat: ChatModel }) {
       </Dialog>
     </div>
     </div>
-  );
-}
-
-/** While a question is answered: the latest real stage from the server (no simulated typing). */
-function Thinking({ requestId, guest }: { requestId: string | null; guest: boolean }) {
-  const { t } = useTranslation();
-  const progress = useRequestProgress(requestId, guest);
-  const stages = (progress.data?.stages ?? []).map((s) => s.stage)
-    .filter((s): s is (typeof PROGRESS_STAGES)[number] => (PROGRESS_STAGES as readonly string[]).includes(s));
-  const stage = stages[stages.length - 1];
-  return (
-    <li className="flex items-center gap-2 text-base text-muted-foreground" role="status" data-testid="assistant-loading" data-stage={stage ?? ''}>
-      <Loader2 aria-hidden="true" className="size-4 animate-spin motion-reduce:animate-none" />
-      {stage && stage !== 'received' ? t(`workflow.stage.${stage}`) : t('workflow.working')}
-    </li>
   );
 }
 
@@ -412,6 +398,12 @@ function ChatMessage({ message, question, chat, onAsk }: {
         {failed ? (
           <Button type="button" variant="outline" size="sm" onClick={chat.retry} data-testid="retry-answer">
             <RotateCcw aria-hidden="true" />{message.status === 'data_report' ? t('assistant.dataReport.retryAi') : t('states.retry')}
+          </Button>
+        ) : null}
+        {/* A stopped answer: the same question again, as a new request (the stopped one is settled). */}
+        {message.status === 'cancelled' && question ? (
+          <Button type="button" variant="outline" size="sm" onClick={() => onAsk(question)} data-testid="ask-again">
+            <RotateCcw aria-hidden="true" />{t('chat.askAgain')}
           </Button>
         ) : null}
         {chat.signedIn && message.status && SAVEABLE.has(message.status) ? <SaveResearchButton messageId={message.id} /> : null}

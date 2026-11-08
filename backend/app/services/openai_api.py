@@ -101,8 +101,10 @@ def create(
     timeout: float,
     http_client_factory: ClientFactory,
     stop: Callable[[], None] | None = None,
+    on_event: Callable[[Any], None] | None = None,
 ) -> dict[str, Any]:
-    """One Responses API call; streamed when ``stop`` is given, so it can be stopped."""
+    """One Responses API call; streamed when ``stop`` is given, so it can be stopped.
+    ``on_event`` sees every streamed event (the answer text as it is generated)."""
     try:
         with http_client_factory(timeout) as http:
             responses = client(api_key, http, timeout).responses
@@ -115,6 +117,8 @@ def create(
                         stop()  # raises when stopped; leaving the block closes the stream
                         checked = time.monotonic()
                     kind = getattr(event, "type", "")
+                    if on_event is not None:
+                        on_event(event)
                     if kind in ("response.completed", "response.incomplete", "response.failed"):
                         return _plain(event.response)
                     if kind == "error":

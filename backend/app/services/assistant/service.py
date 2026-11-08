@@ -44,7 +44,15 @@ from app.models import (
     ResearchCandidate,
 )
 from app.services import accounts
-from app.services.assistant import data_report, grounding, lookup, profile, routing, sources
+from app.services.assistant import (
+    data_report,
+    grounding,
+    lookup,
+    profile,
+    routing,
+    sources,
+    streaming,
+)
 from app.services.assistant.progress import Cancelled, Tracker
 from app.services.assistant.provider import (
     ProviderError,
@@ -900,8 +908,11 @@ def _run_model(
         reader.begin()
         reader.execute(text("SET TRANSACTION READ ONLY"))  # the assistant cannot write
         tools = Tools(reader, ledger)
-        # A provider that streams can end its call as soon as the person stops the question.
+        # A provider that streams can end its call as soon as the person stops the question,
+        # and hands the answer over as it is written (checked sentences: streaming.py).
         stopping = stop_check.set(tracker.check)
+        sink = streaming.AnswerSink(ledger, tracker)
+        sinking = streaming.answer_sink.set(sink)
         try:
             for round_ in range(rounds):
                 if time.monotonic() > deadline:
@@ -949,6 +960,8 @@ def _run_model(
                     None,
                 )
                 if final is not None:
+                    # A provider that does not stream: its finished text, as checked segments.
+                    sink.whole(str(final.get("id")), final.get("input") or {})
                     return final.get("input") or {}, ledger, provider.name
                 if not calls:
                     raise ProviderError("no_tool_call")
@@ -997,6 +1010,7 @@ def _run_model(
             exc.ledger = ledger
             raise
         finally:
+            streaming.answer_sink.reset(sinking)
             stop_check.reset(stopping)
             reader.rollback()
 

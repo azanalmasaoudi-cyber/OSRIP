@@ -1,8 +1,11 @@
 import { Check, Loader2, Square } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { Markdown } from './Markdown';
+import { withoutMarkers } from './StructuredReply';
 import { PROGRESS_STAGES, useCancelRequest, useRequestProgress, type StructuredReply } from '@/api/assistant';
 import { Button } from '@/components/ui/button';
+import { useAnswerStream } from '@/state/answerStream';
 
 type Stage = (typeof PROGRESS_STAGES)[number];
 const isStage = (s: string): s is Stage => (PROGRESS_STAGES as readonly string[]).includes(s);
@@ -17,6 +20,8 @@ export function ResearchProgress({ requestId, guest }: { requestId: string | nul
   const { t } = useTranslation();
   const progress = useRequestProgress(requestId, guest);
   const cancel = useCancelRequest();
+  // The answer as it is written (checked sentences, streamed by the server).
+  const stream = useAnswerStream(requestId, guest);
   const stages = (progress.data?.stages ?? []).map((s) => s.stage).filter(isStage);
   const stopping = cancel.isPending || cancel.isSuccess || Boolean(progress.data?.cancel_requested);
   return (
@@ -37,6 +42,11 @@ export function ResearchProgress({ requestId, guest }: { requestId: string | nul
             );
           })}
         </ol>
+      ) : null}
+      {stream.text ? (
+        <div className="flex flex-col gap-2 text-sm text-foreground" data-testid="answer-stream-text" aria-busy="true">
+          <Markdown text={withoutMarkers(stream.text)} cite={() => null} />
+        </div>
       ) : null}
       {requestId ? (
         <Button type="button" variant="outline" size="sm" className="w-fit" disabled={stopping} data-testid="assistant-stop"
