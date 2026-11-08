@@ -384,23 +384,23 @@ def test_provisional_commodity_in_verified_mode_is_flagged_not_hidden() -> None:
     assert "commodity_mapping_provisional" in codes(result)
 
 
-def test_verified_statistics_start_in_january_2022() -> None:
+def test_verified_statistics_start_in_january_2021() -> None:
     before, first = validate(
         [
             row(
                 "ELEC_GENERATION",
                 "GWh",
                 "1",
-                start="2021-12-01",
-                end="2021-12-31",
+                start="2020-12-01",
+                end="2020-12-31",
                 frequency="monthly",
             ),
             row(
                 "ELEC_GENERATION",
                 "GWh",
                 "1",
-                start="2022-01-01",
-                end="2022-01-31",
+                start="2021-01-01",
+                end="2021-01-31",
                 frequency="monthly",
             ),
         ],

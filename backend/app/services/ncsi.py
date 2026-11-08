@@ -4,7 +4,7 @@ The output is an ordinary OSRIP import CSV. It still goes through upload, mappin
 validation, error review, explicit approval and publication; nothing here publishes.
 
 Rules applied while converting:
-* only periods from January 2022 onward are kept (platform scope);
+* only periods from the platform's statistical start (January 2021) onward are kept;
 * an annual value for the current (unfinished) year, or later, is skipped: a partial
   year is never presented as a complete year;
 * regions are matched to registry codes by exact NCSI spellings only. Unknown names
@@ -215,7 +215,7 @@ def convert(
             out.skip("unreadable_period")
             continue
         if period.start < STATISTICAL_SCOPE_START:
-            out.skip("before_2022")
+            out.skip("before_statistical_scope")
             continue
         if period.frequency == "annual" and period.start.year >= today.year:
             out.skip("annual_value_for_unfinished_year")

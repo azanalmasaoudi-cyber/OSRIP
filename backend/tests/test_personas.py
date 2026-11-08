@@ -78,6 +78,12 @@ def test_version_4_keeps_only_al_mulhim_and_changes_nothing_else() -> None:
     v3 = profile.document(V3)
     v4 = profile.document(V4)
     v3["personas"] = [x for x in v3["personas"] if x["code"] == "mulhim"]
+    # Version 4 also moves the statistical start to 2021 (the complete-year baseline 2021-2025).
+    assert (v3["statistics_from"], v4["statistics_from"]) == ("2022-01-01", "2021-01-01")
+    v3["statistics_from"] = v4["statistics_from"]
+    scope = next(x for x in v4["limitations"] if x["code"] == "statistics_scope")
+    assert "2021" in scope["en"] and "2021" in scope["ar"]
+    v3["limitations"] = [scope if x["code"] == "statistics_scope" else x for x in v3["limitations"]]
     for key in ("version", "effective_date", "approved_source"):
         v3.pop(key), v4.pop(key)
     assert v3 == v4

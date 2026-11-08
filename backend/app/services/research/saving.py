@@ -62,6 +62,7 @@ from app.models import (
 )
 from app.services import accounts, audit
 from app.services.imports import workflow
+from app.services.imports.validation import STATISTICAL_SCOPE_START
 from app.services.principal import Principal
 from app.services.research import sources
 from app.services.sync.ncsi_msb import Record
@@ -69,7 +70,7 @@ from app.services.sync.service import records_csv, same_figure
 
 RESEARCH_EMAIL = "research-assistant@osrip.invalid"
 SYSTEM = Principal(user_id=None, label="system:research")
-SCOPE_START = date(2022, 1, 1)
+SCOPE_START = STATISTICAL_SCOPE_START  # the platform's statistical start
 KINDS = ("monthly", "quarterly", "annual", "year_to_date")
 SCALES = ("one", "thousand", "million", "billion")
 SECTIONS = ("electricity", "water", "food_security", "trade")
@@ -207,7 +208,7 @@ def period_problems(kind: str, start: date, end: date, read_on: date) -> list[st
     else:
         out.append("unknown_period_kind")
     if start < SCOPE_START:
-        out.append("before_2022")
+        out.append("before_statistical_scope")
     if end > read_on:
         out.append("period_not_ended_when_read")
     return out
@@ -425,8 +426,8 @@ def _check(
         return _Checked(ref, "rejected", ["period_dates_missing_or_reversed"], None)
     read_on = doc.retrieved_at.date()
     problems = period_problems(kind, start, end, read_on)
-    if "before_2022" in problems or end < SCOPE_START:
-        return _Checked(ref, "rejected", ["before_2022_outside_scope"], None)
+    if "before_statistical_scope" in problems or end < SCOPE_START:
+        return _Checked(ref, "rejected", ["before_statistical_scope"], None)
     if problems:
         return _Checked(ref, "rejected", problems, None)
     indicator = session.scalar(

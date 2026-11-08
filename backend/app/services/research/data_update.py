@@ -25,7 +25,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import func, select
@@ -35,34 +35,35 @@ from app.db.session import session_factory
 from app.domain.enums import DataMode
 from app.models import ResearchDocument, ResearchJob, ResearchSearch
 from app.services.assistant.progress import Cancelled, Tracker
+from app.services.imports.validation import STATISTICAL_SCOPE_START
 
 log = logging.getLogger("osrip.research")
 
 QUESTIONS: dict[str, tuple[str, str]] = {
     "electricity": (
         "Find the latest published official electricity statistics for Oman (gross and net "
-        "generation, consumption, peak demand) from 2022 onward. Read the original NCSI or "
+        "generation, consumption, peak demand) from 2021 onward. Read the original NCSI or "
         "sector publications and submit every figure you read for validation and saving.",
         "ابحث عن أحدث إحصاءات الكهرباء الرسمية المنشورة لسلطنة عُمان منذ 2022، واقرأ المنشورات "
         "الأصلية للمركز الوطني للإحصاء والمعلومات أو القطاع، وقدّم كل رقم تقرؤه للتحقق والحفظ.",
     ),
     "water": (
         "Find the latest published official water statistics for Oman (production, "
-        "consumption) from 2022 onward. Read the original NCSI or sector publications and "
+        "consumption) from 2021 onward. Read the original NCSI or sector publications and "
         "submit every figure you read for validation and saving.",
         "ابحث عن أحدث إحصاءات المياه الرسمية المنشورة لسلطنة عُمان منذ 2022، واقرأ المنشورات "
         "الأصلية، وقدّم كل رقم تقرؤه للتحقق والحفظ.",
     ),
     "food_security": (
         "Find the latest published official food security statistics for Oman (production, "
-        "self-sufficiency) from 2022 onward. Read the original publications and submit every "
+        "self-sufficiency) from 2021 onward. Read the original publications and submit every "
         "figure you read for validation and saving.",
         "ابحث عن أحدث إحصاءات الأمن الغذائي الرسمية المنشورة لسلطنة عُمان منذ 2022، واقرأ "
         "المنشورات الأصلية، وقدّم كل رقم تقرؤه للتحقق والحفظ.",
     ),
     "trade": (
         "Find the latest published official foreign trade statistics for Oman (merchandise "
-        "exports, imports, re-exports) from 2022 onward. Read the original publications and "
+        "exports, imports, re-exports) from 2021 onward. Read the original publications and "
         "submit every figure you read for validation and saving.",
         "ابحث عن أحدث إحصاءات التجارة الخارجية الرسمية المنشورة لسلطنة عُمان منذ 2022، واقرأ "
         "المنشورات الأصلية، وقدّم كل رقم تقرؤه للتحقق والحفظ.",
@@ -123,7 +124,7 @@ def create(
         limits={"max_pages": max_pages, "max_credits": max_credits},
         steps=[{"stage": STEP, "state": "pending"}],
         cache_key=key,
-        period_from=date(2022, 1, 1),
+        period_from=STATISTICAL_SCOPE_START,
     )
     session.add(job)
     session.flush()

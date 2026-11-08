@@ -26,6 +26,7 @@ from app.core.errors import ApiError, not_found, unprocessable
 from app.domain.enums import DataMode
 from app.models import Indicator, Observation, ResearchCandidate
 from app.services import audit
+from app.services.imports.validation import STATISTICAL_SCOPE_START
 from app.services.principal import Principal
 from app.services.research import fetching, pages, search_log, sources
 from app.services.research.search import (
@@ -36,7 +37,7 @@ from app.services.research.search import (
 
 DOMAINS = ("electricity", "water", "food_security", "trade", "general")
 MAX_RESULTS_KEPT = 6
-SCOPE_START = date(2022, 1, 1)
+SCOPE_START = STATISTICAL_SCOPE_START  # the platform's statistical start
 
 
 def available() -> bool:
@@ -574,7 +575,7 @@ def queue_candidates(
     language: str,
 ) -> int:
     """Store the model's proposed numerical observations, keeping only those whose value
-    appears verbatim in cited web evidence and whose period is from 2022 onward. A provider
+    appears verbatim in cited web evidence and whose period is from 2021 onward. A provider
     summary (another model's statement about a source) never qualifies: the figure must come
     from the source's own text (a page or document excerpt, or the engine's snippet)."""
     by_id = {i["id"]: i for i in ledger_items}

@@ -568,7 +568,7 @@ def electricity(ctx: Ctx) -> SectorOut:
     out.recs.append(Rec(
         problem=T("Peak adequacy cannot be assessed", "لا يمكن تقييم كفاية القدرة وقت الذروة"),
         evidence=T("Peak demand and firm capacity are not among the published series.", "ذروة الطلب والقدرة المؤكدة ليستا ضمن السلاسل المنشورة."),
-        action=T("Obtain annual peak demand and firm available capacity for 2022 onward and repeat this analysis.", "الحصول على ذروة الطلب السنوية والقدرة المتاحة المؤكدة منذ 2022 وإعادة هذا التحليل."),
+        action=T("Obtain annual peak demand and firm available capacity for 2021 onward and repeat this analysis.", "الحصول على ذروة الطلب السنوية والقدرة المتاحة المؤكدة منذ 2021 وإعادة هذا التحليل."),
         quantity_note=T("Not applicable (a data request).", "لا ينطبق (طلب بيانات)."), horizon="short", constraints=ELEC_CONSTRAINTS,
         outcome=T("Makes a reserve-margin assessment possible. Assumes the operator publishes or shares these figures.", "يجعل تقييم هامش الاحتياطي ممكناً. ويفترض أن ينشر المشغّل هذه الأرقام أو يتيحها."),
         priority=BLOCKING[0], priority_basis=BLOCKING[1], kpi=T("Reserve margin at the annual peak (%)", "هامش الاحتياطي عند الذروة السنوية (٪)"),
@@ -655,7 +655,7 @@ def water(ctx: Ctx) -> SectorOut:
     out.recs.append(Rec(
         problem=T("A water shortage cannot be assessed", "لا يمكن تقييم عجز المياه"),
         evidence=T("Demand requirement, unmet demand and storage are not among the published series.", "الاحتياج والطلب غير الملبّى والتخزين ليست ضمن السلاسل المنشورة."),
-        action=T("Obtain the demand requirement (or unmet demand) and storage levels by service area for 2022 onward and repeat this analysis.", "الحصول على الاحتياج (أو الطلب غير الملبّى) ومستويات التخزين حسب منطقة الخدمة منذ 2022 وإعادة هذا التحليل."),
+        action=T("Obtain the demand requirement (or unmet demand) and storage levels by service area for 2021 onward and repeat this analysis.", "الحصول على الاحتياج (أو الطلب غير الملبّى) ومستويات التخزين حسب منطقة الخدمة منذ 2021 وإعادة هذا التحليل."),
         quantity_note=T("Not applicable (a data request).", "لا ينطبق (طلب بيانات)."), horizon="short", constraints=WATER_CONSTRAINTS,
         outcome=T("Makes a supply–demand balance possible. Assumes the utility shares coverage-matched figures.", "يجعل حساب ميزان العرض والطلب ممكناً. ويفترض أن تتيح الشركة أرقاماً متطابقة التغطية."),
         priority=BLOCKING[0], priority_basis=BLOCKING[1], kpi=T("Unmet demand (million m³) and days of storage", "الطلب غير الملبّى (مليون م³) وأيام التخزين"),
@@ -1478,7 +1478,7 @@ def _forecast(ctx: Ctx, indicator: str | None) -> dict[str, Any]:
 
 COMMON_LIMITATIONS = [
     T(
-        "Statistics from 2022 onward are used; any older figure is labelled as context.",
+        "Statistics from 2021 onward are used; any older figure is labelled as context.",
         "تُستخدم الإحصاءات من 2022 فصاعداً؛ وأي رقم أقدم يُوسم بأنه للسياق.",
     ),
     T(

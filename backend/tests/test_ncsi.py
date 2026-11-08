@@ -18,7 +18,7 @@ COLUMNS = {
     "unit": "Unit",
 }
 SAMPLE = """Indicators,Regions,Date,Value,Frequency,Unit
-Test generation indicator,Oman,2021,100,A,GWh
+Test generation indicator,Oman,2020,100,A,GWh
 Test generation indicator,Oman,2022,200.5,A,GWh
 Test generation indicator,Oman,2026,90,A,GWh
 Test generation indicator,Muscat,2023M02,7,M,GWh
@@ -50,7 +50,7 @@ def test_conversion_keeps_scope_and_never_guesses() -> None:
         ["ELEC_GENERATION", "OM-SS-07", "2023-03-01", "2023-03-31", "monthly", "GWh", "", "true"],
     ]
     assert result.skipped == {
-        "before_2022": 1,
+        "before_statistical_scope": 1,
         "annual_value_for_unfinished_year": 1,  # 2026 is not over: never a complete year
         "region_not_in_registry": 1,  # pre-2011 'Ash Sharqiyah' is not guessed
         "indicator_not_mapped": 1,

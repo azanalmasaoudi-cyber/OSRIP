@@ -2,7 +2,7 @@
   "schema": "osrip.assistant_profile/1",
   "version": 4,
   "effective_date": "2026-11-08",
-  "approved_source": "OSRIP Academic Booklet, rewritten English edition, November 2026 (sections 3.22 and 5.2: one assistant persona, legacy second persona retired) and the owner's requirements of 8 November 2026. Version 4 keeps Al Mulhim as the only persona; Ilham is retired from the interface while earlier replies keep the persona they were given. The project knowledge, replies and rules are unchanged from version 3.",
+  "approved_source": "OSRIP Academic Booklet, rewritten English edition, November 2026 (sections 3.22 and 5.2: one assistant persona, legacy second persona retired) and the owner's requirements of 8 November 2026. Version 4 keeps Al Mulhim as the only persona; Ilham is retired from the interface while earlier replies keep the persona they were given. Statistics now start in January 2021 (the complete-year baseline 2021-2025). The project knowledge, replies and rules are otherwise unchanged from version 3.",
   "name": {
     "ar": "المُلْهِم",
     "en": "Al Mulhim"
@@ -79,7 +79,7 @@
       "sections": []
     }
   ],
-  "statistics_from": "2022-01-01",
+  "statistics_from": "2021-01-01",
   "data_modes": [
     {
       "code": "verified_source",
@@ -169,8 +169,8 @@
     },
     {
       "code": "statistics_scope",
-      "en": "Statistics start in 2022 and were checked against their sources up to the stated research cutoff; they are not live data.",
-      "ar": "تبدأ الإحصاءات من عام 2022، وقد رُوجعت مقابل مصادرها حتى تاريخ التحقق المذكور؛ وهي ليست بيانات لحظية."
+      "en": "Statistics start in 2021 and were checked against their sources up to the stated research cutoff; they are not live data.",
+      "ar": "تبدأ الإحصاءات من عام 2021، وقد رُوجعت مقابل مصادرها حتى تاريخ التحقق المذكور؛ وهي ليست بيانات لحظية."
     },
     {
       "code": "no_causal_claims",

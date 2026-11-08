@@ -5,7 +5,7 @@ The model may only state numbers that appear in cited evidence; calculations are
 done here with the domain functions, never by the model.
 
 Scope: published snapshots of the conversation's data mode. In verified-source mode
-only periods from January 2022 onward are used (build brief).
+only periods from January 2021 onward are used (the complete-year baseline 2021-2025).
 """
 
 from __future__ import annotations
@@ -1329,7 +1329,7 @@ TOOL_SPECS: list[dict[str, Any]] = [
     },
     {
         "name": "get_observations",
-        "description": "Published observations for one indicator and area, from January 2022 in verified mode. Each has an evidence id.",
+        "description": "Published observations for one indicator and area, from January 2021 in verified mode. Each has an evidence id.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -1447,7 +1447,7 @@ TOOL_SPECS: list[dict[str, Any]] = [
                     "type": "array",
                     "maxItems": 10,
                     "description": "Numerical observations stated in cited web evidence, for a data manager to review "
-                    "(never added to the platform's data). Only figures written in the evidence text; periods from 2022 onward.",
+                    "(never added to the platform's data). Only figures written in the evidence text; periods from 2021 onward.",
                     "items": {
                         "type": "object",
                         "properties": {
