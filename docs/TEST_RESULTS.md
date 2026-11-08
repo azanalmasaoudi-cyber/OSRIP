@@ -1,5 +1,22 @@
 # Test results
 
+## 2026-11-08 (later): one modern Al Mulhim conversation; the Talk screen removed (branch `feature/al-mulhim-chat`)
+
+What changed: `/talk` redirects to `/assistant` (keeping only the data mode and a question to prefill); the floating orb opens the conversation instead of a second chat in a side panel; the workspace column embeds the same conversation; the old panel layout (answer-mode button rows, persona picker, End call, mute row) is deleted. The conversation has a history column (a drawer on phones), a centred welcome, a large two-row message box with Tools, microphone and Send or Stop, and streaming statuses from the server's real stages. Al Mulhim is the only persona in every part of the interface (no picker or stored choice; no Ilham intro slot); synthetic data is labelled on answers from OSRIP's data, not on internet answers.
+
+| Check | Result |
+|---|---|
+| `npm run typecheck`, `npm run lint`, `npm run check:contrast`, `npm run build` | Pass; 0 failing contrast pairs (the bundle-size warning is not new) |
+| Frontend unit tests | **20 passed** (new `talk-redirect.test.mjs`: 3; the stream phases now include planning and preparing tables) |
+| Backend (unchanged on this branch apart from the intro import tool): `test_personas.py`, `test_guest_allowance_integration.py`, `test_answer_streaming*.py` | **63 passed**; `ruff` clean on the tool |
+| Mock-data browser suite (Chrome, desktop and phone) | **45 passed**, 3 skipped as designed; new welcome test: "Ask Al Mulhim" beside the four sector images, opens the conversation, in Arabic and the other theme |
+| Full-stack browser suite (Chrome, desktop and phone), whole suite | **190 passed, 10 failed, 2 skipped** (1.4 h; the computer kept stalling). Five failures were expectations the redesign changes: at most three examples (now up to four, ×2), Tools before the message box in tab order (now after it, ×2), the old Arabic "writing" label (×1); five were stalls: a suspended network, page-load and navigation timeouts, a page that never opened. No page scrolls sideways at 360–1366 px in either language (checked again by hand on `/assistant` and `/workspace`) |
+| The failing spec files again, after the fixes | **56 passed**, 1 skipped as designed, 1 failed: on a cold server a guest's very first question was refused as an expired session (it was sent before the guest session existed). Fixed: the first question waits for the session. Then `chat-phone` and `assistant` specs: **32 passed** |
+| The rewritten specs, first focused run | 43 passed, 6 failed: 4 disturbed by a concurrent run (3 deleted trace files, 1 lost request), 2 because two notes of the old panel were missing (web figures go to a review queue; the speaking animation is not lip synchronisation), now kept in the conversation; the 4 spec files again: **24 passed** |
+| By hand (browser pane) | `/talk?mode=synthetic&persona=ilham` lands on `/assistant?mode=synthetic`; desktop light English, dark Arabic (right to left: the history on the right), phone width (history in a drawer, examples in one column) |
+
+**Not verified:** live DeepSeek streaming and live web research through the new conversation. The app running on this computer (port 8010) was started this morning, before the streaming work: its database is at migration 0029 and it runs the earlier code. Restarting it from Visual Studio applies migrations 0030–0031; then one question in Deep research shows the streamed statuses and text live. All automated tests used the scripted stand-ins.
+
 ## 2026-11-08: one persona, streamed answers, 2021 scope, booklet synchronised (branch `feature/al-mulhim-streaming`)
 
 What changed: Al Mulhim is the only persona (profile version 4, migration 0030); answers are streamed sentence by sentence, each released only after the evidence check (migration 0031); "Azzan" is reserved and `ensure-admin --promote` refuses self-made accounts; verified statistics start in January 2021; the owner's workbooks are staged as four validated imports (`docs/data-imports/2026-11/`), nothing published. The academic booklet was then compared with the code and updated (below).
