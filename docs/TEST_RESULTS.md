@@ -15,7 +15,22 @@ What changed: `/talk` redirects to `/assistant` (keeping only the data mode and 
 | The rewritten specs, first focused run | 43 passed, 6 failed: 4 disturbed by a concurrent run (3 deleted trace files, 1 lost request), 2 because two notes of the old panel were missing (web figures go to a review queue; the speaking animation is not lip synchronisation), now kept in the conversation; the 4 spec files again: **24 passed** |
 | By hand (browser pane) | `/talk?mode=synthetic&persona=ilham` lands on `/assistant?mode=synthetic`; desktop light English, dark Arabic (right to left: the history on the right), phone width (history in a drawer, examples in one column) |
 
-**Not verified:** live DeepSeek streaming and live web research through the new conversation. The app running on this computer (port 8010) was started this morning, before the streaming work: its database is at migration 0029 and it runs the earlier code. Restarting it from Visual Studio applies migrations 0030–0031; then one question in Deep research shows the streamed statuses and text live. All automated tests used the scripted stand-ins.
+**Live check with DeepSeek (9 November 2026).** Pressing Start again in Visual Studio reused the OSRIP already running since 8 November (the launcher never starts a second copy), still at migration 0029. So the check ran beside it, without touching it: a copy of `osrip_dev` migrated to 0031, this branch's backend on port 8011 with the configured DeepSeek key, and a frontend on port 5188 pointed at it. Both were removed afterwards and the copy dropped.
+- Through the API, "What was Oman's total electricity generation in 2025, and how did it change from 2024?" in Deep research gave this timeline:
+  - received 0 s; planning 2.7 s;
+  - three web searches in parallel from 5.3 s, results by 7.8 s;
+  - reading original pages 10.2–24 s, then one more search; computing 27.0 s;
+  - writing from 28.6 s: **49 checked sentences streamed** by 33.7 s;
+  - checking 41.0 s; complete 41.3 s.
+
+  The reply was `answered`, by Al Mulhim, with 4 web sources; one unsupported part was left out with a note rather than withholding the answer. It cited a press report of preliminary NCSI data (51,612.3 GWh), not the Statistical Year Book's 50,973.5 GWh, and said so.
+- Through the new interface, "How did water production in Oman change in 2025 compared with 2024…?" in Deep research, in verified mode:
+  - the status line went Searching the internet → Reading sources → Analysing the findings → Writing the response;
+  - the report then appeared sentence by sentence (Summary, Findings, Hypotheses kept apart, Assumptions), with "Parts withheld… 1", Show sources, Read aloud and follow-up questions;
+  - the history listed the conversation, and the counter showed 4 of 5 free answers.
+- Found and fixed: the header's general status read "Checking the published data…" while Al Mulhim was searching the web; it now reads "Working on your answer…" (the exact stage stays on the answer).
+
+To see this in the app on this computer, stop the running OSRIP first (Stop in Visual Studio, or close its launcher window), then Start: the launcher applies migrations 0030–0031.
 
 ## 2026-11-08: one persona, streamed answers, 2021 scope, booklet synchronised (branch `feature/al-mulhim-streaming`)
 

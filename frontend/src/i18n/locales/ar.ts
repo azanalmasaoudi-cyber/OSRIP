@@ -1375,7 +1375,7 @@ export const ar: ArabicTranslationShape = {
   orb: {
     idle: 'جاهز',
     listening: 'يستمع…',
-    processing: 'يتحقق من البيانات المنشورة…',
+    processing: 'يعمل على إجابتك…',
     speaking: 'يتحدث…',
     error: 'حدث خطأ',
   },

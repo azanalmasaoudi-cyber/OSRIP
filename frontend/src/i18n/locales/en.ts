@@ -1365,7 +1365,7 @@ export const en = {
   orb: {
     idle: 'Ready',
     listening: 'Listening…',
-    processing: 'Checking the published data…',
+    processing: 'Working on your answer…',
     speaking: 'Speaking…',
     error: 'Something went wrong',
   },
