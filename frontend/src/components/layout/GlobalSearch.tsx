@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
-import { NAV_ITEMS, useItemTarget, type NavItem } from './SidebarNav';
+import { NAV_ITEMS, SECTION_ITEMS, useItemTarget, type NavItem } from './SidebarNav';
 import { hasPermission, useMe } from '@/api/auth';
 import { cn } from '@/lib/utils';
 import { usePreservedSearch } from '@/state/usePreservedSearch';
@@ -59,9 +59,10 @@ export function GlobalSearch({ shortcut = false, focusOnOpen = false, inline = f
   const needle = text.toLowerCase();
   const en = i18n.getFixedT('en');
   const ar = i18n.getFixedT('ar');
-  // Pages the person may open (administration only with its permission; the server checks again).
+  // Pages the person may open (administration only with its permission; the server checks again),
+  // and the sections of pages that the sidebar lists once.
   const pages = needle
-    ? NAV_ITEMS.filter((item) => !item.requires || item.requires.some((p) => hasPermission(me.data, p)))
+    ? [...NAV_ITEMS, ...SECTION_ITEMS].filter((item) => !item.requires || item.requires.some((p) => hasPermission(me.data, p)))
       .filter((item) => [t(item.key), en(item.key), ar(item.key)].some((label) => label.toLowerCase().includes(needle)))
     : [];
   const options: Option[] = needle ? [...pages.map((item) => ({ kind: 'page' as const, item })), { kind: 'ask' as const }] : [];

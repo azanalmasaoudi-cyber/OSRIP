@@ -26,7 +26,7 @@ test('navigation lists the required sections and every link opens its page', asy
     ['Trade', /\/trade/, 'Trade'],
     ['Interactive Oman Map', /\/geography/, 'Geography'],
     ['Studies', /\/studies/, 'Studies'],
-    ['Scenarios', /\/forecasts/, 'Forecasts and Scenarios'],
+    ['Forecasts and Scenarios', /\/forecasts/, 'Forecasts and Scenarios'],
     ['Sources', /\/sources/, 'Sources and Methodology'],
     ['AI Research Assistant', /\/assistant/, 'Al Mulhim'], // the page is titled with the chosen persona
     ['Analysis Workspace', /\/workspace/, 'Analysis workspace'],
@@ -169,10 +169,10 @@ test('responsive matrix: no sideways scrolling at six widths, in English and Ara
     const menu = page.getByRole('button', { name: 'Open menu' });
     if (width < 1024) {
       await menu.click();
-      await expect(page.getByRole('dialog').getByRole('link', { name: 'Scenarios', exact: true })).toBeVisible();
+      await expect(page.getByRole('dialog').getByRole('link', { name: 'Forecasts and Scenarios', exact: true })).toBeVisible();
       await page.keyboard.press('Escape');
     } else {
-      await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Scenarios', exact: true })).toBeVisible();
+      await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Forecasts and Scenarios', exact: true })).toBeVisible();
     }
   }
 });

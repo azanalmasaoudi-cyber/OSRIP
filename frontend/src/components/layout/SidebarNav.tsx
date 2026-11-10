@@ -51,7 +51,7 @@ export type NavKey =
   | 'nav.workspace'
   | 'nav.datasets'
   | 'nav.scenarios'
-  | 'nav.forecasting'
+  | 'nav.forecast'
   | 'nav.aiAssistant'
   | 'nav.studies'
   | 'nav.library'
@@ -124,8 +124,7 @@ export const NAV_MODULES: readonly NavModule[] = [
       { path: '/assistant', key: 'nav.aiAssistant', icon: Bot },
       { path: '/workspace', key: 'nav.workspace', icon: LayoutDashboard },
       { path: '/datasets', key: 'nav.datasets', icon: Sheet },
-      { path: '/forecasts', hash: '#scenarios', key: 'nav.scenarios', icon: SlidersHorizontal },
-      { path: '/forecasts', key: 'nav.forecasting', icon: LineChart },
+      { path: '/forecasts', key: 'nav.forecast', icon: LineChart },
       { path: '/studies', key: 'nav.studies', icon: ClipboardList },
       { path: '/library', key: 'nav.library', icon: LibraryBig },
       { path: '/sources', key: 'nav.sourcesShort', icon: BookOpen },
@@ -134,22 +133,17 @@ export const NAV_MODULES: readonly NavModule[] = [
   {
     id: 'geo', label: 'nav.moduleGeo', icon: Map, items: [
       { path: '/geography', key: 'nav.map', icon: MapPinned },
-      { path: '/geography', hash: '#compare-heading', key: 'nav.geoCompare', icon: Layers },
     ],
   },
   {
     id: 'reports', label: 'nav.moduleReports', icon: FileText, items: [
       { path: '/reports', key: 'nav.reports', icon: FileText },
-      { path: '/reports', hash: '#saved-reports', key: 'nav.savedReports', icon: FolderOpen },
-      { path: '/reports', hash: '#export-center', key: 'nav.exportCenter', icon: Download },
     ],
   },
   {
     id: 'you', label: 'nav.groupAccount', icon: UserRound, section: 'you', items: [
       { path: '/account', key: 'nav.profile', icon: UserRound },
       { path: '/settings', key: 'nav.settings', icon: Settings },
-      { path: '/settings', hash: '#appearance', key: 'nav.appearance', icon: Palette },
-      { path: '/settings', hash: '#language', key: 'nav.language', icon: Languages },
     ],
   },
   {
@@ -163,8 +157,19 @@ export const NAV_MODULES: readonly NavModule[] = [
   },
 ];
 
-/** Every destination, for the page title in the top bar and for search. */
+/** Every sidebar destination, for the page title in the top bar and for search. */
 export const NAV_ITEMS: readonly NavItem[] = NAV_MODULES.flatMap((m) => m.items);
+
+/** Sections of pages the sidebar already lists (one sidebar entry per page). They are not in the
+ * sidebar, but search still finds them by name and opens the page at the section. */
+export const SECTION_ITEMS: readonly NavItem[] = [
+  { path: '/forecasts', hash: '#scenarios', key: 'nav.scenarios', icon: SlidersHorizontal },
+  { path: '/geography', hash: '#compare-heading', key: 'nav.geoCompare', icon: Layers },
+  { path: '/reports', hash: '#saved-reports', key: 'nav.savedReports', icon: FolderOpen },
+  { path: '/reports', hash: '#export-center', key: 'nav.exportCenter', icon: Download },
+  { path: '/settings', hash: '#appearance', key: 'nav.appearance', icon: Palette },
+  { path: '/settings', hash: '#language', key: 'nav.language', icon: Languages },
+];
 
 const OPEN_KEY = 'osrip.nav.open';
 

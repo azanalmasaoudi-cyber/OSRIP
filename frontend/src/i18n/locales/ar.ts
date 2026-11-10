@@ -68,7 +68,6 @@ export const ar: ArabicTranslationShape = {
     moduleResearch: 'البحث والتحليلات',
     moduleGeo: 'الذكاء الجغرافي',
     groupAccount: 'الحساب',
-    forecasting: 'التنبؤ',
     geoCompare: 'المقارنات الجغرافية',
     savedReports: 'التقارير المحفوظة',
     exportCenter: 'مركز التصدير',

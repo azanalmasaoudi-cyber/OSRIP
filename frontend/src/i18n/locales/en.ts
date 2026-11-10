@@ -63,7 +63,6 @@ export const en = {
     moduleResearch: 'Research and Analytics',
     moduleGeo: 'Geographic Intelligence',
     groupAccount: 'Account',
-    forecasting: 'Forecasting',
     geoCompare: 'Geographic Comparisons',
     savedReports: 'Saved Reports',
     exportCenter: 'Export Center',

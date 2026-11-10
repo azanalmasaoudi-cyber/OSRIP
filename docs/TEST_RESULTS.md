@@ -15,9 +15,10 @@ What changed: the evidence workbook of November 2026 (`OSRIP_Wilayat_Evidence_De
 | Mock-data browser suite (Chrome, desktop and phone) | **44 passed, 1 failed, 3 skipped**; the failure was Chrome not starting ("NOTREACHED", before the page opened); that spec again: **5 passed** |
 | Full-stack browser suite (Chrome, desktop and phone), whole suite | **200 passed**, 2 skipped as designed (22.5 min) |
 | Development database (`osrip_dev`) | Migrated 0031 → 0032. Dry run: 334 rows in 9 imports, 10 already published or waiting, 6 not imported. Staged as Azzan: **9 imports validated, 0 rejected rows, nothing approved or published**; they wait in Data Management |
+| Sidebar: one entry per page (after the owner's decision) | Scenarios, Geographic Comparisons, Saved Reports, Export Center, Appearance and Language left the sidebar; Forecasting is now "Forecasts and Scenarios"; search still finds the six sections and opens the page at the section. Mock-data suite again: **45 passed**, 3 skipped (a first run timed out twice while the cold dev server took 19.6 s to load the first page; every step had passed). Full-stack `interface` and `research-workflow` specs: **15 passed**. In the browser pane (Arabic, 1280 px): one entry per page; searching "Export" offers "مركز التصدير" and opens `/reports#export-center` |
 | Academic booklet (69-page edition) | Status statements synchronised (title page, ethics page, abstract, §2, §4.4, Appendices D, F, I); Word repaginated it to **69 pages**, no heading moved, so the contents list stands; pages 1, 5, 17, 45, 60, 62 and 69 inspected as rendered by Word; PDF exported by Word |
 
-**Not done here:** approval and publication of the staged imports (the administrator's decision); the sidebar's section shortcuts (Saved Reports, Export Center, Appearance, Language, Scenarios, Geographic Comparisons) were kept because they were specified and are tested, so removing them needs the owner's decision; no new live provider call was made.
+**Not done here:** approval and publication of the staged imports (the administrator's decision); no new live provider call was made.
 
 ## 2026-11-08 (later): one modern Al Mulhim conversation; the Talk screen removed (branch `feature/al-mulhim-chat`)
 

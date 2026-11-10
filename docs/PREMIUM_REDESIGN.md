@@ -40,14 +40,16 @@ item's name in a tooltip on hover and keyboard focus, also remembered.
 |---|---|
 | Dashboard | Dashboard, Overview |
 | Axes | Electricity, Water, Food Security, Trade |
-| Research and Analytics | Analysis Workspace, Datasets, Scenarios, Forecasting, AI Research Assistant, Studies, Research library, Sources |
-| Geographic Intelligence | Interactive Oman Map, Geographic Comparisons |
-| Reports | Reports Dashboard, Saved Reports |
-| Account | My Profile, Settings, Appearance, Language |
+| Research and Analytics | AI Research Assistant, Analysis Workspace, Datasets, Forecasts and Scenarios, Studies, Research library, Sources |
+| Geographic Intelligence | Interactive Oman Map |
+| Reports | Reports Dashboard |
+| Account | My Profile, Settings |
 | Administration (only with the permission) | Data Management, Users and Roles, Groups and Permissions, Service Health, Audit Logs |
 
-- **Current item:** items that open a section (`#scenarios`) or a tab (`?tab=groups`) are marked
-  current only on that section or tab.
+- **One entry per page (10 November 2026):** sections of a listed page (Scenarios, Geographic
+  Comparisons, Saved Reports, Export Center, Appearance, Language) left the sidebar; search still
+  finds them by name and opens the page at the section (`SECTION_ITEMS`).
+- **Current item:** an item that opens a tab (`?tab=groups`) is marked current only on that tab.
 - **Profile:** a card at the foot shows the signed-in name and role, or "Sign in".
 - **Search:** offers only pages the person may open.
 - **Phones:** the same list sits in a drawer.

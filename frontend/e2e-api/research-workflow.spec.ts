@@ -171,14 +171,15 @@ test('navigation and Settings: the main destinations in order, services and sche
   const nav = page.getByRole('navigation', { name: 'Main navigation' });
   const names = await nav.getByRole('link').allInnerTexts();
   // The modules in order: Dashboard; the Axes; Research and Analytics; Geographic Intelligence;
-  // Reports; the account; then administration (an administrator sees all of it).
+  // Reports; the account; then administration (an administrator sees all of it). One entry per
+  // page: sections of a page (saved reports, appearance, ...) are found through search.
   expect(names.map((n) => n.trim())).toEqual([
     'Dashboard', 'Overview',
     'Electricity', 'Water', 'Food Security', 'Trade',
-    'AI Research Assistant', 'Analysis Workspace', 'Datasets', 'Scenarios', 'Forecasting', 'Studies', 'Research library', 'Sources',
-    'Interactive Oman Map', 'Geographic Comparisons',
-    'Reports Dashboard', 'Saved Reports', 'Export Center',
-    'My Profile', 'Settings', 'Appearance', 'Language',
+    'AI Research Assistant', 'Analysis Workspace', 'Datasets', 'Forecasts and Scenarios', 'Studies', 'Research library', 'Sources',
+    'Interactive Oman Map',
+    'Reports Dashboard',
+    'My Profile', 'Settings',
     'Data Management', 'Users and Roles', 'Groups and Permissions', 'Service Health', 'Audit Logs',
   ]);
   await nav.getByRole('link', { name: 'Settings', exact: true }).click();

@@ -153,6 +153,13 @@ test('search finds pages in either language and drafts a question for the assist
   await expect(page).toHaveURL(/\/energy\/water\?mode=synthetic$/);
   // The address changes before the new page renders and takes focus; type after that, as a reader would.
   await expect(page.locator('main#main')).toBeFocused();
+  // A section the sidebar no longer lists on its own is still found, and opens at that section.
+  await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Export Center' })).toHaveCount(0);
+  await input.fill('مركز التصدير');
+  await expect(page.getByTestId('search-result-page')).toHaveText(['Export Center']);
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/reports\?mode=synthetic#export-center$/);
+  await expect(page.locator('#export-center')).toBeFocused(); // the section, not the page top
   await input.fill('electricity growth since 2022');
   await expect(page.getByTestId('search-result-page')).toHaveCount(0); // no page has that name
   await page.keyboard.press('ArrowDown'); // the one option: ask the assistant
