@@ -50,7 +50,6 @@
     <Folder Include="public\images\assistant\" />
     <Folder Include="public\images\editorial\" />
     <Folder Include="public\images\illustrations\" />
-    <Folder Include="public\images\intro\" />
     <Folder Include="public\images\photos\" />
     <Folder Include="public\images\sectors\" />
     <Folder Include="scripts\" />
@@ -197,7 +196,6 @@
     <TypeScriptCompile Include="src\components\brand\SectorArtwork.tsx" />
     <TypeScriptCompile Include="src\components\brand\SectorIllustration.tsx" />
     <TypeScriptCompile Include="src\components\brand\SectorImage.tsx" />
-    <TypeScriptCompile Include="src\components\common\Charts.tsx" />
     <TypeScriptCompile Include="src\components\common\CommodityRegistry.tsx" />
     <TypeScriptCompile Include="src\components\common\DataModeBadge.tsx" />
     <TypeScriptCompile Include="src\components\common\DataQualityNotes.tsx" />
@@ -223,7 +221,6 @@
     <TypeScriptCompile Include="src\components\datasets\ViewChart.tsx" />
     <TypeScriptCompile Include="src\components\forecast\DevelopmentConditions.tsx" />
     <TypeScriptCompile Include="src\components\forecast\ForecastChart.tsx" />
-    <TypeScriptCompile Include="src\components\geography\Basemap.tsx" />
     <TypeScriptCompile Include="src\components\geography\GovernorateComparison.tsx" />
     <TypeScriptCompile Include="src\components\geography\maplibre.ts" />
     <TypeScriptCompile Include="src\components\geography\mapProviders.ts" />
@@ -379,15 +376,6 @@
     <Content Include="public\images\editorial\electricity-800.jpg" />
     <Content Include="public\images\editorial\electricity-800.webp" />
     <Content Include="public\images\editorial\manifest.json" />
-    <Content Include="public\images\editorial\omani-professional-1024.avif" />
-    <Content Include="public\images\editorial\omani-professional-1024.jpg" />
-    <Content Include="public\images\editorial\omani-professional-1024.webp" />
-    <Content Include="public\images\editorial\omani-professional-360.avif" />
-    <Content Include="public\images\editorial\omani-professional-360.jpg" />
-    <Content Include="public\images\editorial\omani-professional-360.webp" />
-    <Content Include="public\images\editorial\omani-professional-640.avif" />
-    <Content Include="public\images\editorial\omani-professional-640.jpg" />
-    <Content Include="public\images\editorial\omani-professional-640.webp" />
     <Content Include="public\images\editorial\trade-1200.avif" />
     <Content Include="public\images\editorial\trade-1200.jpg" />
     <Content Include="public\images\editorial\trade-1200.webp" />
@@ -417,10 +405,6 @@
     <Content Include="public\images\illustrations\sector-food.svg" />
     <Content Include="public\images\illustrations\sector-trade.svg" />
     <Content Include="public\images\illustrations\sector-water.svg" />
-    <Content Include="public\images\intro\electricity.jpg" />
-    <Content Include="public\images\intro\mulhim.jpg" />
-    <Content Include="public\images\intro\trade.jpg" />
-    <Content Include="public\images\intro\water.jpg" />
     <Content Include="public\images\photos\bahla-fort.jpg" />
     <Content Include="public\images\photos\desalination-al-khaluf.jpg" />
     <Content Include="public\images\photos\duqm-port.jpg" />

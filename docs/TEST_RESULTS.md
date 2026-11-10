@@ -1,5 +1,24 @@
 # Test results
 
+## 2026-11-10: wilayat evidence through the reviewed import; map provenance; unused UI removed (branch `feature/wilayat-evidence`)
+
+What changed: the evidence workbook of November 2026 (`OSRIP_Wilayat_Evidence_Development_Review_2026.xlsx`) is mapped by `app/services/imports/wilayat_evidence.py` and staged by `scripts/stage_wilayat_evidence.py` (dry run by default; `--stage --as USER`; rollback `--reject --as USER`). Migration 0032 adds population (context, not a fifth axis: total, Omani, non-Omani; persons) and commercial registrations (new in a period; on record at a date). Water stays at governorate level; quarters and January-September stay partial periods; the Nama service-area supply, the derived national total and rounded summaries are not imported (README in `docs/data-imports/2026-11-wilayat`). The map's tooltip names the source and the review status of the value under the cursor. Removed after a reference and history check: `common/Charts.tsx` and `geography/Basemap.tsx` (no importer; the map replaced Basemap in 9558bbb), their 9 strings, the 4 opening images (unused since e611fb2) and the 9 files of the retired home portrait; masters and provenance records stay, marked "retired".
+
+| Check | Result |
+|---|---|
+| `npm run typecheck`, `npm run lint`, `npm run check:contrast`, `npm run build` | Pass; 0 failing contrast pairs (bundle-size warning not new) |
+| Frontend unit tests (`node --test tests/*.test.mjs`) | **20 passed** |
+| Backend whole suite with the database tests (`OSRIP_RUN_DB_TESTS=1`) | **1059 passed** (2 min 39 s); `ruff check` clean on `app`, `scripts`, `tests`, `alembic` |
+| New: `test_wilayat_evidence.py` (pure) | **19 passed**: the registry from migration 0005; Arabic spelling variants; no match across governorates; the real workbook gives 63 of 63 wilayats and 5,359,557 for 2025; 24 full-year 2025 trade rows, 8 quarterly, 3 stock, 4 not wilayat-level; water 2025 adds up to 508.1; 252 coverage statuses kept as documentation |
+| New: `test_wilayat_evidence_integration.py` (throwaway database) | **1 passed**: the staged files validate with no rejected row; once a data manager approves and publishes them, the wilayat comparison lists all 63 populations (sum 5,359,557, source and revision status on each), the six Al Batinah North registrations of 2025 with 57 wilayats counted as without value (not zero), the Al Wusta second quarter of 2026 with new registrations and the stock apart and no annual 2026 figure, no wilayat water value, and population under its own section |
+| Migration round trip (`test_migrations_roundtrip_integration.py`) and `test_personas.py` | **31 passed** (0032 up and down) |
+| Mock-data browser suite (Chrome, desktop and phone) | **44 passed, 1 failed, 3 skipped**; the failure was Chrome not starting ("NOTREACHED", before the page opened); that spec again: **5 passed** |
+| Full-stack browser suite (Chrome, desktop and phone), whole suite | **200 passed**, 2 skipped as designed (22.5 min) |
+| Development database (`osrip_dev`) | Migrated 0031 → 0032. Dry run: 334 rows in 9 imports, 10 already published or waiting, 6 not imported. Staged as Azzan: **9 imports validated, 0 rejected rows, nothing approved or published**; they wait in Data Management |
+| Academic booklet (69-page edition) | Status statements synchronised (title page, ethics page, abstract, §2, §4.4, Appendices D, F, I); Word repaginated it to **69 pages**, no heading moved, so the contents list stands; pages 1, 5, 17, 45, 60, 62 and 69 inspected as rendered by Word; PDF exported by Word |
+
+**Not done here:** approval and publication of the staged imports (the administrator's decision); the sidebar's section shortcuts (Saved Reports, Export Center, Appearance, Language, Scenarios, Geographic Comparisons) were kept because they were specified and are tested, so removing them needs the owner's decision; no new live provider call was made.
+
 ## 2026-11-08 (later): one modern Al Mulhim conversation; the Talk screen removed (branch `feature/al-mulhim-chat`)
 
 What changed: `/talk` redirects to `/assistant` (keeping only the data mode and a question to prefill); the floating orb opens the conversation instead of a second chat in a side panel; the workspace column embeds the same conversation; the old panel layout (answer-mode button rows, persona picker, End call, mute row) is deleted. The conversation has a history column (a drawer on phones), a centred welcome, a large two-row message box with Tools, microphone and Send or Stop, and streaming statuses from the server's real stages. Al Mulhim is the only persona in every part of the interface (no picker or stored choice; no Ilham intro slot); synthetic data is labelled on answers from OSRIP's data, not on internet answers.
