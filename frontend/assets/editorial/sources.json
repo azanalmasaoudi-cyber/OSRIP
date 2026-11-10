@@ -31,8 +31,8 @@
       "created": "on or before 2026-09-28 (date of the Word file entry)",
       "prompt": null,
       "transformations": "Master extracted unchanged from the booklet. Derivatives are downscaled only; JPEG versions are flattened onto ivory.",
-      "status": "in_use",
-      "usage": "Home page hero portrait"
+      "status": "retired",
+      "usage": "Not shown since the redesign removed the home hero portrait; derivatives removed 2026-11-09. The master stays in assets/editorial/masters."
     },
     {
       "id": "electricity",
@@ -203,11 +203,12 @@
           "file": "frontend/public/images/intro/mulhim.jpg",
           "width": 600,
           "height": 720,
-          "bytes": 59958
+          "bytes": 59958,
+          "removed": "2026-11-09"
         }
       ],
-      "status": "in_use",
-      "usage": "The first-visit introduction (Entrance.tsx)"
+      "status": "retired",
+      "usage": "Not shown since the opening became a 3-second name sequence (e611fb2); derivatives removed 2026-11-09. The master stays in assets/editorial/masters."
     },
     {
       "id": "intro-electricity",
@@ -226,11 +227,12 @@
           "file": "frontend/public/images/intro/electricity.jpg",
           "width": 600,
           "height": 400,
-          "bytes": 50838
+          "bytes": 50838,
+          "removed": "2026-11-09"
         }
       ],
-      "status": "in_use",
-      "usage": "The first-visit introduction (Entrance.tsx)"
+      "status": "retired",
+      "usage": "Not shown since the opening became a 3-second name sequence (e611fb2); derivatives removed 2026-11-09. The master stays in assets/editorial/masters."
     },
     {
       "id": "intro-water",
@@ -249,11 +251,12 @@
           "file": "frontend/public/images/intro/water.jpg",
           "width": 600,
           "height": 400,
-          "bytes": 56229
+          "bytes": 56229,
+          "removed": "2026-11-09"
         }
       ],
-      "status": "in_use",
-      "usage": "The first-visit introduction (Entrance.tsx)"
+      "status": "retired",
+      "usage": "Not shown since the opening became a 3-second name sequence (e611fb2); derivatives removed 2026-11-09. The master stays in assets/editorial/masters."
     },
     {
       "id": "intro-trade",
@@ -272,11 +275,12 @@
           "file": "frontend/public/images/intro/trade.jpg",
           "width": 600,
           "height": 400,
-          "bytes": 52993
+          "bytes": 52993,
+          "removed": "2026-11-09"
         }
       ],
-      "status": "in_use",
-      "usage": "The first-visit introduction (Entrance.tsx)"
+      "status": "retired",
+      "usage": "Not shown since the opening became a 3-second name sequence (e611fb2); derivatives removed 2026-11-09. The master stays in assets/editorial/masters."
     }
   ]
 }

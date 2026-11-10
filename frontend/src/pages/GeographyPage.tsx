@@ -27,7 +27,7 @@ import { Card } from '@/components/ui/card';
 import { Segmented } from '@/components/ui/segmented';
 import { SelectField } from '@/components/ui/select';
 import type { DataMode } from '@/domain/types';
-import { FLOW_KEY } from '@/i18n/keys';
+import { FLOW_KEY, REVISION_STATUS_KEY } from '@/i18n/keys';
 import { formatDecimal, formatPeriod, type AppLanguage } from '@/lib/format';
 import { useAppLanguage } from '@/lib/useAppLanguage';
 import { useDataMode } from '@/state/useDataMode';
@@ -355,19 +355,27 @@ export function GeographyPage() {
     if (byIndicator && compared?.rows) {
       const unit = compared.unit ? (language === 'ar' ? compared.unit.label_ar : compared.unit.label_en) : '';
       const nat = compared.national?.value != null && !compared.national.value_operator ? Number(compared.national.value) : null;
+      const name = compared.indicator_name ? (language === 'ar' ? compared.indicator_name.ar : compared.indicator_name.en) : compared.indicator ?? '';
+      const period = compared.period_start && compared.period_end ? ` · ${formatPeriod(compared.period_start, compared.period_end, language)}` : '';
       for (const row of compared.rows) {
         const exact = row.status === 'published' && row.value !== null && !row.value_operator;
         const v = exact ? Number(row.value) : null;
         const share = v !== null && nat ? ` · ${formatDecimal(String((v * 100) / nat), language, 1)}% ${t('omanMap.ofNational')}` : '';
+        const revision = row.revision_status && row.revision_status in REVISION_STATUS_KEY
+          ? t(REVISION_STATUS_KEY[row.revision_status as keyof typeof REVISION_STATUS_KEY]) : null;
         out[row.area] = {
           value: v,
           detail: v === null
             ? (row.value ? `${row.value_operator ?? ''}${row.value} ${unit}` : t(`compare.status.${row.status}`))
             : `${formatDecimal(row.value ?? '', language, 2)} ${unit}${share}`,
+          // Where the value comes from: indicator and period, source, review and revision status.
+          provenance: row.status === 'published' ? [
+            `${name}${period}`,
+            ...(row.source ? [t('omanMap.tooltipSource', { source: row.source })] : []),
+            [t('omanMap.tooltipReviewed'), revision].filter(Boolean).join(' · '),
+          ] : [`${name}${period}`],
         };
       }
-      const name = compared.indicator_name ? (language === 'ar' ? compared.indicator_name.ar : compared.indicator_name.en) : compared.indicator ?? '';
-      const period = compared.period_start && compared.period_end ? ` · ${formatPeriod(compared.period_start, compared.period_end, language)}` : '';
       return { shades: out, legendTitle: `${name}${period}${unit ? ` (${unit})` : ''}` };
     }
     for (const a of areas) {

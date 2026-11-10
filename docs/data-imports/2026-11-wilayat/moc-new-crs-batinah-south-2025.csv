@@ -1,0 +1,7 @@
+indicator_code,area_code,period_start,period_end,frequency,period_complete,flow,unit_code,value,value_operator,quality_status,revision_status,source_locator,note
+TRADE_NEW_COMMERCIAL_REGISTRATIONS,OM-BJ-04,2025-01-01,2025-12-31,annual,true,,registration,2490,,warning,reported,Ministry announcement (MOCIIPsouth),Official ministry announcement; verify definition prior to integration
+TRADE_NEW_COMMERCIAL_REGISTRATIONS,OM-BJ-01,2025-01-01,2025-12-31,annual,true,,registration,377,,warning,reported,Ministry announcement (MOCIIPsouth),Official ministry announcement; verify definition prior to integration
+TRADE_NEW_COMMERCIAL_REGISTRATIONS,OM-BJ-03,2025-01-01,2025-12-31,annual,true,,registration,320,,warning,reported,Ministry announcement (MOCIIPsouth),Official ministry announcement; verify definition prior to integration
+TRADE_NEW_COMMERCIAL_REGISTRATIONS,OM-BJ-05,2025-01-01,2025-12-31,annual,true,,registration,95,,warning,reported,Ministry announcement (MOCIIPsouth),Official ministry announcement; verify definition prior to integration
+TRADE_NEW_COMMERCIAL_REGISTRATIONS,OM-BJ-06,2025-01-01,2025-12-31,annual,true,,registration,63,,warning,reported,Ministry announcement (MOCIIPsouth),Official ministry announcement; verify definition prior to integration
+TRADE_NEW_COMMERCIAL_REGISTRATIONS,OM-BJ-02,2025-01-01,2025-12-31,annual,true,,registration,51,,warning,reported,Ministry announcement (MOCIIPsouth),Official ministry announcement; verify definition prior to integration

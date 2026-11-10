@@ -16,6 +16,10 @@ Each is downscaled whole (no cropping, no retouching, no upscaling) to
 frontend/public/images/intro/. The portraits keep the introduction's framing through CSS (cover,
 from the top centre); the illustrations are shown complete (contain). The derivatives are
 recorded in frontend/assets/editorial/sources.json.
+
+Retired 2026-11-09: the opening is a 3-second name sequence (e611fb2) and no page shows these
+images, so their derivatives were removed and the records marked "retired". Run this only if
+the introduction's images are brought back (it marks them in use again).
 """
 
 from __future__ import annotations

@@ -1,0 +1,2 @@
+indicator_code,area_code,period_start,period_end,frequency,period_complete,flow,unit_code,value,value_operator,quality_status,revision_status,source_locator,note
+TRADE_NEW_COMMERCIAL_REGISTRATIONS,OM,2026-01-01,2026-09-30,annual,false,,registration,35907,,accepted,preliminary,Preliminary figures for part of 2026,"January to September 2026 only, not the year. national reported through Sep; stock not same as new"

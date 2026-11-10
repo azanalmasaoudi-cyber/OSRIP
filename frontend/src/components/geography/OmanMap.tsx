@@ -31,7 +31,9 @@ import { cn } from '@/lib/utils';
  */
 
 export type MapLevel = 'governorate' | 'wilayat';
-export interface Shade { value: number | null; detail?: string }
+/** An area's shading value and what its tooltip says: the value line, then where the value
+ * comes from (indicator and period, source, review and revision status). */
+export interface Shade { value: number | null; detail?: string; provenance?: string[] }
 
 const FILES: Record<MapLevel, string> = {
   governorate: '/geo/oman-governorates.geojson',
@@ -479,6 +481,11 @@ export function OmanMap({ label, level, onLevelChange, shades, names, legendTitl
             style={{ left: Math.min(hover.x + 12, 9999), top: hover.y + 12 }} data-testid="map-tooltip">
             <p className="font-semibold">{names[hover.code] ?? hover.code}</p>
             <p className="text-muted-foreground">{shown && shown.value !== null ? (shown.detail ?? n(shown.value)) : (shown?.detail ?? t('omanMap.noData'))}</p>
+            {shown?.provenance?.length ? (
+              <ul className="mt-1 flex flex-col gap-0.5 border-t border-border pt-1 text-xs text-muted-foreground" data-testid="map-tooltip-provenance">
+                {shown.provenance.map((line) => <li key={line} dir="auto">{line}</li>)}
+              </ul>
+            ) : null}
           </div>
         ) : null}
       </div>

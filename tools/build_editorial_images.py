@@ -119,7 +119,8 @@ def main() -> None:
     ts_entries = []
     for entry in sources["assets"]:
         record = dict(entry)
-        if entry.get("master") and (MASTERS / entry["master"]).exists():
+        retired = entry.get("status") == "retired"
+        if entry.get("master") and (MASTERS / entry["master"]).exists() and not retired:
             record["derivatives"] = derivatives(record)
             record["native_4k"] = record["source_width"] >= 3840 and record["source_height"] >= 2160
             ts_entries.append(

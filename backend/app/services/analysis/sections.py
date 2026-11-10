@@ -782,11 +782,20 @@ def trade(session: Session, f: AnalysisFilter) -> list[dict[str, Any]]:
     return out
 
 
+def population(session: Session, f: AnalysisFilter) -> list[dict[str, Any]]:
+    """Population is context: only the change between periods of each published series."""
+    evidence = evidence_from(
+        query_observations(session, f.query(Section.POPULATION), allow_mixed=True)
+    )
+    return _changes(Section.POPULATION, evidence, f.area)
+
+
 BUILDERS = {
     Section.ELECTRICITY: electricity,
     Section.WATER: water,
     Section.FOOD_SECURITY: food_security,
     Section.TRADE: trade,
+    Section.POPULATION: population,
 }
 
 

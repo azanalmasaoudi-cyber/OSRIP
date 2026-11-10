@@ -114,7 +114,7 @@ placed behind charts.
 | Filters | `components/common/FilterBar.tsx`, `ui/select.tsx`, `state/useUrlFilter.ts` | Labelled native selects. Values are codes kept in the URL. Collapses behind a toggle on phones. |
 | Indicator card | `components/common/IndicatorCard.tsx` | Latest value, unit, period, previous period and source. No computed change: formulas stay in the backend. |
 | Series card | `components/common/SeriesCard.tsx` | Context, an optional chart, an accessible table and source details. |
-| Charts | `components/common/Charts.tsx` | HTML/CSS so they mirror in RTL. Single hue, bars at most 24px wide, a 4px rounded data end, hairline grid, labelled values. The table carries the same numbers for assistive technology. |
+| Charts | `series/SeriesParts.tsx` (`TimelineChart`), `dashboard/TrendChart.tsx`, `forecast/ForecastChart.tsx`, `studies/StudyCharts.tsx`, `datasets/ViewChart.tsx`, `assistant/InlineChart.tsx` | Drawn so they mirror in RTL. Single hue, bars at most 24px wide, a 4px rounded data end, hairline grid, labelled values. The table carries the same numbers for assistive technology. |
 | Dialog | `components/ui/dialog.tsx` | Native `<dialog>` with `showModal()`: inert background, Escape to close, focus returns to the opener. Also used for the mobile drawer. |
 | Source details | `components/common/SourceDetails.tsx` | Definition, unit, value type, mode, source, publisher, version, access date, link and note. |
 | States | `components/common/StatePanel.tsx` | `loading` (skeleton), `empty` (with reset), `no_verified_data`, `error` (with retry and detail), `not_implemented`, `restricted`. Missing values are shown as the text "Missing", never 0. |

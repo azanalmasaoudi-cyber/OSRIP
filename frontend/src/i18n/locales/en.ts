@@ -557,11 +557,6 @@ export const en = {
     noPrevious: 'No earlier period in this series',
   },
   chart: {
-    summary: '{{indicator}} in {{unit}}, {{n}} periods. The same values are listed in the table.',
-    partnerTitle: '{{indicator}} by partner',
-    partnerSubtitle: '{{flow}}, {{period}}, {{unit}}',
-    partnerNote:
-      'Partner rows are shown next to, not added up into, the stated national total.',
     show: 'Show chart',
     hide: 'Hide chart',
   },
@@ -677,7 +672,7 @@ export const en = {
     keyNote: 'Satellite view and MapTiler relief need a MapTiler key.',
     axis: 'Axis',
     allAxes: 'All axes',
-    axes: { electricity: 'Electricity', water: 'Water', food_security: 'Food Security', trade: 'Trade' },
+    axes: { electricity: 'Electricity', water: 'Water', food_security: 'Food Security', trade: 'Trade', population: 'Population (context)' },
     noWilayatData: 'No indicator is published for individual wilayats in this data mode, so every wilayat shows "No data". Wilayat values are never estimated from governorate or national totals.',
     compareWilayats: 'Compare wilayats',
     level: 'Boundaries',
@@ -693,6 +688,8 @@ export const en = {
     coverageLegend: 'Published values recorded for the area',
     coverageDetail: '{{values}} published values across {{indicators}} indicators',
     ofNational: 'of the national total',
+    tooltipSource: 'Source: {{source}}',
+    tooltipReviewed: 'Published after review',
   },
   audit: {
     title: 'Audit Logs',
@@ -1608,12 +1605,6 @@ export const en = {
       coverageCounts: '{{covered}} of {{total}} registry areas have published observations.',
       mapHeading: 'Map',
       mapLabel: 'Map of Oman’s governorates and wilayats',
-      mapLoading: 'Loading the map…',
-      mapUnavailableTitle: 'Map not available',
-      mapUnavailable:
-        'The map service could not be reached or this browser cannot display it. Every area and its coverage are in the table below.',
-      mapDisabled: 'The basemap is switched off in this deployment. Every area and its coverage are in the table below.',
-      tilesFailing: 'Some map tiles could not be loaded. The table below is unaffected.',
       mapBoundariesNote:
         'Shaded areas are OpenStreetMap boundaries matched to this registry (match report: /geo/boundaries-report.json). Roads, coastlines and place names on the basemap come from the tile provider and are not checked by OSRIP. Relief comes from the open Terrain Tiles (SRTM on land, ETOPO1 under the sea).',
       mapTableNote: 'Choose an area in the table to see its details and observations. The table is the complete, accessible alternative to the map.',

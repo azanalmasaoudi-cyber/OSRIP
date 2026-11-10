@@ -564,10 +564,6 @@ export const ar: ArabicTranslationShape = {
     noPrevious: 'لا توجد فترة سابقة في هذه السلسلة',
   },
   chart: {
-    summary: '{{indicator}} بوحدة {{unit}}، عدد الفترات {{n}}. القيم نفسها مدرجة في الجدول.',
-    partnerTitle: '{{indicator}} حسب الشريك',
-    partnerSubtitle: '{{flow}}، {{period}}، {{unit}}',
-    partnerNote: 'تُعرض قيم الشركاء بجانب الإجمالي الوطني المعلن، ولا تُجمع لتكوينه.',
     show: 'إظهار الرسم البياني',
     hide: 'إخفاء الرسم البياني',
   },
@@ -683,7 +679,7 @@ export const ar: ArabicTranslationShape = {
     keyNote: 'تحتاج صور الأقمار الصناعية وتضاريس MapTiler إلى مفتاح MapTiler.',
     axis: 'المحور',
     allAxes: 'كل المحاور',
-    axes: { electricity: 'الكهرباء', water: 'المياه', food_security: 'الأمن الغذائي', trade: 'التجارة' },
+    axes: { electricity: 'الكهرباء', water: 'المياه', food_security: 'الأمن الغذائي', trade: 'التجارة', population: 'السكان (سياق)' },
     noWilayatData: 'لا يُنشر أي مؤشر لولايات منفردة في وضع البيانات هذا، لذا تظهر كل ولاية «لا توجد بيانات». لا تُقدَّر قيم الولايات أبداً من إجماليات المحافظات أو الإجمالي الوطني.',
     compareWilayats: 'مقارنة الولايات',
     level: 'الحدود',
@@ -699,6 +695,8 @@ export const ar: ArabicTranslationShape = {
     coverageLegend: 'القيم المنشورة المسجلة للمنطقة',
     coverageDetail: '{{values}} قيمة منشورة في {{indicators}} مؤشرات',
     ofNational: 'من الإجمالي الوطني',
+    tooltipSource: 'المصدر: {{source}}',
+    tooltipReviewed: 'منشور بعد المراجعة',
   },
   audit: {
     title: 'سجلات التدقيق',
@@ -1617,12 +1615,6 @@ export const ar: ArabicTranslationShape = {
       coverageCounts: '{{covered}} من أصل {{total}} منطقة في السجل لها مشاهدات منشورة.',
       mapHeading: 'الخريطة',
       mapLabel: 'خريطة محافظات عُمان وولاياتها',
-      mapLoading: 'جارٍ تحميل الخريطة…',
-      mapUnavailableTitle: 'الخريطة غير متاحة',
-      mapUnavailable:
-        'تعذّر الوصول إلى خدمة الخرائط أو لا يستطيع هذا المتصفح عرضها. جميع المناطق وتغطيتها موجودة في الجدول أدناه.',
-      mapDisabled: 'خريطة الأساس معطلة في هذا النشر. جميع المناطق وتغطيتها موجودة في الجدول أدناه.',
-      tilesFailing: 'تعذّر تحميل بعض أجزاء الخريطة. الجدول أدناه غير متأثر.',
       mapBoundariesNote:
         'المناطق الملونة حدود من OpenStreetMap مطابَقة مع هذا السجل (تقرير المطابقة: /geo/boundaries-report.json). الطرق والسواحل وأسماء الأماكن على خريطة الأساس من مزوّد البلاطات ولم تتحقق منها OSRIP. التضاريس من بلاطات التضاريس المفتوحة (SRTM على اليابسة وETOPO1 تحت البحر).',
       mapTableNote: 'اختر منطقة من الجدول لعرض تفاصيلها ومشاهداتها. الجدول هو البديل الكامل الميسّر للخريطة.',

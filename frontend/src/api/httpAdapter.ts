@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { DataAdapter } from './adapter';
 import { apiJson } from './client';
 import {
+  INDICATOR_SECTIONS,
   PERIOD_KINDS,
   REVISION_STATUSES,
   type Commodity,
@@ -41,7 +42,7 @@ const observationSchema = z.object({
 const seriesSchema = z.object({
   indicator: z.object({
     code: z.string(),
-    section: z.enum(['electricity', 'water', 'food_security', 'trade']),
+    section: z.enum(INDICATOR_SECTIONS),
     value_type: z.enum(['period_total', 'average', 'maximum', 'end_of_period', 'cumulative_to_date']),
     name_en: z.string(),
     name_ar: z.string(),

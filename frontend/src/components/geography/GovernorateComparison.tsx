@@ -5,7 +5,7 @@ import { useAreaComparison, type AreaComparison, type CompareRow } from '@/api/l
 import { StatePanel } from '@/components/common/StatePanel';
 import { Badge } from '@/components/ui/badge';
 import { SelectField } from '@/components/ui/select';
-import type { DataMode } from '@/domain/types';
+import { INDICATOR_SECTIONS, type DataMode, type IndicatorSection } from '@/domain/types';
 import { FLOW_KEY } from '@/i18n/keys';
 import { formatDecimal, formatPeriod } from '@/lib/format';
 import { useAppLanguage } from '@/lib/useAppLanguage';
@@ -18,8 +18,9 @@ const FLOWS = ['import', 'domestic_export', 're_export'] as const;
  * comparison (same unit and period length, or flagged as not comparable). Missing values
  * stay missing; national totals and combined figures are shown apart and never divided.
  */
-const AXES = ['electricity', 'water', 'food_security', 'trade'] as const;
-type Axis = (typeof AXES)[number];
+// The four axes, then population (context for per-person comparisons, not an axis).
+const AXES = INDICATOR_SECTIONS;
+type Axis = IndicatorSection;
 
 export function GovernorateComparison({ mode, indicators: all, onResult, level = 'governorate' }: {
   mode: DataMode;

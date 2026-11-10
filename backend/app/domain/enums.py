@@ -27,6 +27,12 @@ class Section(StrEnum):
     WATER = "water"
     FOOD_SECURITY = "food_security"
     TRADE = "trade"
+    # Context for the four axes (per-person comparisons), not a fifth axis (migration 0032).
+    POPULATION = "population"
+
+
+# The four resource axes; population is context, not an axis.
+AXES = (Section.ELECTRICITY, Section.WATER, Section.FOOD_SECURITY, Section.TRADE)
 
 
 class PhysicalDimension(StrEnum):
