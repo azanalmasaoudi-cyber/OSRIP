@@ -42,6 +42,7 @@ from app.core.config import get_settings
 from app.services import monitoring, openai_api
 from app.services import providers as registry
 from app.services.assistant.progress import Cancelled
+from app.services.assistant.streaming import answer_sink
 
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_VERSION = "2023-06-01"
@@ -322,6 +323,25 @@ def _openai_error(exc: openai_api.OpenAIFailure) -> ProviderError:
     return error
 
 
+def _openai_answer_events(sink: Any) -> Callable[[Any], None]:
+    """Forwards a Responses stream's function-call arguments to the answer sink (by call id)."""
+    calls: dict[str, str] = {}  # output item id -> call id
+
+    def handle(event: Any) -> None:
+        kind = getattr(event, "type", "")
+        if kind == "response.output_item.added":
+            item = getattr(event, "item", None)
+            if getattr(item, "type", "") == "function_call":
+                calls[str(item.id)] = str(item.call_id)
+                sink.start(str(item.call_id), str(item.name))
+        elif kind == "response.function_call_arguments.delta":
+            call_id = calls.get(str(getattr(event, "item_id", "")))
+            if call_id is not None:
+                sink.arguments(call_id, str(getattr(event, "delta", "")))
+
+    return handle
+
+
 class OpenAIProvider(_HttpProvider):
     """Responses API (POST /v1/responses) with function tools only, through the official SDK."""
 
@@ -410,6 +430,7 @@ class OpenAIProvider(_HttpProvider):
                 self._timeout,
                 lambda timeout: http_client_factory(timeout),
                 stop=stop_check.get(),
+                on_event=_openai_answer_events(sink) if (sink := answer_sink.get()) else None,
             )
         except openai_api.OpenAIFailure as exc:
             raise _openai_error(exc) from exc
@@ -623,6 +644,95 @@ class GeminiProvider(_HttpProvider):
         return self.parse(body)
 
 
+def _deepseek_stream(
+    body: dict[str, Any],
+    headers: dict[str, str],
+    timeout: float,
+    sink: Any,
+    stop: Callable[[], None] | None,
+) -> dict[str, Any]:
+    """A streamed chat completion (server-sent ``chat.completion.chunk`` events ending with
+    ``[DONE]``), assembled into the shape of an unstreamed one. Tool-call argument pieces go to
+    the answer sink as they arrive; a stopped question closes the stream at once."""
+    try:
+        with (
+            http_client_factory(timeout) as client,
+            client.stream("POST", DEEPSEEK_CHAT_URL, json=body, headers=headers) as response,
+        ):
+            if response.status_code != 200:
+                response.read()
+                try:
+                    detail = error_type(response.json())
+                except ValueError:
+                    detail = None
+                error = ProviderError(f"http_{response.status_code}", detail)
+                error.retry_after = retry_after(response)
+                raise error
+            return _assemble_chunks(response.iter_lines(), sink, stop)
+    except httpx.TimeoutException as exc:
+        raise ProviderError("timeout") from exc
+    except httpx.HTTPError as exc:
+        raise ProviderError("network") from exc
+
+
+def _assemble_chunks(lines: Any, sink: Any, stop: Callable[[], None] | None) -> dict[str, Any]:
+    content: list[str] = []
+    calls: dict[int, dict[str, Any]] = {}
+    started: set[int] = set()
+    finish: str | None = None
+    usage: dict[str, Any] = {}
+    checked = time.monotonic()
+    for line in lines:
+        if stop is not None and time.monotonic() - checked >= openai_api.STOP_CHECK_SECONDS:
+            stop()  # raises when the person stopped the question
+            checked = time.monotonic()
+        if not line.startswith("data:"):
+            continue
+        data = line[5:].strip()
+        if data == "[DONE]":
+            break
+        try:
+            chunk = json.loads(data)
+        except ValueError as exc:
+            raise ProviderError("invalid_json") from exc
+        if isinstance(chunk.get("usage"), dict):
+            usage = chunk["usage"]
+        for choice in chunk.get("choices") or []:
+            delta = choice.get("delta") or {}
+            if isinstance(delta.get("content"), str):
+                content.append(delta["content"])
+            for piece in delta.get("tool_calls") or []:
+                index = int(piece.get("index", 0))
+                call = calls.setdefault(
+                    index,
+                    {"id": None, "type": "function", "function": {"name": "", "arguments": ""}},
+                )
+                function = piece.get("function") or {}
+                if piece.get("id"):
+                    call["id"] = piece["id"]
+                if function.get("name"):
+                    call["function"]["name"] = function["name"]
+                if (
+                    sink is not None
+                    and index not in started
+                    and call["id"]
+                    and call["function"]["name"]
+                ):
+                    started.add(index)
+                    sink.start(str(call["id"]), str(call["function"]["name"]))
+                arguments = function.get("arguments")
+                if isinstance(arguments, str) and arguments:
+                    call["function"]["arguments"] += arguments
+                    if sink is not None and index in started:
+                        sink.arguments(str(call["id"]), arguments)
+            if choice.get("finish_reason"):
+                finish = choice["finish_reason"]
+    message: dict[str, Any] = {"role": "assistant", "content": "".join(content) or None}
+    if calls:
+        message["tool_calls"] = [calls[i] for i in sorted(calls)]
+    return {"choices": [{"message": message, "finish_reason": finish}], "usage": usage}
+
+
 class DeepSeekProvider(_HttpProvider):
     """Chat Completions (POST https://api.deepseek.com/chat/completions) with function tools.
 
@@ -736,13 +846,23 @@ class DeepSeekProvider(_HttpProvider):
             raise ProviderError("invalid_json")
         return [str(m["id"]) for m in data if isinstance(m, dict) and m.get("id")]
 
+    # Cleared for this process if DeepSeek refuses a streamed request (400 or 422): its
+    # documentation lists stream, stream_options and tools but shows no streamed tool call.
+    streaming = True
+
     def _call(self, body: dict[str, Any]) -> dict[str, Any]:
-        return _post_json(
-            DEEPSEEK_CHAT_URL,
-            body,
-            {"Authorization": f"Bearer {self._key}", "Content-Type": "application/json"},
-            self._timeout,
-        )
+        headers = {"Authorization": f"Bearer {self._key}", "Content-Type": "application/json"}
+        sink, stop = answer_sink.get(), stop_check.get()
+        if (sink is None and stop is None) or not DeepSeekProvider.streaming:
+            return _post_json(DEEPSEEK_CHAT_URL, body, headers, self._timeout)
+        streamed = {**body, "stream": True, "stream_options": {"include_usage": True}}
+        try:
+            return _deepseek_stream(streamed, headers, self._timeout, sink, stop)
+        except ProviderError as exc:
+            if str(exc) not in ("http_400", "http_422"):
+                raise
+            DeepSeekProvider.streaming = False
+            return _post_json(DEEPSEEK_CHAT_URL, body, headers, self._timeout)
 
     @staticmethod
     def parse(body: dict[str, Any]) -> tuple[dict[str, Any], dict[str, int | None]]:
@@ -811,6 +931,28 @@ class FakeProvider:
     def complete(
         self, system: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]]
     ) -> dict[str, Any]:
+        reply = self._reply(system, messages, tools)
+        sink = answer_sink.get()
+        if sink is not None:
+            # As a model writes its answer: the final_answer call's arguments in small pieces
+            # (spaced by OSRIP_FAKE_STREAM_DELAY_MS, for browser tests).
+            delay = get_settings().fake_stream_delay_ms / 1000
+            for block in reply.get("content", []):
+                if block.get("type") == "tool_use" and block.get("name") == "final_answer":
+                    sink.start(block["id"], "final_answer")
+                    arguments = json.dumps(block.get("input") or {}, ensure_ascii=False)
+                    stop = stop_check.get()
+                    for n, i in enumerate(range(0, len(arguments), 16)):
+                        if delay:
+                            sleep(delay)
+                        if stop is not None and n % 8 == 7:
+                            stop()  # a stopped question ends here, as a streamed call does
+                        sink.arguments(block["id"], arguments[i : i + 16])
+        return reply
+
+    def _reply(
+        self, system: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         question = ""
         for m in reversed(messages):
             if m["role"] == "user" and isinstance(m["content"], list):
@@ -835,6 +977,10 @@ class FakeProvider:
         # Scripted research-assistant behaviours (each exercises one backend safeguard).
         if ("conflict" in question or "تعارض" in question) and "web_search" in names:
             return self._conflict(question, tool_results, arabic)
+        if ("report" in question or "تقرير" in question) and "plan_research" in names:
+            return self._deep_report(tool_results, arabic, "generate_image" in names)
+        if "Mode: Quick answer" in system and "web_search" in names:
+            return self._web(question, tool_results, arabic)
         if ("study" in question or "دراسة" in question) and "run_study" in names:
             return self._study(tool_results, arabic)
         chosen = self.SELECTION.search(system)
@@ -895,13 +1041,22 @@ class FakeProvider:
             )
         latest = result["latest_by_series"][0]
         value = latest["value"]
-        if "invent" in question:
+        partly = "partly invent" in question
+        if "invent" in question and not partly:
             value = "123456789"  # deliberately unsupported, to exercise the evidence check
         text = (
             f"آخر قيمة منشورة هي {value} {latest['unit']} للفترة التي تبدأ في {latest['period_start']} [{latest['id']}]."
             if arabic
             else f"The latest published value is {value} {latest['unit']} for the period starting {latest['period_start']} [{latest['id']}]."
         )
+        if partly:
+            # One supported figure, one invented figure, and a sentence without figures: the
+            # evidence check keeps the first and the last.
+            text += (
+                f" وقدّر مصدر آخر القيمة بنحو 987654321 [{latest['id']}]. يجب قراءة هذا الرقم مع مراعاة اكتمال الفترة وتعريف المؤشر."
+                if arabic
+                else f" Another estimate put it at 987654321 [{latest['id']}]. The figure should be read with the period's completeness and the indicator's definition in mind."
+            )
         return self._final("answered", text, [latest["id"]])
 
     def _web(
@@ -957,10 +1112,12 @@ class FakeProvider:
         return final
 
     @staticmethod
-    def _call(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    def _call(name: str, arguments: dict[str, Any], call_id: str | None = None) -> dict[str, Any]:
         return {
             "stop_reason": "tool_use",
-            "content": [{"type": "tool_use", "id": f"t-{name}", "name": name, "input": arguments}],
+            "content": [
+                {"type": "tool_use", "id": call_id or f"t-{name}", "name": name, "input": arguments}
+            ],
         }
 
     def _data_first(
@@ -1307,6 +1464,142 @@ class FakeProvider:
         ]
         return final
 
+    def _deep_report(
+        self, tool_results: list[dict[str, Any]], arabic: bool, illustrate: bool
+    ) -> dict[str, Any]:
+        """Deep internet research, step by step: plan; two searches in one step (fetched in
+        parallel); a calculation on two cited figures; a table of them; a chart of the table; a
+        diagram; an illustration if one was asked for; then the structured report."""
+        done = {str(b.get("tool_use_id")) for b in tool_results}
+        results = {str(b.get("tool_use_id")): json.loads(b["content"]) for b in tool_results}
+        if "t-plan" not in done:
+            questions = (
+                ["كم بلغ توليد الكهرباء في عُمان عام 2023؟", "هل تختلف المصادر في الرقم؟"]
+                if arabic
+                else ["How much electricity did Oman generate in 2023?", "Do the sources agree?"]
+            )
+            return self._call("plan_research", {"questions": questions}, "t-plan")
+        if "t-search-en" not in done:
+            search = {"domain": "electricity"}
+            return {
+                "stop_reason": "tool_use",
+                "content": [
+                    {"type": "tool_use", "id": "t-search-en", "name": "web_search",
+                     "input": {**search, "query": "Oman electricity generated 2023"}},
+                    {"type": "tool_use", "id": "t-search-ar", "name": "web_search",
+                     "input": {**search, "query": "الكهرباء المولدة في عمان 2023"}},
+                ],
+            }  # fmt: skip
+        found = results.get("t-search-en", {})
+        if found.get("status") != "ok" or len(found.get("results", [])) < 2:
+            return self._final(
+                "no_evidence",
+                "فشل البحث على الإنترنت، لذلك لا توجد نتائج لعرضها."
+                if arabic
+                else "The web search failed, so there are no web findings to report.",
+                [],
+            )
+        official, other = found["results"][0], found["results"][1]
+        a, b = official["evidence_id"], other["evidence_id"]
+        if "t-calc" not in done:
+            return self._call(
+                "calculate",
+                {
+                    "kind": "difference",
+                    "inputs": [{"evidence_id": b, "value": "40,000"}, {"evidence_id": a, "value": "41,234"}],
+                    "label": "Official minus news figure",
+                    "unit": "GWh",
+                },
+                "t-calc",
+            )  # fmt: skip
+        calc = results["t-calc"].get("evidence_id")
+        if "t-table" not in done:
+            return self._call(
+                "research_table",
+                {
+                    "title": "توليد الكهرباء في عُمان 2023" if arabic else "Electricity generated in Oman, 2023",
+                    "columns": ["المصدر", "التوليد (غيغاواط ساعة)"] if arabic else ["Source", "Generation (GWh)"],
+                    "rows": [
+                        {"cells": [official["publisher"], "41,234"], "citations": [a]},
+                        {"cells": [other["publisher"], "40,000"], "citations": [b]},
+                    ],
+                },
+                "t-table",
+            )  # fmt: skip
+        if "t-chart" not in done:
+            table_id = results["t-table"].get("table_id", "RT1")
+            return self._call(
+                "research_chart",
+                {"table_id": table_id, "label_column": 0, "value_columns": [1], "kind": "bar", "unit": "GWh"},
+                "t-chart",
+            )  # fmt: skip
+        if "t-diagram" not in done:
+            labels = (
+                ["التوليد", "النقل", "التوزيع", "المستهلكون"]
+                if arabic
+                else ["Generation", "Transmission", "Distribution", "Consumers"]
+            )
+            ids = ["generation", "transmission", "distribution", "consumers"]
+            return self._call(
+                "diagram",
+                {
+                    "kind": "flowchart",
+                    "title": "سلسلة إمداد الكهرباء" if arabic else "The electricity supply chain",
+                    "nodes": [{"id": i, "label": label} for i, label in zip(ids, labels, strict=True)],
+                    "edges": [{"from": f, "to": t} for f, t in zip(ids, ids[1:], strict=False)],
+                },
+                "t-diagram",
+            )  # fmt: skip
+        if illustrate and "t-image" not in done:
+            return self._call(
+                "generate_image",
+                {"prompt": "A power station by the sea at dusk, with transmission lines.",
+                 "purpose": "illustration", "quality": "fast"},
+                "t-image",
+            )  # fmt: skip
+        if arabic:
+            text = (
+                "## الملخص\n"
+                f"تقدّر الإحصاءات الرسمية توليد الكهرباء في عُمان عام 2023 بنحو 41,234 غيغاواط ساعة [{a}]، "
+                f"بينما يذكر تقرير إخباري 40,000 غيغاواط ساعة [{b}].\n\n"
+                "## النتائج\n"
+                f"- الرقم الرسمي أعلى من الرقم الإخباري بمقدار 1,234 غيغاواط ساعة [{calc}].\n\n"
+                "## العوامل المؤثرة\n- نمو الطلب في الصيف وتوسع الشبكة.\n\n"
+                "## الفرص والمخاطر\n- فرصة: توحيد مصادر البيانات. خطر: الاعتماد على أرقام غير رسمية.\n\n"
+                "## التوصيات\n- اعتماد الرقم الرسمي ومراجعة مصدر الفرق.\n\n"
+                "## الأدلة والافتراضات\n- الأرقام أعلاه من المصادر المذكورة؛ العوامل افتراضات للتحقق.\n\n"
+                "## القيود والمعلومات الناقصة\n- لا يوضح التقرير الإخباري منهجيته."
+            )
+        else:
+            text = (
+                "## Summary\n"
+                f"Official statistics put Oman's electricity generation in 2023 at 41,234 GWh [{a}], "
+                f"while a news report gives 40,000 GWh [{b}].\n\n"
+                "## Findings\n"
+                f"- The official figure is 1,234 GWh higher than the news figure [{calc}].\n\n"
+                "## Influencing factors\n- Summer demand and the growth of the grid.\n\n"
+                "## Opportunities and risks\n- Opportunity: one agreed source of figures. "
+                "Risk: relying on unofficial numbers.\n\n"
+                "## Recommendations\n- Use the official figure and ask where the gap comes from.\n\n"
+                "## Evidence and assumptions\n- The figures above come from the cited sources; the "
+                "factors are assumptions to verify.\n\n"
+                "## Limitations and missing information\n- The news report does not give its method."
+            )
+        final = self._final("answered", text, [a, b, calc])
+        final["content"][0]["input"]["conflicts"] = [
+            {
+                "topic": "توليد الكهرباء 2023" if arabic else "Electricity generated in 2023",
+                "values": [
+                    {"evidence_id": a, "value_text": "41,234"},
+                    {"evidence_id": b, "value_text": "40,000"},
+                ],
+                "note": "الإحصاءات الرسمية وتقرير إخباري يختلفان."
+                if arabic
+                else "Official statistics and a news report differ.",
+            }
+        ]
+        return final
+
     @staticmethod
     def _final(status: str, text: str, citations: list[str]) -> dict[str, Any]:
         return {
@@ -1327,8 +1620,12 @@ class FakeProvider:
         }
 
 
-def build_provider(name: str) -> Provider | None:
-    """The answering provider called ``name`` when it is fully configured, else None."""
+def build_provider(
+    name: str, model: str | None = None, effort: str | None = None
+) -> Provider | None:
+    """The answering provider called ``name`` when it is fully configured, else None.
+    ``model`` and ``effort`` replace the provider's configured model and reasoning effort for
+    one mode (a lighter model for Quick answers, a stronger one for Deep research)."""
     s = get_settings()
     timeout = s.assistant_timeout_seconds
     if name == "fake" and s.environment != "production":
@@ -1336,23 +1633,27 @@ def build_provider(name: str) -> Provider | None:
     if registry.missing(name, "answer"):
         return None
     if name == "anthropic" and s.anthropic_api_key:
-        return AnthropicProvider(s.anthropic_api_key.get_secret_value(), s.assistant_model, timeout)
+        return AnthropicProvider(
+            s.anthropic_api_key.get_secret_value(), model or s.assistant_model, timeout
+        )
     if name == "openai" and s.openai_api_key and s.openai_model:
         return OpenAIProvider(
             s.openai_api_key.get_secret_value(),
-            s.openai_model,
+            model or s.openai_model,
             max(timeout, s.openai_timeout_seconds),
-            s.openai_reasoning_effort,
+            effort or s.openai_reasoning_effort,
         )
     if name == "gemini" and s.gemini_api_key and s.gemini_model:
-        return GeminiProvider(s.gemini_api_key.get_secret_value(), s.gemini_model, timeout)
+        return GeminiProvider(s.gemini_api_key.get_secret_value(), model or s.gemini_model, timeout)
     if (
         name == "deepseek"
         and s.deepseek_api_key
         and s.deepseek_model
         and s.deepseek_billing_acknowledged
     ):
-        return DeepSeekProvider(s.deepseek_api_key.get_secret_value(), s.deepseek_model, timeout)
+        return DeepSeekProvider(
+            s.deepseek_api_key.get_secret_value(), model or s.deepseek_model, timeout
+        )
     return None
 
 
@@ -1380,9 +1681,18 @@ def structured_reply(
     raise ProviderError("no_tool_call")
 
 
-def get_provider() -> Provider | None:
-    """The primary answering provider (one per question)."""
-    return build_provider(get_settings().assistant_provider)
+def get_provider(mode: str | None = None) -> Provider | None:
+    """The primary answering provider (one per question), with the model set for ``mode``:
+    ``assistant_quick_model`` for Quick answers, ``assistant_deep_model`` (and its reasoning
+    effort) for Deep internet research; otherwise the provider's own model."""
+    s = get_settings()
+    if mode == "quick" and s.assistant_quick_model:
+        return build_provider(s.assistant_provider, s.assistant_quick_model)
+    if mode == "research" and (s.assistant_deep_model or s.assistant_deep_reasoning_effort):
+        return build_provider(
+            s.assistant_provider, s.assistant_deep_model, s.assistant_deep_reasoning_effort
+        )
+    return build_provider(s.assistant_provider)
 
 
 def answering_available() -> bool:

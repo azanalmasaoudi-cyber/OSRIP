@@ -24,6 +24,7 @@ from app.models import AssistantRequest
 
 STAGES: dict[str, dict[str, str]] = {
     "received": {"en": "Question received", "ar": "استُلم السؤال"},
+    "planning": {"en": "Planning the research", "ar": "تخطيط البحث"},
     "published_data": {
         "en": "Checking OSRIP's published data",
         "ar": "مراجعة بيانات OSRIP المنشورة",
@@ -38,6 +39,16 @@ STAGES: dict[str, dict[str, str]] = {
         "ar": "البحث في الإنترنت بالعربية والإنجليزية",
     },
     "reading": {"en": "Reading sources", "ar": "قراءة المصادر"},
+    "computing": {
+        "en": "Calculating from the sources' figures",
+        "ar": "الحساب من أرقام المصادر",
+    },
+    "visuals": {
+        "en": "Building tables, charts and diagrams",
+        "ar": "إعداد الجداول والرسوم والمخططات",
+    },
+    "image": {"en": "Making an illustration", "ar": "إنشاء رسم توضيحي"},
+    "writing": {"en": "Writing the answer", "ar": "كتابة الإجابة"},
     "checking": {"en": "Checking numbers and citations", "ar": "التحقق من الأرقام والاستشهادات"},
     "done": {"en": "Answer ready", "ar": "الإجابة جاهزة"},
     "cancelled": {"en": "Stopped at your request", "ar": "أُوقف بناءً على طلبك"},
@@ -54,6 +65,16 @@ TOOL_STAGE = {
     "balance_analysis": "calculating",
     "scenario_projection": "calculating",
     "explain_calculation": "calculating",
+    "plan_research": "planning",
+    "calculate": "computing",
+    "research_table": "visuals",
+    "research_chart": "visuals",
+    "diagram": "visuals",
+    "make_table": "visuals",
+    "make_chart": "visuals",
+    "generate_image": "image",
+    "research_status": "checking",
+    "submit_observations": "checking",
 }
 
 

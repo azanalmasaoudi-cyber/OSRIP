@@ -27,10 +27,6 @@ from devdb import admin_url  # noqa: E402
 
 os.environ.setdefault("OSRIP_DATABASE_URL", admin_url("osrip_dev"))
 os.environ.setdefault("OSRIP_SESSION_COOKIE_SECURE", "false")
-# Development: scripted SMS delivery, labelled "test mode" in the interface; codes are
-# shown at /dev/mail. Set OSRIP_SMS_ENABLED=false to see the "unavailable" path.
-os.environ.setdefault("OSRIP_SMS_ENABLED", "true")
-os.environ.setdefault("OSRIP_SMS_PROVIDER", "test")
 # --fake-assistant: the scripted test provider (labelled; refused in production) for
 # interface work without a model account. It answers "generation" questions only.
 if "--fake-assistant" in sys.argv:

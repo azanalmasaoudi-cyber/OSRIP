@@ -1,10 +1,15 @@
-import uuid
-from typing import Annotated, Any
-from urllib.parse import urlencode
+"""Sign-in with a username and password only.
 
-from fastapi import APIRouter, Depends, Query, Request, Response
-from fastapi.responses import RedirectResponse
-from pydantic import BaseModel, Field
+Registration asks for a username and a password (an ordinary viewer account); a forgotten
+password is recovered with the one-time recovery code, or by an administrator's reset to a
+temporary password. E-mail, e-mail link, phone (SMS or WhatsApp), Google and Microsoft sign-in
+and e-mail verification are retired: their endpoints answer 410 and do nothing. The accounts,
+e-mail addresses and phone numbers recorded before stay in the database untouched.
+"""
+
+from typing import Annotated, Any
+
+from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy import select
 
 from app.api.deps import (
@@ -18,22 +23,28 @@ from app.core import ratelimit, security
 from app.core.config import get_settings
 from app.core.errors import ApiError
 from app.models import AppUser, EmailOutbox, UserSession
-from app.schemas.accounts import LoginIn, MeOut, PasswordChangeIn
-from app.services import accounts, identity, mail, oidc, phone, phone_numbers, sms
+from app.schemas.accounts import (
+    LoginIn,
+    MeOut,
+    PasswordChangeIn,
+    RecoverIn,
+    RecoveryCodeIn,
+    UsernameRegisterIn,
+)
+from app.services import accounts, mail, phone_numbers
 from app.services.principal import Principal
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 dev_router = APIRouter(prefix="/dev", tags=["development"])
 
-OIDC_COOKIE = "osrip_oidc"
-EMAIL_REQUESTS_PER_CLIENT_HOUR = 20
+REQUESTS_PER_CLIENT_HOUR = 20
 
 
 def _me(principal: Principal, session: DbSession | None = None) -> MeOut:
     if not principal.is_authenticated:
         return MeOut(authenticated=False)
     email, verified, phone, phone_verified, has_password = principal.label, None, None, None, None
-    username = None
+    username, has_recovery_code = None, None
     if session is not None:
         with session.begin():
             user = session.get(AppUser, principal.user_id)
@@ -44,6 +55,7 @@ def _me(principal: Principal, session: DbSession | None = None) -> MeOut:
                 phone_verified = user.phone_verified_at is not None
                 has_password = user.password_hash != security.UNUSABLE_PASSWORD
                 username = user.username
+                has_recovery_code = user.recovery_code_hash is not None
     return MeOut(
         username=username,
         password_change_required=principal.password_change_required,
@@ -55,6 +67,7 @@ def _me(principal: Principal, session: DbSession | None = None) -> MeOut:
         phone=phone,
         phone_verified=phone_verified,
         has_password=has_password,
+        has_recovery_code=has_recovery_code,
         roles=sorted(principal.roles),
         permissions=sorted(principal.permissions),
     )
@@ -62,7 +75,9 @@ def _me(principal: Principal, session: DbSession | None = None) -> MeOut:
 
 def _set_session_cookies(response: Response, new: accounts.NewSession) -> None:
     settings = get_settings()
-    max_age = settings.session_absolute_hours * 3600
+    # Remember me: a cookie that outlives the browser; otherwise a browser-session cookie.
+    # Either way the server enforces the session's own expiry and idle limit.
+    max_age = settings.session_remember_days * 86400 if new.persistent else None
     # HttpOnly session cookie: unreadable by scripts. SameSite=Strict: not sent on
     # cross-site requests. Secure: HTTPS only (disabled only for local HTTP dev).
     response.set_cookie(
@@ -91,30 +106,84 @@ def _set_session_cookies(response: Response, new: accounts.NewSession) -> None:
 def _client_limit(request: Request, bucket: str) -> None:
     client = request.client.host if request.client else "unknown"
     key = security.keyed_digest(get_settings().client_hash_key.get_secret_value(), client)
-    ratelimit.check(f"{bucket}:{key}", EMAIL_REQUESTS_PER_CLIENT_HOUR, 3600)
+    ratelimit.check(f"{bucket}:{key}", REQUESTS_PER_CLIENT_HOUR, 3600)
 
 
 @router.get("/providers")
 def providers() -> dict[str, Any]:
-    """Which sign-in methods this server offers. Unconfigured ones are reported, not faked."""
-    delivery = mail.delivery_mode()
-    return {
-        "password": True,
-        "registration": delivery != "disabled",
-        "magic_link": delivery != "disabled",
-        "email_delivery": delivery,
-        "oidc": oidc.configured(),
-        "sms": sms.status(),
-        "country_codes": list(phone_numbers.COUNTRY_CODES),
-    }
+    """The only way to sign in: a username and a password (and registration with them)."""
+    return {"password": True, "registration": True, "methods": ["username_password"]}
 
 
 @router.post("/login", response_model=MeOut)
 def login(body: LoginIn, request: Request, response: Response, session: DbSession) -> MeOut:
     client = request.client.host if request.client else "unknown"
-    new = accounts.login(session, body.email, body.password, client)
+    new = accounts.login(session, body.username, body.password, client, remember=body.remember)
     _set_session_cookies(response, new)
     return _me(new.principal, session)
+
+
+# ------------------------------------------------------------------ username accounts
+
+
+@router.post("/register/username", status_code=201)
+def register_username(
+    body: UsernameRegisterIn, request: Request, response: Response, session: DbSession
+) -> dict[str, Any]:
+    """Registration with a username and password only: an ordinary (viewer) account, signed
+    in at once. The recovery code in the answer is shown once and never stored."""
+    _client_limit(request, "register")
+    done = accounts.register_username(
+        session,
+        username=body.username,
+        password=body.password,
+        password_confirm=body.password_confirm,
+    )
+    _set_session_cookies(response, done.new_session)
+    response.headers["Cache-Control"] = "no-store"
+    return {
+        "status": "registered",
+        "recovery_code": done.recovery_code,
+        "me": _me(done.new_session.principal, session).model_dump(mode="json"),
+    }
+
+
+@router.post("/recover")
+def recover(
+    body: RecoverIn, request: Request, response: Response, session: DbSession
+) -> dict[str, Any]:
+    """A forgotten password, with the username and the recovery code. A new recovery code
+    replaces the spent one; other sessions are signed out."""
+    _client_limit(request, "recover")
+    client = request.client.host if request.client else "unknown"
+    done = accounts.recover_with_code(
+        session,
+        username=body.username,
+        recovery_code=body.recovery_code,
+        new_password=body.new_password,
+        new_password_confirm=body.new_password_confirm,
+        client_address=client,
+    )
+    _set_session_cookies(response, done.new_session)
+    response.headers["Cache-Control"] = "no-store"
+    return {
+        "status": "recovered",
+        "recovery_code": done.recovery_code,
+        "me": _me(done.new_session.principal, session).model_dump(mode="json"),
+    }
+
+
+@router.post("/recovery-code")
+def recovery_code(
+    body: RecoveryCodeIn,
+    response: Response,
+    session: DbSession,
+    principal: Annotated[Principal, Depends(require_authenticated)],
+) -> dict[str, str]:
+    """A new recovery code for the signed-in account, shown once."""
+    code = accounts.replace_recovery_code(session, principal, body.current_password)
+    response.headers["Cache-Control"] = "no-store"
+    return {"recovery_code": code}
 
 
 @router.post("/password/change", response_model=MeOut)
@@ -163,271 +232,40 @@ def me(principal: CurrentPrincipal, response: Response, session: DbSession) -> M
     return _me(principal, session)
 
 
-# ------------------------------------------------------------------ e-mail based flows
+# ------------------------------------------------------------------ retired sign-in methods
+
+# E-mail registration and verification, e-mail links, password reset by e-mail, phone codes
+# (SMS or WhatsApp), Google and Microsoft. Each answers 410 without reading its body, so no
+# request can reach an account, create one or open a session through them.
+RETIRED: tuple[tuple[str, str], ...] = (
+    ("POST", "/register"),
+    ("POST", "/verify-email"),
+    ("POST", "/verify-email/resend"),
+    ("POST", "/password/forgot"),
+    ("POST", "/password/reset"),
+    ("POST", "/magic-link"),
+    ("POST", "/magic-link/consume"),
+    ("POST", "/phone/request"),
+    ("POST", "/phone/verify"),
+    ("POST", "/email/link"),
+    ("POST", "/email/link/confirm"),
+    ("GET", "/oidc/{provider}/start"),
+    ("GET", "/oidc/{provider}/callback"),
+    ("GET", "/identities"),
+    ("DELETE", "/identities/{identity_id}"),
+)
 
 
-class RegisterIn(BaseModel):
-    email: str = Field(min_length=3, max_length=254)
-    display_name: str = Field(min_length=1, max_length=120)
-    password: str = Field(min_length=1, max_length=1024)
-
-
-class EmailIn(BaseModel):
-    email: str = Field(min_length=3, max_length=254)
-
-
-class TokenIn(BaseModel):
-    token: str = Field(min_length=20, max_length=200)
-
-
-class ResetIn(TokenIn):
-    password: str = Field(min_length=1, max_length=1024)
-
-
-def _accepted() -> dict[str, str]:
-    return {"status": "accepted", "message": identity.GENERIC_EMAIL_REPLY}
-
-
-@router.post("/register", status_code=202)
-def register(body: RegisterIn, request: Request, session: DbSession) -> dict[str, str]:
-    """Creates an unverified account with ordinary (viewer) access and sends a link."""
-    _client_limit(request, "register")
-    identity.register(
-        session, email=body.email, display_name=body.display_name, password=body.password
-    )
-    return _accepted()
-
-
-@router.post("/verify-email")
-def verify_email(body: TokenIn, session: DbSession) -> dict[str, str]:
-    identity.verify_email(session, body.token)
-    return {"status": "verified"}
-
-
-@router.post("/verify-email/resend", status_code=202)
-def resend(body: EmailIn, request: Request, session: DbSession) -> dict[str, str]:
-    _client_limit(request, "resend")
-    identity.resend_verification(session, body.email)
-    return _accepted()
-
-
-@router.post("/password/forgot", status_code=202)
-def forgot(body: EmailIn, request: Request, session: DbSession) -> dict[str, str]:
-    _client_limit(request, "forgot")
-    identity.forgot_password(session, body.email)
-    return _accepted()
-
-
-@router.post("/password/reset")
-def reset(body: ResetIn, session: DbSession) -> dict[str, str]:
-    """Sets a new password, revokes every existing session and marks the address verified."""
-    identity.reset_password(session, body.token, body.password)
-    return {"status": "password_reset"}
-
-
-@router.post("/magic-link", status_code=202)
-def magic_link(body: EmailIn, request: Request, session: DbSession) -> dict[str, str]:
-    _client_limit(request, "magic")
-    identity.request_magic_link(session, body.email)
-    return _accepted()
-
-
-@router.post("/magic-link/consume", response_model=MeOut)
-def magic_link_consume(body: TokenIn, response: Response, session: DbSession) -> MeOut:
-    new = identity.consume_magic_link(session, body.token)
-    _set_session_cookies(response, new)
-    return _me(new.principal, session)
-
-
-# ------------------------------------------------------------------ phone (SMS verification)
-
-PHONE_REQUESTS_PER_CLIENT_HOUR = 20
-
-
-class PhoneRequestIn(BaseModel):
-    country_code: str = Field(default="+968", max_length=5)
-    number: str = Field(min_length=4, max_length=24)
-    purpose: str = Field(default="sign_in", pattern="^(sign_in|link)$")
-
-
-class PhoneVerifyIn(BaseModel):
-    challenge_id: str = Field(min_length=1, max_length=64)
-    code: str = Field(min_length=1, max_length=12)
-    display_name: str | None = Field(default=None, max_length=120)
-
-
-@router.post("/phone/request", status_code=202)
-def phone_request(
-    body: PhoneRequestIn, request: Request, principal: CurrentPrincipal, session: DbSession
-) -> dict[str, Any]:
-    """Sends a code by SMS. Returns an opaque challenge id, never the code. The answer is
-    the same whether or not the number already has an account."""
-    if body.purpose == "link":
-        principal = require_authenticated(request, principal)  # session + CSRF
-    client = request.client.host if request.client else "unknown"
-    key = security.keyed_digest(get_settings().client_hash_key.get_secret_value(), client)
-    ratelimit.check(f"phone:{key}", PHONE_REQUESTS_PER_CLIENT_HOUR, 3600)
-    return phone.request_code(
-        session,
-        country_code=body.country_code,
-        number=body.number,
-        purpose=body.purpose,
-        principal=principal,
-        client_address=client,
+def _retired() -> None:
+    raise ApiError(
+        410,
+        "sign_in_method_retired",
+        "This sign-in method is no longer offered. Sign in with your username and password.",
     )
 
 
-@router.post("/phone/verify")
-def phone_verify(
-    body: PhoneVerifyIn,
-    request: Request,
-    response: Response,
-    principal: CurrentPrincipal,
-    session: DbSession,
-) -> dict[str, Any]:
-    """Checks the code. Signs in (creating an ordinary account for a new number), or
-    links the number to the signed-in account."""
-    if principal.is_authenticated:
-        principal = require_authenticated(request, principal)  # CSRF for signed-in callers
-    result = phone.verify_code(
-        session,
-        challenge_id=body.challenge_id,
-        code=body.code,
-        display_name=body.display_name,
-        principal=principal,
-    )
-    if result.new_session is not None:
-        _set_session_cookies(response, result.new_session)
-        return {
-            "status": result.outcome,
-            "me": _me(result.new_session.principal, session).model_dump(mode="json"),
-        }
-    response.headers["Cache-Control"] = "no-store"
-    return {"status": result.outcome, "me": _me(principal, session).model_dump(mode="json")}
-
-
-class LinkEmailIn(BaseModel):
-    email: str = Field(min_length=3, max_length=254)
-
-
-@router.post("/email/link", status_code=202)
-def email_link(
-    body: LinkEmailIn,
-    request: Request,
-    session: DbSession,
-    principal: Annotated[Principal, Depends(require_authenticated)],
-) -> dict[str, str]:
-    """Adds an e-mail address to the signed-in account once the link sent to it is opened."""
-    _client_limit(request, "link_email")
-    identity.request_email_link(session, principal, body.email)
-    return _accepted()
-
-
-@router.post("/email/link/confirm")
-def email_link_confirm(body: TokenIn, session: DbSession) -> dict[str, str]:
-    identity.confirm_email_link(session, body.token)
-    return {"status": "linked"}
-
-
-# ------------------------------------------------------------------ OpenID Connect
-
-
-def _frontend(path: str, **params: str) -> str:
-    base = get_settings().public_base_url.rstrip("/")
-    return f"{base}{path}" + (f"?{urlencode(params)}" if params else "")
-
-
-@router.get("/oidc/{provider}/start")
-def oidc_start(
-    provider: str,
-    principal: CurrentPrincipal,
-    session: DbSession,
-    intent: Annotated[str, Query(pattern="^(sign_in|link)$")] = "sign_in",
-) -> RedirectResponse:
-    started = oidc.start(session, provider, intent, principal)
-    settings = get_settings()
-    response = RedirectResponse(started.authorization_url, status_code=302)
-    # Lax so the browser returns it on the provider's top-level redirect back to us.
-    response.set_cookie(
-        OIDC_COOKIE,
-        started.browser_token,
-        max_age=settings.oidc_request_minutes * 60,
-        httponly=True,
-        secure=settings.session_cookie_secure,
-        samesite="lax",
-        path=f"{settings.api_prefix}/auth/oidc",
-    )
-    response.headers["Cache-Control"] = "no-store"
-    return response
-
-
-@router.get("/oidc/{provider}/callback")
-def oidc_callback(
-    provider: str,
-    request: Request,
-    session: DbSession,
-    code: str | None = None,
-    state: str | None = None,
-    error: str | None = None,
-) -> RedirectResponse:
-    settings = get_settings()
-    outcome: oidc.Outcome | None = None
-    if error or not code or not state:
-        target = _frontend("/sign-in", error="provider_declined")
-    else:
-        outcome = oidc.callback(
-            session,
-            provider,
-            code=code,
-            state=state,
-            browser_token=request.cookies.get(OIDC_COOKIE),
-        )
-        if outcome.code == "signed_in":
-            target = _frontend("/account", signed_in=provider)
-        elif outcome.code == "linked":
-            target = _frontend("/account", linked=provider)
-        elif outcome.code == "link_required":
-            target = _frontend("/sign-in", notice="link_required", provider=provider)
-        else:
-            target = _frontend("/sign-in", error=outcome.detail or "sign_in_failed")
-    response = RedirectResponse(target, status_code=302)
-    response.delete_cookie(OIDC_COOKIE, path=f"{settings.api_prefix}/auth/oidc")
-    if outcome is not None and outcome.new_session is not None:
-        _set_session_cookies(response, outcome.new_session)
-    response.headers["Cache-Control"] = "no-store"
-    return response
-
-
-@router.get("/identities")
-def list_identities(
-    session: DbSession, principal: Annotated[Principal, Depends(require_authenticated)]
-) -> list[dict[str, Any]]:
-    assert principal.user_id is not None
-    with session.begin():
-        return oidc.identities(session, principal.user_id)
-
-
-@router.delete("/identities/{identity_id}", status_code=204)
-def unlink_identity(
-    identity_id: uuid.UUID,
-    session: DbSession,
-    principal: Annotated[Principal, Depends(require_authenticated)],
-) -> Response:
-    oidc.unlink(session, principal, identity_id)
-    return Response(status_code=204)
-
-
-# ------------------------------------------------------------------ development SMS sink
-
-
-@dev_router.get("/sms-outbox")
-def sms_outbox() -> list[dict[str, Any]]:
-    """Development and tests only: codes 'sent' by the scripted test provider. 404 in
-    production and whenever another provider is configured."""
-    s = get_settings()
-    if s.environment == "production" or not s.sms_enabled or s.sms_provider != "test":
-        raise ApiError(404, "not_found", "Not found.")
-    return sms.scripted_provider().outbox()
+for _method, _path in RETIRED:
+    router.add_api_route(_path, _retired, methods=[_method], include_in_schema=False)
 
 
 # ------------------------------------------------------------------ development mail sink

@@ -82,13 +82,14 @@ def _used(client) -> int:  # noqa: ANN001
     return int(client.get(f"{API}/assistant/guest").json()["allowance"]["used"])
 
 
-def test_the_allowance_rules_hold_together_across_personas_languages_text_and_voice(
+def test_the_allowance_rules_hold_together_across_languages_text_voice_and_old_tabs(
     app, db
 ) -> None:  # noqa: ANN001
     client = _guest(app)
     queued: list[int] = []
 
-    # The fixed greeting, in both personas and languages: an approved reply, never charged.
+    # The fixed greeting, in both languages (also from a tab that still names the retired
+    # persona, which Al Mulhim answers): an approved reply, never charged.
     for persona, greeting, language in (("ilham", "السلام عليكم", "ar"), ("mulhim", "Hello", "en")):
         r = _ask(client, greeting, persona=persona, language=language)
         assert r.status_code == 201 and r.json()["message"]["status"] == "profile"
@@ -120,9 +121,12 @@ def test_the_allowance_rules_hold_together_across_personas_languages_text_and_vo
     assert client.get(f"{API}/assistant/guest/requests/{first}/study").status_code == 200
     assert _used(client) == 1
 
-    # Answers 2-5: Ilham in Arabic, a spoken question, research mode, compare mode.
+    # Answers 2-5: Arabic (a tab naming the retired persona: Al Mulhim answers), a spoken
+    # question, research mode, compare mode.
     r = _ask(client, "ما آخر قيمة لتوليد الكهرباء؟", persona="ilham", language="ar")
-    assert r.json()["message"]["status"] == "answered" and r.json()["message"]["persona"] == "ilham"
+    assert (
+        r.json()["message"]["status"] == "answered" and r.json()["message"]["persona"] == "mulhim"
+    )
     guest = _guest_row(client)
     call = bridge.Call(
         bridge.Caller("guest", guest.id), "en", data_mode=DataMode.SYNTHETIC, persona="ilham"
@@ -135,7 +139,7 @@ def test_the_allowance_rules_hold_together_across_personas_languages_text_and_vo
     assert r.status_code == 201
     assert _used(client) == 5
 
-    # A sixth is refused for both personas and by voice, before any answer is attempted.
+    # A sixth is refused (whatever persona code is sent) and by voice, before any answer.
     for persona in ("mulhim", "ilham"):
         refused = _ask(client, "What is the latest electricity generation?", persona=persona)
         assert refused.status_code == 403

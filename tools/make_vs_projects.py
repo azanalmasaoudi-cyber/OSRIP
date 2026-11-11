@@ -1,6 +1,4 @@
-"""Write the Visual Studio solution and project files, so Solution Explorer shows every OSRIP file.
-
-    backend\\.venv\\Scripts\\python.exe tools\\make_vs_projects.py
+"""Write the Visual Studio solution and project files, so Solution Explorer shows every  pts\\python.exe tools\\make_vs_projects.py
 
 * ``backend\\OSRIP.Backend.pyproj``: the FastAPI code, tests, scripts and migrations, with the
   backend's own ``.venv`` as the Python environment, so imports resolve and Test Explorer

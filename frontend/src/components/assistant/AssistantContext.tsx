@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 /**
- * Shared assistant UI state: whether the panel is open and what the orb shows. The
+ * Shared assistant UI state: what the orb shows, and the live studies. The
  * chat reports real events (microphone open, request in flight, speech playing,
  * failure); the orb only displays them. Priority: error > listening > speaking >
  * processing > idle.
@@ -19,8 +19,6 @@ export interface StudyRef {
 }
 
 interface AssistantUi {
-  open: boolean;
-  setOpen: (open: boolean) => void;
   state: OrbState;
   setActivity: (activity: Activity, on: boolean) => void;
   reportError: () => void;
@@ -48,7 +46,6 @@ function readStudies(): StudyRef[] {
 }
 
 export function AssistantUiProvider({ children }: { children: ReactNode }) {
-  const [open, setOpen] = useState(false);
   const [studies, setStudies] = useState<StudyRef[]>(readStudies);
   const [activeId, setActiveId] = useState<string | null>(() => studies[0]?.id ?? null);
   useEffect(() => {
@@ -97,15 +94,13 @@ export function AssistantUiProvider({ children }: { children: ReactNode }) {
           ? 'processing'
           : 'idle';
   const value = useMemo(
-    () => ({ open, setOpen, state, setActivity, reportError, activeStudy, studies, startStudy, openStudy }),
-    [open, state, setActivity, reportError, activeStudy, studies, startStudy, openStudy],
+    () => ({ state, setActivity, reportError, activeStudy, studies, startStudy, openStudy }),
+    [state, setActivity, reportError, activeStudy, studies, startStudy, openStudy],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
 const FALLBACK: AssistantUi = {
-  open: false,
-  setOpen: () => undefined,
   state: 'idle',
   setActivity: () => undefined,
   reportError: () => undefined,

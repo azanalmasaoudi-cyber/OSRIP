@@ -1,13 +1,12 @@
 import { AlertTriangle, Database, FlaskConical, Lightbulb, Scale } from 'lucide-react';
-import { Fragment, useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { createContext, Fragment, useContext, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
-import { ASSISTANT_MODES, type AssistantMode, type StructuredReply as Structured } from '@/api/assistant';
+import type { StructuredReply as Structured } from '@/api/assistant';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/format';
 import { useAppLanguage } from '@/lib/useAppLanguage';
-import { cn } from '@/lib/utils';
 import { usePreservedSearch } from '@/state/usePreservedSearch';
 
 import { MethodSummary } from './ResearchProgress';
@@ -27,9 +26,23 @@ function focusEvidence(messageId: number, evidenceId: string): void {
   target.focus({ preventScroll: true });
 }
 
+/**
+ * Whether a reply's sources are shown. Answers do not show citation markers, evidence ids or
+ * source lists until the person asks (the Show sources button, or asking in words); the
+ * evidence stays with the reply. Elsewhere (studies, reports) the default shows them.
+ */
+export const SourcesShown = createContext(true);
+
+/** The text without its evidence markers ("[E3]"), as shown while the sources are hidden. */
+export function withoutMarkers(text: string): string {
+  return text.replace(/[ \t]*\[E\d+\]/g, '');
+}
+
 /** A citation chip: moves focus to the cited evidence below the reply. */
 export function CitationChip({ messageId, id, known }: { messageId: number; id: string; known: boolean }) {
   const { t } = useTranslation();
+  const shown = useContext(SourcesShown);
+  if (!shown) return null;
   if (!known) return <span className="font-mono text-xs text-muted-foreground">[{id}]</span>;
   return (
     <a href={`#${evidenceAnchor(messageId, id)}`} data-testid="citation-chip" data-evidence={id}
@@ -43,7 +56,8 @@ export function CitationChip({ messageId, id, known }: { messageId: number; id: 
 
 /** Reply text with each "[E3]" marker shown as a chip next to the claim it supports. */
 export function CitedText({ text, messageId, known }: { text: string; messageId: number; known: Set<string> }) {
-  const parts = text.split(/\[(E\d+)\]/);
+  const shown = useContext(SourcesShown);
+  const parts = (shown ? text : withoutMarkers(text)).split(/\[(E\d+)\]/);
   return (
     <>
       {parts.map((part, i) => (i % 2 === 1
@@ -54,13 +68,14 @@ export function CitedText({ text, messageId, known }: { text: string; messageId:
 }
 
 function Chips({ ids, messageId, known }: { ids: string[]; messageId: number; known: Set<string> }) {
-  if (!ids.length) return null;
+  const shown = useContext(SourcesShown);
+  if (!ids.length || !shown) return null;
   return <span className="ms-1 inline-flex flex-wrap gap-0.5">{ids.map((id) => <CitationChip key={id} messageId={messageId} id={id} known={known.has(id)} />)}</span>;
 }
 
 function Section({ title, icon, children, testId }: { title: string; icon?: ReactNode; children: ReactNode; testId: string }) {
   return (
-    <section className="rounded-md border border-border p-2 text-xs" data-testid={testId}>
+    <section className="rounded-md border border-border p-2 text-sm" data-testid={testId}>
       <h4 className="mb-1.5 flex items-center gap-1 font-semibold">{icon}{title}</h4>
       {children}
     </section>
@@ -73,7 +88,7 @@ export function DataReportNotice({ report }: { report: NonNullable<Structured['d
   const { t } = useTranslation();
   const language = useAppLanguage();
   return (
-    <section className="rounded-md border border-sand/60 bg-sand/10 p-2 text-xs" data-testid="data-report-notice" data-category={report.category}>
+    <section className="rounded-md border border-sand/60 bg-sand/10 p-2 text-sm" data-testid="data-report-notice" data-category={report.category}>
       <h4 className="mb-1 flex items-center gap-1 font-semibold"><Database aria-hidden="true" className="size-3.5" />{report.label[language]}</h4>
       <p>{t('assistant.dataReport.why', { reason: report.reason[language] })}</p>
       {report.sufficient ? (
@@ -104,7 +119,7 @@ export function WebNotice({ notice }: { notice: NonNullable<Structured['web_noti
   const { t } = useTranslation();
   const language = useAppLanguage();
   return (
-    <p className="flex items-start gap-1 rounded-md border border-border bg-muted/40 p-2 text-xs" data-testid="web-notice" data-web={notice.web_search}>
+    <p className="flex items-start gap-1 rounded-md border border-border bg-muted/40 p-2 text-sm" data-testid="web-notice" data-web={notice.web_search}>
       <AlertTriangle aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
       <span>
         {t(`assistant.webNotice.${notice.web_search}`)}{' '}
@@ -124,6 +139,7 @@ export function StructuredParts({ structured, messageId, known }: { structured: 
   const { t } = useTranslation();
   const language = useAppLanguage();
   const to = usePreservedSearch();
+  const sourcesShown = useContext(SourcesShown);
   const { recommendations, drivers, evidence_points: points, hypotheses, assumptions, conflicts, withheld, studies } = structured;
   const withheldCount = withheld ? Object.values(withheld).reduce((a, b) => a + b, 0) : 0;
   return (
@@ -208,53 +224,12 @@ export function StructuredParts({ structured, messageId, known }: { structured: 
         </Section>
       ) : null))}
       {withheldCount > 0 ? (
-        <p className="flex items-start gap-1 text-xs text-muted-foreground" data-testid="reply-withheld">
+        <p className="flex items-start gap-1 text-sm text-muted-foreground" data-testid="reply-withheld">
           <AlertTriangle aria-hidden="true" className="mt-0.5 size-3 shrink-0" />{t('assistant.withheld', { count: withheldCount })}
         </p>
       ) : null}
-      {structured.method ? <MethodSummary method={structured.method} /> : null}
-    </div>
-  );
-}
-
-/** The five answer modes as a wrapping radio group (arrow keys move the choice). */
-export function ModeSelector({ value, onChange, compact = false }: {
-  value: AssistantMode;
-  onChange: (mode: AssistantMode) => void;
-  /** The mode's one-line description is read by screen readers only (Talk). */
-  compact?: boolean;
-}) {
-  const { t } = useTranslation();
-  const refs = useRef<(HTMLButtonElement | null)[]>([]);
-  const hintId = useId();
-  const index = ASSISTANT_MODES.indexOf(value);
-  const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    const rtl = getComputedStyle(event.currentTarget).direction === 'rtl';
-    let next = index;
-    if (event.key === (rtl ? 'ArrowLeft' : 'ArrowRight') || event.key === 'ArrowDown') next = (index + 1) % ASSISTANT_MODES.length;
-    else if (event.key === (rtl ? 'ArrowRight' : 'ArrowLeft') || event.key === 'ArrowUp') next = (index - 1 + ASSISTANT_MODES.length) % ASSISTANT_MODES.length;
-    else if (event.key === 'Home') next = 0;
-    else if (event.key === 'End') next = ASSISTANT_MODES.length - 1;
-    else return;
-    event.preventDefault();
-    const mode = ASSISTANT_MODES[next];
-    if (mode) onChange(mode);
-    refs.current[next]?.focus();
-  };
-  return (
-    <div className="flex flex-col gap-1">
-      <div role="radiogroup" aria-label={t('assistant.mode.label')} aria-describedby={hintId} data-testid="assistant-mode"
-        className="flex flex-wrap gap-1">
-        {ASSISTANT_MODES.map((mode, i) => (
-          <button key={mode} ref={(el) => { refs.current[i] = el; }} type="button" role="radio" aria-checked={mode === value}
-            tabIndex={mode === value ? 0 : -1} data-value={mode} onClick={() => onChange(mode)} onKeyDown={onKeyDown}
-            className={cn('min-h-9 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
-              mode === value ? 'border-primary bg-primary text-primary-foreground' : 'border-border-strong/60 bg-card hover:bg-muted')}>
-            {t(`assistant.mode.${mode}`)}
-          </button>
-        ))}
-      </div>
-      <p id={hintId} className={cn('text-xs text-muted-foreground', compact && 'sr-only')} data-testid="assistant-mode-hint">{t(`assistant.modeHint.${value}`)}</p>
+      {/* How the answer was made (steps, providers, searches): with the sources, on request. */}
+      {structured.method && sourcesShown ? <MethodSummary method={structured.method} /> : null}
     </div>
   );
 }

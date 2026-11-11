@@ -51,12 +51,12 @@ booklet (design-stage edition).
 >   service is unavailable;
 > - real-time voice (LiveKit Agents) is wired but **not configured or run**: no LiveKit
 >   project, speech models or avatar provider exist, and the browser's LiveKit client is not
->   installed. Talk to Al Mulhim therefore uses push-to-talk with a labelled **static**
->   portrait; nothing claims lip synchronisation ([`docs/avatar-providers.md`](docs/avatar-providers.md));
+>   installed. Voice is therefore push-to-talk, from the microphone in the conversation's
+>   message box, with a labelled **static** portrait; nothing claims lip synchronisation
+>   ([`docs/avatar-providers.md`](docs/avatar-providers.md));
 > - official statistics: a curated reference pack (346 records, checked to 2026-09-27) is
 >   loaded; the full NCSI files still need a signed-in download by the team;
-> - Google/Microsoft sign-in and e-mail are built but not configured; **no SMS provider
->   has been selected**, so phone registration is shown as unavailable;
+> - sign-in is by username and password only; e-mail (used for alerts) is not configured;
 > - images: the two persona portraits are generated images supplied by the owner (fictional
 >   and labelled). The rights to Ilham's image are **still to be confirmed**. The entrance is
 >   a code-drawn 2D scene, not a 3D or video asset. The landscape set is still the booklet
@@ -153,7 +153,7 @@ Copy-Item backend\.env.example backend\.env
 | AI answers | `OSRIP_ASSISTANT_PROVIDER` and that provider's key and model, e.g. `OSRIP_DEEPSEEK_API_KEY`, `OSRIP_DEEPSEEK_MODEL`, `OSRIP_DEEPSEEK_BILLING_ACKNOWLEDGED=true` |
 | Web research | `OSRIP_RESEARCH_PROVIDER` (`deepseek`, `brave`, ...), `OSRIP_RESEARCH_FETCH_PROVIDER`, limits and `OSRIP_RESEARCH_AUTO_SAVE` |
 | Voice | `OSRIP_SPEECH_PROVIDER`, `OSRIP_SPEECH_KEY`, `OSRIP_SPEECH_REGION` |
-| Sign-in and e-mail | `OSRIP_GOOGLE_CLIENT_ID/SECRET`, `OSRIP_MICROSOFT_CLIENT_ID/SECRET`, `OSRIP_EMAIL_BACKEND`, SMTP settings |
+| E-mail (alerts) | `OSRIP_EMAIL_BACKEND`, SMTP settings |
 | Scheduled reports and data updates | `OSRIP_SCHEDULED_REPORTS_ENABLED` |
 
 The frontend needs no secrets: `frontend/.env` may set only public build options
@@ -223,8 +223,8 @@ Navigation:
 - Sectors: Electricity, Water, Food Security, Trade (one row of sector links on each, with
   its own remembered selection);
 - Analyse: Map, Studies, Scenarios, Sources;
-- Assistant and outputs: Al Mulhim (and Talk to Al Mulhim), the Analysis workspace, Reports,
-  Research library;
+- Assistant and outputs: Al Mulhim (one conversation, with its history; the old `/talk` address
+  opens it), the Analysis workspace, Reports, Research library;
 - Account;
 - Data Management, Users and roles, and Service health (authorized users only).
 
@@ -238,15 +238,16 @@ next.
 
 Accounts:
 
-- create an account with an e-mail address **or** a mobile number (Oman +968 by
-  default), with neither required;
-- operators can create a standard account identified by a **username** only
-  (`python -m app.cli ensure-user --username NAME`), with a temporary password that must
-  be changed at first sign-in; nothing else works until it is;
-- sign in with a username or e-mail address and password, an e-mail link, an SMS code, or
-  Google/Microsoft when configured; change the password on the Account page;
-- recover a password by e-mail;
-- add a verified phone or e-mail address to an existing account (never merged).
+- sign in with a **username and a password** only; registration asks for a username
+  (1-10 Arabic or English letters and digits), a password and the password again, and
+  gives an ordinary (viewer) account with a recovery code shown once;
+- a forgotten password is recovered with that code, or an administrator resets it to a
+  temporary one; a username alone never resets anything;
+- operators can create a standard account (`python -m app.cli ensure-user --username NAME`),
+  with a temporary password that must be changed at first sign-in;
+- e-mail, e-mail link, SMS, WhatsApp, Google and Microsoft sign-in are retired (their
+  endpoints answer 410). Older accounts keep their records; an administrator gives an
+  account without a username one on the Users page, and longer older usernames still work.
 
 Roles (booklet 3.9): public viewer (no account), `viewer`, `analyst`, `data_manager`,
 `administrator`. Approving and publishing need explicit per-user grants

@@ -10,7 +10,8 @@ A reply is accepted only if
   the evidence value to the digits shown;
 * every ISO date (2026-09-27) appears in the cited evidence (a period, a source's access
   date, a publication date, a date written in a cited text).
-Otherwise the reply is withheld and the reader sees the evidence instead. This does
+Otherwise the sentences that fail are left out (``keep_supported``) and the reader is told
+that some figures were omitted; the reply is withheld only when too little is left. This does
 not prove the wording is correct; it prevents invented or unsupported figures.
 """
 
@@ -323,6 +324,96 @@ def validate(text: str, citations: list[str], ledger_items: list[dict[str, Any]]
     if uncited:
         problems.append(f"numbers without an inline citation: {', '.join(uncited[:5])}")
     return Verdict(not problems, tuple(problems))
+
+
+# ------------------------------------------------------------------ partly supported replies
+
+# The start of a list item, heading or quotation, kept with its line when a sentence goes.
+_LINE_PREFIX = re.compile(r"^(\s*(?:[-*+]|\d{1,2}[.)]|#{1,6}|>)\s+)")
+_TABLE_ROW = re.compile(r"^\s*\|.*\|\s*$")
+_TABLE_RULE = re.compile(r"^\s*\|[\s:|-]+\|\s*$")
+_SENTENCE_GAP = re.compile(r"(?<=[.!?؟])(\s+)")
+_MARKER_WITH_SPACE = re.compile(r"[ \t]*\[(E\d+)\]")
+
+
+@dataclass(frozen=True, slots=True)
+class Partial:
+    """A reply with its unsupported sentences left out; ``omitted`` counts them."""
+
+    text: str
+    omitted: int
+
+
+def keep_supported(text: str, citations: list[str], ledger_items: list[dict[str, Any]]) -> Partial:
+    """The reply without the sentences (and table rows) that fail ``validate``: a figure that is
+    not in the cited evidence or not cited next to the claim, or a date the evidence does not
+    contain. A marker naming no evidence is removed, since it cites nothing. Nothing is reworded
+    and no figure is added, so what remains passes ``validate`` on its own; sentences without
+    figures (explanation, context, caveats) are kept."""
+    ledger = {i["id"]: i for i in ledger_items}
+    text = _MARKER_WITH_SPACE.sub(lambda m: m.group(0) if m.group(1) in ledger else "", text)
+    cited = list(dict.fromkeys([*(c for c in citations if c in ledger), *inline_markers(text)]))
+
+    def supported(sentence: str, paragraph_ids: list[str]) -> bool:
+        # As in ``validate``: a sentence without its own marker is covered by its paragraph's.
+        own = inline_markers(sentence)
+        probe = (
+            sentence
+            if own or not paragraph_ids
+            else sentence + "".join(f" [{i}]" for i in paragraph_ids)
+        )
+        return validate(probe, cited, ledger_items).ok
+
+    lines: list[str] = []
+    omitted = 0
+    for line in text.split("\n"):
+        if not line.strip() or _TABLE_RULE.match(line):
+            lines.append(line)
+            continue
+        paragraph_ids = inline_markers(line)
+        if _TABLE_ROW.match(line):
+            if supported(line, paragraph_ids):
+                lines.append(line)
+            else:
+                omitted += 1
+            continue
+        prefix_match = _LINE_PREFIX.match(line)
+        prefix = prefix_match.group(1) if prefix_match else ""
+        parts = _SENTENCE_GAP.split(line[len(prefix) :])
+        kept = []
+        for sentence, gap in zip(parts[0::2], [*parts[1::2], ""], strict=True):
+            if supported(sentence, paragraph_ids):
+                kept.append(sentence + gap)
+            else:
+                omitted += 1
+        if kept:
+            lines.append(prefix + "".join(kept).rstrip())
+    return Partial(_tidy(lines), omitted)
+
+
+def _tidy(lines: list[str]) -> str:
+    """Drops tables left with a header only, and runs of blank lines."""
+    out: list[str] = []
+    i = 0
+    while i < len(lines):
+        if _TABLE_ROW.match(lines[i]):
+            j = i
+            while j < len(lines) and _TABLE_ROW.match(lines[j]):
+                j += 1
+            block = lines[i:j]
+            if not (len(block) == 2 and _TABLE_RULE.match(block[1])):
+                out.extend(block)
+            i = j
+            continue
+        out.append(lines[i])
+        i += 1
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(out)).strip()
+
+
+def substantive(text: str) -> bool:
+    """Enough of an answer left to be worth showing: a few words beyond headings and markers."""
+    body = "\n".join(line for line in text.split("\n") if not line.lstrip().startswith("#"))
+    return sum(ch.isalpha() for ch in _MARKER.sub(" ", body)) >= 40
 
 
 # ------------------------------------------------------------------ structured parts

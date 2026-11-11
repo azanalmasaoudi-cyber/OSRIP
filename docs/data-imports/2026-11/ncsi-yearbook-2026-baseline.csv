@@ -1,0 +1,45 @@
+indicator_code,area_code,period_start,period_end,frequency,period_complete,flow,unit_code,value,value_operator,quality_status,revision_status,source_locator,note
+ELEC_GROSS_GENERATION,OM,2021-01-01,2021-12-31,annual,true,,GWh,40992.3,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Electricity production
+ELEC_DISTRIBUTION,OM,2021-01-01,2021-12-31,annual,true,,GWh,35661.1,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Electricity distribution
+ELEC_CONSUMPTION,OM,2021-01-01,2021-12-31,annual,true,,GWh,35661.1,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Net actual electricity consumption
+ELEC_CONSUMPTION_RESIDENTIAL,OM,2021-01-01,2021-12-31,annual,true,,GWh,15923.1,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Residential electricity consumption
+ELEC_CONSUMPTION_COMMERCIAL,OM,2021-01-01,2021-12-31,annual,true,,GWh,8081.7,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Commercial electricity consumption
+ELEC_CONSUMPTION_INDUSTRIAL,OM,2021-01-01,2021-12-31,annual,true,,GWh,6282.3,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Industrial electricity consumption
+ELEC_CONNECTIONS,OM,2021-01-01,2021-12-31,annual,true,,thousand_connections,1219,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Electricity connections
+ELEC_INSTALLED_CAPACITY,OM,2021-01-01,2021-12-31,annual,true,,MW,11732.9,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Installed generation capacity
+WATER_PRODUCTION,OM,2021-01-01,2021-12-31,annual,true,,million_m3,487.7,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Water production
+WATER_DISTRIBUTION,OM,2021-01-01,2021-12-31,annual,true,,million_m3,303.8,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Water distribution
+WATER_CONNECTIONS,OM,2021-01-01,2021-12-31,annual,true,,thousand_connections,752.2,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Water connections
+AGRI_CULTIVATED_AREA,OM,2021-01-01,2021-12-31,annual,true,,feddan,266000,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Cultivated area estimate
+AGRI_CROP_PRODUCTION,OM,2021-01-01,2021-12-31,annual,true,,thousand_tonnes,3170,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Crop production estimate
+LIVESTOCK_CATTLE,OM,2021-01-01,2021-12-31,annual,true,,thousand_head,421,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Cattle estimate
+LIVESTOCK_CAMELS,OM,2021-01-01,2021-12-31,annual,true,,thousand_head,285,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Camel estimate
+LIVESTOCK_SHEEP,OM,2021-01-01,2021-12-31,annual,true,,thousand_head,642,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Sheep estimate
+LIVESTOCK_GOATS,OM,2021-01-01,2021-12-31,annual,true,,thousand_head,2443,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Goat estimate
+FISH_LANDINGS_TRADITIONAL,OM,2021-01-01,2021-12-31,annual,true,,tonne,869968,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Artisanal fishing
+FISH_LANDINGS_TRADITIONAL,OM,2022-01-01,2022-12-31,annual,true,,tonne,688024,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Artisanal fishing
+FISH_LANDINGS_TRADITIONAL,OM,2023-01-01,2023-12-31,annual,true,,tonne,706601,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Artisanal fishing
+FISH_LANDINGS_TRADITIONAL,OM,2024-01-01,2024-12-31,annual,true,,tonne,692973,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Artisanal fishing
+FISH_LANDINGS_TRADITIONAL,OM,2025-01-01,2025-12-31,annual,true,,tonne,715745,,accepted,provisional,"Statistical Year Book 2026, Issue 54","NCSI Statistical Year Book 2026: Artisanal fishing (2025 provisional) Differs from the published 891067 tonne (Monthly Statistical Bulletin, September 2026 (S01))."
+FISH_LANDINGS_COMMERCIAL,OM,2021-01-01,2021-12-31,annual,true,,tonne,45744,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Commercial fishing
+FISH_LANDINGS_COMMERCIAL,OM,2022-01-01,2022-12-31,annual,true,,tonne,51803,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Commercial fishing
+FISH_LANDINGS_COMMERCIAL,OM,2023-01-01,2023-12-31,annual,true,,tonne,76480,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Commercial fishing
+FISH_LANDINGS_COMMERCIAL,OM,2024-01-01,2024-12-31,annual,true,,tonne,68470,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Commercial fishing
+FISH_LANDINGS_COMMERCIAL,OM,2025-01-01,2025-12-31,annual,true,,tonne,74461,,accepted,provisional,"Statistical Year Book 2026, Issue 54","NCSI Statistical Year Book 2026: Commercial fishing (2025 provisional) Differs from the published 81104 tonne (Monthly Statistical Bulletin, September 2026 (S01))."
+FISH_LANDINGS_COASTAL,OM,2021-01-01,2021-12-31,annual,true,,tonne,4668,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Coastal fishing
+FISH_LANDINGS_COASTAL,OM,2022-01-01,2022-12-31,annual,true,,tonne,5062,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Coastal fishing
+FISH_LANDINGS_COASTAL,OM,2023-01-01,2023-12-31,annual,true,,tonne,5600,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Coastal fishing
+FISH_LANDINGS_COASTAL,OM,2024-01-01,2024-12-31,annual,true,,tonne,8326,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Coastal fishing
+FISH_LANDINGS_COASTAL,OM,2025-01-01,2025-12-31,annual,true,,tonne,8409,,accepted,provisional,"Statistical Year Book 2026, Issue 54","NCSI Statistical Year Book 2026: Coastal fishing (2025 provisional) Differs from the published 9678 tonne (Monthly Statistical Bulletin, September 2026 (S01))."
+TRADE_MERCH_IMPORTS,OM,2021-01-01,2021-12-31,annual,true,import,million_OMR,11888,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Merchandise imports (recorded)
+TRADE_MERCH_EXPORTS,OM,2021-01-01,2021-12-31,annual,true,,million_OMR,16569,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Merchandise exports
+TRADE_NON_OIL_EXPORTS,OM,2021-01-01,2021-12-31,annual,true,domestic_export,million_OMR,5219,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Non-oil merchandise exports
+TRADE_NON_OIL_EXPORTS,OM,2022-01-01,2022-12-31,annual,true,domestic_export,million_OMR,6411,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Non-oil merchandise exports
+TRADE_NON_OIL_EXPORTS,OM,2023-01-01,2023-12-31,annual,true,domestic_export,million_OMR,5890,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Non-oil merchandise exports
+TRADE_NON_OIL_EXPORTS,OM,2024-01-01,2024-12-31,annual,true,domestic_export,million_OMR,6232,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Non-oil merchandise exports
+TRADE_REEXPORTS,OM,2021-01-01,2021-12-31,annual,true,re_export,million_OMR,1318,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Re-exports
+TRADE_REEXPORTS,OM,2022-01-01,2022-12-31,annual,true,re_export,million_OMR,1318,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Re-exports
+TRADE_REEXPORTS,OM,2023-01-01,2023-12-31,annual,true,re_export,million_OMR,1487,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Re-exports
+TRADE_REEXPORTS,OM,2024-01-01,2024-12-31,annual,true,re_export,million_OMR,1708,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Re-exports
+TRADE_BALANCE_REPORTED,OM,2021-01-01,2021-12-31,annual,true,,million_OMR,4680,,accepted,reported,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Published trade balance
+TRADE_BALANCE_REPORTED,OM,2025-01-01,2025-12-31,annual,true,,million_OMR,6103,,accepted,provisional,"Statistical Year Book 2026, Issue 54",NCSI Statistical Year Book 2026: Published trade balance (2025 provisional)

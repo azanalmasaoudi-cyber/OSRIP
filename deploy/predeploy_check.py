@@ -154,10 +154,36 @@ def check_env(env: dict[str, str], r: Report) -> None:
     r.check(sms_provider != "test", "OSRIP_SMS_PROVIDER is not the scripted test provider")
     if env.get("OSRIP_SMS_ENABLED", "false").lower() in {"1", "true", "yes"}:
         r.check(
-            bool(sms_provider) and bool(env.get("OSRIP_SMS_PROVIDER_API_KEY")),
-            "SMS is enabled with a provider and its credentials (otherwise phone sign-in shows 'unavailable')",
+            sms_provider in {"twilio_verify", "whatsapp"},
+            "SMS is enabled with a provider (twilio_verify or whatsapp; otherwise phone sign-in shows 'unavailable')",
             warn=True,
         )
+        if sms_provider == "whatsapp":
+            mode = env.get("OSRIP_WHATSAPP_MODE", "test")
+            r.check(
+                bool(env.get("OSRIP_WHATSAPP_ACCESS_TOKEN")) and bool(env.get("OSRIP_WHATSAPP_PHONE_NUMBER_ID")),
+                "WhatsApp: access token and phone number ID are set",
+                warn=True,
+            )
+            r.check(
+                mode == "test",
+                "OSRIP_WHATSAPP_MODE is test (production sends to anyone and Meta charges each delivered code)",
+                warn=True,
+            )
+            if mode == "test":
+                r.check(
+                    bool(env.get("OSRIP_WHATSAPP_TEST_RECIPIENTS", "").strip()),
+                    "WhatsApp test mode: OSRIP_WHATSAPP_TEST_RECIPIENTS lists the approved numbers",
+                    warn=True,
+                )
+        if sms_provider == "twilio_verify":
+            key = env.get("OSRIP_TWILIO_API_KEY_SID") and env.get("OSRIP_TWILIO_API_KEY_SECRET")
+            token = env.get("OSRIP_TWILIO_ACCOUNT_SID") and env.get("OSRIP_TWILIO_AUTH_TOKEN")
+            r.check(
+                bool(env.get("OSRIP_TWILIO_VERIFY_SERVICE_SID")) and bool(key or token),
+                "Twilio Verify: service SID and an API key (or account SID and auth token) are set",
+                warn=True,
+            )
     for name in ("GOOGLE", "MICROSOFT"):
         cid, secret = env.get(f"OSRIP_{name}_CLIENT_ID", ""), env.get(f"OSRIP_{name}_CLIENT_SECRET", "")
         r.check(
@@ -174,19 +200,37 @@ def check_env(env: dict[str, str], r: Report) -> None:
         r.check(False, "web search has no OSRIP_RESEARCH_API_KEY: the assistant will say web search is unavailable", warn=True)
     if not env.get("OSRIP_SPEECH_KEY") or not (env.get("OSRIP_SPEECH_REGION") or env.get("OSRIP_SPEECH_ENDPOINT")):
         r.check(False, "server speech is not configured: voice falls back to the browser or text only", warn=True)
-    # Anything named VITE_* is compiled into the public JavaScript bundle.
-    leaky = [k for k in env if k.startswith("VITE_") and re.search(r"KEY|SECRET|TOKEN|PASSWORD", k)]
+    # Anything named VITE_* is compiled into the public JavaScript bundle. The one exception is
+    # the MapTiler browser key, public by design and protected by its allowed origins.
+    browser_keys = {"VITE_MAPTILER_KEY"}
+    leaky = [
+        k
+        for k in env
+        if k.startswith("VITE_")
+        and k not in browser_keys
+        and re.search(r"KEY|SECRET|TOKEN|PASSWORD", k)
+    ]
     r.check(
         not leaky,
         "no key, secret, token or password in a browser-exposed VITE_ variable"
         + (f" ({', '.join(leaky)})" if leaky else ""),
     )
-    map_url = env.get("VITE_MAP_STYLE_URL", "")
-    r.check(map_url == "none" or map_url.startswith("https://"), "VITE_MAP_STYLE_URL is https:// or 'none'")
-    if map_url.startswith("https://") and "openfreemap.org" not in map_url:
+    if env.get("VITE_MAPTILER_KEY"):
         r.check(
             False,
-            "the Caddyfile Content-Security-Policy allows only tiles.openfreemap.org; add the new map host",
+            "VITE_MAPTILER_KEY is visible to every visitor: restrict it to OSRIP_DOMAIN under "
+            "'Allowed HTTP origins' in the MapTiler account (docs/MAP.md)",
+            warn=True,
+        )
+    map_url = env.get("VITE_MAP_STYLE_URL", "")
+    r.check(map_url == "none" or map_url.startswith("https://"), "VITE_MAP_STYLE_URL is https:// or 'none'")
+    if map_url.startswith("https://") and not any(
+        host in map_url for host in ("openfreemap.org", "api.maptiler.com")
+    ):
+        r.check(
+            False,
+            "the Caddyfile Content-Security-Policy allows only OpenFreeMap, MapTiler and the open "
+            "Terrain Tiles; add the new map host",
             warn=True,
         )
 

@@ -138,19 +138,18 @@ test('Arabic, right to left, light theme and a phone screen', async ({ page }) =
 
 test('voice: the persona voice is checked and tested, and audio can be stopped', async ({ page }) => {
   await page.goto('/assistant');
-  await page.getByTestId('chat-header').getByTestId('persona-option-ilham').click();
   await openChatSettings(page);
   await page.getByTestId('voice-details').locator('summary').click();
   const voice = page.getByTestId('voice-panel');
   await expect(voice).toHaveAttribute('data-configured', 'true');
-  await expect(voice.getByTestId('voice-name-ar')).toHaveText('ar-OM-AyshaNeural');
-  await expect(voice.getByTestId('voice-name-en')).toHaveText('en-GB-SoniaNeural');
+  await expect(voice.getByTestId('voice-name-ar')).toHaveText('ar-OM-AbdullahNeural');
+  await expect(voice.getByTestId('voice-name-en')).toHaveText('en-GB-RyanNeural');
   await expect(voice.getByTestId('voice-verified')).toHaveCount(2);
   await voice.getByTestId('voice-test-language').getByRole('radio', { name: 'العربية' }).click();
   const tested = page.waitForResponse((r) => r.url().endsWith('/api/v1/assistant/voice/test'));
   await voice.getByTestId('voice-test').click();
   const response = await tested;
-  expect(response.headers()['x-voice']).toBe('ar-OM-AyshaNeural');
+  expect(response.headers()['x-voice']).toBe('ar-OM-AbdullahNeural');
   // The words spoken are shown as a transcript beside the player.
   await expect(voice.getByTestId('voice-transcript')).toContainText('هذا اختبار للصوت');
   await expect(voice.getByTestId('voice-test-state')).toHaveAttribute('data-state', /playing|idle/);
@@ -159,7 +158,6 @@ test('voice: the persona voice is checked and tested, and audio can be stopped',
   await expect(voice.getByTestId('voice-test-state')).toHaveAttribute('data-state', 'idle');
   await expect(page.getByTestId('assistant-status-bar')).toHaveAttribute('data-state', 'idle');
   await closeDrawer(page);
-  await page.getByTestId('chat-header').getByTestId('persona-option-mulhim').click();
 });
 
 test('a suggested question for the chosen sector is asked in the conversation, without a chart', async ({ page }) => {

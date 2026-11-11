@@ -1,0 +1,6 @@
+indicator_code,area_code,period_start,period_end,frequency,period_complete,flow,unit_code,value,value_operator,quality_status,revision_status,source_locator,note
+TRADE_NEW_COMMERCIAL_REGISTRATIONS,OM-SJ-03,2026-01-01,2026-03-31,quarterly,true,,registration,208,,accepted,reported,Ministry announcement (MOCIIPssh),"Quarterly, NOT full-year 2026; do not compare directly with annual figures"
+TRADE_NEW_COMMERCIAL_REGISTRATIONS,OM-SJ-01,2026-01-01,2026-03-31,quarterly,true,,registration,114,,accepted,reported,Ministry announcement (MOCIIPssh),"Quarterly, NOT full-year 2026; do not compare directly with annual figures"
+TRADE_NEW_COMMERCIAL_REGISTRATIONS,OM-SJ-05,2026-01-01,2026-03-31,quarterly,true,,registration,56,,accepted,reported,Ministry announcement (MOCIIPssh),"Quarterly, NOT full-year 2026; do not compare directly with annual figures"
+TRADE_NEW_COMMERCIAL_REGISTRATIONS,OM-SJ-04,2026-01-01,2026-03-31,quarterly,true,,registration,48,,accepted,reported,Ministry announcement (MOCIIPssh),"Quarterly, NOT full-year 2026; do not compare directly with annual figures"
+TRADE_NEW_COMMERCIAL_REGISTRATIONS,OM-SJ-02,2026-01-01,2026-03-31,quarterly,true,,registration,25,,accepted,reported,Ministry announcement (MOCIIPssh),"Quarterly, NOT full-year 2026; do not compare directly with annual figures"

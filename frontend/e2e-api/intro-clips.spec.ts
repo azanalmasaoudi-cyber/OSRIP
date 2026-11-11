@@ -3,12 +3,12 @@ import { expect, test, type Page } from '@playwright/test';
 import { closeDrawer, openChatSettings } from './chat';
 
 // The recorded introductions (Canva AI Voice clips listed in public/audio/intro/manifest.json):
-// hidden while no clip is listed; with clips, played only after a click, stopped by Stop and
-// by choosing the other persona, with a volume control and clear loading errors. On the AI
+// hidden while no clip is listed; with a clip, played only after a click, stopped by Stop,
+// with a volume control and clear loading errors (Al Mulhim is the only persona). On the AI
 // Assistant page they are in the conversation settings (Voice). The audio here is a generated
 // test tone served in place of the clips, not a voice and not shipped.
 
-const SCRIPTS = { mulhim: 'السلام عليكم، أنا مُلهم', ilham: 'مرحبًا بك، أنا إلهام' };
+const SCRIPTS = { mulhim: 'السلام عليكم، أنا مُلهم' };
 
 /** A short WAV tone (PCM 16-bit mono) as bytes. */
 function tone(seconds: number, hz: number): Buffer {
@@ -28,12 +28,11 @@ async function serveClips(page: Page, { missingFile = false } = {}): Promise<voi
     contentType: 'application/json',
     body: JSON.stringify({ clips: {
       mulhim: { ar: { src: 'mulhim-intro-ar.wav', transcript: SCRIPTS.mulhim } },
-      ilham: { ar: { src: 'ilham-intro-ar.wav', transcript: SCRIPTS.ilham } },
     } }),
   }));
   await page.route('**/audio/intro/*.wav', (route) => (missingFile
     ? route.fulfill({ status: 404, body: '' })
-    : route.fulfill({ contentType: 'audio/wav', body: tone(6, route.request().url().includes('ilham') ? 330 : 220) })));
+    : route.fulfill({ contentType: 'audio/wav', body: tone(6, 220) })));
   // Record what the page does with audio volume (the element is not in the document).
   await page.addInitScript(() => {
     const desc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'volume');
@@ -82,31 +81,6 @@ test('a listed clip plays only after a click, with stop, volume and transcript',
   await expect(player.getByTestId('intro-transcript')).toContainText(SCRIPTS.mulhim);
   // The volume is remembered for the next visit.
   expect(await page.evaluate(() => window.localStorage.getItem('osrip.intro.volume'))).toBe('70');
-});
-
-test('choosing the other persona stops the playing introduction', async ({ page }) => {
-  await serveClips(page);
-  await page.goto('/assistant?mode=synthetic');
-  const header = page.getByTestId('chat-header');
-  await header.getByTestId('persona-option-mulhim').click();
-  await openChatSettings(page);
-  await page.getByTestId('intro-play').click();
-  await expect(page.getByTestId('intro-player')).toHaveAttribute('data-state', 'playing');
-  // Switching in the conversation header (the settings drawer closed first).
-  await closeDrawer(page);
-  await header.getByTestId('persona-option-ilham').click();
-  await openChatSettings(page);
-  const player = page.getByTestId('intro-player');
-  await expect(player).toHaveAttribute('data-persona', 'ilham');
-  await expect(player).toHaveAttribute('data-state', 'idle'); // Al Mulhim's clip stopped
-  await expect(page.getByTestId('assistant-status-bar')).not.toHaveAttribute('data-state', 'speaking');
-  await page.getByTestId('intro-play').click();
-  await expect(player).toHaveAttribute('data-state', 'playing');
-  await player.getByTestId('intro-transcript-toggle').click();
-  await expect(player.getByTestId('intro-transcript')).toContainText(SCRIPTS.ilham);
-  await page.getByTestId('intro-stop').click();
-  await closeDrawer(page);
-  await header.getByTestId('persona-option-mulhim').click();
 });
 
 test('a clip that cannot be loaded says so and the page keeps working', async ({ page }) => {

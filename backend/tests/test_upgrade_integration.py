@@ -89,9 +89,9 @@ def test_temporary_password_must_be_changed_first(app) -> None:  # noqa: ANN001
     name = f"User{uuid.uuid4().hex[:6]}"
     _ensure(name)
     client = TestClient(app)
-    bad = client.post(f"{API}/auth/login", json={"email": name, "password": "wrong-password"})
+    bad = client.post(f"{API}/auth/login", json={"username": name, "password": "wrong-password"})
     assert bad.status_code == 401
-    r = client.post(f"{API}/auth/login", json={"email": name.upper(), "password": TEMP})
+    r = client.post(f"{API}/auth/login", json={"username": name.upper(), "password": TEMP})
     assert r.status_code == 200, r.text
     me = r.json()
     assert (
@@ -126,7 +126,8 @@ def test_temporary_password_must_be_changed_first(app) -> None:  # noqa: ANN001
     # The temporary password no longer works.
     other = TestClient(app)
     assert (
-        other.post(f"{API}/auth/login", json={"email": name, "password": TEMP}).status_code == 401
+        other.post(f"{API}/auth/login", json={"username": name, "password": TEMP}).status_code
+        == 401
     )
     assert client.post(f"{API}/auth/logout").status_code == 204
 

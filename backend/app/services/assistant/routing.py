@@ -2,7 +2,8 @@
 
 * A numerical question (a figure, quantity, rate, share, change or comparison) starts with
   OSRIP's approved data: web search is refused until the platform's data have been looked up
-  in this answer. The web may then fill a gap the data leave.
+  in this answer. The web may then fill a gap the data leave. Internet research (the Research
+  mode) is the exception: it searches the web first and uses OSRIP's data only to compare.
 * A question about recent events ("latest news", "this week", "now", ...) may use web research
   from the start, where web research is available.
 * One provider answers; a second only as a fallback after a failure, or for a cross-check the
@@ -100,6 +101,19 @@ _CHART = re.compile(
 )
 
 
+# Words that ask for the newest figures: cached searches and documents then count only while
+# they are recent (``research_latest_cache_hours``), so "latest" is checked against the source.
+_LATEST = re.compile(
+    r"\b(latest|newest|most recent|recent|current(ly)?|up[- ]to[- ]date|now|today|this (year|month))\b"
+    r"|أحدث|احدث|آخر|اخر|الأخير|الأخيرة|الحالي|الحالية|حالياً|حاليا|الآن|الان|اليوم|هذا العام|هذا الشهر",
+    re.IGNORECASE,
+)
+
+
+def asks_for_latest(question: str) -> bool:
+    return bool(question and _LATEST.search(question))
+
+
 def asks_for_chart(question: str) -> bool:
     """Charts appear only when the person asks for one."""
     return bool(question and _CHART.search(question))
@@ -111,3 +125,41 @@ def answer_mode(question: str, requested: str) -> str:
     if requested != "auto":
         return requested
     return next((mode for mode, pattern in _MODES if pattern.search(question)), "ask")
+
+
+# ------------------------------------------------------------------ the three user-facing modes
+#
+# Quick answer ("quick") and Deep internet research ("research") work from the live web only:
+# OSRIP's own datasets are not offered to the model (tools.tool_specs) nor run if asked for
+# (tools.run_tool), unless the question itself asks for the platform's data. Data analysis and
+# visualization ("analyze", with "ask", "compare" and "scenario" as its variants) works from
+# the published OSRIP data the person selected, and searches the web only when switched on.
+INTERNET_MODES = frozenset({"quick", "research"})
+DATA_MODES = frozenset({"ask", "analyze", "compare", "scenario"})
+
+# The question asks for OSRIP's own records ("in OSRIP's data", "بيانات المنصة").
+_PROJECT_DATA = re.compile(
+    r"\b(osrip(['’]s)? (own )?(data|datasets?|records|figures|observations)|"
+    r"(the )?platform(['’]s)? (own )?(data|datasets?|records|figures)|(our|internal|published) "
+    r"(osrip )?(data|datasets?|records)|in osrip|from osrip)\b"
+    r"|بيانات (المنصة|OSRIP|osrip)|سجلات (المنصة|OSRIP)|البيانات المنشورة في المنصة|من بيانات المنصة"
+    r"|البيانات الداخلية|في OSRIP|من OSRIP",
+    re.IGNORECASE,
+)
+
+# The question asks for a generated picture (an illustration, not a chart of figures).
+_IMAGE = re.compile(
+    r"\b(image|illustration|illustrate|picture|infographic|poster|artwork|visual concept|"
+    r"concept art|render)\b|صورة|رسم(ة)? توضيحي|رسما توضيحيا|إنفوجرافيك|انفوجرافيك|ملصق|لوحة",
+    re.IGNORECASE,
+)
+
+
+def asks_for_project_data(question: str) -> bool:
+    """The person asked for OSRIP's own data, which internet modes then also consult."""
+    return bool(question and _PROJECT_DATA.search(question))
+
+
+def asks_for_image(question: str) -> bool:
+    """A generated illustration is made only when the person asks for one."""
+    return bool(question and _IMAGE.search(question))

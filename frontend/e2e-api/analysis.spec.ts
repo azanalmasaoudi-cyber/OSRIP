@@ -14,7 +14,7 @@ const PASSWORD = process.env.OSRIP_E2E_PASSWORD ?? '';
 
 async function signIn(page: Page, email: string): Promise<void> {
   await page.goto('/sign-in');
-  await page.getByLabel('E-mail address').fill(email);
+  await page.getByLabel('Username').fill(email);
   await page.getByLabel('Password').fill(PASSWORD);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByTestId('signed-in-as')).toBeVisible();
@@ -114,7 +114,7 @@ test('the applied selection narrows the table, the downloads and the calculation
 });
 
 test('an analyst runs the rules, reviews a card and freezes a report', async ({ page }) => {
-  await signIn(page, 'analyst@e2e.invalid');
+  await signIn(page, 'e2eanalyst');
   await page.goto('/trade?mode=synthetic');
   await showResults(page, TRADE);
   await openReviews(page);
@@ -148,7 +148,7 @@ test('an analyst runs the rules, reviews a card and freezes a report', async ({ 
 });
 
 test('a viewer sees the cards but cannot run rules, review or save reports', async ({ page }) => {
-  await signIn(page, 'viewer@e2e.invalid');
+  await signIn(page, 'e2eviewer');
   await page.goto('/trade?mode=synthetic');
   await showResults(page, TRADE);
   await openReviews(page);

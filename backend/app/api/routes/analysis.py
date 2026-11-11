@@ -13,6 +13,7 @@ from app.api.deps import CurrentPrincipal, DbSession, require
 from app.core.errors import ApiError
 from app.domain.calculations import StockAssumption
 from app.domain.enums import DataMode, Frequency, Permission, Section
+from app.services import decision
 from app.services.analysis import runs
 from app.services.analysis.rules import RuleParameters
 from app.services.analysis.sections import AnalysisFilter, analyse
@@ -79,6 +80,19 @@ def section_analysis(section: Section, f: F, session: DbSession) -> dict[str, An
     """Public: transparent calculations over the published snapshot of one data mode."""
     with session.begin():
         return _payload(section, f, analyse(session, section, f))
+
+
+@router.get("/analysis/{section}/brief")
+def section_brief(
+    section: Section,
+    session: DbSession,
+    data_mode: DataMode = DataMode.VERIFIED_SOURCE,
+    dataset_version_id: uuid.UUID | None = None,
+) -> dict[str, Any]:
+    """Public: the decision brief for one axis, from published data only (no AI, no
+    estimates). Findings carry reference ids; sources are listed in ``provenance``."""
+    with session.begin():
+        return decision.brief(session, section, data_mode, dataset_version_id)
 
 
 @router.get("/analysis/{section}/export.csv")

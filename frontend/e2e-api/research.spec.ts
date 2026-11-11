@@ -12,7 +12,7 @@ const PASSWORD = process.env.OSRIP_E2E_PASSWORD ?? '';
 
 async function signIn(page: Page): Promise<void> {
   await page.goto('/sign-in');
-  await page.getByTestId('sign-in-form').getByLabel('E-mail address').fill('viewer@e2e.invalid');
+  await page.getByTestId('sign-in-form').getByLabel('Username').fill('e2eviewer');
   await page.getByTestId('sign-in-form').getByLabel('Password').fill(PASSWORD);
   await page.getByTestId('sign-in-form').getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByTestId('account-page')).toBeVisible();
@@ -25,22 +25,23 @@ test('Analyze mode shows checked recommendation cards, inline citations, and sav
   await openTools(page);
   const modes = page.getByTestId('assistant-mode');
   await expect(modes.getByRole('radio', { name: 'Automatic' })).toHaveAttribute('aria-checked', 'true');
-  await modes.getByRole('radio', { name: 'Analyze' }).click();
-  await expect(modes.getByRole('radio', { name: 'Analyze' })).toHaveAttribute('aria-checked', 'true');
+  await modes.getByRole('radio', { name: 'Data analysis' }).click();
+  await expect(modes.getByRole('radio', { name: 'Data analysis' })).toHaveAttribute('aria-checked', 'true');
   await expect(page.getByTestId('assistant-mode-hint')).toContainText('recommendation cards');
   await closeDrawer(page);
-  await expect(page.getByTestId('chat-mode-chip')).toContainText('Analyze');
+  await expect(page.getByTestId('chat-mode-chip')).toContainText('Data analysis');
   await page.getByTestId('assistant-input').fill('What do you recommend for electricity generation?');
   await page.getByTestId('assistant-send').click();
 
   const reply = page.getByTestId('assistant-message').last();
   await expect(reply).toHaveAttribute('data-status', 'answered');
-  await expect(reply.getByTestId('reply-mode')).toHaveText('Analyze');
+  await expect(reply.getByTestId('reply-mode')).toHaveText('Data analysis');
   await expect(reply.getByTestId('recommendation-card')).toHaveCount(1);
   await expect(reply).not.toContainText('25%'); // the invented saving was withheld by the server
   await expect(reply.getByTestId('reply-withheld')).toContainText('2');
   await expect(reply.getByTestId('reply-drivers')).toContainText('Hypothesis');
-  // An inline citation moves focus to the cited evidence.
+  // With the sources shown, an inline citation moves focus to the cited evidence.
+  await reply.getByTestId('toggle-sources').click();
   const chip = reply.getByTestId('assistant-text').getByTestId('citation-chip').first();
   const id = await chip.getAttribute('data-evidence');
   await chip.click();

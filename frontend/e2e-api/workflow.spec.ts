@@ -9,7 +9,7 @@ const PASSWORD = process.env.OSRIP_E2E_PASSWORD ?? '';
 
 async function signIn(page: Page, email: string): Promise<void> {
   await page.goto('/sign-in');
-  await page.getByLabel('E-mail address').fill(email);
+  await page.getByLabel('Username').fill(email);
   await page.getByLabel('Password').fill(PASSWORD);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByTestId('signed-in-as')).toBeVisible();
@@ -55,7 +55,7 @@ test('Arabic shows the same API values', async ({ page }) => {
 });
 
 test('a data manager uploads, maps, validates, reviews, approves and publishes a CSV', async ({ page }) => {
-  await signIn(page, 'manager@e2e.invalid');
+  await signIn(page, 'e2emanager');
   await page.goto('/data-management');
 
   // Register a synthetic source.
@@ -112,7 +112,7 @@ test('a data manager uploads, maps, validates, reviews, approves and publishes a
 });
 
 test('a viewer is refused by the server even when calling the API directly', async ({ page }) => {
-  await signIn(page, 'viewer@e2e.invalid');
+  await signIn(page, 'e2eviewer');
   await page.goto('/data-management');
   await expect(page.locator('[data-state="restricted"]')).toBeVisible();
 

@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useAreaComparison, type CompareRow } from '@/api/library';
+import { useAreaComparison, type AreaComparison, type CompareRow } from '@/api/library';
 import { StatePanel } from '@/components/common/StatePanel';
 import { Badge } from '@/components/ui/badge';
 import { SelectField } from '@/components/ui/select';
-import type { DataMode } from '@/domain/types';
+import { INDICATOR_SECTIONS, type DataMode, type IndicatorSection } from '@/domain/types';
 import { FLOW_KEY } from '@/i18n/keys';
 import { formatDecimal, formatPeriod } from '@/lib/format';
 import { useAppLanguage } from '@/lib/useAppLanguage';
@@ -18,22 +18,41 @@ const FLOWS = ['import', 'domestic_export', 're_export'] as const;
  * comparison (same unit and period length, or flagged as not comparable). Missing values
  * stay missing; national totals and combined figures are shown apart and never divided.
  */
-export function GovernorateComparison({ mode, indicators }: {
+// The four axes, then population (context for per-person comparisons, not an axis).
+const AXES = INDICATOR_SECTIONS;
+type Axis = IndicatorSection;
+
+export function GovernorateComparison({ mode, indicators: all, onResult, level = 'governorate' }: {
   mode: DataMode;
-  indicators: readonly { code: string; name_en: string; name_ar: string; frequency: string }[];
+  indicators: readonly { code: string; name_en: string; name_ar: string; frequency: string; section?: Axis }[];
+  /** Governorates or wilayats: each area's own published values only, never shares of a total. */
+  level?: 'governorate' | 'wilayat';
+  /** The comparison shown, for the map's "compared indicator" shading. */
+  onResult?: (result: AreaComparison | undefined) => void;
 }) {
   const { t } = useTranslation();
   const language = useAppLanguage();
+  const [axis, setAxis] = useState<Axis | ''>('');
+  const indicators = axis ? all.filter((i) => i.section === axis) : all;
   const [picked, setPicked] = useState<string | null>(null);
   const [period, setPeriod] = useState('');
   const [flow, setFlow] = useState<string | null>(null);
   const chosen = indicators.find((i) => i.code === picked) ?? indicators[0];
   const indicator = chosen?.code ?? null;
-  const comparison = useAreaComparison(mode, indicator, period || null, flow, chosen?.frequency);
+  const comparison = useAreaComparison(mode, indicator, period || null, flow, chosen?.frequency, level);
+  useEffect(() => {
+    onResult?.(comparison.data);
+  }, [comparison.data, onResult]);
+  const axisSelect = (
+    <SelectField className="w-full sm:w-56" label={t('omanMap.axis')} value={axis} data-testid="compare-axis"
+      onValueChange={(v) => { setAxis(v as Axis | ''); setPicked(null); setPeriod(''); setFlow(null); }}
+      options={[{ value: '', label: t('omanMap.allAxes') }, ...AXES.map((a) => ({ value: a, label: t(`omanMap.axes.${a}`) }))]} />
+  );
   if (!indicators.length) {
     return (
-      <div data-testid="governorate-comparison">
-        <p className="text-sm text-muted-foreground" role="status">{t('compare.noData')}</p>
+      <div className="flex flex-col gap-3" data-testid="governorate-comparison" data-level={level}>
+        {all.length ? <div className="flex flex-wrap items-end gap-3">{axisSelect}</div> : null}
+        <p className="text-sm text-muted-foreground" role="status">{level === 'wilayat' ? t('omanMap.noWilayatData') : t('compare.noData')}</p>
       </div>
     );
   }
@@ -45,9 +64,10 @@ export function GovernorateComparison({ mode, indicators }: {
   const flows = data?.flows?.filter((f): f is (typeof FLOWS)[number] => (FLOWS as readonly string[]).includes(f)) ?? [];
 
   return (
-    <div className="flex flex-col gap-3" data-testid="governorate-comparison">
+    <div className="flex flex-col gap-3" data-testid="governorate-comparison" data-level={level}>
       <p className="max-w-4xl text-sm text-muted-foreground">{t('compare.intro')}</p>
       <div className="flex flex-wrap items-end gap-3">
+        {axisSelect}
         <SelectField className="w-full sm:w-72" label={t('compare.indicator')} value={indicator ?? ''}
           onValueChange={(v) => { setPicked(v); setPeriod(''); setFlow(null); }}
           options={indicators.map((i) => ({ value: i.code, label: language === 'ar' ? i.name_ar : i.name_en }))}

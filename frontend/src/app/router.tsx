@@ -1,6 +1,8 @@
 import { createBrowserRouter, Navigate, useLocation } from 'react-router';
 
+import { AuthLayout } from '@/components/layout/AuthLayout';
 import { AppShell } from '@/components/layout/AppShell';
+import { talkRedirectSearch } from '@/lib/talkRedirect';
 import { DesignReferencePage } from '@/pages/DesignReferencePage';
 import { EnergyIndexRedirect, EnergyLayout } from '@/pages/EnergyLayout';
 import { HomePage } from '@/pages/HomePage';
@@ -9,6 +11,7 @@ import { DatasetsPage } from '@/pages/DatasetsPage';
 import { AnalysisReportPage } from '@/pages/AnalysisReportPage';
 import { AssistantPage } from '@/pages/AssistantPage';
 import { ForecastPage } from '@/pages/ForecastPage';
+import { AuditPage } from '@/pages/AuditPage';
 import { HealthPage } from '@/pages/HealthPage';
 import { GeographyPage } from '@/pages/GeographyPage';
 import { LibraryPage } from '@/pages/LibraryPage';
@@ -18,20 +21,8 @@ import { WorkspacePage } from '@/pages/WorkspacePage';
 import { ReportPage, ReportsPage } from '@/pages/ReportsPages';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { StudiesPage } from '@/pages/StudiesPage';
-import { TalkPage } from '@/pages/TalkPage';
 import { ElectricityPage, FoodSecurityPage, TradePage, WaterPage } from '@/pages/SectionPages';
-import {
-  AccountPage,
-  AdminUsersPage,
-  DevMailPage,
-  ForgotPasswordPage,
-  LinkEmailPage,
-  MagicLinkPage,
-  RegisterPage,
-  ResetPasswordPage,
-  SignInPage,
-  VerifyEmailPage,
-} from '@/pages/SignInPage';
+import { AccountPage, AdminUsersPage, ForgotPasswordPage, RegisterPage, SignInPage } from '@/pages/SignInPage';
 
 /** Old /forecast links land on Forecasts and Scenarios, keeping the query string. */
 function ForecastRedirect() {
@@ -45,7 +36,32 @@ function MethodologyRedirect() {
   return <Navigate to={{ pathname: '/sources', search }} replace />;
 }
 
+/** Retired sign-in pages (e-mail links, e-mail verification and reset, phone and other
+ * providers, the development mailbox): old links land on the username sign-in. Only the data
+ * mode is kept; tokens in old links are dropped and never sent anywhere. */
+function RetiredSignInRedirect() {
+  const { search } = useLocation();
+  const mode = new URLSearchParams(search).get('mode');
+  const keep = mode === 'synthetic' || mode === 'verified' ? `?mode=${mode}` : '';
+  return <Navigate to={{ pathname: '/sign-in', search: keep }} replace />;
+}
+
+/** The old Talk screen: /talk opens the one Al Mulhim conversation (lib/talkRedirect). */
+function TalkRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={{ pathname: '/assistant', search: talkRedirectSearch(search) }} replace />;
+}
+
 export const router = createBrowserRouter([
+  {
+    // Sign-in, registration and a forgotten password: the full-screen glass design.
+    element: <AuthLayout />,
+    children: [
+      { path: '/sign-in', element: <SignInPage /> },
+      { path: '/register', element: <RegisterPage /> },
+      { path: '/forgot-password', element: <ForgotPasswordPage /> },
+    ],
+  },
   {
     path: '/',
     element: <AppShell />,
@@ -68,7 +84,7 @@ export const router = createBrowserRouter([
       { path: 'forecasts', element: <ForecastPage /> },
       { path: 'forecast', element: <ForecastRedirect /> },
       { path: 'assistant', element: <AssistantPage /> },
-      { path: 'talk', element: <TalkPage /> },
+      { path: 'talk', element: <TalkRedirect /> },
       { path: 'library', element: <LibraryPage /> },
       { path: 'studies', element: <StudiesPage /> },
       { path: 'studies/:studyId', element: <StudiesPage /> },
@@ -81,17 +97,13 @@ export const router = createBrowserRouter([
       { path: 'settings', element: <SettingsPage /> },
       { path: 'methodology', element: <MethodologyRedirect /> },
       { path: 'data-management', element: <DataManagementPage /> },
-      { path: 'sign-in', element: <SignInPage /> },
-      { path: 'register', element: <RegisterPage /> },
-      { path: 'verify-email', element: <VerifyEmailPage /> },
-      { path: 'forgot-password', element: <ForgotPasswordPage /> },
-      { path: 'reset-password', element: <ResetPasswordPage /> },
-      { path: 'magic-link', element: <MagicLinkPage /> },
-      { path: 'link-email', element: <LinkEmailPage /> },
+      // Retired: e-mail, phone, Google and Microsoft sign-in and their pages.
+      ...['sign-in/other', 'verify-email', 'forgot-password/email', 'reset-password', 'magic-link', 'link-email', 'dev/mail']
+        .map((path) => ({ path, element: <RetiredSignInRedirect /> })),
       { path: 'account', element: <AccountPage /> },
       { path: 'admin/users', element: <AdminUsersPage /> },
       { path: 'admin/health', element: <HealthPage /> },
-      { path: 'dev/mail', element: <DevMailPage /> },
+      { path: 'admin/audit', element: <AuditPage /> },
       { path: 'design-reference', element: <DesignReferencePage /> },
       { path: '*', element: <NotFoundPage /> },
     ],

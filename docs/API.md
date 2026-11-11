@@ -59,24 +59,18 @@ implies (SPEC_CONFLICTS C6).
 
 | Method and path | Purpose |
 |---|---|
-| `POST /auth/login` `{email, password}` | Sign in. Unknown account and wrong password get the same answer; 5 failures in 15 min → 429 |
-| `POST /auth/logout` | Revokes the session |
-| `GET /auth/me` | Current user, roles, permissions and whether the e-mail is confirmed (anonymous if not signed in) |
-| `GET /auth/providers` | Which sign-in methods are configured: password, registration, magic link, e-mail delivery mode, Google, Microsoft, and `sms` `{available, status: disabled or not_configured or test or configured, default_country, resend_seconds, code_minutes}`, plus the offered `country_codes` |
-| `POST /auth/register` `{email, display_name, password}` | 202 with the same answer whether or not the address exists. Creates an unconfirmed account with the Viewer role only and sends a confirmation link |
-| `POST /auth/verify-email` `{token}`, `POST /auth/verify-email/resend` `{email}` | Confirm the address (single-use, 24 h) / send a new link |
-| `POST /auth/password/forgot` `{email}`, `POST /auth/password/reset` `{token, password}` | Recovery link (single-use, 30 min). A reset revokes every session |
-| `POST /auth/magic-link` `{email}`, `POST /auth/magic-link/consume` `{token}` | Sign-in link for confirmed accounts (single-use, 15 min) |
-| `GET /auth/oidc/{google or microsoft}/start?intent=sign_in or link` | Redirects to the provider (404 when not configured). `link` needs a signed-in session |
-| `GET /auth/oidc/{provider}/callback` | Validates state, browser binding, PKCE and the ID token; redirects to `/account` or `/sign-in?error=…` |
-| `GET /auth/identities`, `DELETE /auth/identities/{id}` | Linked providers of the signed-in user; the last sign-in method cannot be removed |
-| `POST /auth/phone/request` `{country_code (default +968), number, purpose: sign_in or link}` | Sends a code by SMS through the configured provider. Returns 202 `{challenge_id, phone_masked, expires_in, resend_after, max_attempts}`, never the code, with the same shape whether or not the number has an account. `link` needs a signed-in session. Errors: `sms_unavailable` (503), `invalid_phone` (422), `sms_resend_cooldown` (429, `retry_after`), `sms_number_limit` / `sms_client_limit` (429), `sms_busy` (503), `sms_invalid_number` / `sms_undeliverable` (422), `sms_provider_unavailable` (503) |
-| `POST /auth/phone/verify` `{challenge_id, code, display_name?}` | Checks the code through the provider. `sign_in` opens a session and creates an ordinary (Viewer) account for a new number; `link` adds the number to the signed-in account. Returns `{status: registered or signed_in or linked, me}`. Errors: `sms_code_incorrect` (400, `attempts_left`), `sms_code_expired`, `sms_too_many_attempts`, `sms_challenge_invalid` (unknown, spent or another session's), `phone_taken` (409, never merged), `invalid_code_format` (422) |
-| `POST /auth/email/link` `{email}`, `POST /auth/email/link/confirm` `{token}` | A signed-in account without a confirmed address (for example a phone-only one) adds one. It is stored only when the single-use link sent to it is confirmed. Another account's address gets the same 202 reply, and that account's owner is told instead |
+| `POST /auth/login` `{username, password, remember?}` | Sign in with a username (1-64 characters accepted, so the longer names some accounts had before migration 0033 still work; compared without regard to case or Arabic look-alike letters). An e-mail address or a phone number finds nothing. Unknown account and wrong password get the same answer; 5 failures in 15 min → 429 |
+| `POST /auth/register/username` `{username, password, password_confirm}` | 201: an ordinary (Viewer) account, signed in, and a recovery code shown once. Username: 1-10 Arabic or English letters and digits, starting with a letter (`_ . -` allowed), trimmed and NFKC-normalised; errors `username_required`, `username_too_long` ("Username must not exceed 10 characters."), `invalid_username`, `username_reserved`, `username_taken` (409). Any role, e-mail address or phone number sent is ignored |
+| `POST /auth/recover` `{username, recovery_code, new_password, new_password_confirm}` | A forgotten password with the recovery code (a username alone never resets anything); a new code replaces the spent one; other sessions end |
+| `POST /auth/recovery-code` `{current_password}` | A new recovery code for the signed-in account |
+| `GET /auth/providers` | `{password: true, registration: true, methods: ["username_password"]}` |
+| Retired (410 `sign_in_method_retired`) | `POST /auth/register`, `/auth/verify-email`, `/auth/verify-email/resend`, `/auth/password/forgot`, `/auth/password/reset`, `/auth/magic-link`, `/auth/magic-link/consume`, `/auth/phone/request`, `/auth/phone/verify`, `/auth/email/link`, `/auth/email/link/confirm`; `GET /auth/oidc/{provider}/start` and `/callback`; `GET`/`DELETE /auth/identities`. None reads its body, opens a session or creates an account |
 | `GET /dev/outbox` | Development only (404 otherwise): stored e-mails |
 | `GET /dev/sms-outbox` | Development and tests only, with the scripted `test` SMS provider (404 in production and with any other provider): codes that were 'sent' |
 
 Password sign-in is refused with `403 email_not_verified` until the address is confirmed.
+
+`register`, `verify-email/resend`, `password/forgot` and `magic-link` also accept `language` (`en` default, or `ar`): every account e-mail carries both languages, that one first.
 
 ### Assistant
 
@@ -228,7 +222,7 @@ in the `X-Transcript` header (percent-encoded UTF-8). Analyses built since 0021 
 
 | Method and path | Purpose |
 |---|---|
-| `POST /auth/login` `{email, password}` | `email` is the sign-in identifier: an e-mail address or a username (case-insensitive) |
+| `POST /admin/users` `{username, display_name?, password, roles}` | An administrator creates an account with a username (the same rule); `POST /admin/users/{id}/username` `{username}` gives an existing account one (accounts that used an e-mail address or a phone number before have none), audited as `user.username` |
 | `GET /auth/me` | Adds `username` and `password_change_required` |
 | `POST /auth/password/change` `{current_password, new_password}` | Signed in (CSRF). New password 12+ characters and different; revokes the account's other sessions; clears a required change. While a change is required every other authenticated endpoint returns 403 `password_change_required` (sign-out still works) |
 

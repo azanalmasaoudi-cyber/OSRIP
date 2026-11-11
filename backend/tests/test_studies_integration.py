@@ -57,17 +57,17 @@ def published(database_url: str) -> None:
     from app.services import accounts
     from app.services.principal import Principal
 
-    email, password = f"st-manager-{uuid.uuid4().hex[:6]}@test.invalid", "pw-st-manager-0000"
+    email, password = f"st{uuid.uuid4().hex[:8]}", "pw-st-manager-0000"
     with session_factory()() as s, s.begin():
         user = accounts.create_user(
-            s, Principal(None, "t"), email=email, display_name="M", password=password,
+            s, Principal(None, "t"), username=email, display_name="M", password=password,
             roles=[Role.DATA_MANAGER],
         )  # fmt: skip
         s.flush()
         for p in (Permission.IMPORT_APPROVE, Permission.IMPORT_PUBLISH):
             accounts.grant_permission(s, Principal(None, "t"), user.id, p)
     manager = TestClient(create_app())
-    manager.post(f"{API}/auth/login", json={"email": email, "password": password})
+    manager.post(f"{API}/auth/login", json={"username": email, "password": password})
     manager.headers["X-CSRF-Token"] = manager.cookies["osrip_csrf"]
     lines = [
         # Al Wusta generation: 1993 is missing in the source.

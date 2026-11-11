@@ -12,75 +12,11 @@
       "created": "on or before 2026-09-28 (date of the Word file entry)",
       "prompt": null,
       "transformations": "Master extracted unchanged from the booklet. Derivatives are downscaled only; JPEG versions are flattened onto ivory.",
-      "status": "in_use",
-      "usage": "Home page hero portrait",
+      "status": "retired",
+      "usage": "Not shown since the redesign removed the home hero portrait; derivatives removed 2026-11-09. The master stays in assets/editorial/masters.",
       "source_width": 1024,
       "source_height": 1536,
-      "derivatives": [
-        {
-          "file": "/images/editorial/omani-professional-360.avif",
-          "format": "avif",
-          "width": 360,
-          "height": 540,
-          "bytes": 5112
-        },
-        {
-          "file": "/images/editorial/omani-professional-360.webp",
-          "format": "webp",
-          "width": 360,
-          "height": 540,
-          "bytes": 6506
-        },
-        {
-          "file": "/images/editorial/omani-professional-360.jpg",
-          "format": "jpg",
-          "width": 360,
-          "height": 540,
-          "bytes": 12765
-        },
-        {
-          "file": "/images/editorial/omani-professional-640.avif",
-          "format": "avif",
-          "width": 640,
-          "height": 960,
-          "bytes": 10792
-        },
-        {
-          "file": "/images/editorial/omani-professional-640.webp",
-          "format": "webp",
-          "width": 640,
-          "height": 960,
-          "bytes": 15446
-        },
-        {
-          "file": "/images/editorial/omani-professional-640.jpg",
-          "format": "jpg",
-          "width": 640,
-          "height": 960,
-          "bytes": 30383
-        },
-        {
-          "file": "/images/editorial/omani-professional-1024.avif",
-          "format": "avif",
-          "width": 1024,
-          "height": 1536,
-          "bytes": 20500
-        },
-        {
-          "file": "/images/editorial/omani-professional-1024.webp",
-          "format": "webp",
-          "width": 1024,
-          "height": 1536,
-          "bytes": 30168
-        },
-        {
-          "file": "/images/editorial/omani-professional-1024.jpg",
-          "format": "jpg",
-          "width": 1024,
-          "height": 1536,
-          "bytes": 62090
-        }
-      ],
+      "derivatives": [],
       "native_4k": false
     },
     {

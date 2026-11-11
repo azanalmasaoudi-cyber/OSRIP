@@ -53,7 +53,7 @@ function useResultLabels(): Labels {
 }
 
 /**
- * The AI Assistant page: one conversation with Al Mulhim or Ilham, centred, filling the
+ * The AI Assistant page: one conversation with Al Mulhim, centred, filling the
  * window, with the message box at the bottom (components/assistant/ChatView). The shortage and
  * surplus analysis and a full study are optional tools (the Tools drawer), not part of the
  * conversation. A question passed as ?q= is prefilled, not sent; ?sector= chooses the
@@ -85,7 +85,7 @@ export function AssistantPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="assistant-workspace" data-layout="conversation">
-      <AssistantChat variant="chat" initialDraft={question} askRef={askRef} showIdentity={false} selection={selection}
+      <AssistantChat initialDraft={question} askRef={askRef} selection={selection}
         selectionLabel={selection ? (params.get('sl') ?? '').slice(0, 200) || undefined : undefined} tools={tools} />
       {api ? (
         <Dialog open={analysisOpen} onClose={() => setAnalysisOpen(false)} title={t('balance.heading')} placement="end"

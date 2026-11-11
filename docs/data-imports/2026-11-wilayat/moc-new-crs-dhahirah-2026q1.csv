@@ -1,0 +1,4 @@
+indicator_code,area_code,period_start,period_end,frequency,period_complete,flow,unit_code,value,value_operator,quality_status,revision_status,source_locator,note
+TRADE_NEW_COMMERCIAL_REGISTRATIONS,OM-ZA-01,2026-01-01,2026-03-31,quarterly,true,,registration,114,,accepted,reported,Ministry announcement (MOCIIPdhah),"Quarterly, NOT full-year 2026"
+TRADE_NEW_COMMERCIAL_REGISTRATIONS,OM-ZA-02,2026-01-01,2026-03-31,quarterly,true,,registration,13,,accepted,reported,Ministry announcement (MOCIIPdhah),"Quarterly, NOT full-year 2026"
+TRADE_NEW_COMMERCIAL_REGISTRATIONS,OM-ZA-03,2026-01-01,2026-03-31,quarterly,true,,registration,12,,accepted,reported,Ministry announcement (MOCIIPdhah),"Quarterly, NOT full-year 2026"

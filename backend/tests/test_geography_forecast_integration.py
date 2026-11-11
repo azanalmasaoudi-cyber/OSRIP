@@ -106,7 +106,9 @@ def test_codes_are_unique_and_osrip_codes_are_labelled(registry: dict) -> None:
 
 
 def test_registry_carries_no_coordinates_or_geometry(registry: dict) -> None:
-    assert registry["geometry"]["available"] is False
+    # Boundaries are a separate OpenStreetMap file for the map; the registry stays free of them.
+    assert registry["geometry"]["source"] == "OpenStreetMap"
+    assert registry["geometry"]["licence"] == "ODbL-1.0"
     forbidden = {"lat", "lon", "lng", "latitude", "longitude", "centroid", "geometry", "bbox"}
     for area in registry["areas"]:
         assert not forbidden & set(area)
@@ -160,6 +162,7 @@ def test_coverage_counts_only_the_exact_area_and_missing_is_not_zero(manager, an
     cov = response.json()["areas"]
     muscat = cov["OM-MA"]
     water = next(i for i in muscat["indicators"] if i["code"] == "WATER_PRODUCTION")
+    assert water["section"] == "water", "each indicator names its axis"
     assert water["observations"] >= 2 and water["values"] >= 1
     assert muscat["missing"] >= 1
     # Nothing is inherited downwards or from the national total.

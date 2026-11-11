@@ -1,9 +1,10 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 /**
- * The AI Assistant page (/assistant) is one conversation; its optional controls are in two
- * drawers: Tools (answer mode, web search, research brief, analysis, a full study) and
- * conversation Settings (answer language, voice, conversations, memory, help).
+ * The AI Assistant page (/assistant) is the one Al Mulhim conversation, with its history beside
+ * it (a drawer on narrow screens); its optional controls are in two drawers: Tools (answer mode,
+ * web search, research brief, analysis, a full study) and conversation Settings (answer
+ * language, voice, memory, help).
  */
 export async function openTools(page: Page): Promise<void> {
   await page.getByTestId('chat-tools').click();
@@ -13,6 +14,23 @@ export async function openTools(page: Page): Promise<void> {
 export async function openChatSettings(page: Page): Promise<void> {
   await page.getByTestId('chat-settings').click();
   await expect(page.getByTestId('chat-settings-sheet')).toBeVisible();
+}
+
+/** The conversation history: the column beside the chat on wide screens, a drawer otherwise. */
+export async function openHistory(page: Page): Promise<Locator> {
+  const column = page.getByTestId('chat-history');
+  if (await column.isVisible()) return column;
+  await page.getByTestId('chat-history-open').click();
+  const drawer = page.locator('dialog[open]');
+  await expect(drawer.getByTestId('chat-history-body')).toBeVisible();
+  return drawer;
+}
+
+/** Chooses the language Al Mulhim answers in (conversation Settings). */
+export async function setAnswerLanguage(page: Page, language: 'English' | 'العربية'): Promise<void> {
+  await openChatSettings(page);
+  await page.getByTestId('assistant-language').getByRole('radio', { name: language }).click();
+  await closeDrawer(page);
 }
 
 /** Closes the open drawer (Escape, as a keyboard user would). */

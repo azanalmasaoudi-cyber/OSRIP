@@ -1,42 +1,13 @@
-import {
-  BookOpenCheck,
-  Calculator,
-  CircleHelp,
-  Globe,
-  Loader2,
-  MessageSquarePlus,
-  Mic,
-  MicOff,
-  Pause,
-  Play,
-  RotateCcw,
-  Send,
-  Sparkles,
-  Square,
-  Trash2,
-  Volume2,
-  VolumeX,
-  X,
-} from 'lucide-react';
-import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
 import { useAssistantUi } from './AssistantContext';
 import { ChatView } from './ChatView';
-import { AssistantAvatar, ORB_STATE_KEY } from './AssistantAvatar';
-import {
-  EvidenceItem, GroundedContext, pick, SAVEABLE, SaveResearchButton, SearchLog, STATUS_BADGE, WebEvidenceItem,
-} from './Evidence';
-import { AboutMulhim, MemoryPanel } from './MulhimPanels';
-import { PersonaPicker, usePersona } from './persona';
-import { PersonaImage } from './PersonaImage';
+import { usePersona } from './persona';
 import { ResearchBriefBuilder } from './ResearchBriefBuilder';
-import { ResearchProgress } from './ResearchProgress';
-import { CitedText, DataReportNotice, evidenceAnchor, ModeSelector, StructuredParts, WebNotice } from './StructuredReply';
-import { VoiceVolume } from './VoiceVolume';
 import {
-  ASSISTANT_MODES,
+  isInternetMode,
   speakMessage,
   transcribe,
   useAsk,
@@ -50,22 +21,14 @@ import {
   useGuestStatus,
   useLinkGuestHistory,
   useVoiceStatus,
-  type Allowance,
   type AssistantMessage,
   type AssistantMode,
-  type Evidence,
   type RequestMode,
   type AskSelection,
 } from '@/api/assistant';
-import { hasPermission, useMe, useProviders } from '@/api/auth';
+import { hasPermission, useMe } from '@/api/auth';
 import { ApiRequestError } from '@/api/client';
-import { DataModeBadge } from '@/components/common/DataModeBadge';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog } from '@/components/ui/dialog';
-import { Segmented } from '@/components/ui/segmented';
-import { SelectField } from '@/components/ui/select';
-import { formatDecimal, formatPeriod } from '@/lib/format';
 import { recordingSupported, startRecording, type Recording, type RecorderError } from '@/lib/recorder';
 import {
   createRecognizer,
@@ -82,17 +45,14 @@ import {
 } from '@/lib/speech';
 import { playAudio, type Playback } from '@/lib/voicePlayer';
 import { useAppLanguage } from '@/lib/useAppLanguage';
-import { cn } from '@/lib/utils';
 import { useDataMode } from '@/state/useDataMode';
 import { usePreservedSearch } from '@/state/usePreservedSearch';
-
 
 // Kept across sign-in (same tab): the unsent draft and the guest conversation.
 const DRAFT_KEY = 'osrip.assistant.draft';
 const GUEST_CONVERSATION_KEY = 'osrip.assistant.guestConversation';
 const MUTE_KEY = 'osrip.assistant.muted';
 const WEB_KEY = 'osrip.assistant.web';
-const MODE_KEY = 'osrip.assistant.mode';
 
 /** The avatar reads the playing audio's loudness from this CSS variable (0-1). */
 function setVoiceLevel(level: number): void {
@@ -126,125 +86,6 @@ function newRequestId(): string {
   bytes[8] = ((bytes[8] ?? 0) & 0x3f) | 0x80;
   const hex = [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
-}
-
-function MessageView({ message, onAsk, onRetry, onSpeak, canSave, onOpenStudy, activeStudyId }: {
-  message: AssistantMessage;
-  onAsk: (q: string) => void;
-  onRetry: () => void;
-  onSpeak: ((message: AssistantMessage) => void) | null;
-  canSave: boolean;
-  onOpenStudy: (id: string) => void;
-  activeStudyId: string | null;
-}) {
-  const { t } = useTranslation();
-  const language = useAppLanguage();
-  const { byCode } = usePersona();
-  if (message.role === 'user') {
-    return (
-      <li className="ms-auto max-w-[85%] rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground" dir="auto" data-testid="user-message">
-        {message.content}
-      </li>
-    );
-  }
-  // Who gave this reply (a conversation may switch persona; replies keep their author).
-  const author = byCode(message.persona);
-  const badge = message.status ? STATUS_BADGE[message.status] : null;
-  const searches = message.evidence.filter((e) => e.kind === 'search');
-  const evidence = message.evidence.filter((e) => e.kind !== 'search');
-  const byId = new Map(evidence.map((e) => [e.id, e]));
-  const shown = message.citations.length ? message.citations.map((c) => byId.get(c)).filter((e): e is Evidence => Boolean(e)) : evidence;
-  const hasWeb = shown.some((e) => e.kind === 'web');
-  // Chips link only to evidence listed below this reply (or to its calculations).
-  const known = new Set([...shown.map((e) => e.id), ...message.calculations.map((c) => c.id)]);
-  const anchor = (id: string) => evidenceAnchor(message.id, id);
-  return (
-    <li className="me-auto flex max-w-[95%] flex-col gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm"
-      data-testid="assistant-message" data-status={message.status ?? ''} data-persona={author.code}>
-      <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-        <span className="inline-flex items-center gap-1 font-semibold text-foreground" data-testid="message-persona">
-          <PersonaImage src={author.avatar.portrait} alt="" width={20} height={20} className="size-5 rounded-full object-cover object-top" draggable={false} />
-          {author.name[language]}
-        </span>
-        {message.ai_generated ? (
-          <Badge variant="accent" data-testid="ai-label"><Sparkles aria-hidden="true" />{t('assistant.aiLabel')}</Badge>
-        ) : <Badge variant="muted" data-testid="non-ai-label">
-          {message.status === 'lookup' ? t('assistant.lookupLabel') : message.status === 'profile' ? t('assistant.profileLabel')
-            : message.status === 'data_report' ? t('assistant.dataReportLabel') : t('assistant.systemLabel')}
-        </Badge>}
-        {badge ? <Badge variant="sand">{t(badge)}</Badge> : null}
-        {message.mode && message.mode !== 'ask' ? <Badge variant="outline" data-testid="reply-mode">{t(`assistant.mode.${message.mode}`)}</Badge> : null}
-        {onSpeak && message.content ? (
-          <button type="button" onClick={() => onSpeak(message)} className="ms-auto inline-flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-muted"
-            data-testid="read-aloud">
-            <Volume2 aria-hidden="true" className="size-3.5" />{t('voice.readAloud')}
-          </button>
-        ) : null}
-      </p>
-      <p className="whitespace-pre-wrap" dir="auto" data-testid="assistant-text">
-        <CitedText text={message.content} messageId={message.id} known={known} />
-      </p>
-      {message.structured.data_report ? <DataReportNotice report={message.structured.data_report} /> : null}
-      {message.structured.web_notice ? <WebNotice notice={message.structured.web_notice} /> : null}
-      {message.status === 'unavailable' || message.status === 'data_report' ? (
-        <Button variant="outline" size="sm" className="w-fit" onClick={onRetry} data-testid="retry-answer">
-          <RotateCcw aria-hidden="true" />{message.status === 'data_report' ? t('assistant.dataReport.retryAi') : t('states.retry')}
-        </Button>
-      ) : null}
-      {message.structured && Object.keys(message.structured).length ? (
-        <StructuredParts structured={message.structured} messageId={message.id} known={known} />
-      ) : null}
-      <SearchLog items={searches} />
-      {shown.length > 0 ? (
-        <div>
-          <p className="mb-1 text-xs font-semibold">
-            {message.status === 'unverified' ? t('assistant.retrievedEvidence') : message.status === 'lookup' || message.status === 'data_report' ? t('assistant.records') : t('assistant.sources')}
-          </p>
-          <ul className="flex flex-col gap-1.5">
-            {shown.map((e) => (e.kind === 'web'
-              ? <WebEvidenceItem key={e.id} item={e} anchor={anchor(e.id)} />
-              : <EvidenceItem key={e.id} item={e} anchor={anchor(e.id)} />))}
-          </ul>
-          {hasWeb ? <p className="mt-1.5 flex items-start gap-1 text-xs text-muted-foreground"><Globe aria-hidden="true" className="mt-0.5 size-3 shrink-0" />{t('web.reviewNote')}</p> : null}
-        </div>
-      ) : null}
-      {message.structured.grounded_context?.length ? <GroundedContext entries={message.structured.grounded_context} /> : null}
-      {message.calculations.length > 0 ? (
-        <details className="rounded-md border border-border p-2 text-xs" data-testid="how-calculated">
-          <summary className="flex cursor-pointer items-center gap-1 font-semibold"><Calculator aria-hidden="true" className="size-3.5" />{t('assistant.howCalculated')}</summary>
-          <ul className="mt-2 flex flex-col gap-2">
-            {message.calculations.map((c) => (
-              <li key={c.id} id={anchor(c.id)} tabIndex={-1} className="scroll-mt-4 focus-visible:outline-2">
-                <p className="font-mono">[{c.id}] {c.calculation}</p>
-                <p>{pick(c.formula, language)}</p>
-                {c.inputs?.length ? <p className="text-muted-foreground">{t('assistant.inputs')}: {c.inputs.map((i) => `[${i}]`).join(' ')}</p> : null}
-                {c.value != null ? (
-                  <p>{t('analysis.result')}: <span className="tabular-nums" dir="ltr">{formatDecimal(c.value, language, 4)}</span> {c.unit === 'percent' ? '%' : c.unit}</p>
-                ) : c.reason ? <p className="text-muted-foreground">{pick(c.reason, language)}</p> : null}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-2 text-muted-foreground">{t('assistant.calculatedByPlatform')}</p>
-        </details>
-      ) : null}
-      {canSave && message.status && SAVEABLE.has(message.status) ? <SaveResearchButton messageId={message.id} /> : null}
-      {message.structured.study_id ? (
-        <button type="button" onClick={() => onOpenStudy(message.structured.study_id ?? '')} data-testid="open-study"
-          aria-pressed={activeStudyId === message.structured.study_id}
-          className="inline-flex w-fit items-center gap-1 rounded-md border border-border-strong/50 px-2.5 py-1 text-xs font-medium hover:bg-muted aria-pressed:border-primary aria-pressed:bg-primary/5">
-          <BookOpenCheck aria-hidden="true" className="size-3.5" />
-          {activeStudyId === message.structured.study_id ? t('workspace.study.shown') : t('workspace.study.open')}
-        </button>
-      ) : null}
-      {message.suggestions.length > 0 ? (
-        <div className="flex flex-wrap gap-1.5">
-          {message.suggestions.map((s) => (
-            <button key={s} type="button" onClick={() => onAsk(s)} className="rounded-full border border-border-strong/50 px-2.5 py-1 text-xs hover:bg-muted" dir="auto">{s}</button>
-          ))}
-        </div>
-      ) : null}
-    </li>
-  );
 }
 
 // ------------------------------------------------------------------ voice
@@ -477,33 +318,9 @@ export type ChatVoice = ReturnType<typeof useVoice>;
 
 // ------------------------------------------------------------------ allowance and sign-in
 
-function AllowanceMeter({ allowance, notice }: { allowance: Allowance; notice: { en: string; ar: string } }) {
-  const { t } = useTranslation();
-  const language = useAppLanguage();
-  return (
-    <div className="flex flex-col gap-1.5 rounded-md border border-border bg-background p-3 text-xs" data-testid="guest-allowance"
-      data-remaining={allowance.remaining}>
-      <p className="font-medium" role="status">
-        {t('guest.remaining', { remaining: allowance.remaining, limit: allowance.limit })}
-      </p>
-      <div className="flex gap-1" aria-hidden="true">
-        {Array.from({ length: allowance.limit }, (_, i) => (
-          <span key={i} className={i < allowance.used ? 'h-1.5 flex-1 rounded-full bg-copper/70' : 'h-1.5 flex-1 rounded-full bg-primary/25'} />
-        ))}
-      </div>
-      <details>
-        <summary className="cursor-pointer text-muted-foreground">{t('guest.howCounted')}</summary>
-        <p className="mt-1 text-muted-foreground">{pick(notice, language)}</p>
-      </details>
-    </div>
-  );
-}
-
 function SignInPrompt({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation();
   const to = usePreservedSearch();
-  const providers = useProviders();
-  const p = providers.data;
   return (
     <div className="flex flex-col gap-3 rounded-md border border-copper/40 bg-copper-subtle/40 p-4 text-sm" data-testid="assistant-sign-in" role="status">
       <p className="font-semibold">{t('guest.limitReachedTitle')}</p>
@@ -512,17 +329,10 @@ function SignInPrompt({ onNavigate }: { onNavigate?: () => void }) {
         <Link to={to('/sign-in')} onClick={onNavigate} className="rounded-md bg-primary px-3 py-2 font-medium text-primary-foreground" data-testid="guest-sign-in">
           {t('auth.signIn')}
         </Link>
-        {p?.registration ? (
-          <Link to={to('/register')} onClick={onNavigate} className="rounded-md border border-border-strong px-3 py-2 font-medium">
-            {t('guest.registerEmail')}
-          </Link>
-        ) : null}
-        {p?.sms.available ? (
-          <Link to={{ ...to('/register'), search: `${to('/register').search ? `${to('/register').search}&` : '?'}method=phone` }} onClick={onNavigate}
-            className="rounded-md border border-border-strong px-3 py-2 font-medium">
-            {t('guest.registerPhone')}
-          </Link>
-        ) : null}
+        <Link to={to('/register')} onClick={onNavigate} className="rounded-md border border-border-strong px-3 py-2 font-medium"
+          data-testid="guest-register">
+          {t('account.createAccount')}
+        </Link>
       </div>
       <p className="text-xs text-muted-foreground">{t('guest.keptNote')}</p>
     </div>
@@ -534,20 +344,19 @@ function SignInPrompt({ onNavigate }: { onNavigate?: () => void }) {
 /** Asks a question from outside the chat (a suggested question, or "Run analysis"). */
 export type AskFromOutside = (question: string, mode?: AssistantMode) => void;
 
-/** The chat itself, used by the side panel and by the full AI Assistant page. */
-export function AssistantChat({ onClose, initialDraft = '', active = true, showIdentity = true, askRef, selection = null, selectionLabel, variant = 'panel', tools }: {
-  onClose?: () => void;
+/**
+ * The one Al Mulhim conversation: its state and actions, drawn by ChatView. "page" is the AI
+ * Assistant page (with the conversation history beside it); "embedded" is the same chat in the
+ * workspace's assistant column, compact, where a reply's study opens beside it.
+ */
+export function AssistantChat({ initialDraft = '', active = true, askRef, selection = null, selectionLabel, layout = 'page', tools }: {
   initialDraft?: string;
   /** Asked from a sector page: its applied selection, sent with each question until removed. */
   selection?: AskSelection | null;
   selectionLabel?: string;
   active?: boolean;
-  /** False in the Talk workspace, which shows the large portrait and state itself. */
-  showIdentity?: boolean;
-  /** "talk": compact for the Talk page (one row of controls; help, setup and voice notes are in
-   * Settings, with a one-line notice and a link when no voice can read the answers). */
-  variant?: 'panel' | 'talk' | 'chat';
-  /** "chat" only: page tools for the Tools drawer (analysis, a full study). */
+  layout?: 'page' | 'embedded';
+  /** Page tools for the Tools menu (analysis, a full study). */
   tools?: ReactNode;
   /** Filled with this chat's send function, so a page can ask a question in it. */
   askRef?: { current: AskFromOutside | null };
@@ -601,14 +410,12 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
     setDraftState(value);
     writeStore('session', DRAFT_KEY, value || null);
   };
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [viaVoice, setViaVoice] = useState(false);
   const last = useRef<{ text: string; requestId: string; mode: RequestMode } | null>(null);
   // The question being answered (shown at once on the conversation page) and the size of the
   // conversation when it was sent: it is shown until the conversation returns it.
   const [asked, setAsked] = useState<{ text: string; requestId: string; base: number; echo: boolean } | null>(null);
   const spokenFor = useRef<number | null>(null);
-  const listRef = useRef<HTMLOListElement>(null);
   const inputId = useId();
   const max = status.data?.max_message_chars ?? 1000;
   const voiceStatus = useVoiceStatus();
@@ -619,21 +426,13 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
   // Web research: on by default where the server offers it; the reader can switch it off.
   const webAvailable = Boolean(status.data?.web_research);
   const [webOn, setWebOn] = useState(() => readStore('local', WEB_KEY) !== '0');
-  // Answer mode (remembered on this device). Research mode always asks for web research.
-  const [answerMode, setAnswerModeState] = useState<AssistantMode>(() => {
-    const stored = readStore('local', MODE_KEY);
-    return ASSISTANT_MODES.find((m) => m === stored) ?? 'ask';
-  });
-  const setAnswerMode = (value: AssistantMode) => {
-    setAnswerModeState(value);
-    writeStore('local', MODE_KEY, value === 'ask' ? null : value);
-  };
-  // The conversation page asks with "auto" (the server infers the mode from the question)
-  // unless the person picks one in Tools, for this visit only.
-  const chatPage = variant === 'chat';
-  const [chatMode, setChatMode] = useState<RequestMode>('auto');
-  const effectiveMode: RequestMode = chatPage ? chatMode : answerMode;
-  const webResearch = webAvailable && (webOn || effectiveMode === 'research');
+  // The conversation asks with "auto" (the server infers the kind of answer from the question:
+  // internet research, a quick answer, or analysis of OSRIP's data) unless the person picks one
+  // in Tools, for this visit only. Beside the workspace's analysis it starts from data analysis.
+  const [chatMode, setChatMode] = useState<RequestMode>(layout === 'embedded' ? 'ask' : 'auto');
+  const effectiveMode: RequestMode = chatMode;
+  // The internet modes always search the web; the data modes only with the switch on.
+  const webResearch = webAvailable && (webOn || isInternetMode(effectiveMode));
   // Research mode only: a second search route as a cross-check, when the person asks for one
   // (never on by default; it uses more of the limits and is not independent evidence).
   const crossCheckAvailable = Boolean(status.data?.cross_check_available) && effectiveMode === 'research';
@@ -660,9 +459,6 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
   useEffect(() => {
     if (error) reportError();
   }, [error, reportError]);
-  useEffect(() => {
-    listRef.current?.lastElementChild?.scrollIntoView({ block: 'end' });
-  }, [messages.length, pending]);
 
   // A reply to a spoken question is read aloud (unless muted); its text stays on screen.
   const lastMessage = messages[messages.length - 1];
@@ -693,13 +489,17 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
       });
       return;
     }
-    guestAsk.mutate(
+    const askAsGuest = () => guestAsk.mutate(
       {
         content: text, language: chatLanguage, request_id: requestId, conversation_id: guestId, data_mode: mode,
         web_research: webResearch, mode: askMode, persona: persona.code, cross_check: checked, selection: scoped,
       },
       { onSuccess: (result) => setGuestId(result.conversation_id) },
     );
+    // A guest's first question waits for the guest session (its cookie), which a page opened a
+    // moment ago may still be requesting; it is then sent, never refused as expired.
+    if (guestStatus.data) askAsGuest();
+    else void guestStatus.refetch().finally(askAsGuest);
   };
   useEffect(() => {
     if (activeId && pendingRef.current) {
@@ -737,46 +537,29 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
     setAsked({ text: last.current.text, requestId: last.current.requestId, base: messages.length, echo: !messages.length });
     dispatch(last.current.text, last.current.requestId, last.current.mode);
   };
-  // Conversation page: a question that could not be sent goes back into the box (unless the
-  // person has typed something new), so nothing is lost; Retry sends it again.
+  // A question that could not be sent goes back into the box (unless the person has typed
+  // something new), so nothing is lost; Retry sends it again.
   const [seenError, setSeenError] = useState<unknown>(null);
-  if (chatPage && error && error !== seenError) {
+  if (error && error !== seenError) {
     setSeenError(error);
     if (!draft && asked) setDraftState(asked.text);
   }
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    send(draft);
-  };
-  const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      event.currentTarget.form?.requestSubmit();
-    }
-  };
 
-  // Return to a reply's study in the workspace (opening it there from any other page).
+  // A reply's study: beside the chat in the workspace; from the assistant page, it opens there.
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const preserved = usePreservedSearch();
   const openStudyHere = (id: string) => {
     ui.openStudy(id, !signedIn);
-    if (pathname !== '/workspace') {
-      onClose?.();
-      void navigate(preserved('/workspace'));
-    }
+    if (pathname !== '/workspace') void navigate(preserved('/workspace'));
   };
 
   const suggestions = status.data?.suggestions[chatLanguage] ?? [];
-  const configured = status.data?.configured ?? false;
   const canAsk = signedIn ? allowed : true;
   const linkable = signedIn && guestStatus.data?.authenticated === true && guestStatus.data.linkable_history && !link.isSuccess;
   const speakHandler = voice.canSpeak && !voice.muted
     ? (m: AssistantMessage) => voice.say(m, byCode(m.persona).gender)
     : null;
-  const talk = variant === 'talk';
-  // A study request to review and edit: it fills the box and the mode, and sends nothing. Above
-  // the message box; in Talk at the top of the conversation, so the pinned composer stays small.
   const linkUi = (
     <>
       {linkable ? (
@@ -791,313 +574,47 @@ export function AssistantChat({ onClose, initialDraft = '', active = true, showI
       {link.isSuccess ? <p className="mb-3 text-sm" role="status" data-testid="link-guest-done">{t('guest.linkDone', { count: link.data.linked_conversations })}</p> : null}
     </>
   );
+  // A study request to review and edit (Tools): it fills the box and the mode, and sends nothing.
   const brief = (
     <ResearchBriefBuilder language={chatLanguage} disabled={pending || needsAccount} maxLength={max}
       onDraft={(text, briefMode) => {
         setDraft(text);
-        if (chatPage) setChatMode(briefMode);
-        else setAnswerMode(briefMode);
+        setChatMode(briefMode);
         setViaVoice(false);
         document.getElementById(inputId)?.focus();
       }} />
   );
 
-  if (chatPage) {
-    const asking = asked && !error && (pending || messages.length <= asked.base)
-      ? { text: asked.text, requestId: asked.requestId, echo: asked.echo } : null;
-    return (
-      <ChatView chat={{
-        language: chatLanguage,
-        setLanguage: (l) => { pickedLanguage.current = true; setChatLanguage(l); },
-        dataMode: (signedIn ? conversation.data?.data_mode : guestConversation.data?.data_mode) ?? mode,
-        messages, pending, asking, guest: !signedIn, error, send, retry,
-        draft, type: (text) => { setDraft(text); setViaVoice(false); }, max, inputId, viaVoice,
-        canAsk, needsAccount, signedIn, allowance, signInPrompt: <SignInPrompt onNavigate={onClose} />,
-        voice, speak: speakHandler,
-        web: { available: webAvailable, on: webOn, set: (on) => { setWebOn(on); writeStore('local', WEB_KEY, on ? null : '0'); } },
-        mode: { value: chatMode, set: setChatMode },
-        crossCheck: { available: crossCheckAvailable, on: crossCheckOn, set: setCrossCheckOn },
-        conversations: signedIn && allowed ? {
-          list: conversations.data ?? [], activeId, select: setActiveId, removing: remove.isPending,
-          remove: () => { if (activeId) remove.mutate(activeId, { onSuccess: () => setActiveId(null) }); },
-        } : null,
-        newConversation: () => { if (signedIn) setActiveId(null); else setGuestId(null); setAsked(null); },
-        linkPrompt: linkUi,
-        memory: { guestExpires: guestData?.expires_at ?? null, guestConversationId: signedIn ? null : guestId,
-          onGuestDeleted: () => setGuestId(null), onAllDeleted: () => setActiveId(null) },
-        selection: { value: scope, label: selectionLabel, clear: () => setScope(null) },
-        // This page shows no study panel: a reply's study always opens in the workspace.
-        brief, openStudy: openStudyHere, activeStudyId: null, suggestions, tools,
-      }} />
-    );
-  }
-
+  const asking = asked && !error && (pending || messages.length <= asked.base)
+    ? { text: asked.text, requestId: asked.requestId, echo: asked.echo } : null;
+  const embedded = layout === 'embedded';
   return (
-    // Narrow screens: the whole chat scrolls as one column (the composer stays pinned at the
-    // bottom), so the header and answer modes never squeeze the messages out of view. Talk keeps
-    // one compact row of controls instead, and only the message list scrolls at every width.
-    <div className={cn('flex min-h-0 flex-1 flex-col', !talk && 'max-sm:overflow-y-auto')} data-testid="assistant-panel" lang={chatLanguage}>
-      {/* Who is speaking: the chosen persona's portrait (a fictional person), always labelled
-          as an AI assistant, and the choice between the two personas. */}
-      <div className={cn('flex flex-col gap-3 border-b border-border bg-muted/50 px-4 py-3', !showIdentity && 'hidden')} data-testid="assistant-identity">
-        <div className="flex items-center gap-3">
-          <AssistantAvatar state={ui.state} size="4rem" decorative={false} />
-          <div className="min-w-0 text-xs">
-            <p className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-semibold text-foreground" data-testid="mulhim-name" data-persona={persona.code}>{persona.name[appLanguage]}</span>
-              <Badge variant="accent">{t('assistant.aiAssistant')}</Badge>
-              <span className="font-medium" role="status" data-testid="assistant-state" data-state={ui.state}>{t(ORB_STATE_KEY[ui.state])}</span>
-            </p>
-          </div>
-        </div>
-        {showIdentity ? <PersonaPicker /> : null /* Talk has its own, beside the portrait */}
-      </div>
-      {/* Talk: the answer modes and the toolbar share one wrapped row (elsewhere `contents`). */}
-      <div className={talk ? 'flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-3 py-2' : 'contents'} data-testid="assistant-controls">
-      {/* Answer mode: the same assistant (and the same avatar) for all five modes. */}
-      {canAsk ? (
-        <div className={talk ? 'min-w-0' : 'border-b border-border px-4 py-2.5'}>
-          <ModeSelector value={answerMode} onChange={setAnswerMode} compact={talk} />
-          {answerMode === 'research' && status.data && !webAvailable ? (
-            <p className="mt-1 text-xs text-destructive" role="status" data-testid="research-unavailable">{t('assistant.researchNeedsSearch')}</p>
-          ) : null}
-          {crossCheckAvailable ? (
-            <div className="mt-2 text-xs">
-              <label className="flex items-center gap-2 font-medium">
-                <input type="checkbox" checked={crossCheckOn} onChange={(e) => setCrossCheckOn(e.target.checked)}
-                  aria-describedby={`${inputId}-cross-check`} className="size-4 accent-primary" data-testid="cross-check-toggle" />
-                {t('assistant.crossCheck')}
-              </label>
-              <p id={`${inputId}-cross-check`} className="ms-6 text-muted-foreground">{t('assistant.crossCheckHint')}</p>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-      {/* Toolbar: answer language, web research, voice output */}
-      <div className={talk ? 'contents' : 'flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-2.5'}>
-        {webAvailable ? (
-          <label className="flex items-center gap-2 text-xs font-medium" title={t('assistant.webToggleHint')}>
-            <input type="checkbox" checked={webOn} className="size-4 accent-primary" data-testid="web-toggle"
-              onChange={(e) => { setWebOn(e.target.checked); writeStore('local', WEB_KEY, e.target.checked ? null : '0'); }} />
-            <Globe aria-hidden="true" className="size-3.5" />{t('assistant.webToggle')}
-          </label>
-        ) : null}
-        <Segmented
-          className="ms-auto"
-          label={t('assistant.language')}
-          value={chatLanguage}
-          onChange={(v) => { pickedLanguage.current = true; setChatLanguage(v === 'ar' ? 'ar' : 'en'); }}
-          options={[{ value: 'en', label: 'English' }, { value: 'ar', label: 'العربية' }]}
-          testId="assistant-language"
-        />
-        {voice.canSpeak ? (
-          <>
-            <Button variant="ghost" size="sm" aria-pressed={voice.muted} onClick={() => voice.setMuted(!voice.muted)} data-testid="voice-mute"
-              title={talk ? (voice.muted ? t('voice.unmute') : t('voice.mute')) : undefined} className={cn(talk && 'w-8 px-0')}>
-              {voice.muted ? <VolumeX aria-hidden="true" /> : <Volume2 aria-hidden="true" />}
-              <span className={cn(talk && 'sr-only')}>{voice.muted ? t('voice.unmute') : t('voice.mute')}</span>
-            </Button>
-            {/* Talk on a phone or a short screen: Mute and the device's own volume, to keep the
-                controls to one row. */}
-            <span className={cn(talk && 'max-sm:hidden short:hidden')}><VoiceVolume testId="voice-volume-replies" compact={talk} /></span>
-          </>
-        ) : null}
-        {voice.canPause ? (
-          <Button variant="ghost" size="sm" onClick={voice.paused ? voice.resumePlayback : voice.pausePlayback}
-            aria-pressed={voice.paused} data-testid="voice-pause">
-            {voice.paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}
-            {voice.paused ? t('voicePanel.resume') : t('voicePanel.pause')}
-          </Button>
-        ) : null}
-        {voice.speaking ? (
-          <Button variant="outline" size="sm" onClick={voice.stopPlayback} data-testid="voice-stop-speaking">
-            <Square aria-hidden="true" />{t('voice.stopSpeaking')}
-          </Button>
-        ) : null}
-      </div>
-      </div>
-
-      {signedIn && allowed ? (
-        <div className="flex flex-wrap items-end gap-2 border-b border-border px-4 py-3">
-          <SelectField className="min-w-0 flex-1" label={t('assistant.conversation')} value={activeId ?? ''}
-            onValueChange={(v) => { setActiveId(v || null); setConfirmDelete(false); }}
-            options={[{ value: '', label: t('assistant.newConversation') }, ...(conversations.data ?? []).map((c) => ({ value: c.id, label: c.title }))]}
-            data-testid="conversation-select" />
-          <Button variant="outline" size="sm" onClick={() => { setActiveId(null); setConfirmDelete(false); }}>
-            <MessageSquarePlus aria-hidden="true" />{t('assistant.new')}
-          </Button>
-          {activeId ? (
-            <Button variant={confirmDelete ? 'default' : 'ghost'} size="sm" data-testid="delete-conversation"
-              onClick={() => {
-                if (!confirmDelete) { setConfirmDelete(true); return; }
-                remove.mutate(activeId, { onSuccess: () => { setActiveId(null); setConfirmDelete(false); } });
-              }}>
-              <Trash2 aria-hidden="true" />{confirmDelete ? t('assistant.confirmDelete') : t('assistant.delete')}
-            </Button>
-          ) : null}
-        </div>
-      ) : null}
-
-      <div className={cn('min-h-0 flex-1 overflow-y-auto px-4 py-3', !talk && 'max-sm:min-h-[45dvh] max-sm:flex-none max-sm:overflow-visible')} aria-live="polite"
-        data-testid="assistant-messages">
-        <p className="mb-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <DataModeBadge mode={(signedIn ? conversation.data?.data_mode : guestConversation.data?.data_mode) ?? mode} />
-          <span data-testid="assistant-disclaimer-short">{t('assistant.disclaimerShort')}</span>
-        </p>
-        {status.data && !configured ? (
-          <p role="status" className="mb-2 rounded-md border border-dashed border-border-strong/50 px-3 py-2 text-sm" data-testid="assistant-unconfigured">
-            {t('assistant.notConfiguredShort')}
-          </p>
-        ) : null}
-        {/* Explanations and limits, collapsed: the conversation comes first. Talk links to
-            Settings for them instead. */}
-        {talk ? null : (
-        <div className="mb-3 flex flex-col gap-2">
-          <details className="rounded-md border border-border px-3 py-2 text-xs" data-testid="assistant-help">
-            <summary className="flex cursor-pointer items-center gap-1.5 font-semibold">
-              <CircleHelp aria-hidden="true" className="size-3.5" />{t('assistant.help.title')}
-            </summary>
-            <ul className="mt-2 flex list-disc flex-col gap-1 ps-4 text-muted-foreground">
-              <li>{t('assistant.disclaimer', { name: persona.name[appLanguage] })}</li>
-              <li>{t('assistant.help.dataReport')}</li>
-              {status.data?.research_cutoff ? (
-                <li data-testid="research-cutoff">
-                  {t('assistant.cutoff', { date: formatPeriod(status.data.research_cutoff, status.data.research_cutoff, appLanguage) })}
-                </li>
-              ) : null}
-              {status.data && !configured ? <li>{t('assistant.notConfiguredLookup')}</li> : null}
-              {status.data && configured && !webAvailable ? <li data-testid="web-unavailable">{t('assistant.webUnavailable')}</li> : null}
-              {webResearch ? <li>{t('assistant.webToggleHint')}</li> : null}
-              <li>{t('assistant.avatarNote')}</li>
-              {voice.canSpeak ? <li>{t('voice.animationNote')}</li> : null}
-              <li>{voice.serverMode ? t('voice.serverDisclosure') : voice.canListen ? t('voice.disclosure') : t('voice.unsupported')}</li>
-            </ul>
-          </details>
-          <AboutMulhim />
-          <MemoryPanel signedIn={signedIn} guestExpires={guestData?.expires_at ?? null} guestConversationId={signedIn ? null : guestId}
-            onGuestDeleted={() => setGuestId(null)} onAllDeleted={() => setActiveId(null)} />
-        </div>
-        )}
-        {talk && canAsk ? <div className="mb-3">{brief}</div> : null}
-        {signedIn && !allowed ? <p className="mb-3 text-sm">{t('assistant.noPermission')}</p> : null}
-        {!signedIn && allowance && guestData ? <div className="mb-3"><AllowanceMeter allowance={allowance} notice={guestData.notice} /></div> : null}
-        {linkUi}
-        {messages.length === 0 && !pending && canAsk && !needsAccount ? (
-          <div className="flex flex-col gap-2" data-testid="suggestions">
-            <p className="text-xs font-semibold">{t('assistant.suggested')}</p>
-            {suggestions.map((s) => (
-              <button key={s} type="button" onClick={() => send(s)}
-                className="rounded-md border border-border-strong/50 px-3 py-2 text-start text-sm hover:bg-muted disabled:opacity-60" dir="auto">{s}</button>
-            ))}
-          </div>
-        ) : null}
-        <ol ref={listRef} className="flex flex-col gap-3">
-          {messages.map((m) => (
-            <MessageView key={m.id} message={m} onAsk={send} onRetry={retry} onSpeak={speakHandler} canSave={signedIn && allowed}
-              onOpenStudy={openStudyHere} activeStudyId={ui.activeStudy?.id ?? null} />
-          ))}
-          {pending ? (
-            <ResearchProgress requestId={(signedIn ? accountAsk.variables?.request_id : guestAsk.variables?.request_id) ?? null} guest={!signedIn} />
-          ) : null}
-        </ol>
-        {needsAccount ? <div className="mt-3"><SignInPrompt onNavigate={onClose} /></div> : null}
-        {error ? (
-          <div role="alert" className="mt-3 flex flex-col gap-2 text-sm text-destructive" data-testid="assistant-error">
-            <p>{error.message}</p>
-            <Button variant="outline" size="sm" className="w-fit" onClick={retry}><RotateCcw aria-hidden="true" />{t('states.retry')}</Button>
-          </div>
-        ) : null}
-      </div>
-
-      {canAsk ? (
-        <form onSubmit={submit} className={cn('flex flex-col gap-2 border-t border-border bg-card px-4 py-3', !talk && 'max-sm:sticky max-sm:bottom-0 max-sm:z-10')}>
-          {talk ? null : brief}
-          {scope ? (
-            <p className="flex flex-wrap items-center gap-2 rounded-md border border-primary/40 bg-primary/5 px-2 py-1 text-xs" data-testid="assistant-selection">
-              <span>{t('assistant.selectionApplied', { selection: selectionLabel ?? `${scope.indicator} · ${scope.area} · ${scope.period_from} – ${scope.period_to}` })}</span>
-              <button type="button" className="text-primary underline underline-offset-2" onClick={() => setScope(null)} data-testid="assistant-selection-clear">
-                {t('assistant.selectionClear')}
-              </button>
-            </p>
-          ) : null}
-          <label htmlFor={inputId} className="sr-only">{t('assistant.question')}</label>
-          <textarea id={inputId} value={draft} onChange={(e) => { setDraft(e.target.value.slice(0, max)); setViaVoice(false); }} onKeyDown={onKeyDown}
-            rows={2} dir="auto" placeholder={needsAccount ? t('guest.inputLocked') : t('assistant.placeholder')} disabled={needsAccount}
-            className={cn('w-full resize-none rounded-md border border-border-strong bg-card px-3 py-2 text-sm', talk && 'short:h-10')} data-testid="assistant-input" />
-          {voice.notice ? (
-            <p className="text-xs text-destructive" role="alert" data-testid="voice-notice">{t(`voice.notice.${voice.notice}`)}</p>
-          ) : null}
-          {voice.serverMode && voice.listening ? (
-            <p className="text-xs font-medium" role="status" data-testid="voice-recording">{t('voice.recording', { seconds: voiceStatus.data?.max_seconds ?? 60 })}</p>
-          ) : null}
-          {voice.transcribing ? (
-            <p className="flex items-center gap-1 text-xs" role="status" data-testid="voice-transcribing">
-              <Loader2 aria-hidden="true" className="size-3 animate-spin motion-reduce:animate-none" />{t('voice.transcribing')}
-            </p>
-          ) : null}
-          {viaVoice && draft && !voice.listening && !voice.transcribing ? (
-            <p className="text-xs text-muted-foreground" role="status" data-testid="voice-review">{t('voice.review')}</p>
-          ) : null}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              {voice.canListen ? (
-                voice.listening || voice.transcribing ? (
-                  <>
-                    <Button type="button" size="sm" variant="default" onClick={voice.stop} disabled={voice.transcribing} data-testid="voice-stop">
-                      <MicOff aria-hidden="true" />{t('voice.stopListening')}
-                    </Button>
-                    <Button type="button" size="sm" variant="ghost" onClick={voice.cancel} data-testid="voice-cancel">
-                      <X aria-hidden="true" />{t('voice.cancel')}
-                    </Button>
-                  </>
-                ) : (
-                  <Button type="button" size="sm" variant="outline" onClick={voice.start} disabled={needsAccount} data-testid="voice-start">
-                    <Mic aria-hidden="true" />{t('voice.speak')}
-                  </Button>
-                )
-              ) : null}
-              <span className="text-xs text-muted-foreground">{draft.length}/{max}</span>
-            </div>
-            <Button type="submit" size="sm" disabled={!draft.trim() || pending || needsAccount} data-testid="assistant-send">
-              <Send aria-hidden="true" className="rtl:-scale-x-100" />{t('assistant.send')}
-            </Button>
-          </div>
-          {talk ? (
-            // One line, only when answers cannot be read aloud here; the explanation is in Settings.
-            voice.noVoice || voice.noLanguageVoice ? (
-              <p className="text-xs text-muted-foreground" role="status" data-testid="talk-no-voice">
-                {t('talk.noVoice')}{' '}
-                <Link to={preserved('/settings')} className="font-medium text-primary underline underline-offset-2">{t('talk.howToFix')}</Link>
-              </p>
-            ) : null
-          ) : (
-            <p className="text-xs text-muted-foreground" data-testid="voice-support">
-              {voice.serverMode ? t('voice.consentServer') : voice.canListen ? t('voice.consentBrowser') : t('voice.unsupported')}
-            </p>
-          )}
-          {!talk && voice.noLanguageVoice ? (
-            <p className="text-xs text-muted-foreground" data-testid="voice-no-language" data-language={chatLanguage}>
-              {t(`voice.noLanguageVoice.${chatLanguage}`)}
-            </p>
-          ) : null}
-          {!talk && voice.noVoice ? (
-            <p className="text-xs text-muted-foreground" data-testid={persona.gender === 'female' ? 'voice-no-female' : 'voice-no-male'}>
-              {t(persona.gender === 'female' ? 'voice.noFemaleVoice' : 'voice.noMaleVoice', { name: persona.name[appLanguage] })}
-            </p>
-          ) : null}
-        </form>
-      ) : null}
-    </div>
-  );
-}
-
-export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { t } = useTranslation();
-  const language = useAppLanguage();
-  const { persona } = usePersona();
-  return (
-    <Dialog open={open} onClose={onClose} title={t('assistant.title', { name: persona.name[language] })} description={t('assistant.subtitle')} placement="end">
-      <AssistantChat onClose={onClose} active={open} />
-    </Dialog>
+    <ChatView layout={layout} chat={{
+      language: chatLanguage,
+      setLanguage: (l) => { pickedLanguage.current = true; setChatLanguage(l); },
+      dataMode: (signedIn ? conversation.data?.data_mode : guestConversation.data?.data_mode) ?? mode,
+      messages, pending, asking, guest: !signedIn, error, send, retry,
+      draft, type: (text) => { setDraft(text); setViaVoice(false); }, max, inputId, viaVoice,
+      canAsk, needsAccount, signedIn, allowance, signInPrompt: <SignInPrompt />,
+      voice, speak: speakHandler,
+      web: { available: webAvailable, on: webOn, set: (on) => { setWebOn(on); writeStore('local', WEB_KEY, on ? null : '0'); } },
+      mode: { value: chatMode, set: setChatMode },
+      crossCheck: { available: crossCheckAvailable, on: crossCheckOn, set: setCrossCheckOn },
+      conversations: signedIn && allowed ? {
+        list: conversations.data ?? [], activeId, removing: remove.isPending, loading: conversations.isPending,
+        select: (id) => { setActiveId(id); setAsked(null); },
+        remove: (id) => remove.mutate(id, { onSuccess: () => { if (id === activeId) setActiveId(null); } }),
+      } : null,
+      guestConversationId: signedIn ? null : guestId,
+      newConversation: () => { if (signedIn) setActiveId(null); else setGuestId(null); setAsked(null); },
+      linkPrompt: linkUi,
+      memory: { guestExpires: guestData?.expires_at ?? null, guestConversationId: signedIn ? null : guestId,
+        onGuestDeleted: () => setGuestId(null), onAllDeleted: () => setActiveId(null) },
+      selection: { value: scope, label: selectionLabel, clear: () => setScope(null) },
+      // In the workspace a reply's study shows beside the chat; elsewhere it opens there.
+      brief, suggestions, tools,
+      openStudy: embedded ? (id) => ui.openStudy(id, !signedIn) : openStudyHere,
+      activeStudyId: embedded ? ui.activeStudy?.id ?? null : null,
+    }} />
   );
 }

@@ -26,6 +26,7 @@ from app.core.errors import ApiError, not_found, unprocessable
 from app.domain.enums import DataMode
 from app.models import Indicator, Observation, ResearchCandidate
 from app.services import audit
+from app.services.imports.validation import STATISTICAL_SCOPE_START
 from app.services.principal import Principal
 from app.services.research import fetching, pages, search_log, sources
 from app.services.research.search import (
@@ -36,7 +37,7 @@ from app.services.research.search import (
 
 DOMAINS = ("electricity", "water", "food_security", "trade", "general")
 MAX_RESULTS_KEPT = 6
-SCOPE_START = date(2022, 1, 1)
+SCOPE_START = STATISTICAL_SCOPE_START  # the platform's statistical start
 
 
 def available() -> bool:
@@ -111,7 +112,10 @@ def web_search(
         getattr(ledger, "max_searches", None) or s.research_max_searches_per_answer
     ):
         return {"status": "limit_reached", "message": "No more web searches for this answer."}
-    if client_key:
+    normalized = " ".join(query.split())[:300]
+    prechecked = normalized in ledger.search_prechecked  # counted when prefetched
+    ledger.search_prechecked.discard(normalized)
+    if client_key and not prechecked:
         try:
             ratelimit.check(f"research:{client_key}", s.research_per_client_hour, 3600)
         except ApiError:
@@ -246,9 +250,11 @@ def _route(
             getattr(ledger, "max_searches", None) or s.research_max_searches_per_answer
         ):
             break
+        # For a question about the latest figures, only recent cached results count.
+        max_age = search_log.cache_hours(ledger.fresh_hours)
         hit = (
-            search_log.lookup(provider.name, q, lang, max_age_hours=search_log.cache_hours())
-            if cacheable
+            search_log.lookup(provider.name, q, lang, max_age_hours=max_age)
+            if cacheable and max_age > 0
             else None
         )
         if hit is not None:
@@ -258,7 +264,14 @@ def _route(
             continue
         ledger.searches += 1
         try:
-            found = provider.search(q, language=lang, count=10)
+            prefetched = ledger.search_memo.pop((provider.name, q, lang), None)
+            if isinstance(prefetched, SearchError):
+                raise prefetched
+            found = (
+                prefetched
+                if prefetched is not None
+                else provider.search(q, language=lang, count=10)
+            )
             results += found
             searched.append({"query": q, "language": lang})
             if cacheable:
@@ -428,10 +441,19 @@ def read_web_page(ledger: Any, evidence_id: str, focus: str | None = None) -> di
             "status": "invalid_request",
             "message": "Give the evidence id of a web_search result.",
         }
-    if ledger.pages >= (getattr(ledger, "max_pages", None) or s.research_max_pages_per_answer):
-        return {"status": "limit_reached", "message": "No more pages can be read for this answer."}
-    ledger.pages += 1
-    read = fetching.read(found["url"], job_id=ledger.job_id)
+    url = found["url"]
+    read = ledger.reads.get(url)  # the same address read earlier in this answer: reused
+    if read is None:
+        if ledger.pages >= (getattr(ledger, "max_pages", None) or s.research_max_pages_per_answer):
+            return {
+                "status": "limit_reached",
+                "message": "No more pages can be read for this answer.",
+            }
+        ledger.pages += 1
+        read = ledger.prefetched.pop(url, None) or fetching.read(
+            url, job_id=ledger.job_id, max_age_hours=search_log.cache_hours(ledger.fresh_hours)
+        )
+        ledger.reads[url] = read
     if read.status == "blocked":
         return {
             "status": "blocked",
@@ -553,7 +575,7 @@ def queue_candidates(
     language: str,
 ) -> int:
     """Store the model's proposed numerical observations, keeping only those whose value
-    appears verbatim in cited web evidence and whose period is from 2022 onward. A provider
+    appears verbatim in cited web evidence and whose period is from 2021 onward. A provider
     summary (another model's statement about a source) never qualifies: the figure must come
     from the source's own text (a page or document excerpt, or the engine's snippet)."""
     by_id = {i["id"]: i for i in ledger_items}

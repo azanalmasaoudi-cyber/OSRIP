@@ -8,8 +8,13 @@
 export const DATA_MODES = ['verified_source', 'synthetic'] as const;
 export type DataMode = (typeof DATA_MODES)[number];
 
+/** The four resource axes (each has its pages). */
 export const SECTIONS = ['electricity', 'water', 'food_security', 'trade'] as const;
 export type SectionCode = (typeof SECTIONS)[number];
+/** An indicator's section: an axis, or population (context for per-person comparisons, not an
+ * axis: no axis page; shown in the registry, datasets and the map). */
+export const INDICATOR_SECTIONS = [...SECTIONS, 'population'] as const;
+export type IndicatorSection = (typeof INDICATOR_SECTIONS)[number];
 
 export type DomainCode = 'energy_essential_services' | 'food_security' | 'trade';
 
@@ -95,7 +100,7 @@ export interface ObservationRecord {
 
 export interface Series {
   indicatorCode: string;
-  section: SectionCode;
+  section: IndicatorSection;
   name: BilingualText;
   definition: BilingualText;
   unit: UnitRef;

@@ -15,8 +15,8 @@ export const ORB_STATE_KEY = {
 } as const satisfies Record<OrbState, string>;
 
 /**
- * The chosen persona's still portrait (styles: .assistant-avatar in index.css): Al Mulhim or
- * Ilham, generated images of fictional people recorded in frontend/assets/editorial/
+ * The persona's still portrait (styles: .assistant-avatar in index.css): Al Mulhim, a
+ * generated image of a fictional person recorded in frontend/assets/editorial/
  * sources.json. ``shape="figure"`` shows the larger half-length image (the Talk workspace).
  * Its data-state comes from real events only (microphone open, request in flight, audio
  * playing, failure). While speech plays, the ring and level bars follow the measured loudness

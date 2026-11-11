@@ -82,7 +82,7 @@ def save_persona_choice(
     """Save the signed-in person's persona (a preference: it changes who speaks, never the
     knowledge, tools, permissions, sources, history or limits)."""
     with session.begin():
-        code = service.resolve_persona(session, body.persona)
+        code = service.resolve_persona(session, body.persona, retired_ok=False)
         user = session.get(AppUser, principal.user_id)
         if user is None:
             raise ApiError(401, "authentication_required", "Sign in to continue.")
@@ -129,9 +129,9 @@ class MessageIn(BaseModel):
     request_id: uuid.UUID | None = None
     # The reader may switch internet search off for a question.
     web_research: bool = True
-    # Ask, Analyze, Research (web search when configured), Compare or Scenario; "auto" lets the
-    # question's words decide (routing.answer_mode).
-    mode: Literal["auto", "ask", "analyze", "research", "compare", "scenario"] = "ask"
+    # Quick (a fast internet answer), Research (deep internet research), or the data modes Ask,
+    # Analyze, Compare and Scenario; "auto" lets the question's words decide (routing.answer_mode).
+    mode: Literal["auto", "quick", "ask", "analyze", "research", "compare", "scenario"] = "ask"
     # Who replies (a persona code from the profile); default: the saved choice, then the
     # profile's default persona.
     persona: str | None = Field(default=None, pattern=PERSONA_CODE)
@@ -140,6 +140,24 @@ class MessageIn(BaseModel):
     cross_check: bool = False
     # Asked from a sector page: its applied selection (indicator, area, period ...).
     selection: SelectionIn | None = None
+
+
+@router.get("/images/{image_id}")
+def generated_image(image_id: uuid.UUID, principal: User) -> Response:
+    """An illustration made for this user's answer (never someone else's)."""
+    from app.services import images
+
+    row = images.get_for_user(image_id, principal.user_id)
+    if row is None:
+        raise ApiError(404, "not_found", "No such image.")
+    return Response(
+        content=row.data,
+        media_type=row.mime,
+        headers={
+            "Cache-Control": "private, max-age=86400",
+            "Content-Disposition": f'inline; filename="osrip-illustration-{str(row.id)[:8]}.png"',
+        },
+    )
 
 
 @router.get("/conversations")
@@ -353,7 +371,7 @@ class GuestMessageIn(BaseModel):
     conversation_id: uuid.UUID | None = None
     data_mode: DataMode = DataMode.VERIFIED_SOURCE
     web_research: bool = True
-    mode: Literal["auto", "ask", "analyze", "research", "compare", "scenario"] = "ask"
+    mode: Literal["auto", "quick", "ask", "analyze", "research", "compare", "scenario"] = "ask"
     persona: str | None = Field(default=None, pattern=PERSONA_CODE)
     cross_check: bool = False
     selection: SelectionIn | None = None

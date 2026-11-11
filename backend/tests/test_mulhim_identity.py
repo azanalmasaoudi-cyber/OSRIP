@@ -282,20 +282,20 @@ def test_realtime_voice_reports_missing_settings_and_issues_scoped_tokens(app, m
     ):
         monkeypatch.setattr(s, name, value)
     # The service settings alone are not enough: each persona needs its real-time voice,
-    # which lives in the assistant profile (none is chosen in version 3).
+    # which lives in the assistant profile (none is chosen in version 4).
     still = client.get(f"{API}/assistant/voice/realtime").json()
     assert still["configured"] is False
-    assert "profile: real-time voice for Ilham (ar)" in still["missing"]
+    assert "profile: real-time voice for Al Mulhim (ar)" in still["missing"]
     with_voices = _realtime_voices(monkeypatch)
     issued = client.post(
-        f"{API}/assistant/voice/realtime/session", json={"language": "ar", "persona": "ilham"}
+        f"{API}/assistant/voice/realtime/session", json={"language": "ar", "persona": "mulhim"}
     )
     assert issued.status_code == 200, issued.text
     body = issued.json()
     claims = jwt.decode(body["token"], secret, algorithms=["HS256"])
     assert claims["sub"].startswith("guest:") and claims["iss"] == "test-key"
-    assert json.loads(claims["metadata"]) == {"language": "ar", "persona": "ilham"}
-    assert body["persona"] == "ilham" and with_voices["ilham"]["ar"] == "test/tts-ilham-ar"
+    assert json.loads(claims["metadata"]) == {"language": "ar", "persona": "mulhim"}
+    assert body["persona"] == "mulhim" and with_voices["mulhim"]["ar"] == "test/tts-mulhim-ar"
     assert claims["exp"] - claims["nbf"] == s.voice_token_minutes * 60
     video = claims["video"]
     assert video["roomJoin"] is True and video["room"] == body["room"]

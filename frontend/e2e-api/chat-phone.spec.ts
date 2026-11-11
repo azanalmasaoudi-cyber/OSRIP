@@ -29,7 +29,7 @@ test('a greeting is answered at once, without a lookup or a charge, and the welc
   await expect(page.getByTestId('chat-greeting')).toHaveText('How can I help you?');
   await snap(page, 'after-welcome');
   const examples = page.getByTestId('suggestion');
-  expect(await examples.count()).toBeLessThanOrEqual(3);
+  expect(await examples.count()).toBeLessThanOrEqual(4); // up to four examples under the welcome
   await page.getByTestId('assistant-input').fill('Hello');
   await page.getByTestId('assistant-input').press('Enter');
   await expect(page.getByTestId('user-message').last()).toHaveText('Hello'); // shown at once
@@ -46,6 +46,11 @@ test('a question, then a follow-up that keeps the topic; a chart only when asked
   const first = await ask(page, 'What is the latest electricity generation?');
   await expect(first).toHaveAttribute('data-status', 'answered');
   await expect(first.getByTestId('assistant-text')).toContainText('50100');
+  // No citation markers, evidence ids or source list until the sources are asked for.
+  await expect(first.getByTestId('citation-chip')).toHaveCount(0);
+  await expect(first.getByTestId('assistant-text')).not.toContainText('[E');
+  await expect(first.getByTestId('chat-sources')).toHaveCount(0);
+  await first.getByTestId('toggle-sources').click();
   await expect(first.getByTestId('citation-chip')).toHaveCount(1);
 
   const follow = await ask(page, 'Compare it with the previous year.');
@@ -53,13 +58,16 @@ test('a question, then a follow-up that keeps the topic; a chart only when asked
   await expect(follow.getByTestId('reply-mode')).toHaveText('Compare'); // inferred from the words
   await expect(follow.getByTestId('assistant-text')).toContainText('2001');
   await expect(follow.getByTestId('assistant-text')).toContainText('2002');
+  await expect(follow.getByTestId('citation-chip')).toHaveCount(0);
+  // Show sources: the citations and the list of sources, open; Hide sources puts them away.
+  await follow.getByTestId('toggle-sources').click();
   await expect(follow.getByTestId('citation-chip')).toHaveCount(2);
-  // The sources are one line, opened on request; a citation opens them at its source.
   const sources = follow.getByTestId('chat-sources');
   await expect(sources).toContainText('Sources (2)');
-  await expect(sources).not.toHaveAttribute('open', '');
-  await follow.getByTestId('citation-chip').first().click();
   await expect(sources).toHaveAttribute('open', '');
+  await snap(page, 'after-show-sources');
+  await follow.getByTestId('toggle-sources').click();
+  await expect(follow.getByTestId('chat-sources')).toHaveCount(0);
   await expect(page.getByTestId('inline-chart')).toHaveCount(0); // never drawn unasked
 
   const chart = await ask(page, 'Show a chart of the history of electricity generation');
@@ -79,6 +87,8 @@ test('answers render Markdown safely: a heading, a table and a list', async ({ p
   await expect(text.locator('th')).toHaveText(['Year', 'Value']);
   await expect(text.locator('tbody tr')).toHaveCount(2);
   await expect(text.locator('tbody tr').first()).toContainText('48000 GWh');
+  await expect(text.locator('tbody tr').first().getByTestId('citation-chip')).toHaveCount(0);
+  await reply.getByTestId('toggle-sources').click();
   await expect(text.locator('tbody tr').first().getByTestId('citation-chip')).toHaveCount(1);
   await expect(text.locator('ul li')).toHaveText('Published values only, nothing estimated.');
   await expect(text).not.toContainText('|'); // no raw Markdown left
@@ -146,17 +156,16 @@ test('Enter sends once, Shift+Enter starts a new line', async ({ page }) => {
   expect(asks).toHaveLength(1);
 });
 
-test('switching to Ilham changes who answers; the conversation stays', async ({ page }) => {
+test('Al Mulhim answers on a phone; the header offers no persona choice', async ({ page }) => {
   await page.goto('/assistant?mode=synthetic');
   await ask(page, 'Hello');
   const header = page.getByTestId('chat-header');
-  await header.getByTestId('persona-option-ilham').click();
-  await expect(page.getByTestId('mulhim-name')).toHaveText('Ilham');
-  await expect(header.getByTestId('assistant-avatar').locator('img')).toHaveAttribute('src', /ilham-portrait/);
+  await expect(header.getByTestId('persona-picker')).toHaveCount(0);
+  await expect(page.getByTestId('mulhim-name')).toHaveText('Al Mulhim');
+  await expect(header.getByTestId('assistant-avatar').locator('img')).toHaveAttribute('src', /mulhim-portrait/);
   const reply = await ask(page, 'Who are you?');
-  await expect(reply).toHaveAttribute('data-persona', 'ilham');
-  await expect(page.getByTestId('assistant-message').first()).toHaveAttribute('data-persona', 'mulhim');
-  await header.getByTestId('persona-option-mulhim').click();
+  await expect(reply).toHaveAttribute('data-persona', 'mulhim');
+  await expect(reply.getByTestId('assistant-text')).toContainText('I am Al Mulhim');
 });
 
 test('reading older messages: a new reply does not pull the page; "New messages" brings it', async ({ page }, info) => {

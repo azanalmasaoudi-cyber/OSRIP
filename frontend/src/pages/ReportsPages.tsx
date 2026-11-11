@@ -92,7 +92,38 @@ export function ReportsPage() {
       {reports.data && reports.data.length > 0 ? <p className="mb-4 text-sm text-muted-foreground">{t('pages.reports.createHint')}</p> : null}
       {body}
       <AnalysisReportList />
+      <ExportCenter />
     </>
+  );
+}
+
+/** Where each export is and in which formats; the files themselves come from each page. */
+function ExportCenter() {
+  const { t } = useTranslation();
+  const to = usePreservedSearch();
+  const entries = [
+    { id: 'reports', path: '/reports', hash: '#saved-reports', formats: 'PDF · Excel · CSV' },
+    { id: 'datasets', path: '/datasets', hash: '', formats: 'Excel · CSV' },
+    { id: 'axes', path: '/energy/electricity', hash: '', formats: 'CSV' },
+  ] as const;
+  return (
+    <section id="export-center" tabIndex={-1} aria-labelledby="export-center-h" className="mt-10 flex scroll-mt-24 flex-col gap-3 outline-none" data-testid="export-center">
+      <h2 id="export-center-h" className="text-lg font-semibold">{t('pages.reports.exportCenter.title')}</h2>
+      <p className="text-sm text-muted-foreground">{t('pages.reports.exportCenter.intro')}</p>
+      <ul className="grid gap-3 sm:grid-cols-2">
+        {entries.map((e) => (
+          <li key={e.id}>
+            <Card className="flex h-full flex-col gap-1 p-4">
+              <Link to={{ ...to(e.path), hash: e.hash }} className="inline-flex items-center gap-1.5 font-semibold text-primary underline underline-offset-2">
+                <Download aria-hidden="true" className="size-4" />{t(`pages.reports.exportCenter.${e.id}.title`)}
+              </Link>
+              <p className="text-sm text-muted-foreground">{t(`pages.reports.exportCenter.${e.id}.where`)}</p>
+              <p className="text-xs text-muted-foreground" dir="ltr">{e.formats}</p>
+            </Card>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -127,8 +158,8 @@ function AnalysisReportList() {
     );
   }
   return (
-    <section className="mt-10 flex flex-col gap-3" data-testid="analysis-reports">
-      <h2 className="text-lg font-semibold">{t('reportsAi.listTitle')}</h2>
+    <section id="saved-reports" tabIndex={-1} aria-labelledby="saved-reports-h" className="mt-10 flex scroll-mt-24 flex-col gap-3 outline-none" data-testid="analysis-reports">
+      <h2 id="saved-reports-h" className="text-lg font-semibold">{t('reportsAi.listTitle')}</h2>
       <p className="text-sm text-muted-foreground">{t('reportsAi.listIntro')}</p>
       {body}
     </section>

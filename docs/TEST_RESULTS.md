@@ -1,5 +1,269 @@
 # Test results
 
+## 2026-11-10 (evening): username and password only; usernames of 1-10 characters; the 502 on sign-in (branch `feature/username-password-auth`)
+
+**The 502.** Nothing answered behind the page. Port 8000 belonged to Incredibuild's Manager service (installed with Visual Studio), but this branch's API uses 8010. The launcher had started the API on 8010 at 17:58 and its log ends at 17:59:05; both the launcher and the API had gone. A frontend-only preview server, started from a Claude session at 07:38, still held port 5173 and forwarded `/api` to the empty port 8010. That pushed the launcher's frontend to 5174, and every sign-in through 5173 got a bare 502, shown as "Request failed with status 502". Fixes:
+- the stray preview server was stopped;
+- the Vite proxy now answers 503 with the API's error envelope (`server_unavailable`) when the API is not reachable;
+- the client turns a network failure, or a 502/503/504 without that envelope, into `server_unavailable`, shown as "The OSRIP server is not responding right now…" / "خادم OSRIP لا يستجيب الآن…". Nothing is faked as success.
+
+**What changed.**
+- **Sign-in:** a username and a password are the only way in.
+- **Registration:** asks for a username, a password and the password again, and creates an ordinary (viewer) account with a recovery code shown once.
+- **Forgotten password:** recovered with that code, or by an administrator's reset; a username alone never resets anything.
+- **Retired methods, code removed:** e-mail registration, e-mail verification, e-mail reset and sign-in links, phone codes (SMS and WhatsApp), and Google and Microsoft. Their endpoints answer 410 `sign_in_method_retired` without reading the body; their pages redirect to `/sign-in`, dropping any token.
+- **Usernames (migration 0033):**
+  - 1-10 Arabic or English letters and digits, starting with a letter (`_ . -` allowed);
+  - trimmed, NFKC-normalised, Arabic-Indic digits stored as 0-9;
+  - unique without regard to case or Arabic look-alike letters (`username_key`);
+  - reserved names refused, also with digits or punctuation added (Azzan, admin, المدير, الملهم…).
+- **Enforced in four places:** the frontend (`maxLength` 10 and the messages "Username must not exceed 10 characters." / "اسم المستخدم يجب ألا يتجاوز 10 أحرف."), FastAPI, the Pydantic schemas, and a database trigger.
+- **Older accounts:** the trigger checks only a new or changed name, so older usernames keep working (such as the 12-character one in the development database). Nothing was renamed or deleted; e-mail addresses and phone numbers stay as records.
+- **Administrators:** they can give an account without a username one (audited `user.username`); the Users page shows the old address or number as a record only.
+- **Removed with the methods:**
+  - `identity.py`, `phone.py`, `oidc.py`, `sms.py`, `mail_templates.py` and the WhatsApp/SMS scripts;
+  - their tests and the three browser specs;
+  - SMS, Google and Microsoft from Service health;
+  - 82 translation keys that nothing used any more, in both languages.
+
+| Check | Result |
+|---|---|
+| Backend whole suite with database tests | **973 passed** (2 min 40 s; fewer than before because the tests of the removed methods went with them); migration round trip with 0033: pass |
+| Of which, sign-in and usernames (`test_username_accounts_integration.py`, `test_auth_integration.py`) | **57 passed**. Covered: Arabic and English registration; exactly 10 characters; 11 refused with `username_too_long` and the exact message; look-alike Arabic names taken; the database refuses bad names on insert and on rename; an older 13-character username signs in, changes its password and gets a recovery code; e-mail address and phone number find nothing; 14 retired endpoints answer 410 with no session and no account; an administrator gives an e-mail-only account a username (audited) |
+| `ruff check`, `ruff format --check` | Clean |
+| `npm run typecheck`, `lint`, `check:contrast`, `build` | Pass |
+| Frontend unit tests | **23 passed** (new `username.test.mjs`: 3) |
+| Full-stack browser suite (Chrome) | **178 passed**, 2 skipped as designed, 0 failed (25.3 min). An earlier run while the computer was busy: 174 passed, 4 failed. Three were timing failures that passed when rerun; the fourth was the service-health test still expecting a Google row, which was updated |
+| `accounts` and `welcome-sign-in` specs alone, first run | **21 passed**. Covered: registration fields (3 inputs, `maxlength` 10); eleven letters typed stop at ten with the message; the API's 422; ten characters register; an Arabic name registers and signs in; a look-alike is taken; reload keeps the session; sign-out ends it; retired links land on `/sign-in`; an e-mail address does not sign in; the retired API answers 410; the older long username signs in; an administrator assigns a username; no 502/503/504 during the journey |
+| Mock-data browser suite | **45 passed**, 3 skipped as designed. Two earlier runs were disturbed: the computer slept during one (9.5 h), and in the other three shell tests hit a cold server, then passed on their own (15 of 15) |
+| Copy of the development database (`osrip_livecheck`, since dropped) | Migrated 0032 → 0033. All 11 accounts kept; the administrator account and the 12-character older username unchanged, each with its lower-case key; the trigger is in place. Through this branch's API on the copy: providers report username and password only; a wrong password for the 12-character older username gives `invalid_credentials` (not an error); `/auth/magic-link` gives 410. In the browser pane, Arabic and the dark theme: the registration field stops at 10 with the Arabic message; `سالم١` registered as `سالم1`, viewer, no e-mail or phone; the recovery code was shown in the glass card. With the API stopped, sign-in showed the Arabic "server not responding" message after a 503 from the proxy |
+
+**Not done here:** the development database `osrip_dev` is still at 0032; the launcher applies 0033 the next time OSRIP starts from this branch. Five personal accounts there have no username (two analysts and two viewers who used e-mail, one viewer who used a phone number): they cannot sign in until an administrator gives each a username on the Users page, then a temporary password where needed (the phone account has none). No live provider was called.
+
+## 2026-11-10: wilayat evidence through the reviewed import; map provenance; unused UI removed (branch `feature/wilayat-evidence`)
+
+What changed: the evidence workbook of November 2026 (`OSRIP_Wilayat_Evidence_Development_Review_2026.xlsx`) is mapped by `app/services/imports/wilayat_evidence.py` and staged by `scripts/stage_wilayat_evidence.py` (dry run by default; `--stage --as USER`; rollback `--reject --as USER`). Migration 0032 adds population (context, not a fifth axis: total, Omani, non-Omani; persons) and commercial registrations (new in a period; on record at a date). Water stays at governorate level; quarters and January-September stay partial periods; the Nama service-area supply, the derived national total and rounded summaries are not imported (README in `docs/data-imports/2026-11-wilayat`). The map's tooltip names the source and the review status of the value under the cursor. Removed after a reference and history check: `common/Charts.tsx` and `geography/Basemap.tsx` (no importer; the map replaced Basemap in 9558bbb), their 9 strings, the 4 opening images (unused since e611fb2) and the 9 files of the retired home portrait; masters and provenance records stay, marked "retired".
+
+| Check | Result |
+|---|---|
+| `npm run typecheck`, `npm run lint`, `npm run check:contrast`, `npm run build` | Pass; 0 failing contrast pairs (bundle-size warning not new) |
+| Frontend unit tests (`node --test tests/*.test.mjs`) | **20 passed** |
+| Backend whole suite with the database tests (`OSRIP_RUN_DB_TESTS=1`) | **1059 passed** (2 min 39 s); `ruff check` clean on `app`, `scripts`, `tests`, `alembic` |
+| New: `test_wilayat_evidence.py` (pure) | **19 passed**: the registry from migration 0005; Arabic spelling variants; no match across governorates; the real workbook gives 63 of 63 wilayats and 5,359,557 for 2025; 24 full-year 2025 trade rows, 8 quarterly, 3 stock, 4 not wilayat-level; water 2025 adds up to 508.1; 252 coverage statuses kept as documentation |
+| New: `test_wilayat_evidence_integration.py` (throwaway database) | **1 passed**: the staged files validate with no rejected row; once a data manager approves and publishes them, the wilayat comparison lists all 63 populations (sum 5,359,557, source and revision status on each), the six Al Batinah North registrations of 2025 with 57 wilayats counted as without value (not zero), the Al Wusta second quarter of 2026 with new registrations and the stock apart and no annual 2026 figure, no wilayat water value, and population under its own section |
+| Migration round trip (`test_migrations_roundtrip_integration.py`) and `test_personas.py` | **31 passed** (0032 up and down) |
+| Mock-data browser suite (Chrome, desktop and phone) | **44 passed, 1 failed, 3 skipped**; the failure was Chrome not starting ("NOTREACHED", before the page opened); that spec again: **5 passed** |
+| Full-stack browser suite (Chrome, desktop and phone), whole suite | **200 passed**, 2 skipped as designed (22.5 min) |
+| Development database (`osrip_dev`) | Migrated 0031 → 0032. Dry run: 334 rows in 9 imports, 10 already published or waiting, 6 not imported. Staged as Azzan: **9 imports validated, 0 rejected rows, nothing approved or published**; they wait in Data Management |
+| Sidebar: one entry per page (after the owner's decision) | Scenarios, Geographic Comparisons, Saved Reports, Export Center, Appearance and Language left the sidebar; Forecasting is now "Forecasts and Scenarios"; search still finds the six sections and opens the page at the section. Mock-data suite again: **45 passed**, 3 skipped (a first run timed out twice while the cold dev server took 19.6 s to load the first page; every step had passed). Full-stack `interface` and `research-workflow` specs: **15 passed**. In the browser pane (Arabic, 1280 px): one entry per page; searching "Export" offers "مركز التصدير" and opens `/reports#export-center` |
+| Academic booklet (69-page edition) | Status statements synchronised (title page, ethics page, abstract, §2, §4.4, Appendices D, F, I); Word repaginated it to **69 pages**, no heading moved, so the contents list stands; pages 1, 5, 17, 45, 60, 62 and 69 inspected as rendered by Word; PDF exported by Word |
+
+**Not done here:** approval and publication of the staged imports (the administrator's decision); no new live provider call was made.
+
+## 2026-11-08 (later): one modern Al Mulhim conversation; the Talk screen removed (branch `feature/al-mulhim-chat`)
+
+What changed: `/talk` redirects to `/assistant` (keeping only the data mode and a question to prefill); the floating orb opens the conversation instead of a second chat in a side panel; the workspace column embeds the same conversation; the old panel layout (answer-mode button rows, persona picker, End call, mute row) is deleted. The conversation has a history column (a drawer on phones), a centred welcome, a large two-row message box with Tools, microphone and Send or Stop, and streaming statuses from the server's real stages. Al Mulhim is the only persona in every part of the interface (no picker or stored choice; no Ilham intro slot); synthetic data is labelled on answers from OSRIP's data, not on internet answers.
+
+| Check | Result |
+|---|---|
+| `npm run typecheck`, `npm run lint`, `npm run check:contrast`, `npm run build` | Pass; 0 failing contrast pairs (the bundle-size warning is not new) |
+| Frontend unit tests | **20 passed** (new `talk-redirect.test.mjs`: 3; the stream phases now include planning and preparing tables) |
+| Backend (unchanged on this branch apart from the intro import tool): `test_personas.py`, `test_guest_allowance_integration.py`, `test_answer_streaming*.py` | **63 passed**; `ruff` clean on the tool |
+| Mock-data browser suite (Chrome, desktop and phone) | **45 passed**, 3 skipped as designed; new welcome test: "Ask Al Mulhim" beside the four sector images, opens the conversation, in Arabic and the other theme |
+| Full-stack browser suite (Chrome, desktop and phone), whole suite | **190 passed, 10 failed, 2 skipped** (1.4 h; the computer kept stalling). Five failures were expectations the redesign changes: at most three examples (now up to four, ×2), Tools before the message box in tab order (now after it, ×2), the old Arabic "writing" label (×1); five were stalls: a suspended network, page-load and navigation timeouts, a page that never opened. No page scrolls sideways at 360–1366 px in either language (checked again by hand on `/assistant` and `/workspace`) |
+| The failing spec files again, after the fixes | **56 passed**, 1 skipped as designed, 1 failed: on a cold server a guest's very first question was refused as an expired session (it was sent before the guest session existed). Fixed: the first question waits for the session. Then `chat-phone` and `assistant` specs: **32 passed** |
+| The rewritten specs, first focused run | 43 passed, 6 failed: 4 disturbed by a concurrent run (3 deleted trace files, 1 lost request), 2 because two notes of the old panel were missing (web figures go to a review queue; the speaking animation is not lip synchronisation), now kept in the conversation; the 4 spec files again: **24 passed** |
+| By hand (browser pane) | `/talk?mode=synthetic&persona=ilham` lands on `/assistant?mode=synthetic`; desktop light English, dark Arabic (right to left: the history on the right), phone width (history in a drawer, examples in one column) |
+
+**Live check with DeepSeek (9 November 2026).** Pressing Start again in Visual Studio reused the OSRIP already running since 8 November (the launcher never starts a second copy), still at migration 0029. So the check ran beside it, without touching it: a copy of `osrip_dev` migrated to 0031, this branch's backend on port 8011 with the configured DeepSeek key, and a frontend on port 5188 pointed at it. Both were removed afterwards and the copy dropped.
+- Through the API, "What was Oman's total electricity generation in 2025, and how did it change from 2024?" in Deep research gave this timeline:
+  - received 0 s; planning 2.7 s;
+  - three web searches in parallel from 5.3 s, results by 7.8 s;
+  - reading original pages 10.2–24 s, then one more search; computing 27.0 s;
+  - writing from 28.6 s: **49 checked sentences streamed** by 33.7 s;
+  - checking 41.0 s; complete 41.3 s.
+
+  The reply was `answered`, by Al Mulhim, with 4 web sources; one unsupported part was left out with a note rather than withholding the answer. It cited a press report of preliminary NCSI data (51,612.3 GWh), not the Statistical Year Book's 50,973.5 GWh, and said so.
+- Through the new interface, "How did water production in Oman change in 2025 compared with 2024…?" in Deep research, in verified mode:
+  - the status line went Searching the internet → Reading sources → Analysing the findings → Writing the response;
+  - the report then appeared sentence by sentence (Summary, Findings, Hypotheses kept apart, Assumptions), with "Parts withheld… 1", Show sources, Read aloud and follow-up questions;
+  - the history listed the conversation, and the counter showed 4 of 5 free answers.
+- Found and fixed: the header's general status read "Checking the published data…" while Al Mulhim was searching the web; it now reads "Working on your answer…" (the exact stage stays on the answer).
+
+To see this in the app on this computer, stop the running OSRIP first (Stop in Visual Studio, or close its launcher window), then Start: the launcher applies migrations 0030–0031.
+
+## 2026-11-08: one persona, streamed answers, 2021 scope, booklet synchronised (branch `feature/al-mulhim-streaming`)
+
+What changed: Al Mulhim is the only persona (profile version 4, migration 0030); answers are streamed sentence by sentence, each released only after the evidence check (migration 0031); "Azzan" is reserved and `ensure-admin --promote` refuses self-made accounts; verified statistics start in January 2021; the owner's workbooks are staged as four validated imports (`docs/data-imports/2026-11/`), nothing published. The academic booklet was then compared with the code and updated (below).
+
+| Check | Result |
+|---|---|
+| `ruff`, backend `pytest` with database tests | Pass; **1039 passed** |
+| `npm run typecheck`, `npm run lint`, `npm run check:contrast`, `npm run build`, frontend unit tests | Pass; 0 failing contrast pairs; 17 unit tests |
+| Full-stack browser tests (Chrome), whole suite, desktop and phone | **199 passed, 14 failed, 3 skipped** (4.1 h; the computer slept during the run). Six failures were `talk-phone.spec.ts` assertions still expecting the removed persona choice or the old "Abdullah or Aysha" help text; one was real: in a 411×257 window, scrolling the Talk message box into view stopped one pixel short (the column is shorter without the picker; the same test passes on `fix/arabic-plurals`); seven were page-load timeouts and an interrupted connection while asleep |
+| The failed spec files again, after the fixes (assertions updated, the message box given a scroll margin on short screens) | `talk-phone`, `phone`, `quality`, `workspace-phone`, `accounts`, `interface`: **all 14 pass**. First re-run with the assertions updated: 62 passed, 1 failed (the short window), 3 skipped as designed; after the margin fix, `talk-phone`: 10 passed, 2 skipped as designed |
+| Streaming and persona browser tests | `answer-stream.spec.ts` (3) and `personas.spec.ts` (4) pass |
+
+**Not verified:** live DeepSeek streaming. The key and model are valid, but the provider check's chat request failed on the network (about 284 s). All browser and backend tests used the scripted stand-ins. Live DeepSeek answering (not streamed) was last verified on 25 October 2026.
+
+**Academic booklet** (`docs/OSRIP_Academic_Booklet_Nov_2026_60_Pages.docx` and `.pdf`, from the supplied `OSRIP_Academic_Booklet_Rewritten_Nov_2026_60_Pages.docx`):
+- Every implementation statement was checked against the code, tests and provider settings (names only, no values) and rewritten where it differed: what exists and is tested locally, what is configured, and what is not verified (live streaming, MapTiler, Azure Speech, other providers, deployment, the usability study). The administrator wording matches the code: the first administrator comes only from `ensure-admin` (temporary password at a hidden prompt, changed at first sign-in), later grants need an administrator.
+- Corrected to the code: the 2021 scope start (Table 3.2 FR08, Table 4.3 T13), Table 3.5 (now "Implemented API routes": the real assistant, registration and recovery routes), Table 3.8 record names, the map's OpenStreetMap boundaries (not official), conversation retention ("until deleted"), the September 2026 restore drill, measured latencies, test results, and which 2026 figures are published or staged.
+- Kept: the five chapters, all statistics and periods (2025 full year, 2026 preliminary), the unsigned approval pages and the proposed (not conducted) usability study.
+- References: seven added for works cited without an entry (Canva, Microsoft, Motion) or newly cited (Argon2 RFC 9106, DeepSeek API, OpenStreetMap, WHATWG server-sent events).
+- Layout faults present in the supplied file were fixed: three contents entries without a page number, 18 stale page numbers or titles in the contents and lists (for example Table 4.5 listed on page 50, Figure "C.1" for D.1), and cells and contents entries in 12 point among 10-point ones.
+- Laid out and exported with Microsoft Word: **60 pages** (Word's count and the PDF's); chapters, references and appendices start on the same pages as before; every contents and list entry matches its page; all 60 pages rendered and inspected.
+
+## 2026-11-04 (later): Arabic plural forms (branch `fix/arabic-plurals`)
+
+What changed: Arabic has six plural forms (none, one, two, 3–10, 11–99, 100 and more); the Arabic strings had only English's two. For a count without its Arabic form, i18next showed the English text: the audit log read "16 rows" in Arabic. The other plural labels (group members, failed sync checks, releases awaiting approval) had the same problem; all four are on administration pages. Every plural key now has all six Arabic forms. The Arabic type (`ArabicTranslationShape`) requires them for any plural key added later.
+
+| Check | Result |
+|---|---|
+| New `tests/arabic-plurals.test.mjs` | 4 passed: every plural key resolves in Arabic for 0, 1, 2, 3, 7, 10, 11, 25, 99, 100, 101, 102 and 1000, with the number written from 3 up, distinct forms for 2, 3, 11 and 100, and no English fallback. Against the previous Arabic file it fails ("table.rowsShown (0) fell back to English") |
+| Type check | Passes. With one Arabic form removed (`members_two`), `tsc` refuses the file ("Property 'members_two' is missing") |
+| `npm run lint`, the other frontend unit tests | Pass (12 unit tests in all) |
+| Full-stack browser test (Chrome), new in `interface.spec.ts` | Passes: the audit log's row count in Arabic, "لا صفوف" for an empty search, back to English. Against the previous Arabic file it fails with "· 16 rows". The neighbouring interface and datasets tests pass |
+
+## 2026-11-04: Quick answer, Deep internet research and Data analysis (branch `feature/ai-research-intelligence`)
+
+What changed (modes in AI_PROVIDERS.md, "Answer modes"; status in MASTER_BRIEF_STATUS.md):
+- Three kinds of answer, each with its own tools, model, budgets and rules, enforced by the backend. Quick answer and Deep research work from the live web and never reach OSRIP's datasets unless asked; without web search, or when the answering service fails, they say so instead of answering from OSRIP's records.
+- Deep research plans, searches several questions at once and has its figures built by the backend: calculations on cited values, tables that keep only rows matching their sources, charts from those rows, and diagrams. Illustrations come through the Images API, off by default.
+- The interface groups the internet modes apart from the data modes and shows the tables, charts, diagrams, illustrations and research plan under a reply.
+- As chosen by the owner, every model, search and image service was the backend's scripted stand-in: **no paid call was made**.
+
+| Check | Result |
+|---|---|
+| `ruff`, backend `pytest` with database tests | Pass; **1002 passed** (whole suite). New: `test_research_modes.py` (19) and `test_research_modes_integration.py` (7). The last two unit tests (production refuses the image stand-in; the internet modes' prompt) were added after that run and pass with their module. One older test changed for the no-fallback rule. A bug found by the new tests was fixed: the internet-mode failure path logged an attribute `ProviderError` does not have |
+| Migration 0029 | Applied to the development database by the launcher (`alembic_version` 0029_generated_images); the 'quick' mode and the `generated_image` table are present |
+| `npm run typecheck`, `npm run lint`, `npm run check:contrast`, `npm run build`, frontend unit tests | Pass; 0 failing contrast pairs; 8 unit tests. Type check and lint were repeated on the files changed after the full lint |
+| Full-stack browser tests (Chrome), whole suite, desktop and phone | 202 passed, 9 failed, 3 skipped (33 min). Of the 9: four Talk layout checks on the phone failed because the longer mode names wrapped to a second row (fixed: Talk shows the three main modes in short words); one workspace test asked a published-data question in Research mode, which no longer reads OSRIP's datasets (it now uses Data analysis); two phone sign-in and two interface tests timed out while the machine was also running the backend tests and restarting the app |
+| The same spec files after the fixes | `phone`, `interface`, `workspace`, `talk-phone`, `talk`, `research-modes`: **all pass** (41 + 20 passed, 4 skipped as designed) |
+| New `research-modes.spec.ts` | 5 passed: the Tools drawer's two groups; a Deep research report with its sections, a two-row table checked against its sources (sources column only after "Show sources"), CSV and SVG downloads, the chart drawn from that table, the four-step diagram and the plan; a Quick answer; the report in Arabic, right to left; an illustration for a signed-in person, labelled "AI illustration — not data". At phone width the page does not scroll sideways and the flowchart runs top to bottom |
+| By hand (screenshots from the tests) | English desktop report, Arabic report, phone, illustration. Two problems seen there and fixed: the Arabic plan count fell back to English (plural forms; now worded without them), and the flowchart was unreadably small at phone width |
+
+**Measurements with stand-ins** (`scripts/mode_timing.py`, 3 runs each, a model call given 0.6 s and a search 0.8 s; `docs/evaluation/mode-timing.json`):
+
+| Case | Time (median) | Model calls | Searches | Internal data tools | Evidence check | Built |
+|---|---|---|---|---|---|---|
+| Quick answer | 2.0 s | 2 | 1 | none | passed | – |
+| Deep research, searches one after the other | 5.8 s | 7 | 2 | none | passed | plan, 2 table rows, chart, diagram |
+| Deep research, searches together | 5.0 s | 7 | 2 | none | passed | the same |
+| Deep research in Arabic | 5.0 s | 7 | 2 | none | passed | the same |
+
+These show what the modes' design costs or saves with fixed delays; they are not live timings. Live timings need the owner's keys (`scripts/research_timing.py`, billed).
+
+**Not verified:** live OpenAI, Brave or Images behaviour, and the quality of real reports. No key is configured for them, and the configured DeepSeek service was not called.
+
+## 2026-11-03 (later): welcome and sign-in design (branch `feature/welcome-login-design`)
+
+What changed (details in ENTRANCE.md):
+- The owner's welcome and sign-in design, rebuilt in React with the design's colours in both themes and both languages.
+- The welcome waits for the visitor (no timer) and keeps its lifecycle: once per session, home page only, Skip/Enter/Escape, shown again from the footer, Settings and "Back to introduction".
+- Sign-in requires only a username and a password, through the unchanged login API.
+
+| Check | Result |
+|---|---|
+| `npm run typecheck`, `npm run lint`, `npm run check:contrast`, `npm run build` | Pass; 0 failing contrast pairs. The design's colours on these screens were also measured, all at least 4.5:1 for text |
+| Mock-data browser tests (Chrome): rewritten `entrance.spec.ts` with `shell.spec.ts` | **33 passed, 3 skipped** (desktop and phone projects), before and after the last CSS fixes |
+| Full-stack browser tests (Chrome): new `welcome-sign-in.spec.ts` with `accounts.spec.ts` | **19 passed**. Real sign-in with a username and password, a wrong password refused, an ordinary account without administration, the administrator with it (and the API refusing that request to a visitor), registration with a username and password, recovery code, older e-mail accounts |
+| Full-stack after the CSS fixes: `welcome-sign-in.spec.ts` with `quality.spec.ts` | **18 passed** (no page scrolls sideways in either language, error states) |
+| By hand (screenshots from the tests) | Welcome: dark Arabic, light English, phone. Sign-in: dark Arabic, light English, phone. Compared with the design's own screenshots |
+
+## 2026-11-03: premium sector images (branch `feature/premium-sector-images`)
+
+What changed: the four supplied sector images (1672 × 941, kept as supplied, served as WebP 836
+or 1672 px) are the dashboard's sector cards, each a link to its sector page, and the image in
+each sector page header (details in assets.md).
+
+| Check | Result |
+|---|---|
+| `npm run typecheck`, `npm run lint`, `npm run build` | Pass |
+| Mock-data browser tests (Chrome): new `sector-cards.spec.ts` with `shell.spec.ts` | **23 passed, 3 skipped** (desktop and phone projects). The new spec checks each image loads, is the right file and is drawn at 1672:941 with `object-contain`; cards lazy, headers eager; each card opens its sector page (pointer and keyboard), with an accessible name; Arabic (RTL) with the dark theme; one column at phone width; no sideways scrolling |
+| By hand (screenshots from the tests) | Light English and dark Arabic dashboard, the Electricity and Trade headers, the Food Security page at phone width: whole images, no text over them, arrows mirrored in Arabic |
+
+## 2026-11-03: sources on request, partial answers, internet research (branch `feature/osrip-complete-development`)
+
+What changed (status against the whole brief in MASTER_BRIEF_STATUS.md):
+- Answers show no sources, citation markers, evidence ids, search logs or method notes until asked for (Show sources, or asking in words, which gets a `sources` reply; migration 0028).
+- An unsupported figure no longer withholds the whole answer: its sentence is left out and the rest shown with a note.
+- Internet research searches the web first.
+- The brief's exact palette; AI Assistant first in the navigation; an Export Center.
+
+| Check | Result |
+|---|---|
+| `ruff`, backend `pytest` with database tests | Pass; **978 passed**. New: `test_partial_answers.py` (7), `test_sources_on_request.py` (23), and integration tests for a partly kept answer, sources on request (not charged) and web-first internet research. The 0028 migration applied to the development database |
+| `npm run typecheck`, `npm run lint`, `npm run check:contrast`, `npm run build` | Pass; 0 failing contrast pairs with the new palette |
+| Mock-data browser tests (Chrome) | **38 passed, 3 skipped, 2 failed** in the full run. One failure was the theme test still expecting the old page colour (now #F7F4EF); the other was the phone-width entrance check, which passed on rerun. The entrance and shell spec files rerun: **33 passed, 3 skipped** |
+| Full-stack browser tests (Chrome) | **197 passed, 3 skipped, 3 failed** in the full run. The 3 were the Talk layout checks: the longer "Internet research" chip wrapped the mode row. The chip is "Research" again and the answer's badge says "Internet research". The Talk spec files rerun: **15 passed, 2 skipped**. The assistant, chat, governed-AI, upgrade and research specs, updated for hidden sources: **49 passed**, then **38 passed** with screenshots |
+| Live answer service | Not called (no model call was needed; the tests use the scripted provider). DeepSeek's last recorded health check: ok, 2 November 2026 |
+
+## 2026-11-02 (night): premium Oman map (branch `feature/oman-premium-map`)
+
+What changed (details in MAP.md):
+- MapTiler when a browser key is configured (Topographic, Satellite, Terrain, 3D terrain), otherwise OpenFreeMap with the open Terrain Tiles, otherwise a plain background; a refusal, quota or outage hands over to the next provider.
+- The national outline (dissolved from the governorates), a mask dimming everything outside Oman, and registry-named labels.
+- The comparison by axis and at wilayat level, and the data mode beside the map.
+- The MapTiler build argument and the map hosts in the Content-Security-Policy.
+
+| Check | Result |
+|---|---|
+| `ruff`, backend `pytest` with database tests | Pass; **945 passed**. New: `test_build_boundaries.py` (the outline dissolve with a shared way and an enclave, ring orientation, the mask, label points) |
+| Boundary build | 11/11 governorates, 63/63 wilayats, 0 unmatched either side, 0 geometry problems; outline 38 parts, 1 hole (Nahwa), 0 unjoined segments; 74 labels, each inside its area |
+| `npm run typecheck`, `npm run lint`, `npm run check:contrast` | Pass; 0 failing contrast pairs |
+| Full-stack browser tests (Chrome) | **193 passed, 3 skipped, 5 failed** in the full run (201 tests). The 5 were timeouts (a 3-minute browser launch among them) while the machine was loaded and asleep for part of the run; their spec files rerun: **19 passed**. New: `oman-map.spec.ts` (4) and `oman-map-maptiler.spec.ts` (5), with every external map request stopped or answered by a stand-in |
+| Headless Chrome against the development server, by hand | OpenFreeMap provider, toolbar, Satellite disabled without a key, hover tooltip, selection with zoom, Terrain view and 3D with relief, wilayat level and comparison, data mode switch; dark Arabic with the toolbar at the start edge and the zoom buttons opposite; 390 px with no sideways scroll; no console errors besides the API's handled mixed-frequency answer |
+| MapTiler, live | **Not tested**: no MapTiler account or key. The requests OSRIP makes and its fallback are tested with stand-in responses |
+
+## 2026-11-02 (later): premium redesign (branch `feature/premium-osrip-redesign`)
+
+What changed (details and screenshots in PREMIUM_REDESIGN.md): the warm glass design tokens in both themes, the new sidebar (collapsible modules, icon-only mode, profile card), the dashboard KPI cards and analysis by axis, the full-screen sign-in with Remember me (migration 0027), the Audit Logs page and reusable data table, the assistant's glass messages, and relief on the map.
+
+| Check | Result |
+|---|---|
+| `ruff`, backend `pytest` with database tests | Pass; **941 passed**. New: `test_remember_me_integration.py` (a browser-session cookie and the idle limit without it; a 14-day persistent session that survives an idle gap with it; sign-out ends it). The 0027 migration round trip passes |
+| `npm run typecheck`, `npm run lint`, `npm run check:contrast` (47 pairs per theme), `npm run build` | Pass; 0 failing contrast pairs |
+| Mock-data browser tests (Chrome) | **40 passed, 3 skipped** (on a quiet machine; with the backend suite running alongside, the opening's 3-second timing check once read 4.6 s) |
+| Full-stack browser tests (Chrome) | **188 passed, 3 skipped, 1 failed** in the full run (192 tests). The failure was the sign-in test counting the form's inputs (Remember me adds a checkbox); it now counts text inputs and checks the box is off by default, and its spec file reruns: **13 passed** |
+| Browser, by hand (copy of the development database) | Sign-in in light and dark, password toggle, Remember me stored as a 14-day persistent session; dashboard KPIs and analysis; Audit Logs (119 events); map relief in light and dark; an assistant reply; Arabic at phone width with no sideways scroll |
+| OpenAI, live | **Not tested**: no API key configured |
+
+## 2026-10-27 (evening): WhatsApp verification, Meta Cloud API (branch `feature/whatsapp-verification`)
+
+What changed (details in INTEGRATIONS.md, "WhatsApp verification"):
+- `OSRIP_SMS_PROVIDER=whatsapp`: codes made by OSRIP (only a keyed digest stored) and delivered with a WhatsApp authentication template in Arabic or English, through the Meta WhatsApp Cloud API. Meta's error codes mapped; no retry; the number, code and token never logged.
+- Test and production separated: `OSRIP_WHATSAPP_MODE=test` (default) sends only to `OSRIP_WHATSAPP_TEST_RECIPIENTS` and is labelled as a demonstration (status `sandbox`); `production` must be set explicitly and is not set anywhere.
+- `scripts/whatsapp_setup.py` (configure with a hidden token prompt, create the template, check the sender and template status; none of them sends a message).
+- The phone form and account page say "WhatsApp" when that is the channel, in both languages.
+
+| Check | Result |
+|---|---|
+| `ruff`, backend `pytest` with database tests | Pass; **906 passed**. New: `test_whatsapp.py` (request format, test-mode recipient list, keyed digest, Meta error mapping, no retry, nothing sensitive in logs, settings), `test_whatsapp_integration.py` (registration through the API in test mode with a simulated Meta API: refused number never reaches Meta, Arabic template, wrong code counted, code works once) |
+| `npm run typecheck`, `npm run lint`, `npm run build` | Pass |
+| Full-stack browser tests (Edge): `phone.spec.ts`, `verification-change.spec.ts`, new `whatsapp.spec.ts` | **24 passed** |
+| Browser (local preview) | An API in WhatsApp test mode with placeholder settings: the form shows the demonstration notice; a number outside the approved list is refused with an explanation and an e-mail alternative, and the server log shows no call to Meta |
+| WhatsApp, live | **Not tested**: no Meta developer app yet. The demonstration needs the setup in INTEGRATIONS.md |
+
+## 2026-10-27 (later): e-mail and phone verification (branch `feature/email-phone-verification`)
+
+What changed (details in INTEGRATIONS.md, "E-mail" and "SMS verification"):
+- Twilio Verify adapter (`OSRIP_SMS_PROVIDER=twilio_verify`; REST API, no SDK), with Twilio's error codes mapped, no retry, the code sent in the page's language, and logs without numbers or codes. Missing setting names (never values) are shown to administrators on Service health.
+- Account e-mails in Arabic and English (the reader's language first), as HTML with a plain-text part.
+- Changing a confirmed e-mail address or a verified phone number: current password (or a sign-in within `OSRIP_REAUTH_MINUTES` for accounts without one), proof of the new address or number, and a notice to the confirmed address. Account page: change forms, re-sending a confirmation, and translated errors.
+- A per-address limit on phone code checks; the per-address limit on code requests now follows `OSRIP_SMS_PER_CLIENT_HOUR` when it is set higher (production default unchanged at 20 per hour).
+
+| Check | Result |
+|---|---|
+| `ruff`, backend `pytest` with database tests | Pass; **890 passed**. New: `test_sms_twilio.py` (Twilio requests, authentication, error mapping, timeouts, no number or code in logs), `test_mail_templates.py` (both languages, right to left, escaping, no scripts or images), `test_verification_change_integration.py` (address and number changes, re-authentication, notices, other accounts' addresses never taken, SMTP HTML part via a fake server, per-address limit) |
+| `npm run typecheck`, `npm run lint`, `npm run build` | Pass |
+| Full-stack browser tests (Edge): `accounts.spec.ts`, `phone.spec.ts`, new `verification-change.spec.ts` | **29 passed**: registration and confirmation, links used once, password reset, magic link, phone registration, wrong and expired codes, resend countdown, delivery failure, linking, changing an address (wrong password refused, old address told), changing a number, Arabic |
+| Browser (local preview, Edge) | Account page on a phone-sized screen; change-number form in Arabic (right to left, number and password left to right) with the translated wrong-password error. A throwaway account `ui-check-…@test.invalid` was created in the local development database for this |
+| Twilio Verify, live | **Not tested**: no Twilio account. Every Twilio test uses mocked HTTP, so SMS delivery must not be reported as working |
+| E-mail, live | **Not tested**: no SMTP relay or e-mail service configured; messages go to the development outbox |
+
+**Remaining:** a Twilio account, Verify service, Oman sender ID registration and the live acceptance test (`backend/scripts/sms_acceptance.py`); an SMTP relay or e-mail service with SPF, DKIM and DMARC, then a real-inbox test in both languages.
+
 ## 2026-10-27: OpenAI SDK, datasets, charts and research reports (branch `feature/openai-research-platform`)
 
 What changed (details in AI_RESEARCH_PLATFORM.md):

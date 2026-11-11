@@ -4,13 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { hasPermission, useMe } from '@/api/auth';
 import { adapterKind } from '@/api/config';
 import { useMonitoring } from '@/api/monitoring';
+import { PerformancePanel, SyncPanel, UsagePanel } from '@/components/admin/HealthDetails';
 import { PageHeader } from '@/components/common/PageHeader';
 import { ProviderReadiness } from '@/components/common/ProviderReadiness';
 import { StatePanel } from '@/components/common/StatePanel';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 
-const NAMES = ['email', 'assistant', 'google', 'microsoft', 'official_statistics'] as const;
+const NAMES = ['email', 'assistant', 'official_statistics'] as const;
 
 /** Service health and recent errors (administrators with audit access). */
 export function HealthPage() {
@@ -57,6 +58,9 @@ export function HealthPage() {
             </ul>
           </section>
           <ProviderReadiness enabled={allowed} canTest={hasPermission(me.data, 'user.manage')} />
+          <UsagePanel usage={data.data.usage} />
+          <SyncPanel feeds={data.data.sync} />
+          <PerformancePanel perf={data.data.performance} />
           <section aria-labelledby="errors" className="flex flex-col gap-3">
             <h2 id="errors" className="text-lg font-semibold">{t('health.errors')}</h2>
             {data.data.errors.length === 0 ? <p className="text-sm text-muted-foreground">{t('health.noErrors')}</p> : (

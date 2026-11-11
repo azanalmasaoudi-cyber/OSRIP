@@ -42,8 +42,12 @@ def require_delivery() -> None:
         )
 
 
-def send(session: Session, *, to: str, subject: str, body: str, purpose: str) -> None:
-    """Send (or, in development, store) one message inside the caller's transaction."""
+def send(
+    session: Session, *, to: str, subject: str, body: str, purpose: str, html: str | None = None
+) -> None:
+    """Send (or, in development, store) one message inside the caller's transaction. With
+    ``html``, SMTP sends a multipart message (plain text first, HTML alternative); the
+    development outbox keeps the plain text."""
     mode = delivery_mode()
     if mode == "outbox":
         session.add(EmailOutbox(to_address=to, subject=subject, body_text=body, purpose=purpose))
@@ -55,6 +59,8 @@ def send(session: Session, *, to: str, subject: str, body: str, purpose: str) ->
         message["To"] = to
         message["Subject"] = subject
         message.set_content(body)
+        if html:
+            message.add_alternative(html, subtype="html")
         try:
             with smtplib.SMTP(s.smtp_host or "", s.smtp_port, timeout=15) as smtp:
                 if s.smtp_starttls:

@@ -6,6 +6,7 @@ import { studyExportUrl, useReproduceStudy, type StoredStudy, type StudyColumn }
 import { DataModeBadge } from '@/components/common/DataModeBadge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ChartOnRequest } from '@/components/ui/chart-on-request';
 import { en } from '@/i18n/locales/en';
 import { formatDecimal, type AppLanguage } from '@/lib/format';
 import { useAppLanguage } from '@/lib/useAppLanguage';
@@ -231,12 +232,13 @@ export function StudyView({ stored, headingLevel = 2 }: { stored: StoredStudy; h
       ) : null}
 
       {study.charts.map((chart, i) => (
-        <section key={i} className="rounded-lg border border-border bg-card p-3">
+        // Drawn only on request, from the same rows as the table below.
+        <ChartOnRequest key={i} testId="study-chart" className="rounded-lg border border-border bg-card p-3">
           {chart.type === 'line' ? <StudyLineChart chart={chart} rows={rows} labelFor={labels.text} />
             : chart.type === 'bar' ? <StudyBarChart chart={chart} rows={rows} labelFor={labels.text} />
               : <StudyHeatmap chart={chart} rows={rows} labelFor={labels.text} />}
           {chart.type !== 'heatmap' ? <p className="mt-2 text-xs text-muted-foreground">{t('studies.chartNote')}</p> : null}
-        </section>
+        </ChartOnRequest>
       ))}
 
       {rows.length ? (

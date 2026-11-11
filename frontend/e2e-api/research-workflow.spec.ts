@@ -12,7 +12,7 @@ const PASSWORD = process.env.OSRIP_E2E_PASSWORD ?? '';
 async function signIn(page: Page, email: string): Promise<void> {
   await page.goto('/sign-in');
   const form = page.getByTestId('sign-in-form');
-  await form.getByLabel('E-mail address').fill(email);
+  await form.getByLabel('Username').fill(email);
   await form.getByLabel('Password').fill(PASSWORD);
   await form.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).not.toHaveURL(/sign-in/);
@@ -30,12 +30,12 @@ async function noHorizontalScroll(page: Page): Promise<void> {
 }
 
 /** The conversation page: header, messages and message box, one under another, in one centred
- * column at most 800px wide; only the message list scrolls. */
+ * column at most 52rem (832px) wide; only the message list scrolls. */
 async function oneColumn(page: Page): Promise<void> {
   const header = (await page.getByTestId('chat-header').boundingBox())!;
   const messages = (await page.getByTestId('assistant-messages').boundingBox())!;
   const composer = (await page.getByTestId('chat-composer').boundingBox())!;
-  for (const box of [header, composer]) expect(box.width).toBeLessThanOrEqual(800.5);
+  for (const box of [header, composer]) expect(box.width).toBeLessThanOrEqual(832.5);
   expect(header.y + header.height).toBeLessThanOrEqual(messages.y + 1);
   expect(messages.y + messages.height).toBeLessThanOrEqual(composer.y + 1);
   expect(Math.abs((header.x + header.width / 2) - (composer.x + composer.width / 2))).toBeLessThan(2);
@@ -55,7 +55,9 @@ test('desktop: one centred conversation without the profile card, analysis or no
     if (language === 'العربية') await page.getByRole('button', { name: 'العربية' }).first().click();
     await expect(page.getByTestId('assistant-workspace')).toHaveAttribute('data-layout', 'conversation');
     await expect(page.getByTestId('chat-greeting')).toHaveText(language === 'English' ? 'How can I help you?' : 'كيف يمكنني مساعدتك؟');
-    await expect(page.getByTestId('suggestion')).toHaveCount(3);
+    // Up to four examples to start from, under a centred welcome.
+    expect(await page.getByTestId('suggestion').count()).toBeGreaterThanOrEqual(3);
+    expect(await page.getByTestId('suggestion').count()).toBeLessThanOrEqual(4);
     await expect(page.getByTestId('assistant-input')).toHaveAttribute('placeholder', language === 'English' ? 'Ask your question…' : 'اكتب سؤالك هنا…');
     await oneColumn(page);
     // Moved out of the conversation: the profile card, the analysis form, the results, the
@@ -96,7 +98,8 @@ test('when the answer service fails, the reply is a data-based report, labelled,
   const notice = reply.getByTestId('data-report-notice');
   await expect(notice).toContainText('nothing was written or interpreted by AI');
   await expect(notice.getByTestId('data-report-updated')).toContainText('Data last updated');
-  // Figures come with their evidence and OSRIP's own calculation.
+  // Figures come with their evidence and OSRIP's own calculation (shown with the sources).
+  await reply.getByTestId('toggle-sources').click();
   await expect(reply.getByTestId('citation-chip').first()).toBeVisible();
   await expect(reply.getByTestId('how-calculated')).toBeVisible();
   await expect(reply.getByTestId('retry-answer')).toHaveText(/Try the AI answer again/);
@@ -142,7 +145,7 @@ test('a sector page: period first, then the table, the chart only on request, in
 });
 
 test('create a study: it runs in the background with visible steps and ends with conclusions', async ({ page }) => {
-  await signIn(page, 'analyst@e2e.invalid');
+  await signIn(page, 'e2eanalyst');
   await page.goto('/studies?mode=synthetic&create=water');
   const form = page.getByTestId('create-study');
   await expect(form.getByTestId('job-sector')).toHaveValue('water');
@@ -163,13 +166,23 @@ test('create a study: it runs in the background with visible steps and ends with
 });
 
 test('navigation and Settings: the main destinations in order, services and scheduled reports', async ({ page }) => {
-  await signIn(page, 'admin@e2e.invalid');
+  await signIn(page, 'e2eadmin');
   await page.goto('/overview?mode=synthetic');
   const nav = page.getByRole('navigation', { name: 'Main navigation' });
   const names = await nav.getByRole('link').allInnerTexts();
-  const main = names.map((n) => n.trim()).slice(0, 8);
-  expect(main).toEqual(['Overview', 'Electricity', 'Water', 'Food Security', 'Trade', 'Studies', 'Sources', 'Settings']);
-  await nav.getByRole('link', { name: 'Settings' }).click();
+  // The modules in order: Dashboard; the Axes; Research and Analytics; Geographic Intelligence;
+  // Reports; the account; then administration (an administrator sees all of it). One entry per
+  // page: sections of a page (saved reports, appearance, ...) are found through search.
+  expect(names.map((n) => n.trim())).toEqual([
+    'Dashboard', 'Overview',
+    'Electricity', 'Water', 'Food Security', 'Trade',
+    'AI Research Assistant', 'Analysis Workspace', 'Datasets', 'Forecasts and Scenarios', 'Studies', 'Research library', 'Sources',
+    'Interactive Oman Map',
+    'Reports Dashboard',
+    'My Profile', 'Settings',
+    'Data Management', 'Users and Roles', 'Groups and Permissions', 'Service Health', 'Audit Logs',
+  ]);
+  await nav.getByRole('link', { name: 'Settings', exact: true }).click();
   await expect(page.getByTestId('settings-services')).toBeVisible();
   await expect(page.getByTestId('service-answers').getByTestId('assistant-service')).toBeVisible();
   await expect(page.getByTestId('service-retrieval')).toContainText('Not configured');

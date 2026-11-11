@@ -1,6 +1,7 @@
 """OSRIP API entry point: ``uvicorn app.main:app --reload``."""
 
 import logging
+import time
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -40,7 +41,7 @@ from app.api.routes import (
 )
 from app.core.config import get_settings
 from app.core.errors import ApiError
-from app.services import monitoring
+from app.services import monitoring, usernames
 
 logger = logging.getLogger("osrip")
 
@@ -70,6 +71,8 @@ def _check_production_settings() -> None:
             problems.append(f"{name}={value} is for automated tests only")
     if settings.speech_provider == "fake":
         problems.append("OSRIP_SPEECH_PROVIDER=fake is for automated tests only")
+    if settings.images_provider == "fake":
+        problems.append("OSRIP_IMAGES_PROVIDER=fake is for automated tests only")
     if any(o.strip() in ("*", "") or not o.startswith("https://") for o in settings.cors_origins):
         problems.append("OSRIP_CORS_ORIGINS must list explicit https:// origins only")
     if settings.sms_provider == "test":
@@ -119,6 +122,7 @@ def create_app() -> FastAPI:
     async def request_id_and_errors(request: Request, call_next):  # noqa: ANN001, ANN202
         """Tag every request with an id; capture unhandled exceptions without leaking them."""
         request_id = request.headers.get("X-Request-ID", "")[:64] or uuid.uuid4().hex
+        started = time.perf_counter()
         try:
             response = await call_next(request)
         except Exception as exc:  # noqa: BLE001 - last-resort handler
@@ -139,6 +143,13 @@ def create_app() -> FastAPI:
                 },
             )
         response.headers["X-Request-ID"] = request_id
+        # The route pattern (``/admin/groups/{group_id}``), never the concrete path.
+        route = getattr(request.scope.get("route"), "path", None) or "unmatched"
+        monitoring.record_request(
+            f"{request.method} {route}",
+            response.status_code,
+            (time.perf_counter() - started) * 1000,
+        )
         return response
 
     @app.exception_handler(ApiError)
@@ -148,6 +159,25 @@ def create_app() -> FastAPI:
     @app.exception_handler(RequestValidationError)
     async def validation_error_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
         details = [{"location": list(e["loc"]), "message": e["msg"]} for e in exc.errors()]
+        # A missing or over-long username gets its own code, so the page can say so in its
+        # language ("Username must not exceed 10 characters.").
+        for e in exc.errors():
+            if e["loc"][-1:] != ("username",):
+                continue
+            if e["type"] in ("string_too_short", "too_short"):
+                code, message = "username_required", "Enter a username."
+            elif (
+                e["type"] in ("string_too_long", "too_long")
+                and (e.get("ctx") or {}).get("max_length") == usernames.MAX_LENGTH
+            ):
+                code = "username_too_long"
+                message = f"Username must not exceed {usernames.MAX_LENGTH} characters."
+            else:
+                continue
+            return JSONResponse(
+                status_code=422,
+                content={"error": {"code": code, "message": message, "details": details}},
+            )
         return JSONResponse(
             status_code=422,
             content={

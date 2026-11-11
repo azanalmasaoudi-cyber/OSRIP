@@ -9,7 +9,7 @@ const PASSWORD = process.env.OSRIP_E2E_PASSWORD ?? '';
 
 async function signIn(page: Page, email: string): Promise<void> {
   await page.goto('/sign-in');
-  await page.getByLabel('E-mail address').fill(email);
+  await page.getByLabel('Username').fill(email);
   await page.getByLabel('Password').fill(PASSWORD);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByTestId('signed-in-as')).toBeVisible();
@@ -24,14 +24,14 @@ test('navigation lists the required sections and every link opens its page', asy
     ['Water', /\/energy\/water/, 'Water'],
     ['Food Security', /\/food-security/, 'Food Security'],
     ['Trade', /\/trade/, 'Trade'],
-    ['Map', /\/geography/, 'Geography'],
+    ['Interactive Oman Map', /\/geography/, 'Geography'],
     ['Studies', /\/studies/, 'Studies'],
-    ['Scenarios', /\/forecasts/, 'Forecasts and Scenarios'],
+    ['Forecasts and Scenarios', /\/forecasts/, 'Forecasts and Scenarios'],
     ['Sources', /\/sources/, 'Sources and Methodology'],
-    ['AI Assistant', /\/assistant/, 'Al Mulhim'], // the page is titled with the chosen persona
-    ['Analysis workspace', /\/workspace/, 'Analysis workspace'],
-    ['Reports', /\/reports/, 'Reports'],
-    ['Account', /\/(account|sign-in)/, ''],
+    ['AI Research Assistant', /\/assistant/, 'Al Mulhim'], // the page is titled with the chosen persona
+    ['Analysis Workspace', /\/workspace/, 'Analysis workspace'],
+    ['Reports Dashboard', /\/reports/, 'Reports'],
+    ['My Profile', /\/(account|sign-in)/, ''],
   ];
   for (const [name, url, heading] of expected) {
     await nav.getByRole('link', { name, exact: true }).click();
@@ -100,35 +100,49 @@ test('motion: gentle route entrance that keeps focus and history; reduced motion
   expect(parseFloat(await card.locator('xpath=..').evaluate((el) => getComputedStyle(el).animationDuration))).toBeLessThan(0.001);
 });
 
-test('3D depth: the hero follows the mouse; reduced motion keeps the flat 2D layout', async ({ page }) => {
+test('no decorative motion: the landing hero is a still, credited photograph that does not follow the mouse', async ({ page }) => {
   await page.goto('/');
-  const scene = page.getByTestId('hero-scene');
-  await expect(scene).toBeVisible();
-  const box = await scene.boundingBox();
+  const hero = page.getByTestId('home-hero-image');
+  await expect(hero).toBeVisible();
+  const box = await hero.boundingBox();
   if (!box) throw new Error('no hero box');
+  const before = await hero.evaluate((el) => getComputedStyle(el).transform);
   await page.mouse.move(box.x + box.width * 0.9, box.y + box.height * 0.1);
-  await expect.poll(() => scene.evaluate((el) => el.style.getPropertyValue('--tilt-y'))).not.toBe('');
-  expect(await scene.evaluate((el) => getComputedStyle(el).transform)).not.toBe('none');
-  // Charts and forms never tilt.
+  expect(await hero.evaluate((el) => getComputedStyle(el).transform)).toBe(before);
+  expect(before).toBe('none');
+  await expect(page.getByTestId('home-page').getByTestId('photo-credit').first()).toContainText('Wikimedia Commons');
+  // No tilt, parallax or depth layers anywhere, charts and forms included.
+  await expect(page.locator('.tilt, .scene, .depth')).toHaveCount(0);
   await page.goto('/energy/electricity?mode=synthetic');
-  expect(await page.locator('.tilt svg, form.tilt, .tilt form').count()).toBe(0);
-
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('/');
-  await page.mouse.move(box.x + box.width * 0.9, box.y + box.height * 0.1);
-  expect(await scene.evaluate((el) => getComputedStyle(el).transform)).toBe('none');
-  expect(await scene.evaluate((el) => el.style.getPropertyValue('--tilt-y'))).toBe('');
-  await expect(page.getByTestId('home-portrait').locator('img').first()).toBeVisible();
+  await expect(page.getByTestId('sector-form')).toBeVisible();
+  await expect(page.locator('.tilt, .scene, .depth')).toHaveCount(0);
 });
 
 test('service health: administrators only; integrations and errors are listed without personal data', async ({ page }) => {
   await page.goto('/admin/health');
   await expect(page.locator('[data-state="restricted"]')).toBeVisible();
-  await signIn(page, 'admin@e2e.invalid');
+  await signIn(page, 'e2eadmin');
   await page.goto('/admin/health');
   await expect(page.getByTestId('health-page')).toContainText('Ready');
   await expect(page.locator('[data-testid="integration"][data-name="official_statistics"]')).toHaveAttribute('data-status', 'file_import');
-  await expect(page.locator('[data-testid="integration"][data-name="google"]')).toHaveAttribute('data-status', 'not_configured');
+  await expect(page.locator('[data-testid="integration"][data-name="email"]')).toHaveAttribute('data-status', /.+/);
+  // Sign-in is by username and password only: no SMS, Google or Microsoft integration is listed.
+  await expect(page.locator('[data-testid="integration"][data-name="google"], [data-testid="integration"][data-name="microsoft"], [data-testid="integration"][data-name="sms"]')).toHaveCount(0);
+});
+
+test('counts in Arabic take Arabic plural forms, never the English text (audit log)', async ({ page }) => {
+  await signIn(page, 'e2eadmin');
+  await page.goto('/admin/audit');
+  const table = page.getByTestId('audit-table');
+  const caption = table.locator('caption');
+  await expect(caption).toContainText(/\d+ rows?\b/);
+  await page.getByRole('button', { name: 'العربية' }).first().click();
+  await expect(caption).toContainText(/صف/);
+  await expect(caption).not.toContainText(/\brows?\b/);
+  await table.getByTestId('table-search').fill('no such entry in the log');
+  await expect(caption).toContainText('لا صفوف');
+  await page.getByRole('button', { name: 'English' }).first().click();
+  await expect(caption).toContainText('0 rows');
 });
 
 const WIDTHS = [360, 390, 768, 1024, 1366, 1920];
@@ -157,10 +171,10 @@ test('responsive matrix: no sideways scrolling at six widths, in English and Ara
     const menu = page.getByRole('button', { name: 'Open menu' });
     if (width < 1024) {
       await menu.click();
-      await expect(page.getByRole('dialog').getByRole('link', { name: 'Scenarios', exact: true })).toBeVisible();
+      await expect(page.getByRole('dialog').getByRole('link', { name: 'Forecasts and Scenarios', exact: true })).toBeVisible();
       await page.keyboard.press('Escape');
     } else {
-      await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Scenarios', exact: true })).toBeVisible();
+      await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Forecasts and Scenarios', exact: true })).toBeVisible();
     }
   }
 });

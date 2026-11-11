@@ -48,7 +48,14 @@ def monitoring_view(
     session: DbSession, _: Annotated[Principal, Depends(require(Permission.AUDIT_READ))]
 ) -> dict[str, Any]:
     with session.begin():
-        return {**monitoring.readiness(session), "errors": monitoring.recent_errors(session)}
+        report = {
+            **monitoring.readiness(session),
+            "errors": monitoring.recent_errors(session),
+            "usage": monitoring.provider_usage(session),
+            "sync": monitoring.sync_summary(session),
+        }
+    report["performance"] = monitoring.performance()
+    return report
 
 
 @router.get("/admin/providers")

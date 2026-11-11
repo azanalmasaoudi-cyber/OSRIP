@@ -133,10 +133,13 @@ test('the builder works by keyboard and does not trap focus', async ({ page }) =
   await page.keyboard.press('Enter');
   await expect(page.getByTestId('assistant-input')).toBeFocused();
   await expect(page.getByTestId('assistant-input')).toHaveValue(buildResearchBrief('en', 'electricity', 'trend'));
-  // The drawer closed; focus moves back from the message box to the Tools button, not trapped.
+  // The drawer closed; focus is not trapped: the message box's actions follow it (Tools first),
+  // and Shift+Tab goes back to the box and on past it.
   await expect(page.getByTestId('chat-tools-sheet')).toBeHidden();
-  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
   await expect(page.getByTestId('chat-tools')).toBeFocused();
   await page.keyboard.press('Shift+Tab');
-  await expect(page.getByTestId('chat-tools')).not.toBeFocused();
+  await expect(page.getByTestId('assistant-input')).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(page.getByTestId('assistant-input')).not.toBeFocused();
 });

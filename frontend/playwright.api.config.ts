@@ -21,6 +21,9 @@ process.env.OSRIP_E2E_PASSWORD ??= `e2e-${randomBytes(18).toString('hex')}`;
 
 const API_PORT = 8765;
 const WEB_PORT = 5174;
+// The same interface built with a placeholder MapTiler key, for the MapTiler map tests (which
+// answer every map request themselves; nothing reaches MapTiler).
+const MAPTILER_WEB_PORT = 5176;
 
 export default defineConfig({
   testDir: './e2e-api',
@@ -60,8 +63,22 @@ export default defineConfig({
         VITE_API_BASE_URL: '/api/v1',
         OSRIP_API_ORIGIN: `http://127.0.0.1:${API_PORT}`,
         OSRIP_WEB_PORT: String(WEB_PORT),
-        // Not a map style: no external tile requests, and the "map unavailable" path is exercised.
+        // Not a map style: no external tile requests, and the fallback to a plain background is
+        // exercised (e2e-api/oman-map.spec.ts serves a stand-in style here when it needs one).
         VITE_MAP_STYLE_URL: `http://localhost:${WEB_PORT}/__no_map_style__.json`,
+      },
+    },
+    {
+      command: 'npm run dev',
+      url: `http://localhost:${MAPTILER_WEB_PORT}`,
+      reuseExistingServer: false,
+      env: {
+        VITE_DATA_ADAPTER: 'http',
+        VITE_API_BASE_URL: '/api/v1',
+        OSRIP_API_ORIGIN: `http://127.0.0.1:${API_PORT}`,
+        OSRIP_WEB_PORT: String(MAPTILER_WEB_PORT),
+        VITE_MAPTILER_KEY: 'e2e-placeholder-not-a-key',
+        VITE_MAP_STYLE_URL: '',
       },
     },
   ],
@@ -70,6 +87,11 @@ export default defineConfig({
     // Listed first so they run before the zz* specs, which add monthly synthetic data
     // that makes some sections mixed-frequency.
     { name: 'mobile', testMatch: /(quality|assistant|phone|workspace-phone|research-brief)\.spec\.ts/, use: { ...devices['Pixel 7'], channel } },
-    { name: 'chromium', use: { ...devices['Desktop Chrome'], channel } },
+    { name: 'chromium', testIgnore: /oman-map-maptiler\.spec\.ts/, use: { ...devices['Desktop Chrome'], channel } },
+    {
+      name: 'maptiler',
+      testMatch: /oman-map-maptiler\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], channel, baseURL: `http://localhost:${MAPTILER_WEB_PORT}` },
+    },
   ],
 });

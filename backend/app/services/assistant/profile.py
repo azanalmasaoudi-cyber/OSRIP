@@ -338,6 +338,12 @@ def personas(p: AssistantProfile) -> list[Persona]:
     ]  # fmt: skip
 
 
+# Personas of earlier profile versions that are no longer offered (version 4: one persona). A
+# question that still names one (an old browser tab, the voice bridge) is answered by the default
+# persona; earlier replies keep the persona they were given.
+RETIRED_PERSONAS = frozenset({"ilham"})
+
+
 def persona(p: AssistantProfile, code: str | None) -> Persona:
     """The persona with this code, or the default one when no code is given (ValueError for
     a code the profile does not have)."""

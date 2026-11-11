@@ -47,6 +47,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{951A985D-D
 		docs\4caae3f6-c359-4130-a10a-722242bacdcf.png = docs\4caae3f6-c359-4130-a10a-722242bacdcf.png
 		docs\ACADEMIC_EVALUATION.md = docs\ACADEMIC_EVALUATION.md
 		docs\AI_PROVIDERS.md = docs\AI_PROVIDERS.md
+		docs\AI_RESEARCH_PLATFORM.md = docs\AI_RESEARCH_PLATFORM.md
 		docs\API.md = docs\API.md
 		docs\ARCHITECTURE.md = docs\ARCHITECTURE.md
 		docs\assets.md = docs\assets.md
@@ -60,12 +61,20 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{951A985D-D
 		docs\implementation-notes.md = docs\implementation-notes.md
 		docs\implementation-status.md = docs\implementation-status.md
 		docs\INTEGRATIONS.md = docs\INTEGRATIONS.md
+		docs\MAP.md = docs\MAP.md
+		docs\MASTER_BRIEF_STATUS.md = docs\MASTER_BRIEF_STATUS.md
 		docs\OFFICIAL_SOURCES.md = docs\OFFICIAL_SOURCES.md
 		docs\Oman_Statistics_References_and_Images_English.docx = docs\Oman_Statistics_References_and_Images_English.docx
 		docs\OSRIP_Academic_Booklet_English_60_Pages-2.docx = docs\OSRIP_Academic_Booklet_English_60_Pages-2.docx
 		docs\OSRIP_Academic_Booklet_English_60_Pages.docx = docs\OSRIP_Academic_Booklet_English_60_Pages.docx
+		docs\OSRIP_Academic_Booklet_Expanded_2026_Wilayat_Research.docx = docs\OSRIP_Academic_Booklet_Expanded_2026_Wilayat_Research.docx
+		docs\OSRIP_Academic_Booklet_Expanded_2026_Wilayat_Research.pdf = docs\OSRIP_Academic_Booklet_Expanded_2026_Wilayat_Research.pdf
+		docs\OSRIP_Academic_Booklet_Nov_2026_60_Pages.docx = docs\OSRIP_Academic_Booklet_Nov_2026_60_Pages.docx
+		docs\OSRIP_Academic_Booklet_Nov_2026_60_Pages.pdf = docs\OSRIP_Academic_Booklet_Nov_2026_60_Pages.pdf
+		docs\PREMIUM_REDESIGN.md = docs\PREMIUM_REDESIGN.md
 		docs\progress.md = docs\progress.md
 		docs\requirements.md = docs\requirements.md
+		docs\RESEARCH_AND_SAVING.md = docs\RESEARCH_AND_SAVING.md
 		docs\SPEC_CONFLICTS.md = docs\SPEC_CONFLICTS.md
 		docs\TECHNICAL_REPORT.md = docs\TECHNICAL_REPORT.md
 		docs\TECHNICAL_REPORT_AR.md = docs\TECHNICAL_REPORT_AR.md
@@ -89,6 +98,32 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "backup", "backup", "{EEDDB7
 		docs\backup\backup-drill-20260925.json = docs\backup\backup-drill-20260925.json
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "data-imports", "data-imports", "{E66CA9A1-491C-5AD2-B652-B3961587EB5D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2026-11", "2026-11", "{FBF666F4-2ACB-5270-AD5A-68B43F76FF01}"
+	ProjectSection(SolutionItems) = preProject
+		docs\data-imports\2026-11\electricity-by-governorate-jan-sep-2026.csv = docs\data-imports\2026-11\electricity-by-governorate-jan-sep-2026.csv
+		docs\data-imports\2026-11\electricity-water-jan-sep-2026.csv = docs\data-imports\2026-11\electricity-water-jan-sep-2026.csv
+		docs\data-imports\2026-11\foreign-trade-jan-aug-2026.csv = docs\data-imports\2026-11\foreign-trade-jan-aug-2026.csv
+		docs\data-imports\2026-11\ncsi-yearbook-2026-baseline.csv = docs\data-imports\2026-11\ncsi-yearbook-2026-baseline.csv
+		docs\data-imports\2026-11\README.md = docs\data-imports\2026-11\README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2026-11-wilayat", "2026-11-wilayat", "{5D083E2C-63FA-5F04-9DDF-963CC607AE12}"
+	ProjectSection(SolutionItems) = preProject
+		docs\data-imports\2026-11-wilayat\moc-crs-wusta-2026q2.csv = docs\data-imports\2026-11-wilayat\moc-crs-wusta-2026q2.csv
+		docs\data-imports\2026-11-wilayat\moc-new-crs-batinah-north-2025.csv = docs\data-imports\2026-11-wilayat\moc-new-crs-batinah-north-2025.csv
+		docs\data-imports\2026-11-wilayat\moc-new-crs-batinah-south-2025.csv = docs\data-imports\2026-11-wilayat\moc-new-crs-batinah-south-2025.csv
+		docs\data-imports\2026-11-wilayat\moc-new-crs-dakhiliyah-2025.csv = docs\data-imports\2026-11-wilayat\moc-new-crs-dakhiliyah-2025.csv
+		docs\data-imports\2026-11-wilayat\moc-new-crs-dhahirah-2026q1.csv = docs\data-imports\2026-11-wilayat\moc-new-crs-dhahirah-2026q1.csv
+		docs\data-imports\2026-11-wilayat\moc-new-crs-national-jan-sep-2026.csv = docs\data-imports\2026-11-wilayat\moc-new-crs-national-jan-sep-2026.csv
+		docs\data-imports\2026-11-wilayat\moc-new-crs-sharqiyah-north-2025.csv = docs\data-imports\2026-11-wilayat\moc-new-crs-sharqiyah-north-2025.csv
+		docs\data-imports\2026-11-wilayat\moc-new-crs-sharqiyah-south-2026q1.csv = docs\data-imports\2026-11-wilayat\moc-new-crs-sharqiyah-south-2026q1.csv
+		docs\data-imports\2026-11-wilayat\ncsi-yearbook-2026-wilayats.csv = docs\data-imports\2026-11-wilayat\ncsi-yearbook-2026-wilayats.csv
+		docs\data-imports\2026-11-wilayat\OSRIP_Wilayat_Evidence_Development_Review_2026.xlsx = docs\data-imports\2026-11-wilayat\OSRIP_Wilayat_Evidence_Development_Review_2026.xlsx
+		docs\data-imports\2026-11-wilayat\README.md = docs\data-imports\2026-11-wilayat\README.md
+	EndProjectSection
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "demo", "demo", "{5F4E4F17-9349-5ECE-AD7A-EB60F6948C39}"
 	ProjectSection(SolutionItems) = preProject
 		docs\demo\demo-upload.csv = docs\demo\demo-upload.csv
@@ -98,6 +133,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "evaluation", "evaluation", 
 	ProjectSection(SolutionItems) = preProject
 		docs\evaluation\measurements-2026-10-23.json = docs\evaluation\measurements-2026-10-23.json
 		docs\evaluation\measurements-2026-10-23.md = docs\evaluation\measurements-2026-10-23.md
+		docs\evaluation\mode-timing.json = docs\evaluation\mode-timing.json
+		docs\evaluation\research-timing.jsonl = docs\evaluation\research-timing.jsonl
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "evidence", "evidence", "{0B712951-2047-5BE0-A42C-68C45DAA3B66}"
@@ -144,6 +181,16 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "assistant-redesign", "assis
 		docs\evidence\assistant-redesign\live-1-greeting.png = docs\evidence\assistant-redesign\live-1-greeting.png
 		docs\evidence\assistant-redesign\live-2-question.png = docs\evidence\assistant-redesign\live-2-question.png
 		docs\evidence\assistant-redesign\live-3-follow-up.png = docs\evidence\assistant-redesign\live-3-follow-up.png
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "deepseek", "deepseek", "{48846B0A-FB8E-5261-93A9-C6B234A8B151}"
+	ProjectSection(SolutionItems) = preProject
+		docs\evidence\deepseek\live-1-greeting.png = docs\evidence\deepseek\live-1-greeting.png
+		docs\evidence\deepseek\live-2-question.png = docs\evidence\deepseek\live-2-question.png
+		docs\evidence\deepseek\live-3-follow-up.png = docs\evidence\deepseek\live-3-follow-up.png
+		docs\evidence\deepseek\web-1-question.png = docs\evidence\deepseek\web-1-question.png
+		docs\evidence\deepseek\web-2-follow-up.png = docs\evidence\deepseek\web-2-follow-up.png
+		docs\evidence\deepseek\web-3-arabic.png = docs\evidence\deepseek\web-3-arabic.png
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "entrance", "entrance", "{792931BC-B131-5863-A4F2-D392362DE4F8}"
@@ -199,6 +246,16 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "personas", "personas", "{F1
 		docs\evidence\personas\talk-mulhim-ar.png = docs\evidence\personas\talk-mulhim-ar.png
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "research", "research", "{0C89BF79-ABF3-58E4-BA51-0D2D02DE1266}"
+	ProjectSection(SolutionItems) = preProject
+		docs\evidence\research\research-1-latest.png = docs\evidence\research\research-1-latest.png
+		docs\evidence\research\research-2-table.png = docs\evidence\research\research-2-table.png
+		docs\evidence\research\research-3-chart.png = docs\evidence\research\research-3-chart.png
+		docs\evidence\research\research-4-chart-dark.png = docs\evidence\research\research-4-chart-dark.png
+		docs\evidence\research\research-5-table-ar-phone.png = docs\evidence\research\research-5-table-ar-phone.png
+		docs\evidence\research\research-table.csv = docs\evidence\research\research-table.csv
+	EndProjectSection
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "stage1", "stage1", "{B08B19CE-18D4-5C93-96A3-78013F0A3F1E}"
 	ProjectSection(SolutionItems) = preProject
 		docs\evidence\stage1\data-report-reply.png = docs\evidence\stage1\data-report-reply.png
@@ -237,6 +294,27 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "perf", "perf", "{905C8A1C-3
 		docs\perf\perf-2026-09-25.json = docs\perf\perf-2026-09-25.json
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "redesign", "redesign", "{71053B50-9D45-5F8A-BD57-BC8B928B1A58}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "screenshots", "screenshots", "{4250D740-59DD-5C9C-AF33-519CAA508995}"
+	ProjectSection(SolutionItems) = preProject
+		docs\redesign\screenshots\audit-logs-dark.png = docs\redesign\screenshots\audit-logs-dark.png
+		docs\redesign\screenshots\audit-logs-light.png = docs\redesign\screenshots\audit-logs-light.png
+		docs\redesign\screenshots\dashboard-analysis-dark.png = docs\redesign\screenshots\dashboard-analysis-dark.png
+		docs\redesign\screenshots\dashboard-analysis-light.png = docs\redesign\screenshots\dashboard-analysis-light.png
+		docs\redesign\screenshots\dashboard-dark.png = docs\redesign\screenshots\dashboard-dark.png
+		docs\redesign\screenshots\dashboard-light.png = docs\redesign\screenshots\dashboard-light.png
+		docs\redesign\screenshots\dashboard-phone-arabic.png = docs\redesign\screenshots\dashboard-phone-arabic.png
+		docs\redesign\screenshots\decision-brief-dark.png = docs\redesign\screenshots\decision-brief-dark.png
+		docs\redesign\screenshots\decision-brief-light.png = docs\redesign\screenshots\decision-brief-light.png
+		docs\redesign\screenshots\map-dark.png = docs\redesign\screenshots\map-dark.png
+		docs\redesign\screenshots\map-light.png = docs\redesign\screenshots\map-light.png
+		docs\redesign\screenshots\service-health-dark.png = docs\redesign\screenshots\service-health-dark.png
+		docs\redesign\screenshots\service-health-light.png = docs\redesign\screenshots\service-health-light.png
+		docs\redesign\screenshots\sign-in-dark.png = docs\redesign\screenshots\sign-in-dark.png
+		docs\redesign\screenshots\sign-in-light.png = docs\redesign\screenshots\sign-in-light.png
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -262,19 +340,26 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{61FB2FA9-CA59-59B7-B336-3C9A25DE134C} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
 		{EEDDB7A6-C2B2-5952-86EC-8463417DCABF} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
+		{E66CA9A1-491C-5AD2-B652-B3961587EB5D} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
+		{FBF666F4-2ACB-5270-AD5A-68B43F76FF01} = {E66CA9A1-491C-5AD2-B652-B3961587EB5D}
+		{5D083E2C-63FA-5F04-9DDF-963CC607AE12} = {E66CA9A1-491C-5AD2-B652-B3961587EB5D}
 		{5F4E4F17-9349-5ECE-AD7A-EB60F6948C39} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
 		{30029E82-3C33-5B85-8CA1-CA87511FA6C7} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
 		{0B712951-2047-5BE0-A42C-68C45DAA3B66} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
 		{D0192171-A157-51D2-93CF-8D3B8E28109D} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{D32045D4-499E-52DC-B174-22CB7E6DE501} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{F437F8F4-5524-5C94-B7FD-A55098A0B028} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
+		{48846B0A-FB8E-5261-93A9-C6B234A8B151} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{792931BC-B131-5863-A4F2-D392362DE4F8} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{BE95394C-9AA0-5C1C-BD9C-66405DE6D1A4} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{F1F24A2A-5BFF-5F61-BE8C-250723697D85} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
+		{0C89BF79-ABF3-58E4-BA51-0D2D02DE1266} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{B08B19CE-18D4-5C93-96A3-78013F0A3F1E} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{56A21D90-4A13-5631-8986-D1F0AFE4EFAE} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{B34D6E13-8B80-59FA-9AED-693C622716DD} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{905C8A1C-3512-58AB-9365-318FFA4AF538} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
+		{71053B50-9D45-5F8A-BD57-BC8B928B1A58} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
+		{4250D740-59DD-5C9C-AF33-519CAA508995} = {71053B50-9D45-5F8A-BD57-BC8B928B1A58}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {C3A1F7B2-6E4D-4A09-B8C5-71D2E9F04A36}

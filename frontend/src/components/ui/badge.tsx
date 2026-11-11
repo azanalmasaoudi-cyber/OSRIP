@@ -4,7 +4,7 @@ import type { HTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
 
 const badgeVariants = cva(
-  'inline-flex items-center gap-1 rounded-sm border px-2 py-0.5 text-xs font-medium whitespace-nowrap [&_svg]:size-3.5',
+  'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium whitespace-nowrap [&_svg]:size-3.5',
   {
     variants: {
       variant: {
@@ -15,6 +15,8 @@ const badgeVariants = cva(
         muted: 'border-transparent bg-muted text-muted-foreground',
         sand: 'border-sand/50 bg-sand-subtle text-sand-foreground',
         accent: 'border-accent/40 bg-card text-accent',
+        pending: 'border-pending-border bg-pending text-pending-foreground',
+        missing: 'border-dashed border-missing-border bg-missing text-missing-foreground',
       },
     },
     defaultVariants: { variant: 'default' },

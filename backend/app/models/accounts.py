@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import CHAR, Boolean, DateTime, ForeignKey, Identity, Integer, Text, func, text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, validates
 
 from app.db.base import Base
 from app.domain.enums import AccountStatus
@@ -28,12 +28,31 @@ class AppUser(Base):
     created_via: Mapped[str] = mapped_column(Text, server_default=text("'administrator'"))
     phone_e164: Mapped[str | None] = mapped_column(Text)
     phone_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    # Operator-created accounts may be identified by a username alone (migration 0011).
+    # The sign-in name (migration 0011; 1-10 Arabic or English letters and digits for new or
+    # changed names since 0033, longer older names kept as they are).
     username: Mapped[str | None] = mapped_column(Text)
+    # What uniqueness and sign-in compare (app/services/usernames.key), set with the username.
+    username_key: Mapped[str | None] = mapped_column(Text)
     password_change_required: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    # One-time recovery code for accounts without verified contact details (migration 0025):
+    # an Argon2id hash only; the code itself is shown once and never stored.
+    recovery_code_hash: Mapped[str | None] = mapped_column(Text)
+    recovery_code_created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # The assistant persona this person chose (a code from the active profile; migration 0017).
     # NULL: the profile's default persona.
     assistant_persona: Mapped[str | None] = mapped_column(Text)
+
+    @validates("username")
+    def _set_username_key(self, _field: str, value: str | None) -> str | None:
+        """The key follows the username; the name itself is stored normalised."""
+        from app.services import usernames
+
+        if value is None:
+            self.username_key = None
+            return None
+        name = usernames.normalize(value)
+        self.username_key = usernames.key(name)
+        return name
 
 
 class RoleRow(Base):
@@ -41,6 +60,12 @@ class RoleRow(Base):
 
     code: Mapped[str] = mapped_column(Text, primary_key=True)
     description: Mapped[str] = mapped_column(Text)
+    # The four built-in roles; custom roles (migration 0026) have builtin = false.
+    builtin: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), **NOW)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("app_user.id", ondelete="SET NULL")
+    )
 
 
 class PermissionRow(Base):
@@ -68,6 +93,53 @@ class UserRole(Base):
     granted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), **NOW)
 
 
+class UserGroup(Base):
+    """A group gives its members roles and permissions (migration 0026)."""
+
+    __tablename__ = "user_group"
+
+    id: Mapped[uuid.UUID] = mapped_column(**UUID_PK)
+    name: Mapped[str] = mapped_column(Text)
+    description: Mapped[str] = mapped_column(Text, server_default=text("''"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), **NOW)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("app_user.id", ondelete="SET NULL")
+    )
+
+
+class GroupMember(Base):
+    __tablename__ = "group_member"
+
+    group_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("user_group.id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("app_user.id", ondelete="CASCADE"), primary_key=True
+    )
+    added_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("app_user.id", ondelete="SET NULL")
+    )
+    added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), **NOW)
+
+
+class GroupRole(Base):
+    __tablename__ = "group_role"
+
+    group_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("user_group.id", ondelete="CASCADE"), primary_key=True
+    )
+    role_code: Mapped[str] = mapped_column(ForeignKey("role.code"), primary_key=True)
+
+
+class GroupPermission(Base):
+    __tablename__ = "group_permission"
+
+    group_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("user_group.id", ondelete="CASCADE"), primary_key=True
+    )
+    permission_code: Mapped[str] = mapped_column(ForeignKey("permission.code"), primary_key=True)
+
+
 class UserPermissionGrant(Base):
     __tablename__ = "user_permission_grant"
 
@@ -90,6 +162,8 @@ class UserSession(Base):
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), **NOW)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Remember me (migration 0027): kept on this device for session_remember_days.
+    persistent: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
 
 
 class LoginAttempt(Base):

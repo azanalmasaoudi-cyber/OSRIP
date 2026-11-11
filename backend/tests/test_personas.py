@@ -20,6 +20,7 @@ from tests.workflow_helpers import API
 
 ROOT = Path(__file__).resolve().parents[2]
 V3 = profile.load_file(profile.profile_file(3))
+V4 = profile.load_file(profile.profile_file(4))
 SALAM_REPLY = "وعليكم السلام ورحمة الله وبركاته"
 NO_SERVICES = {"answers": False, "web_research": False, "voice": False, "realtime_voice": False}
 
@@ -51,16 +52,44 @@ def test_portraits_exist_and_are_recorded_with_their_source() -> None:
         (ROOT / "frontend/assets/editorial/sources.json").read_text(encoding="utf-8")
     )
     recorded = {d["file"] for a in sources["assets"] for d in a.get("derivatives", [])}
-    for who in profile.personas(V3):
+    for who in profile.personas(V4):
         for path in (who.avatar.portrait, who.avatar.figure):
             assert path and (ROOT / "frontend/public" / path.lstrip("/")).is_file()
             assert f"frontend/public{path}" in recorded
         assert "Not a real person" in who.avatar.alt.en
     masters = {a["id"]: a for a in sources["assets"]}
-    for asset in ("persona-mulhim", "persona-ilham"):
-        entry = masters[asset]
-        data = (ROOT / "frontend/assets/editorial/masters" / entry["master"]).read_bytes()
-        assert hashlib.sha256(data).hexdigest() == entry["sha256"]
+    entry = masters["persona-mulhim"]
+    data = (ROOT / "frontend/assets/editorial/masters" / entry["master"]).read_bytes()
+    assert hashlib.sha256(data).hexdigest() == entry["sha256"]
+    # The retired persona's images are gone from the interface and from the record.
+    assert not list((ROOT / "frontend/public/images").rglob("ilham*"))
+    assert not [f for f in recorded if "ilham" in f]
+    assert "persona-ilham" not in masters and "intro-ilham" not in masters
+
+
+def test_version_4_keeps_only_al_mulhim_and_changes_nothing_else() -> None:
+    assert [p.code for p in profile.personas(V4)] == ["mulhim"]
+    assert profile.persona(V4, None).code == "mulhim"
+    with pytest.raises(ValueError, match="unknown persona"):
+        profile.persona(V4, "ilham")
+    assert "ilham" in profile.RETIRED_PERSONAS
+    # Version 3 with Ilham's entry removed is version 4, apart from the version, its date and
+    # the approval note: the knowledge, replies and rules are unchanged.
+    v3 = profile.document(V3)
+    v4 = profile.document(V4)
+    v3["personas"] = [x for x in v3["personas"] if x["code"] == "mulhim"]
+    # Version 4 also moves the statistical start to 2021 (the complete-year baseline 2021-2025).
+    assert (v3["statistics_from"], v4["statistics_from"]) == ("2022-01-01", "2021-01-01")
+    v3["statistics_from"] = v4["statistics_from"]
+    scope = next(x for x in v4["limitations"] if x["code"] == "statistics_scope")
+    assert "2021" in scope["en"] and "2021" in scope["ar"]
+    v3["limitations"] = [scope if x["code"] == "statistics_scope" else x for x in v3["limitations"]]
+    for key in ("version", "effective_date", "approved_source"):
+        v3.pop(key), v4.pop(key)
+    assert v3 == v4
+    # One persona: the prompt says nothing about switching between personas.
+    block = profile.prompt_block(V4, 4)
+    assert block.startswith("You are Al Mulhim") and "switch between" not in block
 
 
 def _voice(index: int, **voice: str) -> Any:
@@ -311,22 +340,22 @@ def _ask(client, content: str, language: str, persona: str | None, conversation_
 
 
 @pytest.mark.integration
-def test_profile_and_voice_status_publish_both_personas(app) -> None:  # noqa: ANN001
+def test_profile_and_voice_status_publish_al_mulhim_only(app) -> None:  # noqa: ANN001
     client = _guest(app)
     body = client.get(f"{API}/assistant/profile").json()
-    assert body["version"] == 3
-    personas = {p["code"]: p for p in body["personas"]}
-    assert personas["ilham"]["avatar"]["portrait"] == "/images/assistant/ilham-portrait-432.jpg"
-    assert personas["ilham"]["voices"]["azure"]["en"] == "en-GB-SoniaNeural"
+    assert body["version"] == 4
+    assert [p["code"] for p in body["personas"]] == ["mulhim"]
+    assert body["personas"][0]["avatar"]["portrait"] == "/images/assistant/mulhim-portrait-432.jpg"
     voice = client.get(f"{API}/assistant/voice").json()
-    assert {p["code"]: p["gender"] for p in voice["personas"]} == {
-        "mulhim": "male",
-        "ilham": "female",
-    }
+    assert {p["code"]: p["gender"] for p in voice["personas"]} == {"mulhim": "male"}
 
 
 @pytest.mark.integration
-def test_switching_persona_keeps_the_conversation_allowance_and_facts(app, monkeypatch) -> None:  # noqa: ANN001
+def test_the_retired_persona_is_answered_by_al_mulhim_and_old_replies_keep_theirs(
+    app, db, monkeypatch
+) -> None:  # noqa: ANN001
+    from sqlalchemy import text
+
     from app.services.assistant.provider import FakeProvider
 
     systems: list[str] = []
@@ -338,34 +367,32 @@ def test_switching_persona_keeps_the_conversation_allowance_and_facts(app, monke
 
     monkeypatch.setattr(FakeProvider, "complete", recording)
     client = _guest(app)
+    # An open tab from before version 4 may still send Ilham's code: Al Mulhim answers.
     hello = _ask(client, "السلام عليكم", "ar", "ilham").json()
     conv = hello["conversation_id"]
-    assert hello["message"]["persona"] == "ilham" and "أنا إلهام" in hello["message"]["content"]
+    assert hello["message"]["persona"] == "mulhim" and "أنا المُلْهِم" in hello["message"]["content"]
     assert hello["message"]["content"].startswith(SALAM_REPLY)
     assert hello["allowance"]["used"] == 0, "greetings are never charged"
-
     question = "What is the latest electricity generation?"
-    as_ilham = _ask(client, question, "en", "ilham", conv).json()
-    as_mulhim = _ask(client, question, "en", "mulhim", conv).json()
-    assert as_ilham["conversation_id"] == as_mulhim["conversation_id"] == conv
-    assert (as_ilham["allowance"]["used"], as_mulhim["allowance"]["used"]) == (1, 2)
-    a, b = as_ilham["message"], as_mulhim["message"]
-    assert (a["persona"], b["persona"]) == ("ilham", "mulhim")
-    for key in ("status", "content", "evidence", "calculations", "citations"):
-        assert a[key] == b[key], f"{key} must not depend on the persona"
-    # Only the identity block of the system prompt changed.
-    ilham_prompt, mulhim_prompt = systems[0], systems[-1]
-    assert ilham_prompt.startswith("You are Ilham") and mulhim_prompt.startswith(
-        "You are Al Mulhim"
-    )
-    rules = "Rules you must follow:"
-    assert ilham_prompt[ilham_prompt.index(rules) :] == mulhim_prompt[mulhim_prompt.index(rules) :]
+    answer = _ask(client, question, "en", "ilham", conv).json()
+    assert answer["message"]["persona"] == "mulhim" and answer["allowance"]["used"] == 1
+    assert systems and all(x.startswith("You are Al Mulhim") for x in systems)
+    assert not [x for x in systems if "switch between" in x]
 
+    # A reply stored before version 4 keeps the persona it was given.
+    with db.begin():
+        db.execute(
+            text(
+                "INSERT INTO assistant_message (conversation_id, role, content, status, persona) "
+                "VALUES (:c, 'assistant', 'I am Ilham', 'profile', 'ilham')"
+            ),
+            {"c": conv},
+        )
     history = client.get(f"{API}/assistant/guest/conversations/{conv}").json()["messages"]
     assert [m["persona"] for m in history if m["role"] == "assistant"] == [
-        "ilham",
-        "ilham",
         "mulhim",
+        "mulhim",
+        "ilham",
     ]
     refused = _ask(client, "hello", "en", "someone", conv)
     assert refused.status_code == 422 and refused.json()["error"]["code"] == "unknown_persona"
@@ -374,63 +401,44 @@ def test_switching_persona_keeps_the_conversation_allowance_and_facts(app, monke
 
 
 @pytest.mark.integration
-def test_read_aloud_uses_the_voice_of_the_persona_that_replied(app) -> None:  # noqa: ANN001
+def test_read_aloud_uses_al_mulhims_voices(app) -> None:  # noqa: ANN001
     client = _guest(app)
-    conv = None
+    body = _ask(client, "hello", "en", None).json()
     voices = {}
-    for code in ("ilham", "mulhim"):
-        body = _ask(client, "hello", "en", code, conv).json()
-        conv = body["conversation_id"]
-        for language in ("ar", "en"):
-            spoken = client.post(
-                f"{API}/assistant/voice/speak",
-                json={"message_id": body["message"]["id"], "language": language},
-            )
-            assert spoken.status_code == 200, spoken.text
-            voices[(code, language)] = spoken.headers["X-Voice"]
-    assert voices == {
-        ("ilham", "ar"): "ar-OM-AyshaNeural",
-        ("ilham", "en"): "en-GB-SoniaNeural",
-        ("mulhim", "ar"): "ar-OM-AbdullahNeural",
-        ("mulhim", "en"): "en-GB-RyanNeural",
-    }
+    for language in ("ar", "en"):
+        spoken = client.post(
+            f"{API}/assistant/voice/speak",
+            json={"message_id": body["message"]["id"], "language": language},
+        )
+        assert spoken.status_code == 200, spoken.text
+        voices[language] = spoken.headers["X-Voice"]
+    assert voices == {"ar": "ar-OM-AbdullahNeural", "en": "en-GB-RyanNeural"}
 
 
 @pytest.mark.integration
-def test_a_signed_in_choice_is_saved_on_the_account(app, make_user, login) -> None:  # noqa: ANN001
-    from fastapi.testclient import TestClient
-
+def test_the_retired_persona_cannot_be_saved_as_a_choice(app, make_user, login) -> None:  # noqa: ANN001
     from app.domain.enums import Role
-    from app.main import create_app
 
-    person = make_user(Role.VIEWER)
-    user = login(person)
+    user = login(make_user(Role.VIEWER))
     assert user.get(f"{API}/assistant/persona").json() == {"persona": None, "stored": "account"}
-    saved = user.put(f"{API}/assistant/persona", json={"persona": "ilham"})
-    assert saved.status_code == 200 and saved.json()["persona"] == "ilham"
+    refused = user.put(f"{API}/assistant/persona", json={"persona": "ilham"})
+    assert refused.status_code == 422 and refused.json()["error"]["code"] == "unknown_persona"
     assert user.put(f"{API}/assistant/persona", json={"persona": "nobody"}).status_code == 422
+    saved = user.put(f"{API}/assistant/persona", json={"persona": "mulhim"})
+    assert saved.status_code == 200 and saved.json()["persona"] == "mulhim"
     conv = user.post(
         f"{API}/assistant/conversations", json={"language": "ar", "data_mode": "synthetic"}
     ).json()["id"]
     reply = user.post(
         f"{API}/assistant/conversations/{conv}/messages",
-        json={"content": "من أنتِ؟", "language": "ar"},
+        json={"content": "من أنت؟", "language": "ar"},
     ).json()
-    assert reply["persona"] == "ilham" and "أنا إلهام" in reply["content"], "the saved choice"
-    # Another session (a restart, another device) gets the same choice.
-    again = TestClient(create_app())
-    again.cookies.update(user.cookies)
-    assert again.get(f"{API}/assistant/persona").json()["persona"] == "ilham"
-    # Visitors keep the choice in their browser only.
+    assert reply["persona"] == "mulhim" and "أنا المُلْهِم" in reply["content"]
+    # Visitors keep any choice in their browser only.
     assert _guest(app).get(f"{API}/assistant/persona").json() == {
         "persona": None,
         "stored": "browser",
     }
-    anonymous = TestClient(app)
-    assert anonymous.put(f"{API}/assistant/persona", json={"persona": "ilham"}).status_code in (
-        401,
-        403,
-    )
 
 
 @pytest.mark.integration

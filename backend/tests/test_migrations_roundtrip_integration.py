@@ -123,7 +123,7 @@ def test_0014_to_0016_down_and_up_keep_messages_and_requests(scratch_url: str) -
         scratch_url, "SELECT progress FROM assistant_request WHERE idempotency_key = %s", key
     ) == ([],)
     assert _one(scratch_url, "SELECT version FROM assistant_profile WHERE status = 'active'") == (
-        3,
+        4,
     )
 
 
@@ -132,7 +132,7 @@ def test_0017_down_and_up_keeps_replies_and_restores_profile_versions(scratch_ur
     assert _one(
         scratch_url,
         "SELECT version, profile ? 'personas' FROM assistant_profile WHERE status = 'active'",
-    ) == (3, True)
+    ) == (4, True)
     guest, conv = uuid.uuid4(), uuid.uuid4()
     _exec(
         scratch_url,
@@ -177,8 +177,55 @@ def test_0017_down_and_up_keeps_replies_and_restores_profile_versions(scratch_ur
 
     _alembic("upgrade", "head")
     assert _one(scratch_url, "SELECT version FROM assistant_profile WHERE status = 'active'") == (
+        4,
+    )
+
+
+def test_0030_one_persona_down_and_up_keeps_replies(scratch_url: str) -> None:
+    """Profile version 4 (Al Mulhim only) is active at head; going back to 0029 makes version 3
+    (two personas) active again and removes 4. A reply given by Ilham keeps its persona
+    throughout."""
+    _alembic("upgrade", "head")
+    personas = _one(
+        scratch_url,
+        "SELECT version, jsonb_path_query_array(profile, '$.personas[*].code') "
+        "FROM assistant_profile WHERE status = 'active'",
+    )
+    assert personas == (4, ["mulhim"])
+    guest, conv = uuid.uuid4(), uuid.uuid4()
+    _exec(
+        scratch_url,
+        "INSERT INTO guest_session (id, token_hash, csrf_hash, client_hash, answer_limit, expires_at, policy_version) "
+        "VALUES (%s, %s, %s, %s, 5, now() + interval '1 day', 1)",
+        guest, "v" * 64, "e" * 64, "j" * 64,
+    )  # fmt: skip
+    _exec(
+        scratch_url,
+        "INSERT INTO assistant_conversation (id, guest_session_id, title, language, data_mode) "
+        "VALUES (%s, %s, 'Earlier persona', 'en', 'synthetic')",
+        conv, guest,
+    )  # fmt: skip
+    _exec(
+        scratch_url,
+        "INSERT INTO assistant_message (conversation_id, role, content, status, persona) "
+        "VALUES (%s, 'assistant', 'I am Ilham', 'profile', 'ilham')",
+        conv,
+    )  # fmt: skip
+
+    _alembic("downgrade", "0029_generated_images")
+    assert _one(scratch_url, "SELECT version FROM assistant_profile WHERE status = 'active'") == (
         3,
     )
+    assert _one(scratch_url, "SELECT count(*) FROM assistant_profile WHERE version = 4") == (0,)
+    _alembic("upgrade", "head")
+    assert _one(scratch_url, "SELECT version FROM assistant_profile WHERE status = 'active'") == (
+        4,
+    )
+    assert _one(
+        scratch_url,
+        "SELECT content, persona FROM assistant_message WHERE conversation_id = %s",
+        conv,
+    ) == ("I am Ilham", "ilham")
 
 
 def test_0018_provider_call_log_checks_and_round_trip(scratch_url: str) -> None:

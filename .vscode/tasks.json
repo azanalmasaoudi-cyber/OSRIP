@@ -43,10 +43,20 @@
         },
         {
             "label": "OSRIP: create a username account (password prompted)",
-            "detail": "Idempotent; the password is typed in the terminal, never stored in a file.",
+            "detail": "Idempotent; the password is typed in the terminal, never stored in a file. The dev database must be running.",
             "type": "process",
             "command": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
-            "args": ["-m", "app.cli", "ensure-user", "--username", "${input:username}"],
+            "args": ["scripts/dev_cli.py", "ensure-user", "--username", "${input:username}"],
+            "options": { "cwd": "${workspaceFolder}/backend" },
+            "presentation": { "reveal": "always", "focus": true, "panel": "dedicated" },
+            "problemMatcher": []
+        },
+        {
+            "label": "OSRIP: create the administrator (temporary password prompted)",
+            "detail": "ensure-admin: the temporary password (12+ characters) is typed at a hidden prompt and must be changed at first sign-in. An existing account is left unchanged. The dev database must be running.",
+            "type": "process",
+            "command": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
+            "args": ["scripts/dev_cli.py", "ensure-admin", "--username", "${input:adminUsername}"],
             "options": { "cwd": "${workspaceFolder}/backend" },
             "presentation": { "reveal": "always", "focus": true, "panel": "dedicated" },
             "problemMatcher": []
@@ -83,9 +93,46 @@
             "options": { "cwd": "${workspaceFolder}/frontend", "shell": { "executable": "powershell.exe", "args": ["-NoProfile", "-Command"] } },
             "problemMatcher": ["$tsc"],
             "group": "test"
+        },
+        {
+            "label": "OSRIP: frontend unit tests",
+            "detail": "Research brief templates, report exports, voices, and Arabic plural forms (every count resolves in Arabic, never in English).",
+            "type": "shell",
+            "command": "Get-ChildItem tests\\*.test.mjs | ForEach-Object { node --test $_.FullName; if (-not $?) { exit 1 } }",
+            "options": { "cwd": "${workspaceFolder}/frontend", "shell": { "executable": "powershell.exe", "args": ["-NoProfile", "-Command"] } },
+            "problemMatcher": [],
+            "group": "test"
+        },
+        {
+            "label": "OSRIP: map tests (full stack, no map service contacted)",
+            "detail": "The Oman map and geography browser tests in Chrome: boundary files against the registry, fallback, views, 3D, Arabic, and MapTiler with stand-in responses. Starts its own API and web servers (ports 8765, 5174, 5176); the dev database must be running.",
+            "type": "shell",
+            "command": "$env:OSRIP_TEST_ADMIN_URL = (& ..\\backend\\.venv\\Scripts\\python.exe ..\\backend\\scripts\\devdb.py url); $env:PW_CHANNEL = 'chrome'; npx playwright test -c playwright.api.config.ts oman-map geography-forecast",
+            "options": { "cwd": "${workspaceFolder}/frontend", "shell": { "executable": "powershell.exe", "args": ["-NoProfile", "-Command"] } },
+            "problemMatcher": [],
+            "group": "test"
+        },
+        {
+            "label": "OSRIP: answer mode tests (full stack, stand-ins, no paid calls)",
+            "detail": "Quick answer, Deep research (plan, searches, calculation, checked table, chart, diagram), Arabic and a signed-in illustration in Chrome, with the scripted model, search and image stand-ins. Starts its own API and web servers (ports 8765, 5174, 5176); the dev database must be running.",
+            "type": "shell",
+            "command": "$env:OSRIP_TEST_ADMIN_URL = (& ..\\backend\\.venv\\Scripts\\python.exe ..\\backend\\scripts\\devdb.py url); $env:PW_CHANNEL = 'chrome'; npx playwright test -c playwright.api.config.ts --project=chromium research-modes",
+            "options": { "cwd": "${workspaceFolder}/frontend", "shell": { "executable": "powershell.exe", "args": ["-NoProfile", "-Command"] } },
+            "problemMatcher": [],
+            "group": "test"
+        },
+        {
+            "label": "OSRIP: measure the answer modes (stand-ins, no paid calls)",
+            "detail": "scripts/mode_timing.py on a throwaway database: model calls, searches and time per mode, parallel against sequential searches; writes docs/evaluation/mode-timing.json.",
+            "type": "shell",
+            "command": "$env:OSRIP_TEST_ADMIN_URL = (& .venv\\Scripts\\python.exe scripts\\devdb.py url); .venv\\Scripts\\python.exe scripts\\mode_timing.py --runs 3",
+            "options": { "cwd": "${workspaceFolder}/backend", "shell": { "executable": "powershell.exe", "args": ["-NoProfile", "-Command"] } },
+            "problemMatcher": [],
+            "group": "test"
         }
     ],
     "inputs": [
-        { "id": "username", "type": "promptString", "description": "Username (3-32 letters, digits, . _ -)" }
+        { "id": "username", "type": "promptString", "description": "Username (3-32 letters, digits, . _ -)" },
+        { "id": "adminUsername", "type": "promptString", "description": "Administrator username", "default": "Azzan" }
     ]
 }

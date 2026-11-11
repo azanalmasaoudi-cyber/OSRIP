@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import { closeDrawer, openChatSettings, openTools } from './chat';
+
 // Release 0.8 through the real stack: Al Mulhim's labelled face, web research with
 // labelled sources (scripted search provider, refused in production), the review queue,
 // and a username account that must replace its temporary password first.
@@ -11,16 +13,18 @@ test('the floating control is Al Mulhim, labelled as an AI assistant, in English
   const open = page.getByTestId('open-assistant');
   await expect(open).toContainText('Al Mulhim');
   await expect(open.getByTestId('assistant-avatar').first()).toHaveAttribute('data-state', 'idle');
-  await open.click();
-  const identity = page.getByTestId('assistant-identity');
+  await open.click(); // the one conversation
+  const identity = page.getByTestId('chat-header');
   await expect(identity).toContainText('AI assistant');
   await expect(identity).not.toContainText('not a real person'); // no long notes under the portrait
+  await expect(identity.getByRole('img', { name: /generated image of a fictional Omani man/i })).toBeVisible();
+  await openChatSettings(page);
   const help = page.getByTestId('assistant-help');
   await help.locator('summary').click();
   await expect(help).toContainText('not a real person');
   await expect(help).toContainText('not lip synchronisation');
-  await expect(identity.getByRole('img', { name: /generated image of a fictional Omani man/i })).toBeVisible();
-  await page.keyboard.press('Escape');
+  await closeDrawer(page);
+  await page.goto('/energy/electricity?mode=synthetic');
   await page.getByRole('button', { name: 'العربية' }).click();
   await expect(page.getByTestId('open-assistant')).toContainText('المُلْهِم');
   await page.getByRole('button', { name: 'English' }).click();
@@ -29,11 +33,17 @@ test('the floating control is Al Mulhim, labelled as an AI assistant, in English
 test('web research cites a labelled official source and failures are shown, not hidden', async ({ page }) => {
   await page.goto('/energy/electricity?mode=synthetic');
   await page.getByTestId('open-assistant').click();
+  // Answers from OSRIP's data with web search on (the default), chosen in Tools.
+  await openTools(page);
   await expect(page.getByTestId('web-toggle')).toBeChecked();
+  await page.getByTestId('assistant-mode').locator('[data-value="ask"]').click();
+  await closeDrawer(page);
   await page.getByTestId('assistant-input').fill('Search the web for electricity generation 2023');
   await page.getByTestId('assistant-send').click();
   const reply = page.getByTestId('assistant-message').last();
   await expect(reply).toHaveAttribute('data-status', 'answered');
+  await expect(reply).toContainText('review queue'); // where web figures go, sources shown or not
+  await reply.getByTestId('toggle-sources').click();
   const citation = reply.getByTestId('web-citation');
   await expect(citation).toHaveAttribute('data-class', 'official');
   await expect(citation.getByTestId('evidence-class')).toHaveText('Official data');
@@ -48,6 +58,7 @@ test('web research cites a labelled official source and failures are shown, not 
   await page.getByTestId('assistant-send').click();
   const failed = page.getByTestId('assistant-message').last();
   await expect(failed).toHaveAttribute('data-status', 'no_evidence');
+  await failed.getByTestId('toggle-sources').click(); // the search log is shown with the sources
   const failures = failed.getByTestId('search-log').locator('[data-status="failed"]');
   await expect(failures).toHaveCount(2);
   await expect(failures.first()).toContainText('Web search failed');
@@ -60,7 +71,7 @@ test('web research cites a labelled official source and failures are shown, not 
 test('a data manager reviews web figures; accepting needs a note and publishes nothing', async ({ page }) => {
   await page.goto('/sign-in');
   const form = page.getByTestId('sign-in-form');
-  await form.getByLabel('Username or e-mail address').fill('manager@e2e.invalid');
+  await form.getByLabel('Username').fill('e2emanager');
   await form.getByLabel('Password').fill(PASSWORD);
   await form.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByTestId('account-page')).toBeVisible();
@@ -80,7 +91,7 @@ test('a data manager reviews web figures; accepting needs a note and publishes n
 test('a username account must replace its temporary password before anything else', async ({ page }) => {
   await page.goto('/sign-in');
   const form = page.getByTestId('sign-in-form');
-  await form.getByLabel('Username or e-mail address').fill('E2ETemp');
+  await form.getByLabel('Username').fill('E2ETemp');
   await form.getByLabel('Password').fill(PASSWORD);
   await form.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByRole('heading', { name: 'Choose a new password to continue' })).toBeVisible();

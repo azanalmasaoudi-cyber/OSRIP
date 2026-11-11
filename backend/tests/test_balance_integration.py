@@ -149,20 +149,21 @@ def _guest(app) -> TestClient:  # noqa: ANN001
     return client
 
 
-def test_voice_check_and_test_voice_use_each_persona_voice(app) -> None:  # noqa: ANN001
+def test_voice_check_and_test_voice_use_al_mulhims_voice(app) -> None:  # noqa: ANN001
     client = _guest(app)
     voices = client.get(f"{API}/assistant/voice/voices").json()
     assert voices["configured"] is True
     by = {p["code"]: p for p in voices["personas"]}
+    assert list(by) == ["mulhim"], "one persona (profile version 4)"
     assert by["mulhim"]["voices"]["ar"]["name"] == "ar-OM-AbdullahNeural"
-    assert by["ilham"]["voices"]["ar"]["name"] == "ar-OM-AyshaNeural"
-    assert by["ilham"]["voices"]["en"] == {
-        "name": "en-GB-SoniaNeural",
+    assert by["mulhim"]["voices"]["en"] == {
+        "name": "en-GB-RyanNeural",
         "verified": True,
         "locale": "en-GB",
-        "gender": "Female",
+        "gender": "Male",
     }
-    for persona, language, voice in (("ilham", "ar", "ar-OM-AyshaNeural"), ("mulhim", "ar", "ar-OM-AbdullahNeural"),
+    # A tab that still names the retired persona is spoken with Al Mulhim's voice.
+    for persona, language, voice in (("ilham", "ar", "ar-OM-AbdullahNeural"), ("mulhim", "ar", "ar-OM-AbdullahNeural"),
                                      ("mulhim", "en", "en-GB-RyanNeural")):  # fmt: skip
         r = client.post(
             f"{API}/assistant/voice/test", json={"persona": persona, "language": language}
@@ -185,9 +186,9 @@ def test_an_analysis_is_read_as_a_short_summary_not_cell_by_cell(app) -> None:  
     assert len(text) < 3000
     r = client.post(
         f"{API}/assistant/voice/analysis",
-        json={"analysis_id": body["id"], "persona": "ilham", "language": "ar"},
+        json={"analysis_id": body["id"], "persona": "mulhim", "language": "ar"},
     )
-    assert r.status_code == 200 and r.headers["x-voice"] == "ar-OM-AyshaNeural"
+    assert r.status_code == 200 and r.headers["x-voice"] == "ar-OM-AbdullahNeural"
     missing = client.post(
         f"{API}/assistant/voice/analysis",
         json={"analysis_id": "00000000-0000-4000-8000-000000000000", "language": "en"},
@@ -203,7 +204,7 @@ def test_without_speech_the_voice_test_says_not_configured(app, monkeypatch) -> 
     voices = client.get(f"{API}/assistant/voice/voices").json()
     assert voices["configured"] is False
     assert {v["verified"] for p in voices["personas"] for v in p["voices"].values()} == {None}
-    r = client.post(f"{API}/assistant/voice/test", json={"persona": "ilham", "language": "ar"})
+    r = client.post(f"{API}/assistant/voice/test", json={"persona": "mulhim", "language": "ar"})
     assert r.status_code == 503 and r.json()["error"]["code"] == "speech_not_configured"
 
 
@@ -250,8 +251,8 @@ def test_a_selected_range_is_explained_in_a_few_spoken_sentences(app) -> None:  
     assert anonymous.post(f"{API}/assistant/voice/series", json=selection).status_code in (401, 403)
     client = _guest(app)
     spoken = client.post(f"{API}/assistant/voice/series",
-                         json={**selection, "language": "ar", "persona": "ilham"})  # fmt: skip
-    assert spoken.status_code == 200 and spoken.headers["x-voice"] == "ar-OM-AyshaNeural"
+                         json={**selection, "language": "ar"})  # fmt: skip
+    assert spoken.status_code == 200 and spoken.headers["x-voice"] == "ar-OM-AbdullahNeural"
     assert unquote(spoken.headers["x-transcript"]).startswith("توليد الكهرباء")
     mulhim = client.post(
         f"{API}/assistant/voice/series", json={**selection, "persona": "mulhim", "language": "ar"}

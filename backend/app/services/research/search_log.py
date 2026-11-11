@@ -109,5 +109,8 @@ def store(
         log.exception("could not record a research search")
 
 
-def cache_hours() -> float:
-    return float(get_settings().research_cache_hours)
+def cache_hours(fresh_hours: float | None = None) -> float:
+    """How old a cached search or document may be: the research cache period, or less
+    for a question about the latest figures (``fresh_hours``); 0 means no cache."""
+    hours = float(get_settings().research_cache_hours)
+    return hours if fresh_hours is None else min(hours, fresh_hours)

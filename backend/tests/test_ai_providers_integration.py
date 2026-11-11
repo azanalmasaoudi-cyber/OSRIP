@@ -173,6 +173,22 @@ def test_google_search_grounding_is_shown_apart_and_never_used_as_evidence(
     assert again["messages"][-1]["structured"]["grounded_context"][0]["text"] == grounded["text"]
 
 
+def test_internet_research_searches_the_web_first(app) -> None:  # noqa: ANN001
+    client = _guest(app)
+    # Research: the web search runs at once, with no lookup of OSRIP's data forced first.
+    research = _ask(client, "web electricity generation 2023", mode="research")["message"]
+    assert research["structured"]["method"]["route"]["web_first"] is True
+    assert research["structured"]["method"]["searches"] >= 1
+    assert any(e["kind"] == "web" for e in research["evidence"])
+    # Ask (OSRIP's data): a numerical question still starts with the published data.
+    asked = _ask(client, "web electricity generation 2023", mode="ask")["message"]
+    assert asked["structured"]["method"]["route"] == {
+        "numerical": True,
+        "recent": False,
+        "web_first": False,
+    }
+
+
 def test_a_cross_check_uses_the_second_route_only_when_asked(app, monkeypatch) -> None:  # noqa: ANN001
     s = get_settings()
     monkeypatch.setattr(s, "research_fallback_provider", "fake-openai")

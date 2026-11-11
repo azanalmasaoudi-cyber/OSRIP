@@ -74,7 +74,7 @@ def _describe(s: SeriesOut) -> dict[str, Any]:
 
 
 def _evaluated(session: Session, data_mode: DataMode) -> list[tuple[SeriesOut, fc.Eligibility]]:
-    # Verified-source forecasting uses January 2022 onward only (platform scope).
+    # Verified-source forecasting uses January 2021 onward only (platform scope).
     floor = STATISTICAL_SCOPE_START if data_mode is DataMode.VERIFIED_SOURCE else None
     series = query_observations(
         session, ObservationQuery(data_mode, period_from=floor), allow_mixed=True

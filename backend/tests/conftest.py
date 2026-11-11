@@ -110,9 +110,14 @@ def db(database_url: str):  # noqa: ANN201
 
 @dataclass
 class Person:
-    email: str
+    username: str
     password: str
     id: uuid.UUID
+
+    @property
+    def label(self) -> str:
+        """How the audit log names this person."""
+        return f"username:{self.username}"
 
 
 @pytest.fixture
@@ -124,14 +129,14 @@ def make_user(database_url: str):  # noqa: ANN201
     from app.services.principal import Principal
 
     def make(*roles: Role, grants: tuple[Permission, ...] = ()) -> Person:
-        email = f"user-{uuid.uuid4().hex[:8]}@test.invalid"
+        username = f"u{uuid.uuid4().hex[:9]}"  # 10 characters, the longest a username may be
         password = f"pw-{uuid.uuid4().hex}"
         system = Principal(None, "system:test")
         with session_factory()() as session, session.begin():
             user = accounts.create_user(
                 session,
                 system,
-                email=email,
+                username=username,
                 display_name="Test user",
                 password=password,
                 roles=list(roles),
@@ -139,7 +144,7 @@ def make_user(database_url: str):  # noqa: ANN201
             session.flush()
             for permission in grants:
                 accounts.grant_permission(session, system, user.id, permission)
-            return Person(email, password, user.id)
+            return Person(username, password, user.id)
 
     return make
 
@@ -152,7 +157,7 @@ def login(app):  # noqa: ANN001, ANN201
     def sign_in(person: Person) -> TestClient:
         client = TestClient(app)
         response = client.post(
-            "/api/v1/auth/login", json={"email": person.email, "password": person.password}
+            "/api/v1/auth/login", json={"username": person.username, "password": person.password}
         )
         assert response.status_code == 200, response.text
         client.headers["X-CSRF-Token"] = client.cookies["osrip_csrf"]

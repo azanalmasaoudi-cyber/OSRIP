@@ -13,6 +13,8 @@ test('a trend study runs, opens at its own address and reproduces identically', 
   await expect(view).toHaveAttribute('data-status', 'ok');
   await expect(view.getByTestId('study-row')).toHaveCount(2);
   await expect(view.getByTestId('study-card').first()).toContainText('50,100');
+  await expect(view.getByTestId('study-line-chart')).toHaveCount(0); // drawn only on request
+  await view.getByTestId('study-chart-show').first().click();
   await expect(view.getByTestId('study-line-chart')).toBeVisible();
   await expect(view.getByRole('link', { name: 'Download CSV' })).toHaveAttribute('href', /\/studies\/[0-9a-f-]{36}\/export\.csv\?language=en/);
   await view.getByTestId('study-sources').locator('summary').click();
@@ -34,6 +36,7 @@ test('partner concentration in Arabic shows ranked shares from the server', asyn
   await page.getByTestId('study-run').click();
   const view = page.getByTestId('study-view');
   await expect(view).toHaveAttribute('data-kind', 'partner_concentration');
+  await view.getByTestId('study-chart-show').first().click();
   await expect(view.getByTestId('study-bar-chart')).toBeVisible();
   const rows = view.getByTestId('study-row');
   await expect(rows).toHaveCount(3);

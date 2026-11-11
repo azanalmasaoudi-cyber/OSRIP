@@ -101,17 +101,16 @@ to a third-party font CDN. Licence text: `frontend/node_modules/@fontsource/*/LI
 |---|---|---|---|
 | Map library | MapLibre GL JS 6.11.2 (`maplibre-gl`, npm, bundled) | BSD-3-Clause | Library licence in the bundle header |
 | Arabic label shaping | `@mapbox/mapbox-gl-rtl-text` 0.4.0 (npm, served by the app) | BSD-2-Clause | Licence in `node_modules/@mapbox/mapbox-gl-rtl-text/LICENSE.md` |
-| Basemap tiles, style, fonts | OpenFreeMap "positron" style (`https://tiles.openfreemap.org/styles/positron`), OpenMapTiles schema | Free public service under the [OpenFreeMap terms](https://openfreemap.org/tos/); data © OpenStreetMap contributors, [ODbL](https://www.openstreetmap.org/copyright) | MapLibre's attribution control shows "OpenFreeMap © OpenMapTiles Data from OpenStreetMap" on the map, uncollapsed |
+| Basemap tiles, style, fonts (fallback) | OpenFreeMap "positron" and "dark" styles (`https://tiles.openfreemap.org/styles/…`), OpenMapTiles schema | Free public service under the [OpenFreeMap terms](https://openfreemap.org/tos/); data © OpenStreetMap contributors, [ODbL](https://www.openstreetmap.org/copyright) | MapLibre's attribution control shows "OpenFreeMap © OpenMapTiles Data from OpenStreetMap": in full on wide maps, compact (open at first, then an "i" button) on narrow ones |
+| Relief and 3D terrain (fallback) | Terrain Tiles on AWS Open Data (Mapzen; SRTM, ETOPO1 and others) | Open data; [attribution](https://github.com/tilezen/joerd/blob/master/docs/attribution.md) | Credited in the attribution control |
+| Basemap, satellite imagery, terrain (preferred, optional) | MapTiler Cloud, only when `VITE_MAPTILER_KEY` is set | MapTiler terms; data © OpenStreetMap contributors and MapTiler | The style's attribution, plus the MapTiler logo on the map |
+| Boundaries, national outline, label points | OpenStreetMap administrative relations, matched to the registry (`frontend/public/geo/`) | © OpenStreetMap contributors, ODbL (derived database) | "© OpenStreetMap contributors (boundaries, ODbL)" in the attribution control |
 
-Tiles are requested by the viewer's browser when the Geography page opens; they
-are not stored or redistributed by OSRIP. Boundary lines and names on the basemap
-come from OpenStreetMap through the provider. They are not linked to the OSRIP
-registry and have not been checked by OSRIP (the page says so). OSRIP adds no
-boundaries, centroids or markers. `VITE_MAP_STYLE_URL` changes the provider or
-switches the basemap off (`none`).
-
-No administrative boundary file is included. Candidates evaluated and rejected
-are listed in `docs/VERIFICATION.md` (geographic increment).
+Tiles are requested by the viewer's browser when the map scrolls into view; they
+are not stored or redistributed by OSRIP. `VITE_MAP_STYLE_URL` changes the fallback
+basemap or switches it off (`none`). Sources, setup, limits and costs:
+`docs/MAP.md`; how the boundary files were made and checked:
+`frontend/public/geo/README.md`.
 ## Icons
 
 [Lucide](https://lucide.dev) via `lucide-react` 1.48.0, ISC licence.
@@ -149,3 +148,44 @@ master. The booklet generator and prompts were not recorded and are reported as 
 | Mark: eight-point star of two overlapping squares | `frontend/public/favicon.svg`, `src/components/brand/BrandMark.tsx` | A generic geometric motif, chosen so it cannot be read as a seal or crest |
 | Lattice pattern | `pattern-lattice` utility in `src/index.css` | Inspired by star lattices in carved doors and screens, not traced from any building |
 | Crenellation divider | `pattern-crenellation` utility in `src/index.css` | Inspired by the stepped, pointed merlons on Omani fort parapets, not traced from any building |
+
+## Image use from release 2.0 (2026-11-01, branch `redesign/omani-decision-platform`)
+
+Only photographs of real places with a recorded free licence, or the project's own labelled
+drawings, are shown. Nothing was downloaded, generated or edited for this release.
+
+| Where | Image | Kind |
+|---|---|---|
+| Landing hero (full-width background, credit in the corner) | `misfat-al-abriyeen-village.jpg` | Photograph, CC0 1.0 |
+| Overview hero | `bahla-fort.jpg` | Photograph, CC BY-SA 4.0 |
+| Water (Overview sector cards; until 2026-11-02 also the sector header and dashboard cards) | `desalination-al-khaluf.jpg` | Photograph, CC BY-SA 3.0 |
+| Food Security (as for Water) | `falaj-misfah.jpg` | Photograph, CC BY-SA 3.0 |
+| Trade (as for Water) | `duqm-port.jpg` | Photograph, CC BY-SA 4.0 |
+| Electricity (as for Water) | `illustrations/sector-electricity.svg` | Project drawing, labelled "Illustration" (no licensed photograph of an Omani power or solar plant is in the repository yet) |
+
+No longer shown: the generated Omani-professional portrait (landing hero), the booklet's
+conceptual electricity, water and trade rasters (sector headers) and the floating sector tiles.
+The files stay in the repository. The photographs are at most 2000 px wide (none is a native
+4K master); see the release report for which Commons originals could replace them.
+
+## Premium sector artwork (2026-11-02, branch `feature/premium-sector-images`)
+
+Four images supplied by the project owner for OSRIP, each 1672 × 941 px (about 16:9) with its
+own Arabic and English title. They are **AI-generated illustrations**, not photographs of
+specific Omani sites, and their alt text says so. They replace the sector images on the
+dashboard cards and in the sector page headers; the Overview page keeps the credited
+photographs above.
+
+| Sector | Original (kept as supplied) | Delivered as |
+|---|---|---|
+| Electricity | `frontend/public/images/sectors/osrip_electricity.png` (2.0 MB) | WebP 836 px (64 KB) or 1672 px (198 KB) |
+| Water | `frontend/public/images/sectors/osrip_water.png` (2.3 MB) | WebP 836 px (87 KB) or 1672 px (278 KB) |
+| Food Security | `frontend/public/images/sectors/osrip_food_security.png` (2.5 MB) | WebP 836 px (99 KB) or 1672 px (316 KB) |
+| Trade | `frontend/public/images/sectors/osrip_trade.png` (2.1 MB) | WebP 836 px (69 KB) or 1672 px (211 KB) |
+
+- **Display** (`components/brand/SectorArtwork.tsx`): each image is shown whole at its own
+  ratio (`object-contain`, width and height set, so nothing shifts while it loads). It is never
+  cropped, stretched or covered with text, since the image carries its own title.
+- **Delivery:** the browser picks the WebP copy it needs (quality 86–88, made with Pillow), and
+  falls back to the original PNG. Dashboard cards load lazily; the sector header loads at once.
+- **Rights:** owner-supplied for this project.

@@ -1,0 +1,912 @@
+/*
+ * The welcome screen (Entrance.tsx) and the sign-in screen (AuthLayout.tsx, SignInPage.tsx), after
+ * the owner's design (OSRIP_Welcome_Login_Design, 3 November 2026): charcoal and peach in the dark
+ * theme, warm cream in the light theme, glass panels, the four sector images whole. The colours
+ * are the design's own, scoped to `.ow` and switched with the application's theme (`data-theme`
+ * on <html>); text uses the application's typefaces. Movement is only a hover lift and a colour
+ * change, and none under reduced motion.
+ */
+
+.ow {
+  --ow-bg: #0e1217;
+  --ow-ink: #fff7ec;
+  --ow-muted: #afb9bb;
+  --ow-glass: rgb(255 255 255 / 0.065);
+  --ow-glass-line: rgb(255 225 190 / 0.16);
+  --ow-card: rgb(27 31 36 / 0.77);
+  --ow-surface: rgb(255 255 255 / 0.065);
+  --ow-peach: #ffbd8b;
+  --ow-outline: rgb(255 255 255 / 0.16);
+  --ow-field: rgb(13 17 22 / 0.55);
+  --ow-shadow: 0 28px 85px rgb(0 0 0 / 0.32);
+  --ow-primary-bg: linear-gradient(120deg, #ffdbad, #eba877 75%, #e5956b);
+  --ow-primary-ink: #2a2421;
+  --ow-error: #ed9d8d;
+  position: relative;
+  isolation: isolate;
+  min-height: 100dvh;
+  color: var(--ow-ink);
+  background: var(--ow-bg);
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] .ow {
+  --ow-bg: #f5f0e9;
+  --ow-ink: #292521;
+  --ow-muted: #5f5e5c;
+  --ow-glass: rgb(255 255 255 / 0.62);
+  --ow-glass-line: rgb(160 107 67 / 0.19);
+  --ow-card: rgb(255 252 248 / 0.9);
+  --ow-surface: rgb(255 255 255 / 0.72);
+  --ow-peach: #a1532e;
+  --ow-outline: rgb(107 81 61 / 0.22);
+  --ow-field: rgb(255 255 255 / 0.77);
+  --ow-shadow: 0 28px 85px rgb(83 53 32 / 0.15);
+  --ow-primary-bg: linear-gradient(120deg, #a95833, #9c4d2f);
+  --ow-primary-ink: #ffffff;
+  --ow-error: #a13f2f;
+  color-scheme: light;
+}
+
+/* The welcome is a full-screen modal dialog (Entrance.tsx) that scrolls on its own. */
+.welcome-dialog {
+  border: 0;
+  background: #0e1217;
+  color: inherit;
+}
+.welcome-dialog::backdrop {
+  background: #0e1217;
+}
+:root[data-theme='light'] .welcome-dialog,
+:root[data-theme='light'] .welcome-dialog::backdrop {
+  background: #f5f0e9;
+}
+
+.ow :focus-visible {
+  outline: 3px solid var(--ow-peach);
+  outline-offset: 3px;
+}
+
+/* Background: two soft glows and a faint grid. */
+.ow-aurora,
+.ow-grid {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.ow-aurora {
+  background:
+    radial-gradient(ellipse 39% 50% at 88% 22%, rgb(213 125 72 / 0.29), transparent 80%),
+    radial-gradient(ellipse 43% 65% at 8% 78%, rgb(36 95 113 / 0.28), transparent 79%),
+    radial-gradient(ellipse 60% 30% at 40% 98%, rgb(165 94 48 / 0.18), transparent 85%);
+}
+:root[data-theme='light'] .ow-aurora {
+  background:
+    radial-gradient(ellipse 48% 50% at 94% 18%, rgb(227 164 116 / 0.27), transparent 75%),
+    radial-gradient(ellipse 38% 55% at 10% 75%, rgb(154 181 177 / 0.23), transparent 80%);
+}
+.ow-grid {
+  opacity: 0.23;
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.055) 1px, transparent 1px);
+  background-size: 58px 58px;
+  mask-image: linear-gradient(to bottom, transparent, black 45%, black 80%, transparent);
+}
+:root[data-theme='light'] .ow-grid {
+  opacity: 0.17;
+  background-image:
+    linear-gradient(rgb(70 59 48 / 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(70 59 48 / 0.15) 1px, transparent 1px);
+}
+
+/* Top bar: the brand, then the language and theme chips. */
+.ow-topbar {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 26px clamp(22px, 4.5vw, 72px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.ow-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 16px;
+}
+.ow-symbol {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 50px;
+  height: 50px;
+  border-radius: 15px;
+  background: linear-gradient(135deg, #facb94, #bb693e);
+  box-shadow: 0 0 0 1px #ffe8ce inset, 0 6px 35px rgb(213 116 66 / 0.25);
+  color: #30201a;
+  font: 900 22px/1 Arial, system-ui, sans-serif;
+  letter-spacing: -2px;
+}
+.ow-brand-word {
+  display: block;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+.ow-brand-sub {
+  display: block;
+  margin-top: 3px;
+  color: var(--ow-muted);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+.ow-tools {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.ow-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 15px;
+  border: 1px solid var(--ow-outline);
+  border-radius: 999px;
+  background: var(--ow-glass);
+  backdrop-filter: blur(14px);
+  color: var(--ow-ink);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.ow-chip:hover {
+  border-color: var(--ow-peach);
+  transform: translateY(-1px);
+}
+
+.ow-frame {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 30px clamp(22px, 4.5vw, 72px) 35px;
+}
+
+/* Buttons. */
+.ow-primary,
+.ow-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 51px;
+  padding: 0 25px;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.ow-primary {
+  border: 1px solid rgb(255 226 196 / 0.35);
+  background: var(--ow-primary-bg);
+  color: var(--ow-primary-ink);
+  box-shadow: 0 9px 33px rgb(226 144 86 / 0.28);
+}
+.ow-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 40px rgb(226 144 86 / 0.39);
+}
+.ow-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.ow-secondary {
+  border: 1px solid var(--ow-outline);
+  background: var(--ow-glass);
+  color: var(--ow-ink);
+}
+.ow-secondary:hover {
+  transform: translateY(-2px);
+}
+.ow-arrow {
+  display: inline-block;
+}
+:root[dir='rtl'] .ow-arrow {
+  transform: scaleX(-1);
+}
+
+/* ------------------------------------------------------------------ welcome */
+
+.ow-welcome {
+  display: grid;
+  grid-template-columns: 1.03fr 1.02fr;
+  align-items: center;
+  gap: clamp(34px, 5vw, 86px);
+  min-height: min(700px, calc(100dvh - 150px));
+}
+.ow-hero {
+  max-width: 620px;
+  padding: 18px 0 45px;
+}
+.ow-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 15px;
+  border: 1px solid rgb(245 178 121 / 0.24);
+  border-radius: 999px;
+  background: rgb(244 175 118 / 0.05);
+  color: var(--ow-peach);
+  font-size: 12px;
+  font-weight: 700;
+}
+.ow-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #9be0b6;
+  box-shadow: 0 0 0 4px rgb(155 224 182 / 0.12);
+}
+.ow-title {
+  margin: 25px 0 14px;
+  font: 900 clamp(82px, 9vw, 150px) / 0.95 Arial, system-ui, sans-serif;
+  letter-spacing: -0.07em;
+  text-align: left;
+  background: linear-gradient(120deg, #fff9ee 20%, #f5c494 52%, #fff9ee 76%);
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 8px 30px rgb(240 164 99 / 0.13));
+}
+:root[data-theme='light'] .ow-title {
+  background-image: linear-gradient(120deg, #5e3929, #c07448 48%, #5d3a2d);
+}
+/* The wordmark and the name in the other language line up with the page's start edge, whatever
+   their own direction. */
+.ow-name-other {
+  text-align: left;
+}
+:root[dir='rtl'] .ow-title,
+:root[dir='rtl'] .ow-name-other {
+  text-align: right;
+}
+.ow-name {
+  margin: 0;
+  font-size: clamp(20px, 2.5vw, 33px);
+  font-weight: 700;
+  line-height: 1.6;
+  letter-spacing: -0.02em;
+}
+.ow-name-other {
+  margin: 5px 0 0;
+  color: var(--ow-peach);
+  font-size: clamp(12px, 1.2vw, 16px);
+  line-height: 1.6;
+}
+.ow-name-other[dir='ltr'] {
+  font-family: Arial, system-ui, sans-serif;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+.ow-lead {
+  max-width: 590px;
+  margin: 27px 0 30px;
+  color: var(--ow-muted);
+  font-size: clamp(15px, 1.4vw, 18px);
+  line-height: 2;
+}
+.ow-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.ow-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin: 40px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ow-muted);
+  font-size: 12px;
+}
+.ow-meta li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ow-meta b {
+  color: var(--ow-peach);
+  font-size: 14px;
+}
+
+/* Al Mulhim, the one AI assistant: a compact link to the conversation. */
+.ow-assistant {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 28px;
+  padding: 6px 18px 6px 6px;
+  border: 1px solid var(--ow-glass-line);
+  border-radius: 999px;
+  background: var(--ow-glass);
+  color: var(--ow-ink);
+  text-decoration: none;
+  backdrop-filter: blur(14px);
+  transition: border-color 0.2s, transform 0.2s;
+}
+[dir='rtl'] .ow-assistant {
+  padding: 6px 6px 6px 18px;
+}
+.ow-assistant:hover {
+  border-color: var(--ow-peach);
+  transform: translateY(-1px);
+}
+.ow-assistant:focus-visible {
+  outline: 3px solid var(--ow-peach);
+  outline-offset: 3px;
+}
+.ow-assistant img {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  object-fit: cover;
+  object-position: top;
+  box-shadow: 0 0 0 2px var(--ow-glass-line);
+}
+.ow-assistant-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  text-align: start;
+}
+.ow-assistant-text b {
+  font-size: 14px;
+  font-weight: 800;
+}
+.ow-assistant-text span {
+  color: var(--ow-muted);
+  font-size: 12px;
+}
+
+.ow-art {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 525px;
+}
+.ow-art::before {
+  content: '';
+  position: absolute;
+  inset: 7% auto auto 9%;
+  width: 83%;
+  aspect-ratio: 1;
+  border: 1px solid rgb(243 173 115 / 0.25);
+  border-radius: 50%;
+  box-shadow: 0 0 0 56px rgb(255 207 150 / 0.02), 0 0 0 112px rgb(255 207 150 / 0.014);
+  pointer-events: none;
+}
+.ow-panel {
+  position: relative;
+  width: min(100%, 608px);
+  padding: 17px;
+  border: 1px solid var(--ow-glass-line);
+  border-radius: 34px;
+  background: linear-gradient(125deg, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0.018) 44%), var(--ow-card);
+  backdrop-filter: blur(24px);
+  box-shadow: var(--ow-shadow);
+  transform: perspective(1200px) rotateY(-4deg);
+}
+:root[dir='rtl'] .ow-panel {
+  transform: perspective(1200px) rotateY(4deg);
+}
+.ow-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-top: 1px solid rgb(255 230 209 / 0.35);
+  border-radius: 34px;
+  pointer-events: none;
+}
+.ow-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 8px 17px;
+}
+.ow-panel-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+}
+.ow-panel-sub {
+  margin: 4px 0 0;
+  color: var(--ow-muted);
+  font-size: 11px;
+}
+.ow-pill {
+  padding: 8px 11px;
+  border: 1px solid var(--ow-glass-line);
+  border-radius: 999px;
+  color: var(--ow-peach);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.ow-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ow-sector {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border: 1px solid rgb(255 231 210 / 0.23);
+  border-radius: 18px;
+  box-shadow: 0 13px 22px rgb(0 0 0 / 0.16);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.ow-sector:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 35px rgb(0 0 0 / 0.24);
+}
+.ow-sector::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 30%;
+  background: linear-gradient(transparent, rgb(9 13 17 / 0.57));
+  pointer-events: none;
+}
+.ow-panel-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 8px 5px;
+  color: var(--ow-muted);
+  font-size: 11px;
+}
+.ow-panel-bottom a {
+  color: var(--ow-peach);
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 6px;
+}
+.ow-panel-bottom a:hover {
+  text-decoration: underline;
+}
+
+.ow-footer {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 clamp(22px, 4.5vw, 72px) 22px;
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  color: var(--ow-muted);
+  font-size: 11px;
+}
+
+/* ------------------------------------------------------------------ sign-in */
+
+.ow-login {
+  display: grid;
+  grid-template-columns: 1fr 440px;
+  align-items: center;
+  gap: clamp(28px, 6vw, 100px);
+  min-height: min(730px, calc(100dvh - 130px));
+  padding: 32px 0 62px;
+}
+.ow-showcase {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 545px;
+  overflow: hidden;
+  padding: 40px;
+  border: 1px solid var(--ow-glass-line);
+  border-radius: 35px;
+  background:
+    radial-gradient(ellipse at 88% 20%, rgb(247 182 130 / 0.23), transparent 48%),
+    radial-gradient(ellipse at 22% 86%, rgb(34 92 105 / 0.3), transparent 60%),
+    linear-gradient(135deg, #243240, #171f2a 48%, #3a2b28);
+  box-shadow: var(--ow-shadow);
+  color: #fff6eb;
+}
+.ow-showcase::before {
+  content: '';
+  position: absolute;
+  inset: 10% 12%;
+  border: 1px solid rgb(255 210 170 / 0.2);
+  border-radius: 50%;
+  box-shadow: 0 0 0 55px rgb(255 210 170 / 0.025), 0 0 0 110px rgb(255 210 170 / 0.012);
+  pointer-events: none;
+}
+.ow-showcase > * {
+  position: relative;
+  z-index: 1;
+}
+.ow-showcase-name {
+  margin: 0;
+  color: #fff9ef;
+  font: 900 clamp(70px, 8vw, 110px) / 1 Arial, sans-serif;
+  letter-spacing: -0.06em;
+  text-align: left;
+}
+.ow-showcase-caption {
+  max-width: 450px;
+  margin: 22px 0 0;
+  font-size: clamp(22px, 2.7vw, 35px);
+  font-weight: 800;
+  line-height: 1.5;
+}
+.ow-showcase-small {
+  max-width: 440px;
+  margin: 12px 0 0;
+  color: #ebd6c4;
+  font-size: 14px;
+  line-height: 1.9;
+}
+.ow-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ow-badges li {
+  padding: 10px 14px;
+  border: 1px solid rgb(255 235 218 / 0.26);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.1);
+  backdrop-filter: blur(12px);
+  color: #fff7ee;
+  font-size: 12px;
+}
+.ow-box {
+  width: 100%;
+  max-width: 490px;
+  margin: auto;
+  padding: clamp(26px, 4.5vw, 45px);
+  border: 1px solid var(--ow-glass-line);
+  border-radius: 30px;
+  background: linear-gradient(145deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.01)), var(--ow-card);
+  backdrop-filter: blur(28px);
+  box-shadow: var(--ow-shadow);
+}
+.ow-box .ow-symbol {
+  width: 59px;
+  height: 59px;
+  border-radius: 18px;
+  font-size: 27px;
+}
+.ow-heading {
+  margin: 23px 0 8px;
+  font-size: clamp(24px, 2.5vw, 33px);
+  font-weight: 800;
+}
+.ow-intro {
+  margin: 0 0 30px;
+  color: var(--ow-muted);
+  font-size: 14px;
+  line-height: 1.9;
+}
+.ow-field {
+  display: block;
+  margin-bottom: 19px;
+}
+.ow-field label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.ow-field-wrap {
+  position: relative;
+}
+.ow-input {
+  width: 100%;
+  height: 55px;
+  padding: 0 18px;
+  border: 1px solid var(--ow-outline);
+  border-radius: 14px;
+  background: var(--ow-field);
+  color: var(--ow-ink);
+  font: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.ow-input:focus {
+  outline: none;
+  border-color: var(--ow-peach);
+  box-shadow: 0 0 0 3px rgb(231 165 117 / 0.25);
+}
+.ow-input-reveal {
+  padding-inline-end: 84px;
+}
+.ow-show {
+  position: absolute;
+  top: 7px;
+  inset-inline-end: 7px;
+  height: 41px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ow-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.ow-show:hover {
+  background: var(--ow-surface);
+  color: var(--ow-ink);
+}
+.ow-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 2px 0 18px;
+  font-size: 13px;
+}
+.ow-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.ow-check input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--ow-peach);
+}
+.ow-hint {
+  margin: 4px 0 0;
+  color: var(--ow-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.ow-error {
+  margin: 0 0 12px;
+  color: var(--ow-error);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.ow-submit {
+  width: 100%;
+  margin: 7px 0 14px;
+}
+.ow-fine {
+  margin: 0;
+  color: var(--ow-muted);
+  font-size: 12px;
+  line-height: 1.9;
+  text-align: center;
+}
+.ow-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 18px;
+  margin: 16px 0 0;
+  font-size: 13px;
+}
+.ow-link {
+  color: var(--ow-peach);
+  text-decoration: none;
+  border-radius: 6px;
+}
+.ow-link:hover {
+  text-decoration: underline;
+}
+.ow-back {
+  display: block;
+  margin: 20px auto 0;
+  padding: 5px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ow-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+.ow-back:hover {
+  color: var(--ow-peach);
+}
+.ow-notice {
+  margin: 0 0 14px;
+  padding: 12px;
+  border: 1px solid rgb(228 163 114 / 0.33);
+  border-radius: 13px;
+  background: var(--ow-surface);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+/* ------------------------------------------------------------------ narrower screens */
+
+@media (max-width: 1050px) {
+  .ow-welcome {
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+  }
+  .ow-panel,
+  :root[dir='rtl'] .ow-panel {
+    transform: none;
+  }
+  .ow-title {
+    font-size: clamp(68px, 10vw, 120px);
+  }
+  .ow-art {
+    min-height: 420px;
+  }
+}
+
+@media (max-width: 790px) {
+  .ow-topbar {
+    padding-block: 18px;
+  }
+  .ow-frame {
+    padding-top: 7px;
+  }
+  .ow-welcome {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+  .ow-hero {
+    max-width: none;
+    padding-bottom: 0;
+    text-align: center;
+  }
+  .ow-title,
+  :root[dir='rtl'] .ow-title,
+  .ow-name-other,
+  :root[dir='rtl'] .ow-name-other {
+    text-align: center;
+  }
+  .ow-lead {
+    margin-inline: auto;
+  }
+  .ow-actions,
+  .ow-meta {
+    justify-content: center;
+  }
+  .ow-art {
+    min-height: 0;
+    padding: 0 2px 30px;
+  }
+  .ow-art::before {
+    inset: -5% auto auto 10%;
+  }
+  .ow-panel {
+    max-width: 550px;
+  }
+  .ow-login {
+    grid-template-columns: 1fr;
+  }
+  .ow-showcase {
+    min-height: 260px;
+    padding: 26px;
+  }
+  .ow-showcase-name {
+    font-size: 72px;
+  }
+  .ow-showcase-caption {
+    margin-top: 8px;
+    font-size: 25px;
+  }
+  .ow-box {
+    max-width: 550px;
+  }
+  .ow-footer {
+    flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+@media (max-width: 470px) {
+  .ow-topbar {
+    gap: 8px;
+  }
+  .ow-symbol {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+  }
+  .ow-brand-sub {
+    display: none;
+  }
+  .ow-brand-word {
+    font-size: 16px;
+  }
+  .ow-chip {
+    padding: 0 11px;
+    font-size: 12px;
+  }
+  .ow-title {
+    font-size: 71px;
+  }
+  .ow-name {
+    font-size: 21px;
+  }
+  .ow-lead {
+    margin: 18px 0 25px;
+    font-size: 14px;
+  }
+  .ow-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .ow-primary,
+  .ow-secondary {
+    width: 100%;
+  }
+  .ow-meta {
+    gap: 9px 18px;
+  }
+  .ow-art {
+    padding-bottom: 20px;
+  }
+  .ow-panel {
+    padding: 11px;
+    border-radius: 24px;
+  }
+  .ow-cards {
+    gap: 8px;
+  }
+  .ow-sector {
+    border-radius: 12px;
+  }
+  .ow-panel-head {
+    padding: 5px 4px 12px;
+  }
+  .ow-login {
+    gap: 17px;
+    padding-top: 5px;
+  }
+  .ow-showcase {
+    min-height: 230px;
+  }
+  .ow-box {
+    border-radius: 23px;
+  }
+  .ow-badges li {
+    font-size: 11px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ow *,
+  .ow *::before,
+  .ow *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+  .ow-chip:hover,
+  .ow-primary:hover:not(:disabled),
+  .ow-secondary:hover,
+  .ow-sector:hover,
+  .ow-assistant:hover {
+    transform: none;
+  }
+}

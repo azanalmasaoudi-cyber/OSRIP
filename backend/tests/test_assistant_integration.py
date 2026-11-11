@@ -38,12 +38,12 @@ def verified_generation(database_url: str) -> None:
     from app.services import accounts
     from app.services.principal import Principal
 
-    email, password = "assistant-manager@test.invalid", "pw-assistant-manager-000"
+    email, password = "asstmgr", "pw-assistant-manager-000"
     with session_factory()() as s, s.begin():
         user = accounts.create_user(
             s,
             Principal(None, "t"),
-            email=email,
+            username=email,
             display_name="M",
             password=password,
             roles=[Role.DATA_MANAGER],
@@ -52,7 +52,7 @@ def verified_generation(database_url: str) -> None:
         for p in (Permission.IMPORT_APPROVE, Permission.IMPORT_PUBLISH):
             accounts.grant_permission(s, Principal(None, "t"), user.id, p)
     client = TestClient(create_app())
-    client.post(f"{API}/auth/login", json={"email": email, "password": password})
+    client.post(f"{API}/auth/login", json={"username": email, "password": password})
     client.headers["X-CSRF-Token"] = client.cookies["osrip_csrf"]
     source = register_test_verified_source(client)
     imp = upload_validate_approve(
@@ -168,6 +168,43 @@ def test_an_invented_number_is_withheld_and_the_evidence_shown(
     assert reply["status"] == "unverified"
     assert "123456789" not in reply["content"]
     assert reply["evidence"], "the retrieved evidence is shown instead"
+
+
+def test_one_invented_figure_does_not_withhold_the_whole_answer(
+    user, fake, dhofar, verified_generation
+) -> None:  # noqa: ANN001
+    reply = ask(user, conversation(user), "Partly invent the latest electricity generation")
+    assert reply["status"] == "answered", "the supported part is shown"
+    assert "987654321" not in reply["content"], "the invented figure is left out"
+    assert "4305.5" in reply["content"] and "completeness" in reply["content"]
+    assert reply["structured"]["omitted_claims"] == 1
+
+
+def test_sources_are_given_when_asked_for_and_not_charged(
+    user, fake, dhofar, verified_generation, database_url
+) -> None:  # noqa: ANN001
+    from sqlalchemy import create_engine
+
+    engine = create_engine(database_url)
+
+    def usage_rows() -> int:
+        with engine.connect() as c:
+            return int(c.execute(text("SELECT count(*) FROM assistant_usage")).scalar_one())
+
+    conv = conversation(user)
+    answer = ask(user, conv, "What is the latest electricity generation?")
+    assert answer["status"] == "answered" and answer["evidence"]
+    before = usage_rows()
+    listed = ask(user, conv, "Show sources")
+    assert usage_rows() == before, "listing sources is not counted as an answer"
+    assert listed["status"] == "sources" and listed["ai_generated"] is False
+    assert "https://example.invalid/test-table.csv" in listed["content"]
+    assert listed["evidence"] and all(e["kind"] != "search" for e in listed["evidence"])
+    arabic = ask(user, conv, "اعرض المصادر", "ar")
+    assert arabic["status"] == "sources" and arabic["content"].startswith("مصادر الإجابة السابقة")
+    # A question about sources of something is a question, not a request for the list.
+    question = ask(user, conv, "What are the main sources of electricity generation?")
+    assert question["status"] != "sources"
 
 
 def test_missing_evidence_is_explained_not_zero(user, fake) -> None:  # noqa: ANN001

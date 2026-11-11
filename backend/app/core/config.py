@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     session_cookie_secure: bool = True
     session_absolute_hours: int = 8
     session_idle_minutes: int = 30
+    # Remember me: how long a persistent session lasts on its device (no shorter idle limit).
+    session_remember_days: int = Field(default=14, ge=1, le=90)
     # Keys the hash of client addresses in login_attempt (no raw IPs are stored).
     client_hash_key: SecretStr = Field(default=SecretStr("development-only-change-me"))
 
@@ -60,6 +62,10 @@ class Settings(BaseSettings):
     reset_password_minutes: int = 30
     magic_link_minutes: int = 15
     email_requests_per_hour: int = 5
+    # Changing a verified e-mail address or phone number needs the current password, or,
+    # for an account without one (phone or Google/Microsoft sign-in), a session opened
+    # within this many minutes.
+    reauth_minutes: int = 10
 
     # ------------------------------------------------------------ external identity (OIDC)
     google_client_id: str | None = None
@@ -85,11 +91,32 @@ class Settings(BaseSettings):
     openai_search_model: str | None = None  # web search route (Responses API web_search tool)
     # Reasoning models may need longer than other providers: each OpenAI call may run this long.
     openai_timeout_seconds: float = 60.0
-    # Reasoning effort (none, minimal, low, medium, high, xhigh; the model's default when unset):
-    # lower is faster and cheaper. Which values a model accepts is in its model page.
-    openai_reasoning_effort: Literal["none", "minimal", "low", "medium", "high", "xhigh"] | None = (
-        None
-    )
+    # Reasoning effort (none, minimal, low, medium, high, xhigh, max; the model's default when
+    # unset): lower is faster and cheaper. Which values a model accepts is in its model page
+    # (GPT-6.1 Sol and GPT-6 Astra: low to max, not none or minimal).
+    openai_reasoning_effort: (
+        Literal["none", "minimal", "low", "medium", "high", "xhigh", "max"] | None
+    ) = None
+    # Per mode, on the answering provider above (docs/AI_PROVIDERS.md): a lighter model for Quick
+    # answers (e.g. gpt-6-luna) and a stronger one for Deep internet research (e.g. gpt-6.1-sol
+    # or gpt-6-astra), with its own reasoning effort. Unset: the provider's model for every mode.
+    assistant_quick_model: str | None = None
+    assistant_deep_model: str | None = None
+    assistant_deep_reasoning_effort: Literal["low", "medium", "high", "xhigh", "max"] | None = None
+    # A Quick answer: few model rounds, two searches and one page at most.
+    assistant_quick_max_rounds: int = 4
+    research_max_searches_quick: int = 2
+    research_max_pages_quick: int = 1
+    # Generated illustrations (services/images.py): off unless a provider is named ("openai";
+    # "fake" outside production). Images are billed per use: a per-user daily limit applies.
+    images_provider: str | None = None
+    images_model: str = "gpt-image-2.5-flare"  # fast
+    images_detailed_model: str = "gpt-image-2.5-sunburst"  # slower, more precise
+    images_size: str = "1024x1024"
+    images_daily_limit_per_user: int = 10
+    # The scripted answer service only (tests): milliseconds between the pieces of its
+    # streamed answer, so a browser test sees the text arrive. 0: no pause.
+    fake_stream_delay_ms: int = 0
     # Web search route: how much context the search gathers, and optionally only these domains
     # (at most 100, without https://; subdomains included). Empty: the whole web, with official
     # Omani sources preferred by the instructions.
@@ -147,6 +174,12 @@ class Settings(BaseSettings):
     # Searches and pages are reused for this many hours (research_search, research_document);
     # when a search fails, the last successful results are shown with their own date.
     research_cache_hours: int = 24
+    # For a question about the latest figures, cached searches and documents older than this
+    # are retrieved again before they are relied on.
+    research_latest_cache_hours: float = 6.0
+    # Independent searches and page reads asked for in the same step run at the same time,
+    # at most this many at once (each still with its own timeout and the daily limits).
+    research_parallel_fetches: int = 3
     # Paid search and fetch calls per UTC day, across all users and jobs (provider_call rows).
     research_daily_search_limit: int = 200
     research_daily_fetch_limit: int = 200
@@ -240,14 +273,31 @@ class Settings(BaseSettings):
     guest_sessions_per_client_hour: int = 30
 
     # ------------------------------------------------------------ SMS verification (phone accounts)
-    # Off unless explicitly enabled AND a provider is configured. No production SMS
-    # provider has been selected for this project yet, so the only implemented adapter
-    # is "test" (scripted delivery for automated tests; refused in production). A real
-    # adapter must be written against the chosen provider's official documentation.
+    # Off unless explicitly enabled AND a provider is configured. Adapters: "twilio_verify"
+    # (Twilio Verify API v2; the provider generates, sends and checks the code), "whatsapp"
+    # (Meta WhatsApp Cloud API; OSRIP generates and checks the code, WhatsApp delivers it
+    # with an authentication template) and "test" (scripted delivery for automated tests;
+    # refused in production). Twilio credentials: the Account SID with either an API key
+    # (SID and secret, preferred) or the Auth Token, and the Verify Service SID. Server side
+    # only; never in the frontend. The OSRIP_SMS_* limits apply to every channel.
     sms_enabled: bool = False
     sms_provider: str = ""
-    sms_provider_api_key: SecretStr | None = None
-    sms_provider_service_id: str | None = None
+    twilio_account_sid: str | None = None  # AC...
+    twilio_api_key_sid: str | None = None  # SK... (with the secret below; preferred)
+    twilio_api_key_secret: SecretStr | None = None
+    twilio_auth_token: SecretStr | None = None  # used only when no API key is set
+    twilio_verify_service_sid: str | None = None  # VA...
+    # WhatsApp: "test" sends only to the numbers in whatsapp_test_recipients (Meta's free test
+    # sender accepts up to 5 verified recipients); "production" sends to anyone and every
+    # delivered code is charged by Meta. Production stays off until billing and business
+    # verification are in place (docs/INTEGRATIONS.md).
+    whatsapp_mode: str = "test"
+    whatsapp_access_token: SecretStr | None = None  # a system user token (or the temporary one)
+    whatsapp_phone_number_id: str | None = None  # the sender's phone number ID, not the number
+    whatsapp_business_account_id: str | None = None  # WABA ID: template setup script only
+    whatsapp_template_name: str = "osrip_verification_code"  # authentication template, en and ar
+    whatsapp_test_recipients: str = ""  # comma-separated E.164 numbers, e.g. +96891234567
+    whatsapp_api_version: str = "v23.0"
     sms_code_minutes: int = 10  # challenge lifetime
     sms_max_attempts: int = 5  # wrong codes allowed per challenge
     sms_resend_seconds: int = 60  # cooldown before another code to the same number

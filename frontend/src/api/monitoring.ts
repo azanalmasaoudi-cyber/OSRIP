@@ -14,6 +14,29 @@ const integration = z.object({
   note: z.string().optional(),
 });
 
+const usageRow = z.object({
+  provider: z.string(), calls: z.number(), failures: z.number(), refused: z.number(),
+  input_tokens: z.number(), output_tokens: z.number(),
+  estimated_cost_usd: z.number().nullable(), average_ms: z.number().nullable(),
+});
+export type UsageRow = z.infer<typeof usageRow>;
+const usageSchema = z.object({
+  windows: z.object({ day: z.array(usageRow), month: z.array(usageRow) }),
+  priced: z.array(z.string()),
+});
+const syncFeedSchema = z.object({
+  code: z.string(), title: z.object({ en: z.string(), ar: z.string() }), access: z.string(),
+  enabled: z.boolean(), auto_publish: z.boolean(),
+  last_checked_at: z.string().nullable(), last_success_at: z.string().nullable(), next_check_at: z.string().nullable(),
+  last_status: z.string().nullable(), consecutive_failures: z.number(), awaiting_approval: z.number(),
+});
+const performanceSchema = z.object({
+  window: z.number(), requests: z.number(), uptime_seconds: z.number(),
+  p50_ms: z.number().nullable(), p95_ms: z.number().nullable(), max_ms: z.number().nullable(),
+  server_errors: z.number(),
+  slowest: z.array(z.object({ route: z.string(), requests: z.number(), p95_ms: z.number() })),
+});
+
 const monitoringSchema = z.object({
   ready: z.boolean(),
   release: z.string(),
@@ -23,6 +46,9 @@ const monitoringSchema = z.object({
     fingerprint: z.string(), source: z.string(), kind: z.string(), message: z.string(),
     location: z.string().nullable(), count: z.number(), last_seen: z.string(), last_request_id: z.string().nullable(),
   })),
+  usage: usageSchema,
+  sync: z.array(syncFeedSchema),
+  performance: performanceSchema,
 });
 export type Monitoring = z.infer<typeof monitoringSchema>;
 

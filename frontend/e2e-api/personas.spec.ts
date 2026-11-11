@@ -2,15 +2,16 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { closeDrawer, openChatSettings } from './chat';
 
-// Two selectable personas through the real stack (scripted model and speech services):
-// Al Mulhim (male) and Ilham (female). Choosing one changes the name, portrait, introduction and
-// voice; the conversation, the guest allowance and the facts stay the same. Talk shows the
-// chosen persona large, says which fallback it is in, asks for the microphone only when the
-// mic is pressed and never for the camera.
+// One assistant persona through the real stack (scripted model and speech services): Al Mulhim
+// (assistant profile version 4). There is no persona choice anywhere; a question that still names
+// the retired persona (Ilham) is answered by Al Mulhim, while an earlier reply keeps its text
+// under a neutral name. There is no separate Talk screen (/talk opens the conversation): the
+// microphone is in the message box, asked for only when pressed and never with the camera.
 
 const PASSWORD = process.env.OSRIP_E2E_PASSWORD ?? '';
+const API = '/api/v1';
 
-// A fake microphone device (permission is granted only in the Talk group).
+// A fake microphone device (permission is granted only in the voice group).
 test.use({ launchOptions: { args: ['--use-fake-device-for-media-stream', '--autoplay-policy=no-user-gesture-required'] } });
 
 async function ask(page: Page, text: string): Promise<void> {
@@ -28,100 +29,86 @@ async function answerIn(page: Page, name: 'العربية' | 'English'): Promise
   await closeDrawer(page);
 }
 
-async function choose(page: Page, code: 'mulhim' | 'ilham'): Promise<void> {
-  await page.getByTestId('persona-picker').first().getByTestId(`persona-option-${code}`).click();
-  await expect(page.getByTestId('persona-picker').first()).toHaveAttribute('data-selected', code);
+async function signIn(page: Page): Promise<void> {
+  await page.goto('/sign-in');
+  await page.getByTestId('sign-in-form').getByLabel('Username').fill('e2eviewer');
+  await page.getByTestId('sign-in-form').getByLabel('Password').fill(PASSWORD);
+  await page.getByTestId('sign-in-form').getByRole('button', { name: 'Sign in' }).click();
+  await expect(page.getByTestId('account-page')).toBeVisible();
 }
 
-test('choosing Ilham changes who answers; switching back keeps the conversation, allowance and facts', async ({ page }) => {
+test('Al Mulhim is the only assistant: no persona choice, his name, portrait and greeting', async ({ page }) => {
   await page.goto('/assistant?mode=synthetic');
-  const picker = page.getByTestId('persona-picker').first();
-  await expect(picker).toHaveAttribute('data-selected', 'mulhim'); // the default
+  await expect(page.getByTestId('persona-picker')).toHaveCount(0);
   await expect(page.getByTestId('mulhim-name')).toHaveText('Al Mulhim');
-
-  await choose(page, 'ilham');
-  await expect(page.getByTestId('mulhim-name')).toHaveText('Ilham');
   const avatar = page.getByTestId('chat-header').getByTestId('assistant-avatar');
-  await expect(avatar).toHaveAttribute('data-persona', 'ilham');
-  await expect(avatar.locator('img')).toHaveAttribute('src', /ilham-portrait/);
-  await expect(avatar.locator('img')).toHaveAttribute('alt', /fictional Omani woman/);
+  await expect(avatar).toHaveAttribute('data-persona', 'mulhim');
+  await expect(avatar.locator('img')).toHaveAttribute('src', /mulhim-portrait/);
+  await expect(page.locator('img[src*="ilham"]')).toHaveCount(0);
 
-  // «السلام عليكم» → the approved greeting, in Ilham's words, not charged.
+  // «السلام عليكم» → the approved greeting, in Al Mulhim's words, not charged.
   await answerIn(page, 'العربية');
   await ask(page, 'السلام عليكم');
   const greeting = page.getByTestId('assistant-message').last();
-  await expect(greeting).toHaveAttribute('data-persona', 'ilham');
+  await expect(greeting).toHaveAttribute('data-persona', 'mulhim');
   await expect(greeting.getByTestId('assistant-text')).toContainText('وعليكم السلام ورحمة الله وبركاته');
-  await expect(greeting.getByTestId('assistant-text')).toContainText('أنا إلهام، مساعدة OSRIP');
-  await expect(greeting.getByTestId('message-persona')).toHaveText('Ilham');
-  const allowance = page.getByTestId('guest-allowance');
-  await expect(allowance).toHaveAttribute('data-remaining', '5');
-
-  // A factual question as Ilham, then the same question as Al Mulhim.
-  await answerIn(page, 'English');
-  await ask(page, 'What was the growth of electricity generation?');
-  const asIlham = page.getByTestId('assistant-message').last();
-  await expect(asIlham).toHaveAttribute('data-persona', 'ilham');
-  const ilhamText = await asIlham.getByTestId('assistant-text').textContent();
-  await expect(allowance).toHaveAttribute('data-remaining', '4');
-
-  await choose(page, 'mulhim');
-  await ask(page, 'What was the growth of electricity generation?');
-  const asMulhim = page.getByTestId('assistant-message').last();
-  await expect(asMulhim).toHaveAttribute('data-persona', 'mulhim');
-  await expect(asMulhim.getByTestId('assistant-text')).toHaveText(ilhamText ?? '');
-  await expect(allowance).toHaveAttribute('data-remaining', '3'); // the count simply continues
-  // The same conversation: Ilham's replies are still there, under her name.
-  await expect(page.getByTestId('assistant-message')).toHaveCount(3);
-  await expect(page.getByTestId('assistant-message').first()).toHaveAttribute('data-persona', 'ilham');
-
-  // The choice is kept in this browser.
-  await choose(page, 'ilham');
-  await page.reload();
-  await expect(page.getByTestId('persona-picker').first()).toHaveAttribute('data-selected', 'ilham');
+  await expect(greeting.getByTestId('assistant-text')).toContainText('أنا المُلْهِم');
+  await expect(greeting.getByTestId('message-persona')).toHaveText('Al Mulhim');
+  await expect(page.getByTestId('guest-allowance')).toHaveAttribute('data-remaining', '5');
+  await expect(page.locator('body')).not.toContainText('إلهام');
+  await expect(page.locator('body')).not.toContainText('Ilham');
 });
 
-test('a signed-in choice is saved on the account and follows to another browser', async ({ page, browser }) => {
-  const signIn = async (p: Page) => {
-    await p.goto('/sign-in');
-    await p.getByTestId('sign-in-form').getByLabel('E-mail address').fill('viewer@e2e.invalid');
-    await p.getByTestId('sign-in-form').getByLabel('Password').fill(PASSWORD);
-    await p.getByTestId('sign-in-form').getByRole('button', { name: 'Sign in' }).click();
-    await expect(p.getByTestId('account-page')).toBeVisible();
-  };
-  await signIn(page);
-  const settings = page.getByTestId('settings-persona');
-  await expect(settings.getByTestId('persona-note')).toContainText('saved on your account');
-  const saved = page.waitForResponse((r) => r.url().endsWith('/assistant/persona') && r.request().method() === 'PUT');
-  await settings.getByTestId('persona-option-ilham').click();
-  expect((await saved).status()).toBe(200);
-
-  // Another browser: no cookies or saved choice; only the introduction is switched off.
-  const baseURL = test.info().project.use.baseURL ?? '';
-  const other = await browser.newContext({
-    baseURL,
-    storageState: { cookies: [], origins: [{ origin: baseURL, localStorage: [{ name: 'osrip.intro.autoplay', value: 'off' }] }] },
+test('a question naming the retired persona is answered by Al Mulhim; it cannot be saved as a choice', async ({ page }) => {
+  await page.goto('/assistant?mode=synthetic');
+  await ask(page, 'Hello'); // opens the guest session
+  const csrf = (await page.context().cookies()).find((c) => c.name === 'osrip_guest_csrf')?.value ?? '';
+  const asked = await page.request.post(`${API}/assistant/guest/messages`, {
+    headers: { 'X-Guest-CSRF': csrf },
+    data: { content: 'Who are you?', language: 'en', request_id: crypto.randomUUID(), data_mode: 'synthetic', persona: 'ilham' },
   });
-  const second = await other.newPage();
-  try {
-    await signIn(second);
-    await expect(second.getByTestId('settings-persona').getByTestId('persona-picker')).toHaveAttribute('data-selected', 'ilham');
-    await second.goto('/assistant?mode=synthetic');
-    await ask(second, 'Who are you?');
-    await expect(second.getByTestId('assistant-message').last().getByTestId('assistant-text')).toContainText('I am Ilham');
-  } finally {
-    // Leave the shared test account as it was (Al Mulhim, the default).
-    await page.goto('/account');
-    await page.getByTestId('settings-persona').getByTestId('persona-option-mulhim').click();
-    await expect(page.getByTestId('settings-persona').getByTestId('persona-picker')).toHaveAttribute('data-selected', 'mulhim');
-    await other.close();
-  }
+  expect(asked.status()).toBe(201);
+  const body = await asked.json();
+  expect(body.message.persona).toBe('mulhim');
+  expect(body.message.content).toContain('I am Al Mulhim');
+
+  await signIn(page);
+  const csrfToken = (await page.context().cookies()).find((c) => c.name === 'osrip_csrf')?.value ?? '';
+  const saved = await page.request.put(`${API}/assistant/persona`, {
+    headers: { 'X-CSRF-Token': csrfToken }, data: { persona: 'ilham' },
+  });
+  expect(saved.status()).toBe(422);
+  // The account settings name the one assistant and offer no choice.
+  const settings = page.getByTestId('settings-persona');
+  await expect(settings).toContainText('Al Mulhim answers your questions');
+  await expect(settings.getByTestId('persona-picker')).toHaveCount(0);
+  await expect(settings.getByTestId('settings-assistant')).toHaveAttribute('data-persona', 'mulhim');
 });
 
-test.describe('Talk with the chosen persona', () => {
+test('an earlier reply by the retired persona keeps its text under a neutral name', async ({ page }) => {
+  await page.goto('/assistant?mode=synthetic');
+  await ask(page, 'Who are you?');
+  const text = await page.getByTestId('assistant-message').last().getByTestId('assistant-text').textContent();
+  // The stored reply as an earlier conversation would hold it: given by Ilham.
+  await page.route(/\/api\/v1\/assistant\/guest\/conversations\/[0-9a-f-]+$/, async (route) => {
+    const response = await route.fetch();
+    const json = await response.json();
+    for (const m of json.messages) if (m.role === 'assistant') m.persona = 'ilham';
+    await route.fulfill({ response, json });
+  });
+  await page.reload();
+  const reply = page.getByTestId('assistant-message').last();
+  await expect(reply).toHaveAttribute('data-persona', 'ilham');
+  await expect(reply.getByTestId('message-persona')).toHaveText('Earlier assistant persona');
+  await expect(reply.getByTestId('message-persona').locator('img')).toHaveAttribute('data-testid', 'persona-image-fallback');
+  await expect(reply.getByTestId('assistant-text')).toHaveText(text ?? '');
+  await expect(page.getByTestId('mulhim-name')).toHaveText('Al Mulhim');
+});
+
+test.describe('Voice in the conversation', () => {
   test.use({ permissions: ['microphone'] });
 
-  test('Ilham is shown in Talk, push-to-talk with her voice, the camera is never requested', async ({ page }) => {
+  test('the old Talk address opens the conversation; the microphone is in the message box, audio only, and answers are read with Al Mulhim’s voice', async ({ page }) => {
     await page.addInitScript(() => {
       const store = window as unknown as { __media: MediaStreamConstraints[]; __streams: MediaStream[] };
       store.__media = [];
@@ -135,67 +122,39 @@ test.describe('Talk with the chosen persona', () => {
         return stream;
       };
     });
-    await page.goto('/assistant?mode=synthetic');
-    await choose(page, 'ilham');
-    await openChatSettings(page); // Talk is offered in the conversation settings (Voice)
-    await page.getByTestId('open-talk').click();
-    const workspace = page.getByTestId('talk-workspace');
-    await expect(workspace).toHaveAttribute('data-persona', 'ilham');
-    await expect(page.getByRole('heading', { level: 1, name: 'Talk to Ilham' })).toBeFocused();
-    await expect(page.getByTestId('talk-figure').locator('img')).toHaveAttribute('src', /ilham-figure/);
-    await expect(workspace).toHaveAttribute('data-mode', 'push_to_talk');
-    await expect(workspace).toHaveAttribute('data-voice', 'en-GB-SoniaNeural');
-    // Every control is there: transcript, language, microphone, mute, End call, Close.
-    const sheet = page.getByTestId('talk-sheet');
-    for (const id of ['assistant-language', 'voice-start', 'voice-mute', 'assistant-input']) {
-      await expect(sheet.getByTestId(id)).toBeVisible();
-    }
-    await expect(page.getByTestId('talk-end')).toBeVisible();
-    await expect(page.getByTestId('talk-close')).toBeVisible();
+    await page.goto('/talk?mode=synthetic');
+    await expect(page).toHaveURL(/\/assistant\?mode=synthetic$/);
+    await expect(page.getByTestId('talk-workspace')).toHaveCount(0);
+    await expect(page.getByTestId('talk-end')).toHaveCount(0);
+    const composer = page.getByTestId('chat-composer');
+    await expect(composer.getByTestId('voice-start')).toBeVisible();
     // Nothing has asked for a device yet.
     expect(await page.evaluate(() => (window as unknown as { __media: unknown[] }).__media.length)).toBe(0);
 
-    // Greeting and the purpose with the three domains.
-    await sheet.getByTestId('assistant-language').getByRole('radio', { name: 'العربية' }).click();
-    await sheet.getByTestId('assistant-input').fill('السلام عليكم');
-    await sheet.getByTestId('assistant-send').click();
-    await expect(sheet.getByTestId('assistant-message').last().getByTestId('assistant-text')).toContainText('وعليكم السلام ورحمة الله وبركاته');
-    await sheet.getByTestId('assistant-language').getByRole('radio', { name: 'English' }).click();
-    await sheet.getByTestId('assistant-input').fill('What is OSRIP?');
-    await sheet.getByTestId('assistant-send').click();
-    const about = sheet.getByTestId('assistant-message').last().getByTestId('assistant-text');
+    // The purpose with the three domains, answered by Al Mulhim.
+    await ask(page, 'What is OSRIP?');
+    const about = page.getByTestId('assistant-message').last().getByTestId('assistant-text');
     await expect(about).toContainText('decision support on Oman');
     await expect(about).toContainText('Energy and Essential Services');
     await expect(about).toContainText('Food Security');
     await expect(about).toContainText('Trade');
 
-    // Interrupt: the answer is read with Ilham's configured server voice; Stop speaking ends it.
+    // The answer is read with Al Mulhim's configured server voice; Stop speaking ends it.
     const spoken = page.waitForResponse(/\/assistant\/voice\/speak/);
-    await sheet.getByTestId('assistant-message').last().getByTestId('read-aloud').click();
-    expect((await spoken).headers()['x-voice']).toBe('en-GB-SoniaNeural');
+    await page.getByTestId('assistant-message').last().getByTestId('read-aloud').click();
+    expect((await spoken).headers()['x-voice']).toBe('en-GB-RyanNeural');
     await page.getByTestId('voice-stop-speaking').click();
     await expect(page.getByTestId('voice-stop-speaking')).toHaveCount(0);
 
-    // The microphone is asked for only now, audio only.
-    await sheet.getByTestId('voice-start').click();
-    await expect(page.getByTestId('talk-state')).toHaveAttribute('data-state', 'listening');
+    // The microphone is asked for only now, audio only; cancelling releases it.
+    await composer.getByTestId('voice-start').click();
+    await expect(page.getByTestId('chat-state')).toHaveAttribute('data-state', 'listening');
     const constraints = await page.evaluate(() => (window as unknown as { __media: MediaStreamConstraints[] }).__media);
     expect(constraints).toHaveLength(1);
     expect(constraints[0]?.audio).toBeTruthy();
     expect(constraints[0]?.video ?? false).toBe(false);
-
-    // Switching persona inside Talk keeps the transcript.
-    const count = await sheet.getByTestId('assistant-message').count();
-    await sheet.getByTestId('voice-cancel').click();
-    await page.getByTestId('talk-workspace').getByTestId('persona-option-mulhim').click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Talk to Al Mulhim' })).toBeVisible();
-    await expect(page.getByTestId('talk-figure').locator('img')).toHaveAttribute('src', /mulhim-figure/);
-    await expect(sheet.getByTestId('assistant-message')).toHaveCount(count);
-
-    // End call releases the microphone.
-    await page.getByTestId('talk-end').click();
-    await expect(page).toHaveURL(/\/assistant/);
+    await composer.getByTestId('voice-cancel').click();
     await expect.poll(() => page.evaluate(() => (window as unknown as { __streams: MediaStream[] }).__streams
-      .flatMap((s) => s.getTracks()).filter((track) => track.readyState === 'live').length)).toBe(0);
+      .flatMap((st) => st.getTracks()).filter((track) => track.readyState === 'live').length)).toBe(0);
   });
 });

@@ -1,26 +1,25 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// The opening introduction (the owner's design, with the images embedded in it): Al Mulhim and
-// Ilham arrive from the sides, the OSRIP sign is set down between them, then both names, the
-// three resources and the three goals. Shown once per browser session on the home page only (a
-// direct link opens its page at once); Explore and Skip enter the Overview; Escape closes;
-// replayable from Settings and the footer; switchable off in Settings; keyboard-operable; still
-// under reduced motion or on a low-power device. Each test starts from a clean browser.
+// The welcome (the owner's design): the platform's name in both languages, Enter platform, Skip
+// introduction, and the four sectors as image cards that open their pages. It stays until the
+// visitor chooses. Shown once per browser session on the home page only (a direct link opens its
+// page at once); Escape closes; it ends on the page it opened on unless a sector is chosen;
+// shown again from Settings, the footer and the sign-in page; switchable off in Settings; no
+// movement under reduced motion. Each test starts from a clean browser.
 test.use({ storageState: { cookies: [], origins: [] } });
 
-/** A device that is not low-power, whatever machine runs the test. */
-async function ordinaryDevice(page: Page): Promise<void> {
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 });
-    Object.defineProperty(navigator, 'deviceMemory', { get: () => 8 });
-  });
+/** With OSRIP_SCREENSHOT_DIR set, keeps a screenshot for the test report. */
+async function snap(page: Page, name: string): Promise<void> {
+  const dir = process.env.OSRIP_SCREENSHOT_DIR;
+  if (dir) await page.getByTestId('entrance').screenshot({ path: `${dir}/${name}-${test.info().project.name}.png` });
 }
 
-const loaded = (img: HTMLImageElement) => (img.complete ? img.naturalWidth : 0);
-const centre = (b: { x: number; width: number } | null) => (b ? b.x + b.width / 2 : NaN);
+async function imagesLoaded(page: Page): Promise<boolean[]> {
+  return page.getByTestId('welcome-sector').locator('img').evaluateAll((imgs) =>
+    (imgs as HTMLImageElement[]).map((i) => i.complete && i.naturalWidth > 0 && i.currentSrc.includes('/images/sectors/')));
+}
 
-test('first visit: the owner’s images, the sign, the names, three resources and three goals; Explore enters the dashboard once', async ({ page }) => {
-  await ordinaryDevice(page);
+test('first visit: the welcome in the visitor\'s language; it waits; Enter platform opens the dashboard', async ({ page }) => {
   await page.addInitScript(() => {
     // No sound: count any attempt to create audio.
     const w = window as unknown as { __audio: number; AudioContext: typeof AudioContext };
@@ -31,56 +30,27 @@ test('first visit: the owner’s images, the sign, the names, three resources an
   await page.goto('/');
   const entrance = page.getByTestId('entrance');
   await expect(entrance).toBeVisible();
-  await expect(page.getByTestId('entrance-body')).toHaveAttribute('data-mode', 'play');
-  await expect(page.getByTestId('entrance-explore')).toBeFocused();
-
-  // The portraits and the three illustrations are the introduction's own images, all loaded.
-  for (const [id, file] of [['entrance-portrait-mulhim', 'mulhim'], ['entrance-portrait-ilham', 'ilham']]) {
-    const img = page.getByTestId(id).locator('img');
-    await expect(img).toHaveAttribute('src', `/images/intro/${file}.jpg`);
-    await expect.poll(() => img.evaluate(loaded)).toBe(600);
-    await expect(img).toHaveCSS('object-fit', 'cover'); // the approved framing: from the top centre
-    await expect(img).toHaveCSS('object-position', '50% 0%');
-  }
-  const sectors = page.getByTestId('entrance-sector');
-  await expect(sectors).toHaveCount(3);
-  await expect(sectors.first()).toContainText('Electricity and energy');
-  const heights: number[] = [];
-  for (const [i, file] of ['electricity', 'water', 'trade'].entries()) {
-    const img = sectors.nth(i).locator('img');
-    await expect(img).toHaveAttribute('src', `/images/intro/${file}.jpg`);
-    await expect.poll(() => img.evaluate(loaded)).toBe(600);
-    await expect(img).toHaveCSS('object-fit', 'contain'); // complete, never cropped or stretched
-    heights.push((await img.boundingBox())?.height ?? 0);
-  }
-  expect(new Set(heights).size).toBe(1); // one height for all three
-
-  // Once the scene has finished: Al Mulhim, the sign (centred, slightly in front) and Ilham.
-  const goals = page.getByTestId('entrance-goals');
-  await expect(goals).toHaveCSS('opacity', '1');
-  const stage = await page.getByTestId('entrance-stage').boundingBox();
-  const sign = await page.getByTestId('entrance-sign').boundingBox();
-  expect(Math.abs(centre(sign) - centre(stage))).toBeLessThan(3);
-  expect(centre(await page.getByTestId('entrance-portrait-mulhim').boundingBox())).toBeLessThan(sign?.x ?? 0);
-  expect(centre(await page.getByTestId('entrance-portrait-ilham').boundingBox())).toBeGreaterThan((sign?.x ?? 0) + (sign?.width ?? 0));
-  await expect(page.getByTestId('entrance-sign-text')).toHaveText('OSRIP');
-  await expect(page.getByTestId('entrance-name-en')).toHaveText('Oman Smart Resource Intelligence Platform');
-  await expect(page.getByTestId('entrance-name-ar')).toHaveText('منصة عُمان الذكية لمعلومات الموارد');
-  for (const text of ['Understand Oman’s resources', 'افهم موارد عُمان', 'Analyse reliable data', 'حلّل البيانات الموثوقة',
-    'Support informed decisions', 'ادعم القرار بالمعلومة']) {
-    await expect(goals).toContainText(text);
-  }
-  await expect(entrance.locator('audio, video')).toHaveCount(0);
+  await expect(page.getByTestId('entrance-enter')).toBeFocused();
+  await expect(page.getByTestId('entrance-title')).toHaveText('OSRIP');
+  await expect(entrance).toHaveAccessibleName('OSRIP');
+  await expect(page.getByTestId('entrance-name')).toHaveText('Oman Smart Resource Intelligence Platform');
+  await expect(page.getByTestId('entrance-name-other')).toHaveText('منصة عُمان الذكية لمعلومات الموارد');
+  await expect(page.getByTestId('entrance-name-other')).toHaveAttribute('dir', 'rtl');
+  await expect(page.getByTestId('entrance-skip')).toHaveText('Skip introduction');
+  // The four sector images, whole, each a link to its page.
+  await expect(page.getByTestId('welcome-sector')).toHaveCount(4);
+  await expect.poll(() => imagesLoaded(page)).toEqual([true, true, true, true]);
+  await expect(entrance.locator('video, audio')).toHaveCount(0);
   expect(await page.evaluate(() => (window as unknown as { __audio: number }).__audio)).toBe(0);
-
-  // Explore enters the dashboard; the home page does not show it again in this session.
-  await page.getByTestId('entrance-explore').click();
+  await snap(page, 'welcome-light-en');
+  // Nothing closes it on a timer.
+  await page.waitForTimeout(4_000);
+  await expect(entrance).toBeVisible();
+  await page.getByTestId('entrance-enter').click();
   await expect(entrance).toBeHidden();
-  await expect(page).toHaveURL(/\/overview$/);
-  await expect(page.getByTestId('overview-intro')).toBeVisible();
-  await page.goto('/');
+  await expect(page).toHaveURL(/\/$/);
   await expect(page.getByTestId('home-page')).toBeVisible();
-  await expect(page.getByTestId('entrance')).toBeHidden();
+  await expect(page.locator('#main')).toBeFocused();
   await page.reload();
   await expect(page.getByTestId('home-page')).toBeVisible();
   await expect(page.getByTestId('entrance')).toBeHidden();
@@ -93,30 +63,60 @@ test('once per browser session: a new session shows it again, a reload in the sa
     const page = await context.newPage();
     await page.goto('/');
     await expect(page.getByTestId('entrance')).toBeVisible();
-    await page.reload(); // shown as soon as it opened: no loop on reload
+    await page.reload(); // counted as shown as soon as it opened: no loop on reload
     await expect(page.getByTestId('home-page')).toBeVisible();
     await expect(page.getByTestId('entrance')).toBeHidden();
     await context.close();
   }
 });
 
-test('the page behind loads its data while the introduction is open', async ({ page }) => {
+test('the page behind loads its data while the welcome is open', async ({ page }) => {
   await page.goto('/?mode=synthetic');
   await expect(page.getByTestId('entrance')).toBeVisible();
   // The latest figures have finished loading (with mock data, the headline figures are unavailable).
-  await expect(page.getByTestId('latest-card').first().locator('.tabular-nums, [data-state="data-unavailable"]')).toBeAttached();
+  await expect(page.getByTestId('latest-card').first().locator('[data-testid="kpi-value"], [data-state="data-unavailable"]')).toBeAttached();
 });
 
-test('Skip works at once and enters the dashboard, keeping the data mode', async ({ page }) => {
+test('Skip introduction keeps the page and the data mode', async ({ page }) => {
   await page.goto('/?mode=synthetic');
-  await page.getByTestId('entrance-skip').click(); // no waiting for the scene
+  await page.getByTestId('entrance-skip').click();
+  await expect(page.getByTestId('entrance')).toBeHidden();
+  await expect(page).toHaveURL(/\/\?mode=synthetic$/);
+  await expect(page.locator('#main')).toBeFocused();
+});
+
+test('a sector card opens its sector page; Explore opens the overview', async ({ page }) => {
+  await page.goto('/?mode=synthetic');
+  const water = page.locator('[data-testid="welcome-sector"][data-sector="water"]');
+  await expect(water).toHaveAccessibleName(/Water/);
+  await water.click();
+  await expect(page.getByTestId('entrance')).toBeHidden();
+  await expect(page).toHaveURL(/\/energy\/water\?mode=synthetic$/);
+  await expect(page.getByTestId('sector-page')).toHaveAttribute('data-sector', 'water');
+  await page.getByTestId('replay-entrance').click();
+  await page.getByTestId('welcome-explore').click();
   await expect(page.getByTestId('entrance')).toBeHidden();
   await expect(page).toHaveURL(/\/overview\?mode=synthetic$/);
-  await expect(page.locator('#main')).toBeFocused();
-  // Back to the home page in the same session: no second showing.
-  await page.goBack();
-  await expect(page.getByTestId('home-page')).toBeVisible();
-  await expect(page.getByTestId('entrance')).toBeHidden();
+});
+
+test('the one AI assistant, Al Mulhim, is offered on the welcome and opens the conversation', async ({ page }) => {
+  await page.goto('/?mode=synthetic');
+  const entrance = page.getByTestId('entrance');
+  const assistant = page.getByTestId('welcome-assistant');
+  await expect(assistant).toHaveText(/Ask Al Mulhim/);
+  await expect(assistant).toHaveAttribute('data-persona', 'mulhim');
+  await expect(assistant.locator('img')).toHaveAttribute('src', /mulhim-portrait/);
+  await expect(entrance).not.toContainText(/Ilham|إلهام/);
+  await expect(page.getByTestId('welcome-sector')).toHaveCount(4); // the four sector images stay
+  await assistant.click();
+  await expect(entrance).toBeHidden();
+  await expect(page).toHaveURL(/\/assistant\?mode=synthetic$/);
+  // In Arabic, with the other theme.
+  await page.getByTestId('replay-entrance').click();
+  await page.getByTestId('welcome-language').click();
+  await page.getByTestId('welcome-theme').click();
+  await expect(page.getByTestId('welcome-assistant')).toHaveText(/اسأل المُلْهِم/);
+  await expect(page.getByTestId('welcome-assistant')).toBeVisible();
 });
 
 test('direct links are never interrupted (sign-in included); reaching the home page later shows it once', async ({ page }) => {
@@ -127,19 +127,19 @@ test('direct links are never interrupted (sign-in included); reaching the home p
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await expect(page.getByTestId('entrance')).toBeHidden();
   expect(await page.evaluate(() => window.sessionStorage.getItem('osrip.entrance'))).toBeNull();
-  // The brand link leads home: the introduction opens there, once.
+  // The brand link leads home: the welcome opens there, once.
   await page.getByRole('link', { name: 'OSRIP' }).filter({ visible: true }).first().click();
   await expect(page).toHaveURL(/\/\?mode=synthetic$/);
   await expect(page.getByTestId('entrance')).toBeVisible();
-  await page.keyboard.press('Escape'); // Escape only closes
+  await page.keyboard.press('Escape'); // Escape closes
   await expect(page.getByTestId('entrance')).toBeHidden();
   await expect(page).toHaveURL(/\/\?mode=synthetic$/);
 });
 
-test('the footer replays it; Escape closes and returns focus; Explore from another page enters the dashboard', async ({ page }) => {
+test('the footer shows it again; Escape closes and returns focus to the button', async ({ page }) => {
   await page.goto('/energy/water?mode=synthetic');
   const replay = page.getByTestId('replay-entrance');
-  await expect(replay).toHaveText('Replay introduction');
+  await expect(replay).toHaveText('Replay opening');
   await replay.focus();
   await replay.press('Enter');
   await expect(page.getByTestId('entrance')).toBeVisible();
@@ -147,18 +147,12 @@ test('the footer replays it; Escape closes and returns focus; Explore from anoth
   await expect(page.getByTestId('entrance')).toBeHidden();
   await expect(replay).toBeFocused();
   await expect(page).toHaveURL(/\/energy\/water\?mode=synthetic$/);
-  await replay.click();
-  await page.getByTestId('entrance-explore').click();
-  await expect(page.getByTestId('entrance')).toBeHidden();
-  await expect(page).toHaveURL(/\/overview\?mode=synthetic$/);
 });
 
-test('keyboard: focus starts on Explore, Shift+Tab reaches Skip, and focus stays in the introduction', async ({ page }) => {
+test('keyboard: focus stays in the welcome; every control is reachable; Enter on Skip closes it', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByTestId('entrance-explore')).toBeFocused();
-  await page.keyboard.press('Shift+Tab');
-  await expect(page.getByTestId('entrance-skip')).toBeFocused();
-  for (let i = 0; i < 4; i += 1) {
+  await expect(page.getByTestId('entrance-enter')).toBeFocused();
+  for (let i = 0; i < 12; i += 1) {
     await page.keyboard.press('Tab');
     expect(await page.evaluate(() => {
       const el = document.activeElement;
@@ -167,22 +161,37 @@ test('keyboard: focus starts on Explore, Shift+Tab reaches Skip, and focus stays
   }
   await page.getByTestId('entrance-skip').focus();
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/\/overview$/);
+  await expect(page.getByTestId('entrance')).toBeHidden();
+  await expect(page).toHaveURL(/\/$/);
 });
 
-test('Settings: replay, Skip enters the dashboard; the automatic showing can be switched off', async ({ page }) => {
-  await ordinaryDevice(page);
+test('the language and theme chips change the application\'s language and theme', async ({ page }) => {
+  await page.goto('/');
+  const html = page.locator('html');
+  const theme = await html.getAttribute('data-theme');
+  await page.getByTestId('welcome-theme').click();
+  await expect(html).not.toHaveAttribute('data-theme', theme ?? '');
+  await page.getByTestId('welcome-language').click();
+  await expect(html).toHaveAttribute('dir', 'rtl');
+  await expect(page.getByTestId('entrance-enter')).toHaveText(/الدخول إلى المنصة/);
+  await page.getByTestId('entrance-skip').click();
+  // Kept for the whole application.
+  await expect(html).toHaveAttribute('lang', 'ar');
+  expect(await page.evaluate(() => [localStorage.getItem('osrip.language'), localStorage.getItem('osrip.theme')]))
+    .toEqual(['ar', theme === 'dark' ? 'light' : 'dark']);
+});
+
+test('Settings: Replay shows it; the automatic showing can be switched off', async ({ page }) => {
   await page.goto('/account');
-  await expect(page.getByTestId('entrance')).toBeHidden(); // a direct link: no introduction
+  await expect(page.getByTestId('entrance')).toBeHidden(); // a direct link: no welcome
   const settings = page.getByTestId('settings');
-  await expect(settings).toContainText('Introduction');
+  await expect(settings).toContainText('Opening');
   await settings.getByTestId('settings-replay-entrance').click();
   await expect(page.getByTestId('entrance')).toBeVisible();
-  await expect(page.getByTestId('entrance-body')).toHaveAttribute('data-mode', 'play');
   await page.getByTestId('entrance-skip').click();
-  await expect(page).toHaveURL(/\/overview$/);
+  await expect(page.getByTestId('entrance')).toBeHidden();
+  await expect(page).toHaveURL(/\/account$/);
 
-  await page.goto('/account');
   const autoplay = page.getByTestId('settings-intro-autoplay');
   await expect(autoplay).toBeChecked();
   await autoplay.uncheck();
@@ -192,90 +201,69 @@ test('Settings: replay, Skip enters the dashboard; the automatic showing can be 
   await expect(page.getByTestId('entrance')).toBeHidden();
 });
 
-test.describe('Arabic', () => {
+test.describe('Arabic and the dark theme', () => {
   test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => window.localStorage.setItem('osrip.language', 'ar'));
+    await page.addInitScript(() => {
+      window.localStorage.setItem('osrip.language', 'ar');
+      window.localStorage.setItem('osrip.theme', 'dark');
+    });
   });
 
-  test('right to left: Arabic first, both languages on the buttons; the stage keeps its order', async ({ page }) => {
+  test('right to left: the Arabic name first, the English name below; OSRIP stays left to right', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-    await expect(page.getByTestId('entrance-explore')).toHaveText('استكشف · Explore');
-    await expect(page.getByTestId('entrance-skip')).toHaveText('تخطّي · Skip');
-    await expect(page.getByTestId('entrance-names').locator('p').nth(1)).toHaveText('منصة عُمان الذكية لمعلومات الموارد');
-    const man = await page.getByTestId('entrance-portrait-mulhim').boundingBox();
-    const woman = await page.getByTestId('entrance-portrait-ilham').boundingBox();
-    expect(man?.x ?? 0).toBeLessThan(woman?.x ?? 0);
-    expect(await page.getByTestId('entrance-sign-text').evaluate((el) => getComputedStyle(el).direction)).toBe('ltr');
+    await expect(page.getByTestId('entrance-name')).toHaveText('منصة عُمان الذكية لمعلومات الموارد');
+    await expect(page.getByTestId('entrance-name-other')).toHaveText('Oman Smart Resource Intelligence Platform');
+    await expect(page.getByTestId('entrance-enter')).toHaveText(/الدخول إلى المنصة/);
+    await expect(page.getByTestId('entrance-skip')).toHaveText('تجاوز المقدمة');
+    expect(await page.getByTestId('entrance-title').evaluate((el) => getComputedStyle(el).direction)).toBe('ltr');
+    // The hero text sits at the right (the start), the image panel at the left.
+    const hero = await page.getByTestId('entrance-title').boundingBox();
+    const panel = await page.getByTestId('welcome-panel').boundingBox();
+    expect(hero!.x).toBeGreaterThan(panel!.x);
+    await expect.poll(() => imagesLoaded(page)).toEqual([true, true, true, true]);
+    await snap(page, 'welcome-dark-ar');
   });
 
-  test('Settings in Arabic offers إعادة عرض المقدمة', async ({ page }) => {
+  test('Settings in Arabic offers إعادة عرض الافتتاحية', async ({ page }) => {
     await page.goto('/account');
-    await expect(page.getByTestId('settings-replay-entrance')).toHaveText('إعادة عرض المقدمة');
+    await expect(page.getByTestId('settings-replay-entrance')).toHaveText('إعادة عرض الافتتاحية');
   });
-});
-
-test('the light theme gives the introduction its light palette', async ({ page }) => {
-  await page.addInitScript(() => window.localStorage.setItem('osrip.theme', 'light'));
-  await page.goto('/');
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-  await expect(page.getByTestId('entrance')).toHaveCSS('background-color', 'rgb(247, 243, 234)');
-  await expect(page.getByTestId('entrance')).toHaveCSS('color', 'rgb(22, 61, 54)');
-  await expect(page.getByTestId('entrance-explore')).toHaveCSS('background-color', 'rgb(22, 61, 54)');
 });
 
 test.describe('reduced motion', () => {
   test.use({ reducedMotion: 'reduce' });
-  test('the final frame appears at once, without movement, and works the same', async ({ page }) => {
+  test('no movement: no transitions, no hover lift; it still waits for the visitor', async ({ page }) => {
     await page.goto('/');
-    const body = page.getByTestId('entrance-body');
-    await expect(body).toHaveAttribute('data-mode', 'static');
-    await expect(body).toHaveAttribute('data-fallback', 'reduced-motion');
-    await expect(page.getByTestId('entrance-sign')).toHaveCSS('animation-name', 'none');
-    await expect(page.getByTestId('entrance-goals')).toHaveCSS('opacity', '1');
-    await page.getByTestId('entrance-skip').click();
-    await expect(page).toHaveURL(/\/overview$/);
+    const enter = page.getByTestId('entrance-enter');
+    await expect(enter).toHaveCSS('transition-duration', '0s');
+    await enter.hover();
+    await expect(enter).toHaveCSS('transform', 'none');
+    await expect(page.locator('[data-testid="welcome-sector"]').first()).toHaveCSS('transition-duration', '0s');
+    await page.waitForTimeout(2_500);
+    await expect(page.getByTestId('entrance')).toBeVisible();
   });
 });
 
-test('a low-power device gets the final frame instead of the animation', async ({ page }) => {
-  await page.addInitScript(() => Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 2 }));
+test('@mobile on a phone: one column, everything fits, every button reachable', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  const body = page.getByTestId('entrance-body');
-  await expect(body).toHaveAttribute('data-mode', 'static');
-  await expect(body).toHaveAttribute('data-fallback', 'low-power');
-  await expect(page.getByTestId('entrance-sign')).toHaveCSS('animation-name', 'none');
-});
-
-test('if the images cannot load, neutral badges stand in and everything else works', async ({ page }) => {
-  await page.route(/\/images\/intro\//, (route) => route.abort());
-  await page.goto('/');
-  await expect(page.getByTestId('entrance-portrait-mulhim').getByTestId('persona-image-fallback')).toBeVisible();
-  await expect(page.getByTestId('entrance-portrait-ilham').getByTestId('persona-image-fallback')).toBeVisible();
-  await expect(page.getByTestId('entrance-sector')).toHaveCount(3);
-  await expect(page.getByTestId('entrance-sector').nth(1)).toContainText('Water resources');
-  await page.getByTestId('entrance-explore').click();
-  await expect(page.getByTestId('entrance')).toBeHidden();
-  await expect(page).toHaveURL(/\/overview$/);
-});
-
-test('@mobile on a phone the whole scene fits the screen and starts at the top', async ({ page }) => {
-  await ordinaryDevice(page);
-  await page.goto('/');
-  await expect(page.getByTestId('entrance-body')).toHaveAttribute('data-mode', 'play');
-  const viewport = page.viewportSize();
-  await expect(page.getByTestId('entrance-goals')).toHaveCSS('opacity', '1');
-  for (const id of ['entrance-portrait-mulhim', 'entrance-sign', 'entrance-portrait-ilham', 'entrance-skip']) {
+  const dialog = page.getByTestId('entrance');
+  await expect(dialog).toBeVisible();
+  const overflow = await dialog.evaluate((el) => el.scrollWidth - el.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+  for (const id of ['entrance-title', 'entrance-name', 'entrance-enter', 'entrance-skip', 'welcome-panel']) {
     const b = await page.getByTestId(id).boundingBox();
     expect(b?.x ?? -1).toBeGreaterThanOrEqual(0);
-    expect((b?.x ?? 0) + (b?.width ?? 0)).toBeLessThanOrEqual(viewport?.width ?? 0);
+    expect((b?.x ?? 0) + (b?.width ?? 0)).toBeLessThanOrEqual(390.5);
   }
-  expect(await page.getByTestId('entrance').evaluate((el) => el.scrollTop)).toBe(0);
-  const overflow = await page.getByTestId('entrance').evaluate((el) => el.scrollWidth - el.clientWidth);
-  expect(overflow).toBeLessThanOrEqual(0);
-  const sectorHeights = await page.getByTestId('entrance-sector').locator('img').evaluateAll((imgs) => imgs.map((i) => i.getBoundingClientRect().height));
-  expect(new Set(sectorHeights).size).toBe(1);
-  await page.getByTestId('entrance-explore').scrollIntoViewIfNeeded();
-  await page.getByTestId('entrance-explore').click();
-  await expect(page).toHaveURL(/\/overview$/);
+  // The panel comes below the text on a phone.
+  const title = await page.getByTestId('entrance-title').boundingBox();
+  const panel = await page.getByTestId('welcome-panel').boundingBox();
+  expect(panel!.y).toBeGreaterThan(title!.y);
+  await snap(page, 'welcome-phone');
+  await page.getByTestId('welcome-sector').last().scrollIntoViewIfNeeded();
+  await expect.poll(() => imagesLoaded(page)).toEqual([true, true, true, true]);
+  await page.getByTestId('entrance-skip').click();
+  await expect(dialog).toBeHidden();
 });

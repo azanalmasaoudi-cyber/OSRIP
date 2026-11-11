@@ -6,12 +6,17 @@ test('landing page explains the project and credits every photograph', async ({ 
   await page.goto('/');
   await expect(page.getByTestId('home-page')).toBeVisible();
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  await expect(page.getByTestId('photo')).toHaveCount(5); // plus the hero background image
+  // The four sectors show OSRIP's own sector artwork (e2e/sector-cards.spec.ts); the hero
+  // background is a credited photograph.
+  await expect(page.getByTestId('sector-art')).toHaveCount(4);
+  await expect(page.getByTestId('home-hero-image')).toBeVisible();
   const credits = page.getByTestId('photo-credit');
-  await expect(credits).toHaveCount(6);
+  await expect(credits).toHaveCount(1);
   for (const credit of await credits.all()) {
     await expect(credit).toContainText('Wikimedia Commons');
   }
+  // No pointer-following or parallax effects.
+  await expect(page.locator('.tilt, .scene, .depth')).toHaveCount(0);
 });
 
 test('verified mode is the default and a sector shows nothing before a period is chosen', async ({ page }) => {
@@ -76,7 +81,11 @@ test('the overview introduces the project with sector cards and draws no statist
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('OSRIP: Oman Smart Resource Intelligence Platform');
   await expect(page.getByTestId('overview-status')).toContainText('not an official government service');
   await expect(page.getByTestId('overview-sector')).toHaveCount(4);
-  await expect(page.getByTestId('overview-steps').locator('li')).toHaveCount(4);
+  // Sector, indicator, area, period, results, chart on request.
+  await expect(page.getByTestId('overview-steps').locator('li')).toHaveCount(6);
+  for (const part of ['overview-users', 'overview-ai', 'overview-official-first', 'quality-legend', 'overview-benefits']) {
+    await expect(page.getByTestId(part)).toBeVisible();
+  }
   await expect(page.locator('svg[role="img"]')).toHaveCount(0);
   await expect(page.getByTestId('indicator-card')).toHaveCount(0);
   await page.getByTestId('overview-sector').filter({ hasText: 'Water' }).getByTestId('overview-sector-link').click();
@@ -110,20 +119,20 @@ test('the analysis workspace shows the four resources and indicator cards with p
   await expect(resources.nth(3).getByRole('button', { name: /Analyse/ })).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('theme: Dark by default, Light and System from the top bar, remembered after a reload', async ({ page, isMobile }) => {
+test('theme: Light by default, Dark and System from the top bar, remembered after a reload', async ({ page, isMobile }) => {
   test.skip(isMobile, 'the phone menu holds the theme choice');
   await page.goto('/overview?mode=synthetic');
   const html = page.locator('html');
-  await expect(html).toHaveAttribute('data-theme', 'dark');
+  await expect(html).toHaveAttribute('data-theme', 'light');
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(247, 244, 239)'); // warm ivory #F7F4EF
   const theme = page.getByTestId('theme-selector');
-  await theme.getByRole('radio', { name: 'Light' }).click();
-  await expect(html).toHaveAttribute('data-theme', 'light');
-  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(245, 245, 246)');
+  await theme.getByRole('radio', { name: 'Dark' }).click();
+  await expect(html).toHaveAttribute('data-theme', 'dark');
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(16, 19, 21)'); // charcoal
   await page.reload();
-  await expect(html).toHaveAttribute('data-theme', 'light');
+  await expect(html).toHaveAttribute('data-theme', 'dark');
   // System follows the device: arrows move the choice.
-  await theme.getByRole('radio', { name: 'Light' }).focus();
-  await page.keyboard.press('ArrowRight');
+  await theme.getByRole('radio', { name: 'Dark' }).focus();
   await page.keyboard.press('ArrowRight');
   await expect(theme.getByRole('radio', { name: 'System' })).toHaveAttribute('aria-checked', 'true');
   await page.emulateMedia({ colorScheme: 'dark' });
@@ -144,6 +153,13 @@ test('search finds pages in either language and drafts a question for the assist
   await expect(page).toHaveURL(/\/energy\/water\?mode=synthetic$/);
   // The address changes before the new page renders and takes focus; type after that, as a reader would.
   await expect(page.locator('main#main')).toBeFocused();
+  // A section the sidebar no longer lists on its own is still found, and opens at that section.
+  await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Export Center' })).toHaveCount(0);
+  await input.fill('مركز التصدير');
+  await expect(page.getByTestId('search-result-page')).toHaveText(['Export Center']);
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/reports\?mode=synthetic#export-center$/);
+  await expect(page.locator('#export-center')).toBeFocused(); // the section, not the page top
   await input.fill('electricity growth since 2022');
   await expect(page.getByTestId('search-result-page')).toHaveCount(0); // no page has that name
   await page.keyboard.press('ArrowDown'); // the one option: ask the assistant

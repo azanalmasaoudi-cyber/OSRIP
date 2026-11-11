@@ -31,8 +31,8 @@
       "created": "on or before 2026-09-28 (date of the Word file entry)",
       "prompt": null,
       "transformations": "Master extracted unchanged from the booklet. Derivatives are downscaled only; JPEG versions are flattened onto ivory.",
-      "status": "in_use",
-      "usage": "Home page hero portrait"
+      "status": "retired",
+      "usage": "Not shown since the redesign removed the home hero portrait; derivatives removed 2026-11-09. The master stays in assets/editorial/masters."
     },
     {
       "id": "electricity",
@@ -187,47 +187,6 @@
       "usage": "Assistant persona 'mulhim': avatar (portrait) and Talk workspace (figure); listed in the assistant profile"
     },
     {
-      "id": "persona-ilham",
-      "subject": "Ilham's portrait: fictional, generated image of an adult Omani woman in a dark teal headscarf and an abaya with gold-embroidered sleeves, in a courtyard",
-      "origin": "owner_supplied_document",
-      "document": "docs/Oman_Statistics_References_and_Images_English.docx",
-      "master": "omani-woman-professional.jpg",
-      "sha256": "529d559d961841f45953899521ea52803259b5e50a1a5424733dcb82a82c31e0",
-      "source_width": 1145,
-      "source_height": 1374,
-      "generator": "Not recorded; the document describes its illustrations as generated artwork of a fictional Omani professional with no real-person identity implied",
-      "chosen": "2026-10-10, by the project owner, for the assistant personas",
-      "transformations": "Cropped and downscaled only (no retouching or upscaling); JPEG quality 84.",
-      "derivatives": [
-        {
-          "file": "frontend/public/images/assistant/ilham-portrait-432.jpg",
-          "crop": [
-            300,
-            64,
-            820,
-            584
-          ],
-          "width": 432,
-          "height": 432,
-          "bytes": 25919
-        },
-        {
-          "file": "frontend/public/images/assistant/ilham-figure-600.jpg",
-          "crop": [
-            152,
-            40,
-            992,
-            1160
-          ],
-          "width": 600,
-          "height": 800,
-          "bytes": 67793
-        }
-      ],
-      "status": "in_use",
-      "usage": "Assistant persona 'ilham': avatar (portrait) and Talk workspace (figure); listed in the assistant profile"
-    },
-    {
       "id": "intro-mulhim",
       "subject": "Al Mulhim in the introduction: fictional, generated image of an adult Omani man in a white dishdasha and an embroidered kumma, in a courtyard",
       "origin": "owner_supplied_introduction",
@@ -244,34 +203,12 @@
           "file": "frontend/public/images/intro/mulhim.jpg",
           "width": 600,
           "height": 720,
-          "bytes": 59958
+          "bytes": 59958,
+          "removed": "2026-11-09"
         }
       ],
-      "status": "in_use",
-      "usage": "The first-visit introduction (Entrance.tsx)"
-    },
-    {
-      "id": "intro-ilham",
-      "subject": "Ilham in the introduction: fictional, generated image of an adult Omani woman in a dark teal headscarf and an abaya with gold-embroidered sleeves, in a courtyard",
-      "origin": "owner_supplied_introduction",
-      "document": "docs/OSRIP_Intro_Single_File.html",
-      "master": "omani-woman-courtyard.jpg",
-      "sha256": "1b021bab4b17ddf74db9495ff46025de1d76ac53b9b24f14a3bc5f230d7b16a4",
-      "source_width": 1145,
-      "source_height": 1374,
-      "generator": "Not recorded; generated artwork supplied by the project owner (fictional people; no real-person identity implied)",
-      "chosen": "2026-10-16, by the project owner, for the introduction",
-      "transformations": "Downscaled whole to 600 px wide (no cropping, retouching or upscaling); JPEG quality 84.",
-      "derivatives": [
-        {
-          "file": "frontend/public/images/intro/ilham.jpg",
-          "width": 600,
-          "height": 720,
-          "bytes": 67214
-        }
-      ],
-      "status": "in_use",
-      "usage": "The first-visit introduction (Entrance.tsx)"
+      "status": "retired",
+      "usage": "Not shown since the opening became a 3-second name sequence (e611fb2); derivatives removed 2026-11-09. The master stays in assets/editorial/masters."
     },
     {
       "id": "intro-electricity",
@@ -290,11 +227,12 @@
           "file": "frontend/public/images/intro/electricity.jpg",
           "width": 600,
           "height": 400,
-          "bytes": 50838
+          "bytes": 50838,
+          "removed": "2026-11-09"
         }
       ],
-      "status": "in_use",
-      "usage": "The first-visit introduction (Entrance.tsx)"
+      "status": "retired",
+      "usage": "Not shown since the opening became a 3-second name sequence (e611fb2); derivatives removed 2026-11-09. The master stays in assets/editorial/masters."
     },
     {
       "id": "intro-water",
@@ -313,11 +251,12 @@
           "file": "frontend/public/images/intro/water.jpg",
           "width": 600,
           "height": 400,
-          "bytes": 56229
+          "bytes": 56229,
+          "removed": "2026-11-09"
         }
       ],
-      "status": "in_use",
-      "usage": "The first-visit introduction (Entrance.tsx)"
+      "status": "retired",
+      "usage": "Not shown since the opening became a 3-second name sequence (e611fb2); derivatives removed 2026-11-09. The master stays in assets/editorial/masters."
     },
     {
       "id": "intro-trade",
@@ -336,11 +275,12 @@
           "file": "frontend/public/images/intro/trade.jpg",
           "width": 600,
           "height": 400,
-          "bytes": 52993
+          "bytes": 52993,
+          "removed": "2026-11-09"
         }
       ],
-      "status": "in_use",
-      "usage": "The first-visit introduction (Entrance.tsx)"
+      "status": "retired",
+      "usage": "Not shown since the opening became a 3-second name sequence (e611fb2); derivatives removed 2026-11-09. The master stays in assets/editorial/masters."
     }
   ]
 }

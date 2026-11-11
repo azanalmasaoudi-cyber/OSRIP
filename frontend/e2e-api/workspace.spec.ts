@@ -15,6 +15,14 @@ async function startChat(page: Page) {
   await expect(page.getByTestId('workspace-assistant').getByTestId('assistant-input')).toBeVisible();
 }
 
+/** An answer mode for the next questions, from the embedded chat's Tools menu. */
+async function chooseMode(page: Page, name: string) {
+  await page.getByTestId('workspace-assistant').getByTestId('chat-tools').click();
+  await page.locator('dialog[open]').getByTestId('assistant-mode').getByRole('radio', { name }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('dialog[open]')).toHaveCount(0);
+}
+
 async function ask(page: Page, question: string) {
   const panel = page.getByTestId('workspace-assistant');
   const before = await panel.getByTestId('assistant-message').count();
@@ -137,8 +145,7 @@ test('a live study streams steps, sources and a validated table; narration highl
 test('a failed search is a visible partial failure; sources open and close by keyboard', async ({ page }) => {
   await page.goto('/workspace?mode=synthetic');
   await startChat(page);
-  const panel = page.getByTestId('workspace-assistant');
-  await panel.getByTestId('assistant-mode').getByRole('radio', { name: 'Research' }).click();
+  await chooseMode(page, 'Deep research');
   await ask(page, 'web search that will fail');
   const study = page.getByTestId('live-study');
   await expect(study).toHaveAttribute('data-status', 'completed');
@@ -146,6 +153,8 @@ test('a failed search is a visible partial failure; sources open and close by ke
   await expect(study.locator('[data-testid="study-search"][data-status="failed"]')).toBeVisible();
   await expect(study.getByTestId('study-datasets')).toHaveCount(0);
 
+  // Deep research works from the web only: OSRIP's published data are asked in Data analysis.
+  await chooseMode(page, 'Data analysis');
   await ask(page, 'What is the latest electricity generation?');
   await expect(study).toHaveAttribute('data-status', 'completed');
   const source = study.getByTestId('study-source').first().getByRole('button');

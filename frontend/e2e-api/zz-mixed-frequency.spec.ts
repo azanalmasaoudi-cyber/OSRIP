@@ -15,7 +15,7 @@ const PASSWORD = process.env.OSRIP_E2E_PASSWORD ?? '';
 
 async function signInAsManager(page: Page) {
   await page.goto('/sign-in');
-  await page.getByLabel('E-mail address').fill('manager@e2e.invalid');
+  await page.getByLabel('Username').fill('e2emanager');
   await page.getByLabel('Password').fill(PASSWORD);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByTestId('signed-in-as')).toBeVisible();

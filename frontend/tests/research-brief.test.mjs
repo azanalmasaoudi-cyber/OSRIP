@@ -9,7 +9,7 @@ for (const language of ['ar', 'en']) {
       const draft = buildResearchBrief(language, domain, goal);
       assert.ok(draft.length <= 1000);
       assert.ok(draft.includes(briefDomains[language][domain]));
-      assert.ok(draft.includes(language === 'ar' ? '٢٠٢٢' : '2022'));
+      assert.ok(draft.includes(language === 'ar' ? '٢٠٢١' : '2021'));
       assert.ok(draft.includes(language === 'ar' ? 'المراجع' : 'source links'));
       assert.ok(draft.includes(language === 'ar' ? 'فلا تتنبأ' : 'do not forecast'));
     }

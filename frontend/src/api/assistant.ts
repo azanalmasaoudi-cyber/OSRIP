@@ -93,14 +93,20 @@ export type AssistantCalculation = z.infer<typeof calculationSchema>;
 // calculations without AI interpretation (never charged, can be retried).
 export const MESSAGE_STATUSES = [
   'answered', 'clarification', 'no_evidence', 'unverified', 'unavailable', 'lookup', 'profile', 'cancelled',
-  'data_report',
+  // 'sources': the sources of the previous answer, listed because the person asked for them.
+  'data_report', 'sources',
 ] as const;
 
-/** Ask: a direct answer. Analyze: calculations and recommendation cards. Research: web and
- * documents, Arabic and English. Compare: areas or periods side by side. Scenario: what-if
- * arithmetic on stated assumptions, kept apart from forecasts. */
-export const ASSISTANT_MODES = ['ask', 'analyze', 'research', 'compare', 'scenario'] as const;
+/** On the internet: Quick (a short, current answer from one or two searches) and Research (deep
+ * internet research: plan, parallel searches, original pages, calculations, tables, charts and
+ * diagrams). With OSRIP's data: Analyze (data analysis and visualisation), Ask (a direct answer),
+ * Compare (areas or periods side by side) and Scenario (what-if arithmetic on stated
+ * assumptions). The internet modes never use OSRIP's datasets unless the question asks for them. */
+export const ASSISTANT_MODES = ['quick', 'research', 'analyze', 'ask', 'compare', 'scenario'] as const;
 export type AssistantMode = (typeof ASSISTANT_MODES)[number];
+export const INTERNET_MODES = ['quick', 'research'] as const satisfies readonly AssistantMode[];
+export const DATA_MODES = ['analyze', 'ask', 'compare', 'scenario'] as const satisfies readonly AssistantMode[];
+export const isInternetMode = (mode: string): boolean => (INTERNET_MODES as readonly string[]).includes(mode);
 /** What a question is sent with: a mode, or 'auto' (the server infers it from the question's words). */
 export type RequestMode = AssistantMode | 'auto';
 
@@ -209,8 +215,47 @@ const researchSummary = z.object({
 }).passthrough();
 export type ResearchSummaryBlock = z.infer<typeof researchSummary>;
 
+// Built by the server from web figures (assistant/web_analysis.py): each table row checked against
+// the evidence it cites, charts drawn from those rows, diagrams without unsupported figures.
+const researchTable = z.object({
+  id: z.string(),
+  title: z.string(),
+  columns: z.array(z.string()),
+  rows: z.array(z.object({ cells: z.array(z.string()), citations: z.array(z.string()) })),
+  dropped: z.number().default(0),
+  note: z.string().nullable().optional(),
+});
+export type ResearchTableBlock = z.infer<typeof researchTable>;
+const researchChart = z.object({
+  id: z.string(),
+  table_id: z.string(),
+  kind: z.enum(['bar', 'line']),
+  title: z.string(),
+  unit: z.string().nullable().optional(),
+  labels: z.array(z.string()),
+  series: z.array(z.object({ name: z.string(), values: z.array(z.number().nullable()) })),
+});
+export type ResearchChartBlock = z.infer<typeof researchChart>;
+const diagram = z.object({
+  id: z.string(),
+  kind: z.enum(['flowchart', 'cycle', 'hierarchy', 'mindmap']),
+  title: z.string(),
+  nodes: z.array(z.object({ id: z.string(), label: z.string(), detail: z.string().nullable().optional() })),
+  edges: z.array(z.object({ from: z.string(), to: z.string(), label: z.string().nullable().optional() })),
+});
+export type DiagramBlock = z.infer<typeof diagram>;
+// An AI illustration (never data), stored for its owner and served by /assistant/images/{id}.
+const generatedImage = z.object({ id: z.string(), purpose: z.string(), model: z.string(), prompt: z.string() });
+export type GeneratedImageBlock = z.infer<typeof generatedImage>;
+
 const structuredSchema = z.object({
   data_tables: z.array(dataTable).optional(),
+  research_tables: z.array(researchTable).optional(),
+  research_charts: z.array(researchChart).optional(),
+  diagrams: z.array(diagram).optional(),
+  images: z.array(generatedImage).optional(),
+  // Deep research: the questions it set out to settle, before searching.
+  plan: z.array(z.string()).optional(),
   data_charts: z.array(dataChart).optional(),
   research: researchSummary.optional(),
   recommendations: z.array(z.object({
@@ -238,6 +283,8 @@ const structuredSchema = z.object({
   })).optional(),
   // Parts the server dropped because the cited evidence did not support them.
   withheld: z.record(z.string(), z.number()).optional(),
+  // Sentences of the answer left out because their figures did not match the evidence.
+  omitted_claims: z.number().optional(),
   // Deterministic studies cited by the reply; each is stored and opens at /studies/:id.
   studies: z.array(z.object({ id: z.string(), kind: z.string(), title: bilingual, status: z.string() })).optional(),
   // Google Search grounded results (via Gemini): shown verbatim with Google's search
@@ -564,7 +611,8 @@ export function useAsk(conversationId: string | null) {
 // ------------------------------------------------------------------ progress and stopping
 
 export const PROGRESS_STAGES = [
-  'received', 'published_data', 'calculating', 'web_search', 'reading', 'checking', 'done', 'cancelled',
+  'received', 'planning', 'published_data', 'calculating', 'web_search', 'reading', 'computing', 'visuals',
+  'image', 'writing', 'checking', 'done', 'cancelled',
 ] as const;
 
 const progressSchema = z.object({
@@ -846,26 +894,6 @@ export function useAssistantProfile(enabled = true) {
     queryFn: () => apiJson('/assistant/profile', profileSchema),
     enabled: adapterKind === 'http' && enabled,
     staleTime: 10 * 60_000,
-  });
-}
-
-const personaChoiceSchema = z.object({ persona: z.string().nullable(), stored: z.enum(['account', 'browser']) });
-
-/** The signed-in person's saved persona (visitors keep theirs in this browser only). */
-export function usePersonaChoice(enabled: boolean) {
-  return useQuery({
-    queryKey: ['assistant', 'persona'],
-    queryFn: () => apiJson('/assistant/persona', personaChoiceSchema),
-    enabled: adapterKind === 'http' && enabled,
-    staleTime: 5 * 60_000,
-  });
-}
-
-export function useSavePersonaChoice() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: (persona: string) => apiJson('/assistant/persona', personaChoiceSchema, jsonBody('PUT', { persona })),
-    onSuccess: (result) => client.setQueryData(['assistant', 'persona'], result),
   });
 }
 

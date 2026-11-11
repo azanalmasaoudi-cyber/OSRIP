@@ -84,7 +84,7 @@ def test_denied_attempts_are_audited(approved_import, make_user, login, db) -> N
     login(person).post(f"{API}/imports/{approved_import['id']}/publish")
     event = db.scalars(
         select(AuditEvent)
-        .where(AuditEvent.actor_label == person.email)
+        .where(AuditEvent.actor_label == person.label)
         .order_by(AuditEvent.id.desc())
     ).first()
     assert event is not None and event.outcome == "denied"
@@ -129,7 +129,7 @@ def test_only_administrators_manage_accounts(make_user, login) -> None:  # noqa:
     denied = manager.post(
         f"{API}/admin/users",
         json={
-            "email": "x@test.invalid",
+            "username": "xperson",
             "display_name": "X",
             "password": "long-enough-password",
             "roles": ["administrator"],
@@ -140,16 +140,26 @@ def test_only_administrators_manage_accounts(make_user, login) -> None:  # noqa:
     created = admin.post(
         f"{API}/admin/users",
         json={
-            "email": "New.Person@Test.invalid",
+            "username": "  NewPerson ",
             "display_name": "New",
             "password": "long-enough-password",
             "roles": ["analyst"],
         },
     )
-    assert created.status_code == 201
-    assert created.json()["email"] == "new.person@test.invalid" and created.json()["roles"] == [
-        "analyst"
-    ]
+    assert created.status_code == 201, created.text
+    assert created.json()["username"] == "NewPerson" and created.json()["roles"] == ["analyst"]
+    assert created.json()["email"] is None
+    # The same name in another case is taken; a name over 10 characters is refused.
+    taken = admin.post(
+        f"{API}/admin/users",
+        json={"username": "newperson", "password": "long-enough-password", "roles": []},
+    )
+    assert taken.status_code == 409 and taken.json()["error"]["code"] == "username_taken"
+    long = admin.post(
+        f"{API}/admin/users",
+        json={"username": "x" * 11, "password": "long-enough-password", "roles": []},
+    )
+    assert long.status_code == 422 and long.json()["error"]["code"] == "username_too_long"
 
 
 # ------------------------------------------------------------------ sign-in and sessions
@@ -158,7 +168,7 @@ def test_only_administrators_manage_accounts(make_user, login) -> None:  # noqa:
 def test_login_sets_protected_cookies_and_stores_only_hashes(app, make_user, db) -> None:  # noqa: ANN001
     person = make_user(Role.ANALYST)
     response = TestClient(app).post(
-        f"{API}/auth/login", json={"email": person.email, "password": person.password}
+        f"{API}/auth/login", json={"username": person.username, "password": person.password}
     )
     assert response.status_code == 200
     cookies = response.headers.get_list("set-cookie")
@@ -168,7 +178,7 @@ def test_login_sets_protected_cookies_and_stores_only_hashes(app, make_user, db)
     assert "HttpOnly" not in csrf_cookie  # the app's own script echoes it in a header
     token = session_cookie.split(";")[0].split("=", 1)[1]
 
-    user = db.scalar(select(AppUser).where(AppUser.email == person.email))
+    user = db.get(AppUser, person.id)
     assert user.password_hash.startswith("$argon2id$") and person.password not in user.password_hash
     stored = db.scalars(select(UserSession.token_hash).where(UserSession.user_id == user.id)).all()
     assert token not in stored and len(stored[0]) == 64  # SHA-256 digest only
@@ -180,7 +190,7 @@ def test_secure_flag_is_on_by_default(app, make_user, monkeypatch) -> None:  # n
     person = make_user(Role.VIEWER)
     monkeypatch.setattr(get_settings(), "session_cookie_secure", True)
     response = TestClient(app).post(
-        f"{API}/auth/login", json={"email": person.email, "password": person.password}
+        f"{API}/auth/login", json={"username": person.username, "password": person.password}
     )
     assert all("Secure" in c for c in response.headers.get_list("set-cookie"))
 
@@ -188,10 +198,10 @@ def test_secure_flag_is_on_by_default(app, make_user, monkeypatch) -> None:  # n
 def test_wrong_password_and_unknown_account_get_the_same_answer(anonymous, make_user) -> None:  # noqa: ANN001
     person = make_user(Role.VIEWER)
     wrong = anonymous.post(
-        f"{API}/auth/login", json={"email": person.email, "password": "wrong-password-123"}
+        f"{API}/auth/login", json={"username": person.username, "password": "wrong-password-123"}
     )
     unknown = anonymous.post(
-        f"{API}/auth/login", json={"email": "nobody@test.invalid", "password": "whatever-123"}
+        f"{API}/auth/login", json={"username": "nobody", "password": "whatever-123"}
     )
     assert wrong.status_code == unknown.status_code == 401
     assert wrong.json() == unknown.json()
@@ -201,10 +211,11 @@ def test_repeated_failures_are_throttled_even_with_the_right_password(anonymous,
     person = make_user(Role.VIEWER)
     for _ in range(5):
         anonymous.post(
-            f"{API}/auth/login", json={"email": person.email, "password": "wrong-password-123"}
+            f"{API}/auth/login",
+            json={"username": person.username, "password": "wrong-password-123"},
         )
     blocked = anonymous.post(
-        f"{API}/auth/login", json={"email": person.email, "password": person.password}
+        f"{API}/auth/login", json={"username": person.username, "password": person.password}
     )
     assert blocked.status_code == 429 and blocked.json()["error"]["code"] == "too_many_attempts"
 
@@ -256,7 +267,10 @@ def test_service_accounts_cannot_sign_in(anonymous, db) -> None:  # noqa: ANN001
     from app.services.fixtures import SERVICE_EMAIL, seed_booklet_fixtures
 
     seed_booklet_fixtures(db)
-    response = anonymous.post(f"{API}/auth/login", json={"email": SERVICE_EMAIL, "password": "!"})
+    # Service accounts have no username: their old address signs nothing in.
+    response = anonymous.post(
+        f"{API}/auth/login", json={"username": SERVICE_EMAIL, "password": "!"}
+    )
     assert response.status_code == 401
 
 

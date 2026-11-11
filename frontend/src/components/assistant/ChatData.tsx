@@ -1,4 +1,5 @@
 import { CheckCircle2, Download, ExternalLink, FileSearch, Table2 } from 'lucide-react';
+import { useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { DataChartBlock, DataRow, DataTableBlock, ResearchFigure, ResearchSummaryBlock } from '@/api/assistant';
@@ -9,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { csvField, download, safeCell } from '@/lib/exportResults';
 import { formatDecimal, formatPeriod } from '@/lib/format';
 import { useAppLanguage } from '@/lib/useAppLanguage';
+
+import { SourcesShown } from './StructuredReply';
 
 /**
  * Tables, charts and the research summary of an answer, as the server built them from
@@ -56,22 +59,25 @@ export function ChatDataTables({ blocks, messageId }: { blocks: DataTableBlock[]
   const language = useAppLanguage();
   const header = COLUMNS.map((k) => t(`chat.table.col.${k}`));
   const ytd = t('chat.table.ytd');
+  // The Source column only with the sources shown; the CSV keeps it.
+  const sourcesShown = useContext(SourcesShown);
+  const shownColumns = sourcesShown ? COLUMNS : COLUMNS.filter((k) => k !== 'source');
   return (
     <>
       {blocks.flatMap((block) => block.tables.map((table, i) => (
         <figure key={`${block.id}-${i}`} className="m-0 flex flex-col gap-2 rounded-lg border border-border bg-card p-3"
           data-testid="chat-data-table" data-table={block.id} data-rows={table.rows.length} data-message={messageId}>
-          <figcaption className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+          <figcaption className="flex flex-wrap items-center gap-2 text-sm font-semibold">
             <Table2 aria-hidden="true" className="size-3.5" />
             {t('chat.table.title')}
             <span className="font-normal text-muted-foreground">({name({ en: table.unit.label_en, ar: table.unit.label_ar }, language, table.unit.code)})</span>
           </figcaption>
           <div className="max-w-full overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-start text-muted-foreground">
-                  {COLUMNS.map((k, i) => (
-                    <th key={k} scope="col" className="px-2 py-1.5 text-start font-medium">{header[i]}</th>
+                  {shownColumns.map((k) => (
+                    <th key={k} scope="col" className="px-2 py-1.5 text-start font-medium">{t(`chat.table.col.${k}`)}</th>
                   ))}
                 </tr>
               </thead>
@@ -88,14 +94,14 @@ export function ChatDataTables({ blocks, messageId }: { blocks: DataTableBlock[]
                     </td>
                     <td className="px-2 py-1.5"><bdi>{name(r.unit_label, language, r.unit)}</bdi></td>
                     <td className="px-2 py-1.5"><bdi>{name(r.area_name, language, r.area)}</bdi></td>
-                    <td className="px-2 py-1.5">
+                    {sourcesShown ? <td className="px-2 py-1.5">
                       {safeUrl(r.source.url) ? (
                         <a href={safeUrl(r.source.url)!} target="_blank" rel="noreferrer noopener" className="inline-flex items-center gap-1 text-primary underline underline-offset-2">
                           <bdi>{r.source.title}</bdi><ExternalLink aria-hidden="true" className="size-3" />
                         </a>
                       ) : <bdi>{r.source.title}</bdi>}
                       {r.revision_status ? <span className="ms-1 text-muted-foreground">({r.revision_status})</span> : null}
-                    </td>
+                    </td> : null}
                   </tr>
                 ))}
               </tbody>
@@ -114,6 +120,7 @@ export function ChatDataTables({ blocks, messageId }: { blocks: DataTableBlock[]
 export function ChatDataCharts({ charts, messageId }: { charts: DataChartBlock[]; messageId: number }) {
   const { t } = useTranslation();
   const language = useAppLanguage();
+  const sourcesShown = useContext(SourcesShown);
   const labels = useLabels(language);
   return (
     <>
@@ -127,8 +134,8 @@ export function ChatDataCharts({ charts, messageId }: { charts: DataChartBlock[]
             {c.chart.type === 'line'
               ? <StudyLineChart chart={c.chart} rows={rows} labelFor={labels.text} />
               : <StudyBarChart chart={c.chart} rows={rows} labelFor={labels.text} />}
-            <figcaption className="text-xs text-muted-foreground" data-testid="chat-chart-meta">
-              {t('chat.chart.meta', {
+            <figcaption className="text-sm text-muted-foreground" data-testid="chat-chart-meta">
+              {t(sourcesShown ? 'chat.chart.meta' : 'chat.chart.metaNoSources', {
                 unit,
                 periods: periods.length ? `${periods[0]} – ${periods[periods.length - 1]}` : '—',
                 kind: isKind(c.period_kind) ? t(`chat.table.kind.${c.period_kind}`) : c.period_kind,
@@ -183,7 +190,7 @@ export function ResearchSummary({ summary }: { summary: ResearchSummaryBlock }) 
   const { t } = useTranslation();
   const saved = summary.saved.length;
   return (
-    <details className="text-xs" data-testid="research-summary" data-saved={saved} data-read={summary.sources_read.length} open={summary.submitted > 0}>
+    <details className="text-sm" data-testid="research-summary" data-saved={saved} data-read={summary.sources_read.length} open={summary.submitted > 0}>
       <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
         <FileSearch aria-hidden="true" className="me-1 inline size-3.5" />
         <span className="font-semibold">{t('chat.research.title')}</span>

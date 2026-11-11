@@ -64,8 +64,9 @@ TRUE_WORDS = {"true", "yes", "1", "y"}
 FALSE_WORDS = {"false", "no", "0", "n"}
 
 
-# First period of the platform's verified-source statistics (build brief: January 2022 onward).
-STATISTICAL_SCOPE_START = date(2022, 1, 1)
+# First period of the platform's verified-source statistics: the complete-year baseline
+# 2021-2025 (academic booklet, November 2026; January 2022 before).
+STATISTICAL_SCOPE_START = date(2021, 1, 1)
 
 
 def suggest_mapping(header: list[str]) -> dict[str, str]:
@@ -385,7 +386,7 @@ def _validate_row(result: RowResult, get: Any, reference: Reference, data_mode: 
                         "A partial period must end on the last day of a month.",
                     )
 
-    # --- statistical scope: verified-source statistics start in January 2022 (brief)
+    # --- statistical scope: verified-source statistics start in January 2021 (booklet)
     if start and data_mode is DataMode.VERIFIED_SOURCE and start < STATISTICAL_SCOPE_START:
         result.error(
             "before_statistical_scope",
