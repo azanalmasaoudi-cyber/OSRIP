@@ -38,12 +38,12 @@ def verified_generation(database_url: str) -> None:
     from app.services import accounts
     from app.services.principal import Principal
 
-    email, password = "assistant-manager@test.invalid", "pw-assistant-manager-000"
+    email, password = "asstmgr", "pw-assistant-manager-000"
     with session_factory()() as s, s.begin():
         user = accounts.create_user(
             s,
             Principal(None, "t"),
-            email=email,
+            username=email,
             display_name="M",
             password=password,
             roles=[Role.DATA_MANAGER],
@@ -52,7 +52,7 @@ def verified_generation(database_url: str) -> None:
         for p in (Permission.IMPORT_APPROVE, Permission.IMPORT_PUBLISH):
             accounts.grant_permission(s, Principal(None, "t"), user.id, p)
     client = TestClient(create_app())
-    client.post(f"{API}/auth/login", json={"email": email, "password": password})
+    client.post(f"{API}/auth/login", json={"username": email, "password": password})
     client.headers["X-CSRF-Token"] = client.cookies["osrip_csrf"]
     source = register_test_verified_source(client)
     imp = upload_validate_approve(

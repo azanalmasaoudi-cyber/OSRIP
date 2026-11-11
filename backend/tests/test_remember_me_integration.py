@@ -20,7 +20,7 @@ def _sign_in(app, person, remember: bool):  # noqa: ANN001, ANN202
     client = TestClient(app)
     response = client.post(
         f"{API}/auth/login",
-        json={"email": person.email, "password": person.password, "remember": remember},
+        json={"username": person.username, "password": person.password, "remember": remember},
     )
     assert response.status_code == 200, response.text
     client.headers["X-CSRF-Token"] = client.cookies["osrip_csrf"]

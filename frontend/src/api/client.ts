@@ -21,6 +21,11 @@ function csrfToken(): string | null {
   return match ? decodeURIComponent(match.slice('osrip_csrf='.length)) : null;
 }
 
+/** The API could not be reached, or a gateway answered for it (502/503/504 without the API's
+ * own error): the server is temporarily unavailable. Pages translate the code. */
+export const SERVER_UNAVAILABLE = 'server_unavailable';
+const UNAVAILABLE_MESSAGE = 'The OSRIP server is not responding right now. Try again in a moment.';
+
 export class ApiRequestError extends DataAdapterError {
   readonly status: number;
   readonly details: unknown;
@@ -44,13 +49,18 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   try {
     response = await fetch(`${apiBaseUrl}${path}`, { ...init, headers, credentials: 'same-origin' });
   } catch {
-    throw new ApiRequestError(0, 'network_unavailable', 'The OSRIP API could not be reached.');
+    throw new ApiRequestError(0, SERVER_UNAVAILABLE, UNAVAILABLE_MESSAGE);
   }
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => null);
     const parsed = errorEnvelope.safeParse(body);
-    throw parsed.success
-      ? new ApiRequestError(response.status, parsed.data.error.code, parsed.data.error.message, parsed.data.error.details)
+    if (parsed.success) {
+      throw new ApiRequestError(response.status, parsed.data.error.code, parsed.data.error.message, parsed.data.error.details);
+    }
+    // A gateway answering for an API that is not running or not responding (the development
+    // proxy, a reverse proxy): said plainly, never shown as success.
+    throw [502, 503, 504].includes(response.status)
+      ? new ApiRequestError(response.status, SERVER_UNAVAILABLE, UNAVAILABLE_MESSAGE)
       : new ApiRequestError(response.status, 'http_error', `Request failed with status ${response.status}.`);
   }
   return response;

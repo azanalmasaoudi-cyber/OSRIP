@@ -95,7 +95,7 @@ test('Research mode offers a cross-check, off by default and labelled as not ind
 test('provider readiness: administrators see each provider’s state and missing setting names, never keys', async ({ page }) => {
   await page.goto('/sign-in');
   const form = page.getByTestId('sign-in-form');
-  await form.getByLabel('Username').fill('admin@e2e.invalid');
+  await form.getByLabel('Username').fill('e2eadmin');
   await form.getByLabel('Password').fill(PASSWORD);
   await form.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByTestId('signed-in-as')).toBeVisible();

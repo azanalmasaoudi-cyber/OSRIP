@@ -32,12 +32,12 @@ def published(database_url: str) -> Iterator[dict[str, Any]]:
     from app.services import accounts
     from app.services.principal import Principal
 
-    email, password = "brief-manager@test.invalid", "pw-brief-manager-000000"
+    email, password = "briefmgr", "pw-brief-manager-000000"
     with session_factory()() as s, s.begin():
         u = accounts.create_user(
             s,
             Principal(None, "t"),
-            email=email,
+            username=email,
             display_name="brief manager",
             password=password,
             roles=[Role.DATA_MANAGER],
@@ -47,7 +47,7 @@ def published(database_url: str) -> Iterator[dict[str, Any]]:
             accounts.grant_permission(s, Principal(None, "t"), u.id, g)
     client = TestClient(create_app())
     assert (
-        client.post(f"{API}/auth/login", json={"email": email, "password": password}).status_code
+        client.post(f"{API}/auth/login", json={"username": email, "password": password}).status_code
         == 200
     )
     client.headers["X-CSRF-Token"] = client.cookies["osrip_csrf"]

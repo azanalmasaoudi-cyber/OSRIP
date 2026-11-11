@@ -58,12 +58,12 @@ def manager(database_url: str):  # noqa: ANN201
     from app.services import accounts
     from app.services.principal import Principal
 
-    email, password = f"zy-manager-{uuid.uuid4().hex[:6]}@test.invalid", "pw-zy-manager-0000"
+    email, password = f"zy{uuid.uuid4().hex[:8]}", "pw-zy-manager-0000"
     with session_factory()() as s, s.begin():
         user = accounts.create_user(
             s,
             Principal(None, "t"),
-            email=email,
+            username=email,
             display_name="M",
             password=password,
             roles=[Role.DATA_MANAGER],
@@ -72,7 +72,7 @@ def manager(database_url: str):  # noqa: ANN201
         for p in (Permission.IMPORT_APPROVE, Permission.IMPORT_PUBLISH):
             accounts.grant_permission(s, Principal(None, "t"), user.id, p)
     client = TestClient(create_app())
-    client.post(f"{API}/auth/login", json={"email": email, "password": password})
+    client.post(f"{API}/auth/login", json={"username": email, "password": password})
     client.headers["X-CSRF-Token"] = client.cookies["osrip_csrf"]
     return client
 
@@ -443,9 +443,12 @@ def test_watchlist_alerts_on_publication(app, db, manager, make_user, login, mon
     )
     assert no_mail.status_code == 503 and no_mail.json()["error"]["code"] == "email_not_configured"
     monkeypatch.setattr(get_settings(), "email_backend", "outbox")
+    # Alerts by e-mail go to an address the account has on record (not a way to sign in).
+    address = f"{person.username}@test.invalid"
     with db.begin():
         db.execute(
-            text("UPDATE app_user SET email_verified_at = NULL WHERE id = :u"), {"u": person.id}
+            text("UPDATE app_user SET email = :e, email_verified_at = NULL WHERE id = :u"),
+            {"u": person.id, "e": address},
         )
     unverified = viewer.post(
         f"{API}/watchlist/{item_id}/rules", json={"kind": "new_data", "channel": "email"}
@@ -474,7 +477,7 @@ def test_watchlist_alerts_on_publication(app, db, manager, make_user, login, mon
     with db.begin():
         sent = db.execute(
             text("SELECT count(*) FROM email_outbox WHERE purpose = 'alert' AND to_address = :e"),
-            {"e": person.email},
+            {"e": address},
         ).scalar()
     assert sent == 1
 

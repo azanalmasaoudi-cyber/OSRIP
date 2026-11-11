@@ -107,7 +107,7 @@ test('the report in Arabic, right to left', async ({ page }) => {
 
 test('an illustration is made for a signed-in person, labelled as not data', async ({ page }) => {
   await page.goto('/sign-in');
-  await page.getByTestId('sign-in-form').getByLabel('Username').fill('viewer@e2e.invalid');
+  await page.getByTestId('sign-in-form').getByLabel('Username').fill('e2eviewer');
   await page.getByTestId('sign-in-form').getByLabel('Password').fill(PASSWORD);
   await page.getByTestId('sign-in-form').getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByTestId('account-page')).toBeVisible();

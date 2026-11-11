@@ -117,12 +117,12 @@ def test_administrators_cannot_remove_their_own_role(make_user, login) -> None: 
 def test_ensure_admin_creates_a_temporary_administrator(app, monkeypatch) -> None:  # noqa: ANN001
     from app import cli
 
-    username = f"Azzan{uuid.uuid4().hex[:6]}"
+    username = f"Azzan{uuid.uuid4().hex[:5]}"  # 10 characters
     temporary = f"temp-{uuid.uuid4().hex[:12]}"
     monkeypatch.setenv("OSRIP_NEW_USER_PASSWORD", temporary)
     cli.main(["ensure-admin", "--username", username])
     client = TestClient(app)
-    signed = client.post(f"{API}/auth/login", json={"email": username, "password": temporary})
+    signed = client.post(f"{API}/auth/login", json={"username": username, "password": temporary})
     assert signed.status_code == 200
     me = signed.json()
     assert "administrator" in me["roles"] and me["password_change_required"] is True
@@ -132,7 +132,7 @@ def test_ensure_admin_creates_a_temporary_administrator(app, monkeypatch) -> Non
     cli.main(["ensure-admin", "--username", username])
     monkeypatch.setenv("OSRIP_NEW_USER_PASSWORD", "short")
     with pytest.raises(SystemExit):
-        cli.main(["ensure-admin", "--username", f"Other{uuid.uuid4().hex[:6]}"])
+        cli.main(["ensure-admin", "--username", f"Other{uuid.uuid4().hex[:5]}"])
 
 
 def test_choosing_the_administrators_name_never_makes_anyone_an_administrator(
@@ -144,16 +144,16 @@ def test_choosing_the_administrators_name_never_makes_anyone_an_administrator(
     password = f"pw-{uuid.uuid4().hex}"
     form = {"password": password, "password_confirm": password}
     # The owner's administrator name is not offered to the public, in any case.
-    for name in ("Azzan", "azzan", "AZZAN"):
+    for name in ("Azzan", "azzan", "AZZAN", "Azzan1", "azzan_", "عزان"):
         r = client.post(f"{API}/auth/register/username", json={"username": name, **form})
         assert r.status_code == 422 and r.json()["error"]["code"] == "username_reserved", r.text
     # An account its holder created is never promoted, even with --promote.
-    squatter = f"Azzan{uuid.uuid4().hex[:6]}"
+    squatter = f"Azzanx{uuid.uuid4().hex[:4]}"  # not the name itself, so not reserved
     r = client.post(f"{API}/auth/register/username", json={"username": squatter, **form})
     assert r.status_code in (200, 201), r.text
     with pytest.raises(SystemExit, match="never made an administrator"):
         cli.main(["ensure-admin", "--username", squatter, "--promote"])
     signed = TestClient(app).post(
-        f"{API}/auth/login", json={"email": squatter, "password": password}
+        f"{API}/auth/login", json={"username": squatter, "password": password}
     )
     assert signed.status_code == 200 and "administrator" not in signed.json()["roles"]

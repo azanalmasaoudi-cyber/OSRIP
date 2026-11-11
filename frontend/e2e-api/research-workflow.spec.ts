@@ -145,7 +145,7 @@ test('a sector page: period first, then the table, the chart only on request, in
 });
 
 test('create a study: it runs in the background with visible steps and ends with conclusions', async ({ page }) => {
-  await signIn(page, 'analyst@e2e.invalid');
+  await signIn(page, 'e2eanalyst');
   await page.goto('/studies?mode=synthetic&create=water');
   const form = page.getByTestId('create-study');
   await expect(form.getByTestId('job-sector')).toHaveValue('water');
@@ -166,7 +166,7 @@ test('create a study: it runs in the background with visible steps and ends with
 });
 
 test('navigation and Settings: the main destinations in order, services and scheduled reports', async ({ page }) => {
-  await signIn(page, 'admin@e2e.invalid');
+  await signIn(page, 'e2eadmin');
   await page.goto('/overview?mode=synthetic');
   const nav = page.getByRole('navigation', { name: 'Main navigation' });
   const names = await nav.getByRole('link').allInnerTexts();

@@ -41,7 +41,7 @@ from app.api.routes import (
 )
 from app.core.config import get_settings
 from app.core.errors import ApiError
-from app.services import monitoring
+from app.services import monitoring, usernames
 
 logger = logging.getLogger("osrip")
 
@@ -159,6 +159,25 @@ def create_app() -> FastAPI:
     @app.exception_handler(RequestValidationError)
     async def validation_error_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
         details = [{"location": list(e["loc"]), "message": e["msg"]} for e in exc.errors()]
+        # A missing or over-long username gets its own code, so the page can say so in its
+        # language ("Username must not exceed 10 characters.").
+        for e in exc.errors():
+            if e["loc"][-1:] != ("username",):
+                continue
+            if e["type"] in ("string_too_short", "too_short"):
+                code, message = "username_required", "Enter a username."
+            elif (
+                e["type"] in ("string_too_long", "too_long")
+                and (e.get("ctx") or {}).get("max_length") == usernames.MAX_LENGTH
+            ):
+                code = "username_too_long"
+                message = f"Username must not exceed {usernames.MAX_LENGTH} characters."
+            else:
+                continue
+            return JSONResponse(
+                status_code=422,
+                content={"error": {"code": code, "message": message, "details": details}},
+            )
         return JSONResponse(
             status_code=422,
             content={

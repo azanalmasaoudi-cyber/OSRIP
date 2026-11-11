@@ -295,7 +295,7 @@ def test_sign_in_keeps_the_conversation_only_through_an_explicit_link(app, make_
     # Signing in on the same browser: the guest history is offered, not merged.
     assert (
         client.post(
-            f"{API}/auth/login", json={"email": person.email, "password": person.password}
+            f"{API}/auth/login", json={"username": person.username, "password": person.password}
         ).status_code
         == 200
     )
@@ -312,7 +312,7 @@ def test_sign_in_keeps_the_conversation_only_through_an_explicit_link(app, make_
     # Another account cannot claim the same guest history.
     other = make_user(Role.VIEWER)
     client.post(f"{API}/auth/logout")
-    client.post(f"{API}/auth/login", json={"email": other.email, "password": other.password})
+    client.post(f"{API}/auth/login", json={"username": other.username, "password": other.password})
     client.headers["X-CSRF-Token"] = client.cookies["osrip_csrf"]
     assert client.post(f"{API}/assistant/guest/link").status_code == 409
 

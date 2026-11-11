@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import CHAR, Boolean, DateTime, ForeignKey, Identity, Integer, Text, func, text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, validates
 
 from app.db.base import Base
 from app.domain.enums import AccountStatus
@@ -28,8 +28,11 @@ class AppUser(Base):
     created_via: Mapped[str] = mapped_column(Text, server_default=text("'administrator'"))
     phone_e164: Mapped[str | None] = mapped_column(Text)
     phone_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    # Operator-created accounts may be identified by a username alone (migration 0011).
+    # The sign-in name (migration 0011; 1-10 Arabic or English letters and digits for new or
+    # changed names since 0033, longer older names kept as they are).
     username: Mapped[str | None] = mapped_column(Text)
+    # What uniqueness and sign-in compare (app/services/usernames.key), set with the username.
+    username_key: Mapped[str | None] = mapped_column(Text)
     password_change_required: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     # One-time recovery code for accounts without verified contact details (migration 0025):
     # an Argon2id hash only; the code itself is shown once and never stored.
@@ -38,6 +41,18 @@ class AppUser(Base):
     # The assistant persona this person chose (a code from the active profile; migration 0017).
     # NULL: the profile's default persona.
     assistant_persona: Mapped[str | None] = mapped_column(Text)
+
+    @validates("username")
+    def _set_username_key(self, _field: str, value: str | None) -> str | None:
+        """The key follows the username; the name itself is stored normalised."""
+        from app.services import usernames
+
+        if value is None:
+            self.username_key = None
+            return None
+        name = usernames.normalize(value)
+        self.username_key = usernames.key(name)
+        return name
 
 
 class RoleRow(Base):

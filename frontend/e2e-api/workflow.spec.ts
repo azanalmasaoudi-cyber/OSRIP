@@ -55,7 +55,7 @@ test('Arabic shows the same API values', async ({ page }) => {
 });
 
 test('a data manager uploads, maps, validates, reviews, approves and publishes a CSV', async ({ page }) => {
-  await signIn(page, 'manager@e2e.invalid');
+  await signIn(page, 'e2emanager');
   await page.goto('/data-management');
 
   // Register a synthetic source.
@@ -112,7 +112,7 @@ test('a data manager uploads, maps, validates, reviews, approves and publishes a
 });
 
 test('a viewer is refused by the server even when calling the API directly', async ({ page }) => {
-  await signIn(page, 'viewer@e2e.invalid');
+  await signIn(page, 'e2eviewer');
   await page.goto('/data-management');
   await expect(page.locator('[data-state="restricted"]')).toBeVisible();
 

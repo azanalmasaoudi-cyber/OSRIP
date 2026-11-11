@@ -60,12 +60,6 @@ def main() -> None:
     os.environ.setdefault("OSRIP_IMAGES_PROVIDER", "fake")
     # The scripted answer streams in pieces 25 ms apart, so browser tests see it being written.
     os.environ.setdefault("OSRIP_FAKE_STREAM_DELAY_MS", "25")
-    # Scripted SMS delivery (codes readable at /dev/sms-outbox); short cooldown for tests.
-    os.environ.setdefault("OSRIP_SMS_ENABLED", "true")
-    os.environ.setdefault("OSRIP_SMS_PROVIDER", "test")
-    os.environ.setdefault("OSRIP_SMS_RESEND_SECONDS", "3")
-    os.environ.setdefault("OSRIP_SMS_PER_NUMBER_HOUR", "50")
-    os.environ.setdefault("OSRIP_SMS_PER_CLIENT_HOUR", "500")
     # Desktop and phone runs share one test account; the limit itself is tested in pytest.
     os.environ.setdefault("OSRIP_ASSISTANT_MAX_PER_MINUTE", "200")
     os.environ.setdefault("OSRIP_ASSISTANT_MAX_PER_HOUR", "2000")
@@ -83,19 +77,26 @@ def main() -> None:
 
     command.upgrade(Config(str(BACKEND / "alembic.ini")), "head")
 
+    from sqlalchemy import text
+
+    from app.core import security
     from app.db.session import session_factory
     from app.domain.enums import Permission, Role
+    from app.models import AppUser, UserRole
     from app.services import accounts
     from app.services.fixtures import seed_booklet_fixtures
     from app.services.principal import Principal
 
     system = Principal(None, "system:e2e")
+    # Usernames of up to 10 characters; the e-mail addresses are the records such accounts
+    # kept from before e-mail sign-in was retired (they no longer sign anyone in).
     with session_factory()() as session:
         seed_booklet_fixtures(session)
         with session.begin():
             manager = accounts.create_user(
                 session,
                 system,
+                username="e2emanager",
                 email="manager@e2e.invalid",
                 display_name="E2E data manager",
                 password=password,
@@ -106,6 +107,7 @@ def main() -> None:
             accounts.create_user(
                 session,
                 system,
+                username="e2eanalyst",
                 email="analyst@e2e.invalid",
                 display_name="E2E analyst",
                 password=password,
@@ -114,6 +116,7 @@ def main() -> None:
             accounts.create_user(
                 session,
                 system,
+                username="e2eadmin",
                 email="admin@e2e.invalid",
                 display_name="E2E administrator",
                 password=password,
@@ -122,6 +125,7 @@ def main() -> None:
             accounts.create_user(
                 session,
                 system,
+                username="e2eviewer",
                 email="viewer@e2e.invalid",
                 display_name="E2E viewer",
                 password=password,
@@ -131,6 +135,32 @@ def main() -> None:
             accounts.ensure_username_account(
                 session, system, username="e2etemp", display_name="E2E temporary", password=password
             )
+            # An account registered before the 10-character rule (migration 0033) with a longer
+            # name: it keeps it and still signs in. Inserted as such an account was, before the
+            # rule's trigger existed.
+            trigger = "trg_app_user_username_policy"
+            session.execute(text(f"ALTER TABLE app_user DISABLE TRIGGER {trigger}"))
+            legacy = AppUser(
+                username="e2elegacy.user",
+                display_name="E2E older account",
+                password_hash=security.hash_password(password),
+                created_via="self_registration",
+            )
+            session.add(legacy)
+            session.flush()
+            session.execute(text(f"ALTER TABLE app_user ENABLE TRIGGER {trigger}"))
+            session.add(UserRole(user_id=legacy.id, role_code=Role.VIEWER.value))
+            # An account that signed in with its e-mail address before that was retired: it has
+            # no username until an administrator gives it one.
+            by_email = AppUser(
+                email="legacy-email@e2e.invalid",
+                display_name="E2E e-mail account",
+                password_hash=security.hash_password(password),
+                created_via="self_registration",
+            )
+            session.add(by_email)
+            session.flush()
+            session.add(UserRole(user_id=by_email.id, role_code=Role.VIEWER.value))
     if os.environ.get("OSRIP_E2E_REFERENCE_PACK") == "1":
         # Demonstration runs only (playwright.demo.config.ts): the curated, source-checked
         # reference pack, published as verified-source data in this throwaway database.

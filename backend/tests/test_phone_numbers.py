@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from app.core.errors import ApiError
-from app.services import phone_numbers, sms
+from app.services import phone_numbers
 
 
 @pytest.mark.parametrize(
@@ -45,25 +45,3 @@ def test_mask_shows_only_country_code_and_last_two_digits() -> None:
     assert phone_numbers.mask("+96891234567") == "+968 ••••••67"
     assert phone_numbers.mask("+447911123456") == "+44 ••••••••56"
     assert phone_numbers.mask(None) is None
-
-
-def test_scripted_provider_codes_are_single_use_and_checked_exactly() -> None:
-    p = sms.ScriptedSmsProvider()
-    started = p.request_verification("+96891234567")
-    code = p.outbox()[0]["code"]
-    assert len(code) == 6 and code.isdigit()
-    wrong = "0" * 6 if code != "0" * 6 else "1" * 6
-    assert p.check_verification(started.provider_ref, wrong) is sms.CheckStatus.DENIED
-    assert p.check_verification(started.provider_ref, code) is sms.CheckStatus.APPROVED
-    assert p.check_verification(started.provider_ref, code) is sms.CheckStatus.EXPIRED
-
-
-def test_scripted_provider_simulates_delivery_failures() -> None:
-    p = sms.ScriptedSmsProvider()
-    for number, code in (
-        (sms.TEST_UNDELIVERABLE, "undeliverable"),
-        (sms.TEST_OUTAGE, "provider_unavailable"),
-    ):
-        with pytest.raises(sms.DeliveryError) as err:
-            p.request_verification(number)
-        assert err.value.code == code

@@ -107,7 +107,7 @@ test('forecasts: withheld for every target in both modes, with reasons and condi
 });
 
 test('an analyst request on an ineligible series is recorded as withheld (T10)', async ({ page }) => {
-  await signIn(page, 'analyst@e2e.invalid');
+  await signIn(page, 'e2eanalyst');
   await page.goto('/forecasts?mode=synthetic');
   // The page offers no run for an ineligible series; a direct API request is recorded as withheld.
   const result = await page.evaluate(async () => {

@@ -121,15 +121,17 @@ test('no decorative motion: the landing hero is a still, credited photograph tha
 test('service health: administrators only; integrations and errors are listed without personal data', async ({ page }) => {
   await page.goto('/admin/health');
   await expect(page.locator('[data-state="restricted"]')).toBeVisible();
-  await signIn(page, 'admin@e2e.invalid');
+  await signIn(page, 'e2eadmin');
   await page.goto('/admin/health');
   await expect(page.getByTestId('health-page')).toContainText('Ready');
   await expect(page.locator('[data-testid="integration"][data-name="official_statistics"]')).toHaveAttribute('data-status', 'file_import');
-  await expect(page.locator('[data-testid="integration"][data-name="google"]')).toHaveAttribute('data-status', 'not_configured');
+  await expect(page.locator('[data-testid="integration"][data-name="email"]')).toHaveAttribute('data-status', /.+/);
+  // Sign-in is by username and password only: no SMS, Google or Microsoft integration is listed.
+  await expect(page.locator('[data-testid="integration"][data-name="google"], [data-testid="integration"][data-name="microsoft"], [data-testid="integration"][data-name="sms"]')).toHaveCount(0);
 });
 
 test('counts in Arabic take Arabic plural forms, never the English text (audit log)', async ({ page }) => {
-  await signIn(page, 'admin@e2e.invalid');
+  await signIn(page, 'e2eadmin');
   await page.goto('/admin/audit');
   const table = page.getByTestId('audit-table');
   const caption = table.locator('caption');

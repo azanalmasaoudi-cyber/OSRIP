@@ -119,8 +119,8 @@ def environment() -> dict[str, str]:
     return info
 
 
-def login(client: httpx.Client, email: str, password: str) -> None:
-    r = client.post("/auth/login", json={"email": email, "password": password})
+def login(client: httpx.Client, username: str, password: str) -> None:
+    r = client.post("/auth/login", json={"username": username, "password": password})
     r.raise_for_status()
     client.headers["X-CSRF-Token"] = client.cookies["osrip_csrf"]
 
@@ -155,7 +155,7 @@ def main() -> None:
             m = accounts.create_user(
                 session,
                 system,
-                email="manager@perf.invalid",
+                username="perfmgr",
                 display_name="Perf manager",
                 password=password,
                 roles=[Role.DATA_MANAGER],
@@ -165,7 +165,7 @@ def main() -> None:
             accounts.create_user(
                 session,
                 system,
-                email="analyst@perf.invalid",
+                username="perfanalyst",
                 display_name="Perf analyst",
                 password=password,
                 roles=[Role.ANALYST],
@@ -200,7 +200,7 @@ def main() -> None:
 
         # ---- import, each step timed on its own
         with httpx.Client(base_url=BASE, timeout=300) as mgr:
-            login(mgr, "manager@perf.invalid", password)
+            login(mgr, "perfmgr", password)
             src = mgr.post(
                 "/sources",
                 json={
@@ -295,7 +295,7 @@ def main() -> None:
 
         # ---- report generation
         with httpx.Client(base_url=BASE, timeout=120) as an:
-            login(an, "analyst@perf.invalid", password)
+            login(an, "perfanalyst", password)
             ms, errors = [], 0
             for i in range(10):
                 t = time.perf_counter()

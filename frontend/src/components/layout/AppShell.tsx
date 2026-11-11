@@ -101,7 +101,7 @@ function usePageTitle(pathname: string): string {
   const { hash, search } = useLocation();
   if (pathname === '/') return t('nav.dashboard');
   if (pathname === '/energy') return t('nav.electricity');
-  if (['/sign-in', '/register', '/forgot-password', '/reset-password', '/magic-link', '/verify-email', '/link-email'].includes(pathname)) {
+  if (['/sign-in', '/register', '/forgot-password'].includes(pathname)) {
     return t('nav.accountShort');
   }
   // The item for this page and its open section or tab, the most specific path first.

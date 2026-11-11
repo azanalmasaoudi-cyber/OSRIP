@@ -8,7 +8,7 @@ from sqlalchemy import select
 from app.api.deps import DbSession, require
 from app.domain.enums import AccountStatus, Permission
 from app.models import AppUser, AuditEvent, UserGroup, UserPermissionGrant, UserRole
-from app.schemas.accounts import GrantIn, RoleIn, UserCreateIn, UserOut
+from app.schemas.accounts import GrantIn, RoleIn, UserCreateIn, UsernameIn, UserOut
 from app.services import accounts, groups, phone_numbers
 from app.services.principal import Principal
 
@@ -36,6 +36,7 @@ def _user_out(session: DbSession, user: AppUser) -> UserOut:
         created_via=user.created_via,
         phone=phone_numbers.mask(user.phone_e164),
         username=user.username,
+        service_account=user.is_service_account,
     )
 
 
@@ -58,11 +59,22 @@ def create_user(body: UserCreateIn, session: DbSession, actor: Manager) -> UserO
         user = accounts.create_user(
             session,
             actor,
-            email=body.email,
+            username=body.username,
             display_name=body.display_name,
             password=body.password,
             roles=body.roles,
         )
+        return _user_out(session, user)
+
+
+@router.post("/users/{user_id}/username", response_model=UserOut)
+def set_username(
+    user_id: uuid.UUID, body: UsernameIn, session: DbSession, actor: Manager
+) -> UserOut:
+    """Gives an account a username to sign in with (accounts that used an e-mail address or
+    a phone number before those were retired have none), or changes it. Audited."""
+    with session.begin():
+        user = accounts.set_username(session, actor, user_id, body.username)
         return _user_out(session, user)
 
 

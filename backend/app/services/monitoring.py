@@ -94,7 +94,7 @@ def external_success(service: str) -> None:
 
 def integrations() -> dict[str, Any]:
     """Configuration state of each integration (never secrets) plus recent failures."""
-    from app.services import mail, oidc, sms, speech
+    from app.services import mail, speech
     from app.services.assistant.provider import answering_available
     from app.services.research.service import available as research_available
 
@@ -117,7 +117,7 @@ def integrations() -> dict[str, Any]:
             "failures_since_start": e.get("failures", 0),
         }
 
-    providers = oidc.configured()
+    # Sign-in is by username and password only: no SMS, Google or Microsoft integration.
     return {
         "email": {
             **state("smtp", mail.delivery_mode() != "disabled"),
@@ -127,11 +127,6 @@ def integrations() -> dict[str, Any]:
             **state("assistant", answering_available()),
             "provider": s.assistant_provider,
         },
-        "sms": {
-            **state("sms", sms.get_provider() is not None),
-            "mode": sms.status()["status"],
-            "provider": s.sms_provider or None,
-        },
         "web_research": {
             **state("research", research_available()),
             "provider": s.research_provider or None,
@@ -140,8 +135,6 @@ def integrations() -> dict[str, Any]:
             **state("speech", speech.configured()),
             "provider": s.speech_provider or None,
         },
-        "google": state("oidc_google", providers["google"]),
-        "microsoft": state("oidc_microsoft", providers["microsoft"]),
         "official_statistics": {
             "configured": True,
             "status": "file_import",

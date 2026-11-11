@@ -26,7 +26,7 @@ import {
   type RequestMode,
   type AskSelection,
 } from '@/api/assistant';
-import { hasPermission, useMe, useProviders } from '@/api/auth';
+import { hasPermission, useMe } from '@/api/auth';
 import { ApiRequestError } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { recordingSupported, startRecording, type Recording, type RecorderError } from '@/lib/recorder';
@@ -321,8 +321,6 @@ export type ChatVoice = ReturnType<typeof useVoice>;
 function SignInPrompt({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation();
   const to = usePreservedSearch();
-  const providers = useProviders();
-  const p = providers.data;
   return (
     <div className="flex flex-col gap-3 rounded-md border border-copper/40 bg-copper-subtle/40 p-4 text-sm" data-testid="assistant-sign-in" role="status">
       <p className="font-semibold">{t('guest.limitReachedTitle')}</p>
@@ -331,17 +329,10 @@ function SignInPrompt({ onNavigate }: { onNavigate?: () => void }) {
         <Link to={to('/sign-in')} onClick={onNavigate} className="rounded-md bg-primary px-3 py-2 font-medium text-primary-foreground" data-testid="guest-sign-in">
           {t('auth.signIn')}
         </Link>
-        {p?.registration ? (
-          <Link to={to('/register')} onClick={onNavigate} className="rounded-md border border-border-strong px-3 py-2 font-medium">
-            {t('guest.registerEmail')}
-          </Link>
-        ) : null}
-        {p?.sms.available ? (
-          <Link to={{ ...to('/register'), search: `${to('/register').search ? `${to('/register').search}&` : '?'}method=phone` }} onClick={onNavigate}
-            className="rounded-md border border-border-strong px-3 py-2 font-medium">
-            {t('guest.registerPhone')}
-          </Link>
-        ) : null}
+        <Link to={to('/register')} onClick={onNavigate} className="rounded-md border border-border-strong px-3 py-2 font-medium"
+          data-testid="guest-register">
+          {t('account.createAccount')}
+        </Link>
       </div>
       <p className="text-xs text-muted-foreground">{t('guest.keptNote')}</p>
     </div>

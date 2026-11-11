@@ -43,12 +43,12 @@ def clients(database_url: str) -> dict[str, Any]:
     }
     out: dict[str, Any] = {"app": app}
     for name, (roles, grants) in people.items():
-        email, password = f"fs-{name}@test.invalid", f"pw-fs-{name}-000000"
+        email, password = f"fs{name}"[:10], f"pw-fs-{name}-000000"
         with session_factory()() as s, s.begin():
             u = accounts.create_user(
                 s,
                 Principal(None, "t"),
-                email=email,
+                username=email,
                 display_name=name,
                 password=password,
                 roles=roles,
@@ -58,7 +58,7 @@ def clients(database_url: str) -> dict[str, Any]:
                 accounts.grant_permission(s, Principal(None, "t"), u.id, g)
         c = TestClient(app)
         assert (
-            c.post(f"{API}/auth/login", json={"email": email, "password": password}).status_code
+            c.post(f"{API}/auth/login", json={"username": email, "password": password}).status_code
             == 200
         )
         c.headers["X-CSRF-Token"] = c.cookies["osrip_csrf"]
@@ -315,7 +315,8 @@ def _alembic_head() -> str:
 def test_readiness_and_monitoring_view(clients) -> None:  # noqa: ANN001
     ready = clients["viewer"].get(f"{API}/health/ready").json()
     assert ready["ready"] is True and ready["checks"]["migration"] == _alembic_head()
-    assert ready["integrations"]["google"]["status"] == "not_configured"
+    # Sign-in is by username and password only: no SMS, Google or Microsoft integration.
+    assert not {"sms", "google", "microsoft"} & set(ready["integrations"])
     assert "secret" not in json.dumps(ready).lower()
     assert clients["viewer"].get(f"{API}/admin/monitoring").status_code == 403
     view = clients["admin"].get(f"{API}/admin/monitoring").json()

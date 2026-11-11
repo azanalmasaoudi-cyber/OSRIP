@@ -22,20 +22,7 @@ import { ReportPage, ReportsPage } from '@/pages/ReportsPages';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { StudiesPage } from '@/pages/StudiesPage';
 import { ElectricityPage, FoodSecurityPage, TradePage, WaterPage } from '@/pages/SectionPages';
-import {
-  AccountPage,
-  AdminUsersPage,
-  DevMailPage,
-  EmailForgotPasswordPage,
-  ForgotPasswordPage,
-  LinkEmailPage,
-  MagicLinkPage,
-  OtherSignInPage,
-  RegisterPage,
-  ResetPasswordPage,
-  SignInPage,
-  VerifyEmailPage,
-} from '@/pages/SignInPage';
+import { AccountPage, AdminUsersPage, ForgotPasswordPage, RegisterPage, SignInPage } from '@/pages/SignInPage';
 
 /** Old /forecast links land on Forecasts and Scenarios, keeping the query string. */
 function ForecastRedirect() {
@@ -49,6 +36,16 @@ function MethodologyRedirect() {
   return <Navigate to={{ pathname: '/sources', search }} replace />;
 }
 
+/** Retired sign-in pages (e-mail links, e-mail verification and reset, phone and other
+ * providers, the development mailbox): old links land on the username sign-in. Only the data
+ * mode is kept; tokens in old links are dropped and never sent anywhere. */
+function RetiredSignInRedirect() {
+  const { search } = useLocation();
+  const mode = new URLSearchParams(search).get('mode');
+  const keep = mode === 'synthetic' || mode === 'verified' ? `?mode=${mode}` : '';
+  return <Navigate to={{ pathname: '/sign-in', search: keep }} replace />;
+}
+
 /** The old Talk screen: /talk opens the one Al Mulhim conversation (lib/talkRedirect). */
 function TalkRedirect() {
   const { search } = useLocation();
@@ -57,9 +54,13 @@ function TalkRedirect() {
 
 export const router = createBrowserRouter([
   {
-    path: '/sign-in',
+    // Sign-in, registration and a forgotten password: the full-screen glass design.
     element: <AuthLayout />,
-    children: [{ index: true, element: <SignInPage /> }],
+    children: [
+      { path: '/sign-in', element: <SignInPage /> },
+      { path: '/register', element: <RegisterPage /> },
+      { path: '/forgot-password', element: <ForgotPasswordPage /> },
+    ],
   },
   {
     path: '/',
@@ -96,20 +97,13 @@ export const router = createBrowserRouter([
       { path: 'settings', element: <SettingsPage /> },
       { path: 'methodology', element: <MethodologyRedirect /> },
       { path: 'data-management', element: <DataManagementPage /> },
-      // Older e-mail and phone accounts, Google and Microsoft: off the main sign-in screen.
-      { path: 'sign-in/other', element: <OtherSignInPage /> },
-      { path: 'register', element: <RegisterPage /> },
-      { path: 'verify-email', element: <VerifyEmailPage /> },
-      { path: 'forgot-password', element: <ForgotPasswordPage /> },
-      { path: 'forgot-password/email', element: <EmailForgotPasswordPage /> },
-      { path: 'reset-password', element: <ResetPasswordPage /> },
-      { path: 'magic-link', element: <MagicLinkPage /> },
-      { path: 'link-email', element: <LinkEmailPage /> },
+      // Retired: e-mail, phone, Google and Microsoft sign-in and their pages.
+      ...['sign-in/other', 'verify-email', 'forgot-password/email', 'reset-password', 'magic-link', 'link-email', 'dev/mail']
+        .map((path) => ({ path, element: <RetiredSignInRedirect /> })),
       { path: 'account', element: <AccountPage /> },
       { path: 'admin/users', element: <AdminUsersPage /> },
       { path: 'admin/health', element: <HealthPage /> },
       { path: 'admin/audit', element: <AuditPage /> },
-      { path: 'dev/mail', element: <DevMailPage /> },
       { path: 'design-reference', element: <DesignReferencePage /> },
       { path: '*', element: <NotFoundPage /> },
     ],

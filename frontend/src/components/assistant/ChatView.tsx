@@ -32,7 +32,7 @@ import {
   DATA_MODES, INTERNET_MODES, isInternetMode, useAssistantStatus, useCancelRequest, useVoiceStatus,
   type Allowance, type AskSelection, type AssistantMessage, type ConversationSummary, type Evidence, type RequestMode,
 } from '@/api/assistant';
-import { ApiRequestError } from '@/api/client';
+import { ApiRequestError, SERVER_UNAVAILABLE } from '@/api/client';
 import type { DataMode } from '@/domain/types';
 import { DataModeBadge } from '@/components/common/DataModeBadge';
 import { Badge } from '@/components/ui/badge';
@@ -215,7 +215,7 @@ export function ChatView({ chat, layout = 'page' }: { chat: ChatModel; layout?: 
               {chat.error ? (
                 <div role="alert" className="flex flex-wrap items-center gap-2 rounded-2xl border border-destructive/40 bg-destructive/5 px-4 py-3 text-base text-destructive"
                   data-testid="assistant-error">
-                  <p>{chat.error instanceof ApiRequestError && chat.error.code === 'network_unavailable' ? t('chat.errorNetwork') : chat.error.message}</p>
+                  <p>{chat.error instanceof ApiRequestError && chat.error.code === SERVER_UNAVAILABLE ? t('chat.errorNetwork') : chat.error.message}</p>
                   <Button variant="outline" size="sm" onClick={chat.retry} data-testid="error-retry"><RotateCcw aria-hidden="true" />{t('states.retry')}</Button>
                 </div>
               ) : null}

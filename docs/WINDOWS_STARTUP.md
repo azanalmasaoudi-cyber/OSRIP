@@ -49,8 +49,8 @@ found, so existing data is reused instead of a second, empty cluster being creat
 log line names the folder in use (`Development data folder: …`). Set `OSRIP_DEV_HOME` to
 choose explicitly.
 
-Optional provider settings (assistant, web search, speech, e-mail, SMS, Google/Microsoft
-sign-in) go in `backend\.env` (copy `backend\.env.example`) and are described in
+Optional provider settings (assistant, web search, speech, e-mail for alerts; sign-in is a
+username and a password only) go in `backend\.env` (copy `backend\.env.example`) and are described in
 `docs/INTEGRATIONS.md`. Everything starts without them; once the API is ready the launcher
 lists which ones are not configured, and the interface says so wherever they would be used.
 

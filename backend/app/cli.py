@@ -1,6 +1,6 @@
 """Operator commands. Run from backend/: ``python -m app.cli <command>``.
 
-create-user --email E --name N [--role R ...] [--grant P ...]
+create-user --username U [--name N] [--role R ...] [--grant P ...]
     Password is read from OSRIP_NEW_USER_PASSWORD or prompted (never an argument,
     so it does not land in shell history).
 ensure-user --username U [--name N]
@@ -49,15 +49,15 @@ def create_user(args: argparse.Namespace) -> None:
         user = accounts.create_user(
             session,
             CLI,
-            email=args.email,
-            display_name=args.name,
+            username=args.username,
+            display_name=args.name or args.username,
             password=password,
             roles=[Role(r) for r in args.role],
         )
         session.flush()
         for permission in args.grant:
             accounts.grant_permission(session, CLI, user.id, Permission(permission))
-        print(f"Created {user.email} ({user.id}) roles={args.role} grants={args.grant}")
+        print(f"Created '{user.username}' ({user.id}) roles={args.role} grants={args.grant}")
 
 
 def ensure_username_user(args: argparse.Namespace) -> None:
@@ -251,8 +251,8 @@ def main(argv: list[str] | None = None) -> None:
     commands = parser.add_subparsers(dest="command", required=True)
 
     p = commands.add_parser("create-user")
-    p.add_argument("--email", required=True)
-    p.add_argument("--name", required=True)
+    p.add_argument("--username", required=True, help="1-10 Arabic or English letters and digits")
+    p.add_argument("--name", help="display name (defaults to the username)")
     p.add_argument("--role", action="append", default=[], choices=[r.value for r in Role])
     p.add_argument("--grant", action="append", default=[], choices=[p.value for p in Permission])
     p.set_defaults(func=create_user)

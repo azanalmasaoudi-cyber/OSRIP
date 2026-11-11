@@ -1,47 +1,32 @@
-import { CheckCircle2, Copy, KeyRound, LogIn, Mail, ShieldCheck, Trash2, UserPlus } from 'lucide-react';
-import { useEffect, useId, useRef, useState, type InputHTMLAttributes, type ReactNode } from 'react';
+import { Copy, KeyRound, UserPlus } from 'lucide-react';
+import { useId, useState, type InputHTMLAttributes, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
 import {
   hasPermission,
-  OIDC_PROVIDERS,
-  oidcStartUrl,
   ROLES,
   useAdminResetPassword,
   useAdminRoles,
   useAdminUsers,
   useChangePassword,
-  useConsumeMagicLink,
-  useDevOutbox,
-  useEmailRequest,
-  useConfirmEmailLink,
-  useDevSmsOutbox,
-  useIdentities,
-  useLinkEmail,
   useLogin,
   useMe,
   useNewRecoveryCode,
-  useProviders,
   useRecover,
   useRegisterUsername,
-  useResetPassword,
   useSetRole,
-  useUnlinkIdentity,
-  useVerifyEmail,
-  type OidcProvider,
-  type PhoneOutcome,
+  useSetUsername,
 } from '@/api/auth';
 import { ApiRequestError } from '@/api/client';
 import { adapterKind } from '@/api/config';
 import { GroupsPanel, RolesPanel, useRoleLabel } from '@/components/admin/AccessControl';
-import { PhoneVerification } from '@/components/auth/PhoneVerification';
 import { useDocumentTitle } from '@/lib/useDocumentTitle';
+import { normalizeUsername, SIGN_IN_USERNAME_MAX, USERNAME_MAX, usernameProblem, wouldExceed } from '@/lib/username';
 import { PageHeader } from '@/components/common/PageHeader';
 import { SettingsSection } from '@/components/settings/SettingsSection';
 import { StatePanel } from '@/components/common/StatePanel';
-import { Badge } from '@/components/ui/badge';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Segmented } from '@/components/ui/segmented';
 import { cn } from '@/lib/utils';
@@ -64,22 +49,21 @@ function Field({ label, hint, ...props }: { label: string; hint?: string } & Inp
 
 // Server error codes with a translation; anything else shows the server's own message.
 const ERROR_CODES = [
-  'wrong_current_password', 'reauthentication_required', 'email_unchanged', 'email_taken', 'invalid_email',
-  'invalid_name', 'invalid_or_expired_token', 'weak_password', 'password_unchanged', 'email_not_configured',
-  'email_delivery_failed', 'too_many_requests', 'invalid_username', 'username_reserved', 'username_taken',
-  'password_mismatch', 'password_contains_username', 'password_too_simple', 'invalid_recovery', 'invalid_credentials',
-  'too_many_attempts', 'email_not_verified', 'no_password', 'own_account',
+  'wrong_current_password', 'weak_password', 'password_unchanged', 'too_many_requests', 'invalid_username',
+  'username_required', 'username_too_long', 'username_reserved', 'username_taken', 'password_mismatch',
+  'password_contains_username', 'password_too_simple', 'invalid_recovery', 'invalid_credentials', 'too_many_attempts',
+  'no_password', 'own_account', 'server_unavailable', 'sign_in_method_retired',
 ] as const;
 
 function ErrorText({ error, className = 'text-sm text-destructive' }: { error: unknown; className?: string }) {
   const { t } = useTranslation();
   if (!error) return null;
-  let message = error instanceof Error ? error.message : 'Request failed.';
+  let message = error instanceof Error ? error.message : t('auth.errors.server_unavailable');
   if (error instanceof ApiRequestError && (ERROR_CODES as readonly string[]).includes(error.code)) {
     const details = (error.details ?? {}) as { minutes?: number };
     message = t(`auth.errors.${error.code as (typeof ERROR_CODES)[number]}`, { minutes: details.minutes ?? 10 });
   }
-  return <p role="alert" className={className}>{message}</p>;
+  return <p role="alert" className={className} data-testid="auth-error">{message}</p>;
 }
 
 function Notice({ tone = 'info', children }: { tone?: 'info' | 'success'; children: ReactNode }) {
@@ -101,95 +85,93 @@ function RequiresApi({ title }: { title: string }) {
   );
 }
 
-const PROVIDER_LABEL: Record<OidcProvider, string> = { google: 'Google', microsoft: 'Microsoft' };
-
-const OIDC_ERRORS = [
-  'sign_in_failed', 'provider_declined', 'invalid_state', 'browser_mismatch', 'token_exchange_failed',
-  'invalid_id_token', 'email_not_verified_by_provider', 'identity_in_use', 'account_unavailable', 'provider_unavailable',
-] as const;
-function oidcErrorKey(code: string): (typeof OIDC_ERRORS)[number] {
-  return OIDC_ERRORS.find((e) => e === code) ?? 'sign_in_failed';
-}
-
-function ProviderButtons({ intent }: { intent: 'sign_in' | 'link' }) {
-  const { t } = useTranslation();
-  const providers = useProviders();
-  if (!providers.data) return null;
+/** The glass card of the sign-in design (AuthLayout and welcome.css). */
+function AuthCard({ title, intro, children, testId }: { title: string; intro?: string; children: ReactNode; testId?: string }) {
   return (
-    <ul className="flex flex-col gap-2" data-testid="oidc-providers">
-      {OIDC_PROVIDERS.map((p) => (
-        <li key={p}>
-          {providers.data.oidc[p] ? (
-            <a href={oidcStartUrl(p, intent)} className={cn(buttonVariants({ variant: 'outline' }), 'w-full')} data-testid={`oidc-${p}`}>
-              <ShieldCheck aria-hidden="true" />
-              {intent === 'link' ? t('account.linkWith', { provider: PROVIDER_LABEL[p] }) : t('account.continueWith', { provider: PROVIDER_LABEL[p] })}
-            </a>
-          ) : (
-            // Not a button: an unconfigured provider is reported, never faked.
-            <p className="rounded-md border border-dashed border-border-strong/50 px-3 py-2 text-sm text-muted-foreground" data-testid={`oidc-${p}-unconfigured`}>
-              {t('account.notConfigured', { provider: PROVIDER_LABEL[p] })}
-            </p>
-          )}
-        </li>
-      ))}
-    </ul>
+    <div className="ow-box" data-testid={testId}>
+      <span aria-hidden="true" className="ow-symbol">O</span>
+      <h1 className="ow-heading">{title}</h1>
+      {intro ? <p className="ow-intro">{intro}</p> : null}
+      {children}
+    </div>
   );
 }
 
-/** The chosen sign-in or registration method lives in ?method= (replaced, not pushed). */
-function useMethodParam<T extends string>(values: readonly T[], fallback: T): [T, (value: T) => void] {
-  const [params, setParams] = useSearchParams();
-  const raw = params.get('method');
-  const value = values.find((v) => v === raw) ?? fallback;
-  const set = (next: T) => setParams((prev) => {
-    const updated = new URLSearchParams(prev);
-    if (next === fallback) updated.delete('method'); else updated.set('method', next);
-    return updated;
-  }, { replace: true });
-  return [value, set];
+/** A password field with Show / Hide (named by its text, so "Password" still finds only the field). */
+function PasswordField({ label, value, onChange, autoComplete, testId, invalid, revealTestId = `${testId}-reveal` }: {
+  label: string; value: string; onChange: (value: string) => void; autoComplete: string; testId: string; invalid?: boolean; revealTestId?: string;
+}) {
+  const { t } = useTranslation();
+  const id = useId();
+  const [reveal, setReveal] = useState(false);
+  return (
+    <div className="ow-field">
+      <label htmlFor={id}>{label}</label>
+      <div className="ow-field-wrap">
+        <input id={id} type={reveal ? 'text' : 'password'} autoComplete={autoComplete} required value={value}
+          onChange={(e) => onChange(e.target.value)} dir="ltr" data-testid={testId} aria-invalid={invalid || undefined}
+          className="ow-input ow-input-reveal" />
+        <button type="button" onClick={() => setReveal((v) => !v)} aria-pressed={reveal} aria-controls={id}
+          data-testid={revealTestId} className="ow-show">
+          <span aria-hidden="true">{reveal ? t('auth.hide') : t('auth.show')}</span>
+          <span className="sr-only">{reveal ? t('auth.hidePassword') : t('auth.showPassword')}</span>
+        </button>
+      </div>
+    </div>
+  );
 }
 
-function useTokenFromUrl(): string | null {
-  const [params] = useSearchParams();
-  const [token] = useState<string | null>(() => params.get('token'));
-  useEffect(() => {
-    // Remove the token from the address bar and history once read.
-    if (params.has('token')) window.history.replaceState(null, '', window.location.pathname);
-  }, [params]);
-  return token;
+/** A new username: at most 10 characters (the field stops there and says so), the rule checked
+ * as people type. Arabic names read right to left, English ones left to right (dir="auto"). */
+function NewUsernameField({ value, onChange, testId }: { value: string; onChange: (value: string) => void; testId: string }) {
+  const { t } = useTranslation();
+  const id = useId();
+  const hintId = useId();
+  const [tooLong, setTooLong] = useState(false);
+  const problem = value.trim() ? usernameProblem(value) : null;
+  const shown = tooLong ? 'username_too_long' : problem;
+  return (
+    <div className="ow-field">
+      <label htmlFor={id}>{t('account.username')}</label>
+      <input id={id} className="ow-input" autoComplete="username" autoCapitalize="none" spellCheck={false} required
+        maxLength={USERNAME_MAX} value={value} dir="auto" aria-describedby={hintId} aria-invalid={shown ? true : undefined}
+        data-testid={testId}
+        onChange={(e) => { onChange(e.target.value); if (e.target.value.length < USERNAME_MAX) setTooLong(false); }}
+        onBeforeInput={(e) => {
+          const data = e.nativeEvent.data ?? '';
+          if (data && wouldExceed(e.currentTarget, data)) setTooLong(true);
+        }}
+        onPaste={(e) => { if (wouldExceed(e.currentTarget, e.clipboardData.getData('text'))) setTooLong(true); }} />
+      {shown ? (
+        <p id={hintId} role="alert" className="ow-error" style={{ margin: '6px 0 0' }} data-testid={`${testId}-problem`}>
+          {t(`auth.errors.${shown}`)}
+        </p>
+      ) : (
+        <p id={hintId} className="ow-hint">{t('auth.usernameRules', { max: USERNAME_MAX })}</p>
+      )}
+    </div>
+  );
 }
 
 // ------------------------------------------------------------------ sign in
 
-/** Usernames: the rule the server applies (accounts.USERNAME_PATTERN), checked as people type. */
-const USERNAME_RULE = /^[A-Za-z][A-Za-z0-9_.-]{2,31}$/;
-
-/** Sign-in with a username and password (the owner's design: AuthLayout and welcome.css). Accounts
- * created with an e-mail address type that address in the same field; phone, e-mail-link, Google
- * and Microsoft sign-in are on /sign-in/other, off the main screen. Nothing else is required. */
+/** Sign-in with a username and a password: the only way in (the owner's design: AuthLayout and
+ * welcome.css). Older accounts keep their longer usernames, so this field accepts them. */
 export function SignInPage() {
   const { t } = useTranslation();
   const login = useLogin();
   const navigate = useNavigate();
   const to = usePreservedSearch();
-  const [params] = useSearchParams();
-  const resend = useEmailRequest('/auth/verify-email/resend');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [reveal, setReveal] = useState(false);
   const [remember, setRemember] = useState(false);
   const usernameId = useId();
-  const usernameHintId = useId();
-  const passwordId = useId();
   const rememberHintId = useId();
   useDocumentTitle(t('auth.title'));
 
   if (adapterKind !== 'http') return <div className="ow-box"><RequiresApi title={t('auth.title')} /></div>;
-
-  const unverified = login.error instanceof ApiRequestError && login.error.code === 'email_not_verified';
-  const notice = params.get('notice');
-  const error = params.get('error');
   const sectors = ['nav.electricity', 'nav.water', 'nav.foodSecurity', 'nav.trade'] as const;
+  const name = normalizeUsername(username);
 
   return (
     <div className="ow-login" data-testid="sign-in-stage">
@@ -204,41 +186,19 @@ export function SignInPage() {
           {sectors.map((key) => <li key={key}>{t(key)}</li>)}
         </ul>
       </div>
-      <div className="ow-box" data-testid="sign-in-card">
-        <span aria-hidden="true" className="ow-symbol">O</span>
-        <h1 className="ow-heading">{t('auth.welcome')}</h1>
-        <p className="ow-intro">{t('auth.intro')}</p>
-        {/* Returns from Google or Microsoft (started on the other page) land here. */}
-        {notice === 'link_required' ? (
-          <p role="status" className="ow-notice">
-            {t('account.linkRequired', { provider: PROVIDER_LABEL[(params.get('provider') as OidcProvider) ?? 'google'] ?? '' })}
-          </p>
-        ) : null}
-        {error ? <p role="alert" className="ow-error" data-testid="oidc-error">{t(`account.oidcError.${oidcErrorKey(error)}`)}</p> : null}
+      <AuthCard title={t('auth.welcome')} intro={t('auth.intro')} testId="sign-in-card">
         <form
-          onSubmit={(e) => { e.preventDefault(); login.mutate({ email: username.trim(), password, remember }, { onSuccess: () => void navigate(to('/account')) }); }}
+          onSubmit={(e) => { e.preventDefault(); login.mutate({ username: name, password, remember }, { onSuccess: () => void navigate(to('/account')) }); }}
           noValidate data-testid="sign-in-form"
         >
           <div className="ow-field">
             <label htmlFor={usernameId}>{t('account.username')}</label>
             <input id={usernameId} className="ow-input" autoComplete="username" autoCapitalize="none" spellCheck={false} required
-              maxLength={320} value={username} onChange={(e) => setUsername(e.target.value)} dir="ltr" aria-describedby={usernameHintId}
+              maxLength={SIGN_IN_USERNAME_MAX} value={username} onChange={(e) => setUsername(e.target.value)} dir="auto"
               data-testid="sign-in-identifier" />
-            <p id={usernameHintId} className="ow-hint">{t('auth.usernameOlder')}</p>
           </div>
-          <div className="ow-field">
-            <label htmlFor={passwordId}>{t('auth.password')}</label>
-            <div className="ow-field-wrap">
-              <input id={passwordId} type={reveal ? 'text' : 'password'} autoComplete="current-password" required value={password}
-                onChange={(e) => setPassword(e.target.value)} dir="ltr" data-testid="sign-in-password" className="ow-input ow-input-reveal" />
-              {/* Named by its text (not aria-label), so "Password" still finds only the field. */}
-              <button type="button" onClick={() => setReveal((v) => !v)} aria-pressed={reveal} aria-controls={passwordId} data-testid="sign-in-reveal"
-                className="ow-show">
-                <span aria-hidden="true">{reveal ? t('auth.hide') : t('auth.show')}</span>
-                <span className="sr-only">{reveal ? t('auth.hidePassword') : t('auth.showPassword')}</span>
-              </button>
-            </div>
-          </div>
+          <PasswordField label={t('auth.password')} value={password} onChange={setPassword} autoComplete="current-password" testId="sign-in-password"
+            revealTestId="sign-in-reveal" />
           <div className="ow-row">
             <label className="ow-check">
               <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} aria-describedby={rememberHintId}
@@ -249,119 +209,64 @@ export function SignInPage() {
           </div>
           <p id={rememberHintId} className="ow-hint" style={{ margin: '-10px 0 16px' }}>{t('auth.rememberHint')}</p>
           <ErrorText error={login.error} className="ow-error" />
-          {unverified ? (
-            <button type="button" className="ow-secondary" style={{ minHeight: 40, marginBottom: 12 }}
-              onClick={() => resend.mutate(username.trim())} disabled={resend.isPending}>
-              <Mail aria-hidden="true" className="size-4" />{t('account.resend')}
-            </button>
-          ) : null}
-          {resend.isSuccess ? <p role="status" className="ow-notice">{t('account.checkInbox')}</p> : null}
-          <button type="submit" className="ow-primary ow-submit" disabled={login.isPending || !username.trim() || !password}>
+          <button type="submit" className="ow-primary ow-submit" disabled={login.isPending || !name || !password}>
             {login.isPending ? t('auth.submitting') : t('auth.submit')}<span aria-hidden="true" className="ow-arrow">→</span>
           </button>
         </form>
-        <p className="ow-fine" data-testid="sign-in-only-username">{t('auth.onlyUsername')}</p>
         <div className="ow-links">
-          <Link to={to('/register')} className="ow-link">{t('account.createAccount')}</Link>
-          <Link to={to('/sign-in/other')} className="ow-link" data-testid="sign-in-other">{t('auth.otherWays')}</Link>
+          <Link to={to('/register')} className="ow-link" data-testid="sign-in-register">{t('account.createAccount')}</Link>
         </div>
         {/* The welcome again (AppShell shows it for { welcome: true }), not only once per session. */}
         <button type="button" className="ow-back" onClick={() => void navigate(to('/'), { state: { welcome: true } })} data-testid="sign-in-back">
           <span aria-hidden="true" className="ow-arrow">←</span> {t('auth.backToIntro')}
         </button>
-      </div>
+      </AuthCard>
     </div>
-  );
-}
-
-/** Older accounts: a link by e-mail, a code by SMS or WhatsApp (a new number becomes an
- * ordinary account), Google and Microsoft, and the reset by e-mail. */
-export function OtherSignInPage() {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const to = usePreservedSearch();
-  const providers = useProviders();
-  const magic = useEmailRequest('/auth/magic-link');
-  const [method, setMethod] = useMethodParam(['magic', 'phone'] as const, 'magic');
-  const [email, setEmail] = useState('');
-
-  if (adapterKind !== 'http') return <RequiresApi title={t('auth.otherTitle')} />;
-  return (
-    <>
-      <PageHeader title={t('auth.otherTitle')} intro={t('auth.otherIntro')} />
-      <div className="grid max-w-3xl gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,18rem)]">
-        <div className="surface-card flex flex-col gap-4 p-6">
-          <Segmented label={t('account.method')} value={method} onChange={setMethod} testId="sign-in-method" options={[
-            { value: 'magic', label: t('account.methodMagic'), note: providers.data?.magic_link === false ? t('phone.unavailableShort') : undefined },
-            { value: 'phone', label: t('phone.methodPhone'), note: providers.data?.sms.available === false ? t('phone.unavailableShort') : undefined },
-          ]} />
-          {method === 'phone' ? (
-            <PhoneVerification purpose="sign_in" askName onDone={() => void navigate(to('/account'))} onUseEmail={() => setMethod('magic')} />
-          ) : (
-            <form onSubmit={(e) => { e.preventDefault(); magic.mutate(email); }} className="flex flex-col gap-4" noValidate data-testid="magic-form">
-              <Field label={t('auth.email')} type="email" autoComplete="email" required value={email}
-                onChange={(e) => setEmail(e.target.value)} dir="ltr" />
-              <p className="text-sm text-muted-foreground">{t('account.magicHint')}</p>
-              <ErrorText error={magic.error} />
-              {magic.isSuccess ? <Notice>{t('account.checkInbox')}</Notice> : null}
-              <Button type="submit" disabled={magic.isPending || !email}><Mail aria-hidden="true" />{t('account.sendLink')}</Button>
-            </form>
-          )}
-          <div className="flex flex-wrap justify-between gap-2 text-sm">
-            <Link to={to('/forgot-password/email')} className="text-primary underline underline-offset-2">{t('account.emailResetLink')}</Link>
-            <Link to={to('/sign-in')} className="text-primary underline underline-offset-2">{t('auth.backToSignIn')}</Link>
-          </div>
-        </div>
-        <section aria-labelledby="providers-heading" className="flex flex-col gap-3">
-          <h2 id="providers-heading" className="text-sm font-semibold">{t('account.otherMethods')}</h2>
-          <ProviderButtons intent="sign_in" />
-          {providers.data?.email_delivery === 'outbox' ? <DevMailHint /> : null}
-          {providers.data?.email_delivery === 'disabled' ? <Notice>{t('account.emailDisabled')}</Notice> : null}
-        </section>
-      </div>
-    </>
   );
 }
 
 /** The recovery code, shown once: copy it, confirm it was saved, then continue. */
-function RecoveryCodePanel({ code, onContinue, heading = true }: { code: string; onContinue: () => void; heading?: boolean }) {
+function RecoveryCodePanel({ code, onContinue, glass = false }: { code: string; onContinue: () => void; glass?: boolean }) {
   const { t } = useTranslation();
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
+  const copy = () => { void navigator.clipboard?.writeText(code).then(() => setCopied(true), () => setCopied(false)); };
   return (
     <div className="flex flex-col gap-4" data-testid="recovery-panel">
-      {heading ? <h2 className="text-lg font-semibold">{t('account.recoveryTitle')}</h2> : null}
-      <p className="text-base">{t('account.recoveryShownOnce')}</p>
-      <p className="rounded-md border border-sand/60 bg-sand-subtle px-4 py-3 text-center font-mono text-xl tracking-wider select-all"
+      <p className={glass ? 'ow-notice' : 'text-base'}>{t('account.recoveryShownOnce')}</p>
+      <p className="rounded-md border border-sand/60 bg-sand-subtle px-4 py-3 text-center font-mono text-xl tracking-wider text-sand-foreground select-all"
         dir="ltr" data-testid="recovery-code">{code}</p>
-      <Button type="button" variant="outline" className="w-fit" data-testid="recovery-copy"
-        onClick={() => { void navigator.clipboard?.writeText(code).then(() => setCopied(true), () => setCopied(false)); }}>
-        <Copy aria-hidden="true" />{copied ? t('account.recoveryCopied') : t('account.recoveryCopy')}
-      </Button>
-      <label className="flex items-start gap-2 text-base">
-        <input type="checkbox" checked={saved} onChange={(e) => setSaved(e.target.checked)} className="mt-1 size-4 accent-primary"
+      {glass ? (
+        <button type="button" className="ow-secondary" onClick={copy} data-testid="recovery-copy">
+          <Copy aria-hidden="true" className="size-4" />{copied ? t('account.recoveryCopied') : t('account.recoveryCopy')}
+        </button>
+      ) : (
+        <Button type="button" variant="outline" className="w-fit" data-testid="recovery-copy" onClick={copy}>
+          <Copy aria-hidden="true" />{copied ? t('account.recoveryCopied') : t('account.recoveryCopy')}
+        </Button>
+      )}
+      <label className={glass ? 'ow-check' : 'flex items-start gap-2 text-base'}>
+        <input type="checkbox" checked={saved} onChange={(e) => setSaved(e.target.checked)} className={glass ? undefined : 'mt-1 size-4 accent-primary'}
           data-testid="recovery-saved" />
         {t('account.recoverySaved')}
       </label>
-      <Button type="button" className="w-fit" disabled={!saved} onClick={onContinue} data-testid="recovery-continue">
-        {t('account.recoveryContinue')}
-      </Button>
+      {glass ? (
+        <button type="button" className="ow-primary ow-submit" disabled={!saved} onClick={onContinue} data-testid="recovery-continue">
+          {t('account.recoveryContinue')}<span aria-hidden="true" className="ow-arrow">→</span>
+        </button>
+      ) : (
+        <Button type="button" className="w-fit" disabled={!saved} onClick={onContinue} data-testid="recovery-continue">
+          {t('account.recoveryContinue')}
+        </Button>
+      )}
     </div>
-  );
-}
-
-function DevMailHint() {
-  const { t } = useTranslation();
-  const to = usePreservedSearch();
-  return (
-    <p className="rounded-md border border-dashed border-synthetic-border bg-synthetic px-3 py-2 text-xs text-synthetic-foreground">
-      {t('account.devMailHint')} <Link to={to('/dev/mail')} className="underline">{t('account.devMailLink')}</Link>
-    </p>
   );
 }
 
 // ------------------------------------------------------------------ register
 
+/** Registration: a username, a password and the password again. Nothing else is asked; the
+ * account is an ordinary (viewer) one, whatever is sent. */
 export function RegisterPage() {
   const { t } = useTranslation();
   const register = useRegisterUsername();
@@ -370,79 +275,45 @@ export function RegisterPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  useDocumentTitle(t('account.registerTitle'));
 
-  if (adapterKind !== 'http') return <RequiresApi title={t('account.registerTitle')} />;
+  if (adapterKind !== 'http') return <div className="ow-box"><RequiresApi title={t('account.registerTitle')} /></div>;
   if (register.data) {
     return (
-      <>
-        <PageHeader title={t('account.registeredTitle')} />
-        <div className="surface-card max-w-md p-6" data-testid="register-done">
-          <RecoveryCodePanel code={register.data.recovery_code} onContinue={() => void navigate(to('/account'))} />
-        </div>
-      </>
+      <AuthCard title={t('account.registeredTitle')} testId="register-done">
+        <RecoveryCodePanel glass code={register.data.recovery_code} onContinue={() => void navigate(to('/account'))} />
+      </AuthCard>
     );
   }
-  const name = username.trim();
-  const badName = name.length > 0 && !USERNAME_RULE.test(name);
+  const name = normalizeUsername(username);
   const mismatch = confirm.length > 0 && confirm !== password;
-
   return (
-    <>
-      <PageHeader title={t('account.registerTitle')} intro={t('account.registerIntro')} />
-      <div className="surface-card flex max-w-md flex-col gap-5 p-6" data-testid="register-card">
-        <form onSubmit={(e) => { e.preventDefault(); register.mutate({ username: name, password, password_confirm: confirm }); }}
-          className="flex flex-col gap-4" noValidate data-testid="register-form">
-          <Field label={t('account.username')} autoComplete="username" autoCapitalize="none" spellCheck={false} required maxLength={32}
-            value={username} onChange={(e) => setUsername(e.target.value)} dir="ltr" hint={t('auth.usernameRules')}
-            aria-invalid={badName || undefined} data-testid="register-username" />
-          {badName ? <p className="text-sm text-destructive" data-testid="register-username-problem">{t('auth.errors.invalid_username')}</p> : null}
-          <Field label={t('auth.password')} type="password" autoComplete="new-password" required minLength={12} value={password}
-            onChange={(e) => setPassword(e.target.value)} dir="ltr" hint={t('account.passwordHint')} data-testid="register-password" />
-          <Field label={t('auth.confirmPassword')} type="password" autoComplete="new-password" required value={confirm}
-            onChange={(e) => setConfirm(e.target.value)} dir="ltr" aria-invalid={mismatch || undefined} data-testid="register-confirm" />
-          {mismatch ? <p className="text-sm text-destructive" data-testid="register-mismatch">{t('auth.errors.password_mismatch')}</p> : null}
-          <ErrorText error={register.error} />
-          <p className="text-sm text-muted-foreground">{t('account.ordinaryAccess')}</p>
-          <Button type="submit" disabled={register.isPending || !name || badName || password.length < 12 || confirm !== password}
-            data-testid="register-submit">
-            <UserPlus aria-hidden="true" />{t('account.createAccount')}
-          </Button>
-        </form>
-        <Link to={to('/sign-in')} className="text-base text-primary underline underline-offset-2">{t('account.haveAccount')}</Link>
+    <AuthCard title={t('account.registerTitle')} testId="register-card">
+      <form onSubmit={(e) => { e.preventDefault(); register.mutate({ username: name, password, password_confirm: confirm }); }}
+        noValidate data-testid="register-form">
+        <NewUsernameField value={username} onChange={setUsername} testId="register-username" />
+        <PasswordField label={t('auth.password')} value={password} onChange={setPassword} autoComplete="new-password" testId="register-password" />
+        <PasswordField label={t('auth.confirmPassword')} value={confirm} onChange={setConfirm} autoComplete="new-password"
+          testId="register-confirm" invalid={mismatch} />
+        {mismatch ? <p className="ow-error" role="alert" data-testid="register-mismatch">{t('auth.errors.password_mismatch')}</p> : null}
+        <p className="ow-hint" style={{ margin: '-8px 0 16px' }}>{t('account.passwordHint')}</p>
+        <ErrorText error={register.error} className="ow-error" />
+        <button type="submit" className="ow-primary ow-submit" data-testid="register-submit"
+          disabled={register.isPending || usernameProblem(username) !== null || password.length < 12 || confirm !== password}>
+          <UserPlus aria-hidden="true" className="size-4" />{t('account.createAccount')}
+        </button>
+      </form>
+      <div className="ow-links">
+        <Link to={to('/sign-in')} className="ow-link">{t('account.haveAccount')}</Link>
       </div>
-    </>
+    </AuthCard>
   );
 }
 
-// ------------------------------------------------------------------ links from e-mail
+// ------------------------------------------------------------------ forgotten password
 
-export function VerifyEmailPage() {
-  const { t } = useTranslation();
-  const token = useTokenFromUrl();
-  const verify = useVerifyEmail();
-  const to = usePreservedSearch();
-  const started = useRef(false);
-  useEffect(() => {
-    if (token && !started.current) {
-      started.current = true;
-      verify.mutate(token);
-    }
-  }, [token, verify]);
-  return (
-    <>
-      <PageHeader title={t('account.verifyTitle')} />
-      <div className="flex max-w-lg flex-col gap-3" data-testid="verify-result">
-        {!token ? <Notice>{t('account.missingToken')}</Notice> : null}
-        {verify.isPending ? <StatePanel kind="loading" skeleton="lines" /> : null}
-        {verify.isSuccess ? <Notice tone="success"><CheckCircle2 aria-hidden="true" className="me-1 inline size-4" />{t('account.verified')}</Notice> : null}
-        <ErrorText error={verify.error} />
-        <Link to={to('/sign-in')} className={cn(buttonVariants({ variant: 'outline' }), 'w-fit')}>{t('auth.signIn')}</Link>
-      </div>
-    </>
-  );
-}
-
-/** A forgotten password: the username, the recovery code and a new password. */
+/** A forgotten password: the username, the recovery code and a new password. Without the code an
+ * administrator resets the password; knowing a username alone never resets anything. */
 export function ForgotPasswordPage() {
   const { t } = useTranslation();
   const recover = useRecover();
@@ -452,119 +323,54 @@ export function ForgotPasswordPage() {
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const usernameId = useId();
+  const codeId = useId();
+  useDocumentTitle(t('account.forgotTitle'));
 
-  if (adapterKind !== 'http') return <RequiresApi title={t('account.forgotTitle')} />;
+  if (adapterKind !== 'http') return <div className="ow-box"><RequiresApi title={t('account.forgotTitle')} /></div>;
   if (recover.data) {
     return (
-      <>
-        <PageHeader title={t('account.recoveredTitle')} />
-        <div className="surface-card flex max-w-md flex-col gap-4 p-6" data-testid="recover-done">
-          <Notice tone="success">{t('account.recoveredNotice')}</Notice>
-          <RecoveryCodePanel code={recover.data.recovery_code} onContinue={() => void navigate(to('/account'))} />
-        </div>
-      </>
+      <AuthCard title={t('account.recoveredTitle')} intro={t('account.recoveredNotice')} testId="recover-done">
+        <RecoveryCodePanel glass code={recover.data.recovery_code} onContinue={() => void navigate(to('/account'))} />
+      </AuthCard>
     );
   }
   const mismatch = confirm.length > 0 && confirm !== password;
+  const name = normalizeUsername(username);
   return (
-    <>
-      <PageHeader title={t('account.forgotTitle')} intro={t('account.forgotIntro')} />
-      <div className="surface-card flex max-w-md flex-col gap-5 p-6">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            recover.mutate({ username: username.trim(), recovery_code: code, new_password: password, new_password_confirm: confirm });
-          }}
-          noValidate className="flex flex-col gap-4" data-testid="recover-form"
-        >
-          <Field label={t('account.username')} autoComplete="username" autoCapitalize="none" spellCheck={false} required
-            value={username} onChange={(e) => setUsername(e.target.value)} dir="ltr" data-testid="recover-username" />
-          <Field label={t('account.recoveryCodeLabel')} autoComplete="off" autoCapitalize="characters" spellCheck={false} required
+    <AuthCard title={t('account.forgotTitle')} intro={t('account.forgotIntro')} testId="recover-card">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          recover.mutate({ username: name, recovery_code: code, new_password: password, new_password_confirm: confirm });
+        }}
+        noValidate data-testid="recover-form"
+      >
+        <div className="ow-field">
+          <label htmlFor={usernameId}>{t('account.username')}</label>
+          <input id={usernameId} className="ow-input" autoComplete="username" autoCapitalize="none" spellCheck={false} required
+            maxLength={SIGN_IN_USERNAME_MAX} value={username} onChange={(e) => setUsername(e.target.value)} dir="auto" data-testid="recover-username" />
+        </div>
+        <div className="ow-field">
+          <label htmlFor={codeId}>{t('account.recoveryCodeLabel')}</label>
+          <input id={codeId} className="ow-input" autoComplete="off" autoCapitalize="characters" spellCheck={false} required
             value={code} onChange={(e) => setCode(e.target.value)} dir="ltr" placeholder="ABCD-EFGH-JKMN-PQRS-TWXY" data-testid="recover-code" />
-          <Field label={t('account.newPassword')} type="password" autoComplete="new-password" required minLength={12} value={password}
-            onChange={(e) => setPassword(e.target.value)} dir="ltr" hint={t('account.passwordHint')} data-testid="recover-password" />
-          <Field label={t('auth.confirmPassword')} type="password" autoComplete="new-password" required value={confirm}
-            onChange={(e) => setConfirm(e.target.value)} dir="ltr" aria-invalid={mismatch || undefined} data-testid="recover-confirm" />
-          {mismatch ? <p className="text-sm text-destructive">{t('auth.errors.password_mismatch')}</p> : null}
-          <ErrorText error={recover.error} />
-          <Button type="submit" disabled={recover.isPending || !username.trim() || !code.trim() || password.length < 12 || confirm !== password}
-            data-testid="recover-submit">
-            <KeyRound aria-hidden="true" />{t('account.recoverSubmit')}
-          </Button>
-        </form>
-        <p className="text-sm text-muted-foreground">{t('account.noRecoveryCode')}</p>
-        <Link to={to('/sign-in')} className="text-base text-primary underline underline-offset-2">{t('auth.backToSignIn')}</Link>
-      </div>
-    </>
-  );
-}
-
-/** The reset link by e-mail, for accounts with a confirmed address (from "Other ways to sign in"). */
-export function EmailForgotPasswordPage() {
-  const { t } = useTranslation();
-  const forgot = useEmailRequest('/auth/password/forgot');
-  const [email, setEmail] = useState('');
-  return (
-    <>
-      <PageHeader title={t('account.emailForgotTitle')} intro={t('account.emailForgotIntro')} />
-      <form onSubmit={(e) => { e.preventDefault(); forgot.mutate(email); }} noValidate
-        className="flex max-w-md flex-col gap-4 rounded-lg border border-border bg-card p-6" data-testid="forgot-form">
-        <Field label={t('auth.email')} type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" />
-        <ErrorText error={forgot.error} />
-        {forgot.isSuccess ? <Notice tone="success">{t('account.checkInbox')}</Notice> : null}
-        <Button type="submit" disabled={forgot.isPending || !email}><KeyRound aria-hidden="true" />{t('account.sendResetLink')}</Button>
+        </div>
+        <PasswordField label={t('account.newPassword')} value={password} onChange={setPassword} autoComplete="new-password" testId="recover-password" />
+        <PasswordField label={t('auth.confirmPassword')} value={confirm} onChange={setConfirm} autoComplete="new-password"
+          testId="recover-confirm" invalid={mismatch} />
+        {mismatch ? <p className="ow-error" role="alert">{t('auth.errors.password_mismatch')}</p> : null}
+        <ErrorText error={recover.error} className="ow-error" />
+        <button type="submit" className="ow-primary ow-submit" data-testid="recover-submit"
+          disabled={recover.isPending || !name || !code.trim() || password.length < 12 || confirm !== password}>
+          <KeyRound aria-hidden="true" className="size-4" />{t('account.recoverSubmit')}
+        </button>
       </form>
-    </>
-  );
-}
-
-export function ResetPasswordPage() {
-  const { t } = useTranslation();
-  const token = useTokenFromUrl();
-  const reset = useResetPassword();
-  const to = usePreservedSearch();
-  const [password, setPassword] = useState('');
-  return (
-    <>
-      <PageHeader title={t('account.resetTitle')} intro={t('account.resetIntro')} />
-      {!token ? <Notice>{t('account.missingToken')}</Notice> : reset.isSuccess ? (
-        <div className="flex max-w-lg flex-col gap-3" data-testid="reset-done">
-          <Notice tone="success">{t('account.resetDone')}</Notice>
-          <Link to={to('/sign-in')} className={cn(buttonVariants({ variant: 'outline' }), 'w-fit')}>{t('auth.signIn')}</Link>
-        </div>
-      ) : (
-        <form onSubmit={(e) => { e.preventDefault(); reset.mutate({ token, password }); }} noValidate
-          className="flex max-w-md flex-col gap-4 rounded-lg border border-border bg-card p-6" data-testid="reset-form">
-          <Field label={t('account.newPassword')} type="password" autoComplete="new-password" required minLength={12}
-            value={password} onChange={(e) => setPassword(e.target.value)} dir="ltr" hint={t('account.passwordHint')} />
-          <ErrorText error={reset.error} />
-          <Button type="submit" disabled={reset.isPending || password.length < 12}><KeyRound aria-hidden="true" />{t('account.setPassword')}</Button>
-        </form>
-      )}
-    </>
-  );
-}
-
-export function MagicLinkPage() {
-  const { t } = useTranslation();
-  const token = useTokenFromUrl();
-  const consume = useConsumeMagicLink();
-  const navigate = useNavigate();
-  const to = usePreservedSearch();
-  // A button, not an automatic request: mail scanners that open links must not spend the token.
-  return (
-    <>
-      <PageHeader title={t('account.magicTitle')} intro={t('account.magicIntro')} />
-      {!token ? <Notice>{t('account.missingToken')}</Notice> : (
-        <div className="flex max-w-md flex-col gap-3">
-          <Button onClick={() => consume.mutate(token, { onSuccess: () => void navigate(to('/account')) })}
-            disabled={consume.isPending || consume.isSuccess} className="w-fit" data-testid="magic-sign-in">
-            <LogIn aria-hidden="true" />{t('auth.signIn')}
-          </Button>
-          <ErrorText error={consume.error} />
-        </div>
-      )}
-    </>
+      <p className="ow-fine">{t('account.noRecoveryCode')}</p>
+      <div className="ow-links">
+        <Link to={to('/sign-in')} className="ow-link">{t('auth.backToSignIn')}</Link>
+      </div>
+    </AuthCard>
   );
 }
 
@@ -573,11 +379,7 @@ export function MagicLinkPage() {
 export function AccountPage() {
   const { t } = useTranslation();
   const me = useMe();
-  const [params] = useSearchParams();
-  const identities = useIdentities(Boolean(me.data?.authenticated));
-  const unlink = useUnlinkIdentity();
   const to = usePreservedSearch();
-  const [phoneLinkedNow, setPhoneLinkedNow] = useState(false);
 
   // Settings stored in this browser are available signed in or not, and without the API.
   if (adapterKind !== 'http') return <><RequiresApi title={t('account.title')} /><div className="mt-6 max-w-3xl"><SettingsSection /></div></>;
@@ -593,9 +395,6 @@ export function AccountPage() {
       </>
     );
   }
-  const signedIn = params.get('signed_in');
-  const linked = params.get('linked');
-
   if (me.data.password_change_required) {
     // A temporary password: nothing else on the account works until it is replaced.
     return (
@@ -605,63 +404,22 @@ export function AccountPage() {
       </>
     );
   }
-
   return (
     <>
       <PageHeader title={t('account.title')} intro={t('account.intro')} />
       <div className="flex max-w-3xl flex-col gap-6" data-testid="account-page">
-        {signedIn ? <Notice tone="success">{t('account.signedInWith', { provider: PROVIDER_LABEL[signedIn as OidcProvider] ?? signedIn })}</Notice> : null}
-        {linked ? <Notice tone="success">{t('account.linkedNotice', { provider: PROVIDER_LABEL[linked as OidcProvider] ?? linked })}</Notice> : null}
         <Card className="p-5">
           <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[auto_1fr]">
             <dt className="text-muted-foreground">{t('account.name')}</dt><dd>{me.data.display_name}</dd>
-            {me.data.username ? (
-              <><dt className="text-muted-foreground">{t('account.username')}</dt><dd dir="ltr" data-testid="account-username">{me.data.username}</dd></>
-            ) : null}
-            <dt className="text-muted-foreground">{t('auth.email')}</dt>
-            <dd data-testid="account-email">
-              {me.data.email ? (
-                <span dir="ltr">{me.data.email}{' '}
-                  <Badge variant={me.data.email_verified ? 'verified' : 'sand'}>{me.data.email_verified ? t('account.emailVerified') : t('account.emailUnverified')}</Badge>
-                </span>
-              ) : <span className="text-muted-foreground">{t('account.noEmail')}</span>}
-            </dd>
-            <dt className="text-muted-foreground">{t('phone.number')}</dt>
-            <dd data-testid="account-phone">
-              {me.data.phone ? (
-                <span><span dir="ltr" className="tabular-nums">{me.data.phone}</span>{' '}<Badge variant="verified">{t('phone.verified')}</Badge></span>
-              ) : <span className="text-muted-foreground">{t('phone.none')}</span>}
-            </dd>
+            <dt className="text-muted-foreground">{t('account.username')}</dt>
+            <dd dir="auto" data-testid="account-username">{me.data.username ?? '—'}</dd>
             <dt className="text-muted-foreground">{t('account.roles')}</dt>
             <dd data-testid="account-roles">{me.data.roles.map((r) => t(`account.role.${r as 'viewer'}`)).join(document.documentElement.lang === 'ar' ? '، ' : ', ') || '—'}</dd>
           </dl>
           <p className="mt-3 text-xs text-muted-foreground">{t('account.rolesNote')}</p>
         </Card>
-        {/* Stays mounted just after linking so its confirmation is shown. */}
-        {!me.data.phone || phoneLinkedNow ? <AddPhone onLinked={() => setPhoneLinkedNow(true)} /> : <ChangePhone hasPassword={me.data.has_password === true} />}
-        {!me.data.email || !me.data.email_verified
-          ? <AddEmail unconfirmed={me.data.email ?? null} />
-          : <ChangeEmail hasPassword={me.data.has_password === true} />}
         {me.data.has_password ? <ChangePassword /> : null}
         {me.data.has_password ? <RecoveryCodeSection has={me.data.has_recovery_code === true} /> : null}
-        <section aria-labelledby="linked-heading" className="flex flex-col gap-3">
-          <h2 id="linked-heading" className="text-lg font-semibold">{t('account.linkedHeading')}</h2>
-          <p className="text-sm text-muted-foreground">{t('account.linkedIntro')}</p>
-          {identities.data && identities.data.length > 0 ? (
-            <ul className="flex flex-col gap-2" data-testid="identities">
-              {identities.data.map((i) => (
-                <li key={i.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm">
-                  <span>{PROVIDER_LABEL[i.provider]} <span className="text-muted-foreground" dir="ltr">{i.email}</span></span>
-                  <Button variant="ghost" size="sm" onClick={() => unlink.mutate(i.id)} disabled={unlink.isPending}>
-                    <Trash2 aria-hidden="true" />{t('account.unlink')}
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          ) : <p className="text-sm text-muted-foreground">{t('account.noLinked')}</p>}
-          <ErrorText error={unlink.error} />
-          <ProviderButtons intent="link" />
-        </section>
         <SettingsSection />
       </div>
     </>
@@ -677,7 +435,7 @@ function RecoveryCodeSection({ has }: { has: boolean }) {
     <section aria-labelledby="recovery-section-heading" className="surface-card flex flex-col gap-3 p-5" data-testid="recovery-section">
       <h2 id="recovery-section-heading" className="text-lg font-semibold">{t('account.recoverySectionTitle')}</h2>
       {create.data ? (
-        <RecoveryCodePanel code={create.data.recovery_code} heading={false} onContinue={() => create.reset()} />
+        <RecoveryCodePanel code={create.data.recovery_code} onContinue={() => create.reset()} />
       ) : (
         <>
           <p className="text-base text-muted-foreground" data-testid="recovery-status">{has ? t('account.recoveryHas') : t('account.recoveryNone')}</p>
@@ -726,134 +484,6 @@ function ChangePassword({ required = false }: { required?: boolean }) {
   );
 }
 
-function AddPhone({ onLinked }: { onLinked: () => void }) {
-  const { t } = useTranslation();
-  const providers = useProviders();
-  const [open, setOpen] = useState(false);
-  const [done, setDone] = useState(false);
-  return (
-    <section aria-labelledby="add-phone-heading" className="surface-card flex flex-col gap-3 p-5" data-testid="add-phone">
-      <h2 id="add-phone-heading" className="text-lg font-semibold">{t('phone.addTitle')}</h2>
-      <p className="text-sm text-muted-foreground">{providers.data?.sms.channel === 'whatsapp' ? t('phone.whatsapp.addIntro') : t('phone.addIntro')}</p>
-      {done ? <Notice tone="success">{t('phone.linked')}</Notice> : open ? (
-        <PhoneVerification purpose="link" onDone={() => { setDone(true); onLinked(); }} />
-      ) : (
-        <Button variant="outline" className="w-fit" onClick={() => setOpen(true)} data-testid="add-phone-open">{t('phone.addButton')}</Button>
-      )}
-    </section>
-  );
-}
-
-function ChangePhone({ hasPassword }: { hasPassword: boolean }) {
-  const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const [outcome, setOutcome] = useState<PhoneOutcome | null>(null);
-  return (
-    <section aria-labelledby="change-phone-heading" className="surface-card flex flex-col gap-3 p-5" data-testid="change-phone">
-      <h2 id="change-phone-heading" className="text-lg font-semibold">{t('phone.changeTitle')}</h2>
-      <p className="text-sm text-muted-foreground">{t('phone.changeIntro')}</p>
-      {!hasPassword ? <p className="text-xs text-muted-foreground">{t('account.reauthNote')}</p> : null}
-      {outcome ? <Notice tone="success">{outcome === 'changed' ? t('phone.changed') : t('phone.linked')}</Notice> : open ? (
-        <PhoneVerification purpose="link" askPassword={hasPassword} onDone={setOutcome} />
-      ) : (
-        <Button variant="outline" className="w-fit" onClick={() => setOpen(true)} data-testid="change-phone-open">{t('phone.changeButton')}</Button>
-      )}
-    </section>
-  );
-}
-
-/** Add an address, or confirm the unconfirmed one the account already shows (prefilled). */
-function AddEmail({ unconfirmed }: { unconfirmed: string | null }) {
-  const { t } = useTranslation();
-  const link = useLinkEmail();
-  const providers = useProviders();
-  const [email, setEmail] = useState(unconfirmed ?? '');
-  const again = unconfirmed !== null && email.trim().toLowerCase() === unconfirmed.toLowerCase();
-  return (
-    <section aria-labelledby="add-email-heading" className="surface-card flex flex-col gap-3 p-5" data-testid="add-email">
-      <h2 id="add-email-heading" className="text-lg font-semibold">{t('account.addEmailTitle')}</h2>
-      <p className="text-sm text-muted-foreground">{t('account.addEmailIntro')}</p>
-      {providers.data?.email_delivery === 'disabled' ? <Notice>{t('account.emailDisabled')}</Notice> : link.isSuccess ? (
-        <Notice tone="success">{again ? t('account.confirmationSent') : t('account.checkInbox')}</Notice>
-      ) : (
-        <form onSubmit={(e) => { e.preventDefault(); link.mutate({ email }); }} noValidate className="flex flex-col gap-3">
-          <Field label={t('auth.email')} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" />
-          <ErrorText error={link.error} />
-          <Button type="submit" variant="outline" className="w-fit" disabled={link.isPending || !email} data-testid="add-email-submit">
-            <Mail aria-hidden="true" />{again ? t('account.resendConfirmation') : t('account.sendConfirmLink')}
-          </Button>
-        </form>
-      )}
-    </section>
-  );
-}
-
-/** Replace a confirmed address: the change happens only when the link sent to the new one is opened. */
-function ChangeEmail({ hasPassword }: { hasPassword: boolean }) {
-  const { t } = useTranslation();
-  const link = useLinkEmail();
-  const providers = useProviders();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [sentTo, setSentTo] = useState<string | null>(null);
-  return (
-    <section aria-labelledby="change-email-heading" className="surface-card flex flex-col gap-3 p-5" data-testid="change-email">
-      <h2 id="change-email-heading" className="text-lg font-semibold">{t('account.changeEmailTitle')}</h2>
-      <p className="text-sm text-muted-foreground">{t('account.changeEmailIntro')}</p>
-      {providers.data?.email_delivery === 'disabled' ? <Notice>{t('account.emailDisabled')}</Notice> : sentTo ? (
-        <Notice tone="success"><span>{t('account.changeEmailSent', { email: sentTo })}</span></Notice>
-      ) : (
-        <form
-          noValidate
-          className="flex flex-col gap-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            link.mutate({ email, password: hasPassword ? password : undefined }, {
-              onSuccess: () => { setSentTo(email.trim()); setPassword(''); },
-            });
-          }}
-        >
-          <Field label={t('account.newEmail')} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)}
-            dir="ltr" data-testid="change-email-address" />
-          {hasPassword ? (
-            <Field label={t('account.currentPassword')} type="password" autoComplete="current-password" value={password}
-              onChange={(e) => setPassword(e.target.value)} dir="ltr" data-testid="change-email-password" />
-          ) : <p className="text-xs text-muted-foreground">{t('account.reauthNote')}</p>}
-          <ErrorText error={link.error} />
-          <Button type="submit" variant="outline" className="w-fit" disabled={link.isPending || !email || (hasPassword && !password)}
-            data-testid="change-email-submit">
-            <Mail aria-hidden="true" />{t('account.sendChangeLink')}
-          </Button>
-        </form>
-      )}
-    </section>
-  );
-}
-
-export function LinkEmailPage() {
-  const { t } = useTranslation();
-  const token = useTokenFromUrl();
-  const confirm = useConfirmEmailLink();
-  const to = usePreservedSearch();
-  // A button, not an automatic request: mail scanners that open links must not spend the token.
-  return (
-    <>
-      <PageHeader title={t('account.linkEmailTitle')} intro={t('account.linkEmailIntro')} />
-      {!token ? <Notice>{t('account.missingToken')}</Notice> : (
-        <div className="flex max-w-md flex-col gap-3" data-testid="link-email">
-          {confirm.isSuccess ? <Notice tone="success">{confirm.data.status === 'changed' ? t('account.emailChanged') : t('account.emailLinked')}</Notice> : (
-            <Button onClick={() => confirm.mutate(token)} disabled={confirm.isPending} className="w-fit" data-testid="link-email-confirm">
-              <CheckCircle2 aria-hidden="true" />{t('account.confirmEmail')}
-            </Button>
-          )}
-          <ErrorText error={confirm.error} />
-          <Link to={to('/account')} className={cn(buttonVariants({ variant: 'outline' }), 'w-fit')}>{t('account.title')}</Link>
-        </div>
-      )}
-    </>
-  );
-}
-
 // ------------------------------------------------------------------ administration
 
 /** The tab of the users page, kept in ?tab= (replaced, not pushed). */
@@ -866,6 +496,27 @@ function useTabParam<T extends string>(values: readonly T[], fallback: T): [T, (
     return updated;
   }, { replace: true });
   return [value, set];
+}
+
+/** An account without a username (it used an e-mail address or a phone number before those were
+ * retired) gets one here; the administrator can then hand over a temporary password. */
+function AssignUsername({ userId, name }: { userId: string; name: string }) {
+  const { t } = useTranslation();
+  const assign = useSetUsername();
+  const [value, setValue] = useState('');
+  const problem = value.trim() ? usernameProblem(value) : null;
+  return (
+    <form className="flex flex-wrap items-center gap-1" noValidate data-testid="assign-username"
+      onSubmit={(e) => { e.preventDefault(); assign.mutate({ userId, username: normalizeUsername(value) }, { onSuccess: () => setValue('') }); }}>
+      <input value={value} onChange={(e) => setValue(e.target.value)} maxLength={USERNAME_MAX} dir="auto"
+        aria-label={t('account.assignUsernameFor', { name })} placeholder={t('account.assignUsername')}
+        className="h-8 w-28 rounded-md border border-border-strong bg-card px-2 text-xs" data-testid="assign-username-input" />
+      <Button type="submit" size="sm" variant="outline" disabled={assign.isPending || !value.trim() || problem !== null}
+        data-testid="assign-username-save">{t('account.assignUsernameSave')}</Button>
+      {problem ? <span className="w-full text-xs text-destructive">{t(`auth.errors.${problem}`)}</span> : null}
+      <ErrorText error={assign.error} className="w-full text-xs text-destructive" />
+    </form>
+  );
 }
 
 export function AdminUsersPage() {
@@ -905,7 +556,7 @@ export function AdminUsersPage() {
             <thead>
               <tr className="border-b border-border-strong/40 text-xs text-muted-foreground">
                 <th scope="col" className="px-4 py-2 text-start font-medium">{t('account.name')}</th>
-                <th scope="col" className="px-2 py-2 text-start font-medium">{t('auth.email')}</th>
+                <th scope="col" className="px-2 py-2 text-start font-medium">{t('account.username')}</th>
                 <th scope="col" className="px-2 py-2 text-start font-medium">{t('account.createdVia')}</th>
                 {roleCodes.map((r) => <th key={r} scope="col" className="px-2 py-2 text-center font-medium">{roleLabel(r)}</th>)}
                 <th scope="col" className="px-2 py-2 text-start font-medium">{t('account.adminPassword')}</th>
@@ -913,12 +564,15 @@ export function AdminUsersPage() {
             </thead>
             <tbody>
               {users.data.map((u) => (
-                <tr key={u.id} className="border-b border-border last:border-0" data-email={u.email ?? undefined} data-username={u.username ?? undefined}>
+                <tr key={u.id} className="border-b border-border last:border-0" data-username={u.username ?? undefined} data-user-id={u.id}>
                   <th scope="row" className="px-4 py-2 text-start font-medium">{u.display_name}</th>
-                  <td className="px-2 py-2" dir="ltr">
-                    {u.username ? <span className="block font-mono text-xs">@{u.username}</span> : null}
-                    {u.email ? <>{u.email} {u.email_verified ? null : <Badge variant="sand">{t('account.emailUnverified')}</Badge>}</> : null}
-                    {u.phone ? <span className="block text-xs text-muted-foreground tabular-nums">{u.phone}</span> : null}
+                  <td className="px-2 py-2">
+                    {u.username ? <span className="block font-mono text-xs" dir="auto">{u.username}</span>
+                      : u.service_account ? <span className="block text-xs text-muted-foreground">{t('account.serviceAccount')}</span>
+                        : <AssignUsername userId={u.id} name={u.display_name} />}
+                    {/* Kept as records only: they no longer sign anyone in. */}
+                    {u.email ? <span className="block text-xs text-muted-foreground" dir="ltr">{u.email}</span> : null}
+                    {u.phone ? <span className="block text-xs text-muted-foreground tabular-nums" dir="ltr">{u.phone}</span> : null}
                   </td>
                   <td className="px-2 py-2 text-xs text-muted-foreground">{u.created_via}</td>
                   {roleCodes.map((r) => (
@@ -972,48 +626,6 @@ export function AdminUsersPage() {
           ) : null}
         </div>
       )}
-    </>
-  );
-}
-
-// ------------------------------------------------------------------ development mail sink
-
-export function DevMailPage() {
-  const { t } = useTranslation();
-  const outbox = useDevOutbox();
-  const providers = useProviders();
-  const smsOutbox = useDevSmsOutbox(providers.data?.sms.status === 'test');
-  const linkify = (body: string) =>
-    body.split(/(https?:\/\/\S+)/g).map((part, i) =>
-      // Links are opened on this origin, whatever address the server put in the message.
-      /^https?:\/\//.test(part) ? <a key={i} href={new URL(part).pathname + new URL(part).search} className="break-all text-primary underline">{part}</a> : <span key={i}>{part}</span>);
-  return (
-    <>
-      <PageHeader title={t('account.devMailTitle')} intro={t('account.devMailIntro')} />
-      {outbox.isError ? <StatePanel kind="empty"><p className="text-sm text-muted-foreground">{t('account.devMailOff')}</p></StatePanel> : null}
-      {providers.data?.sms.status === 'test' ? (
-        <section aria-labelledby="dev-sms-heading" className="mb-6 flex flex-col gap-2">
-          <h2 id="dev-sms-heading" className="text-lg font-semibold">{t('phone.devSmsTitle')}</h2>
-          <p className="text-sm text-muted-foreground">{t('phone.devSmsIntro')}</p>
-          <ul className="flex flex-col gap-2" data-testid="dev-sms">
-            {smsOutbox.data?.map((m) => (
-              <li key={`${m.to}-${m.sent_at}`} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm" data-to={m.to}>
-                <span dir="ltr" className="tabular-nums">{m.to}</span>
-                <span dir="ltr" className="font-mono text-base tracking-widest" data-testid="dev-sms-code">{m.code}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-      <ul className="flex flex-col gap-3" data-testid="dev-mail">
-        {outbox.data?.map((m) => (
-          <li key={m.id} className="rounded-lg border border-border bg-card p-4 text-sm" data-purpose={m.purpose} data-to={m.to}>
-            <p className="font-semibold" dir="auto">{m.subject}</p>
-            <p className="text-xs text-muted-foreground" dir="ltr">{m.to} · {m.created_at.slice(0, 19).replace('T', ' ')}</p>
-            <p className="mt-2 whitespace-pre-wrap" dir="auto">{linkify(m.body)}</p>
-          </li>
-        ))}
-      </ul>
     </>
   );
 }

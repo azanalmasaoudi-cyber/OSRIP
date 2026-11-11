@@ -9,7 +9,7 @@ import { chooseSelection, openCalculations, showResults } from './sector';
 const ROUTES = [
   '/', '/overview', '/workspace', '/energy/electricity', '/energy/water', '/food-security', '/trade',
   '/geography', '/reports', '/forecasts', '/assistant', '/sources', '/data-management', '/sign-in',
-  '/register', '/sign-in/other', '/sign-in/other?method=phone', '/forgot-password', '/forgot-password/email', '/account', '/admin/users', '/admin/health', '/dev/mail',
+  '/register', '/forgot-password', '/account', '/admin/users', '/admin/health',
 ];
 
 async function toArabic(page: Page): Promise<void> {

@@ -19,6 +19,22 @@ export default defineConfig({
     // OSRIP_WEB_PORT (test configs), then PORT (assigned by the preview launcher), then 5173.
     port: Number(process.env.OSRIP_WEB_PORT ?? process.env.PORT ?? 5173),
     strictPort: true,
-    proxy: { '/api': { target: apiTarget, changeOrigin: false } },
+    proxy: {
+      '/api': {
+        target: apiTarget,
+        changeOrigin: false,
+        // The API is not running or refused the connection: answer as the API would, so the page
+        // says the server is unavailable (in the reader's language) instead of a bare 502.
+        configure: (proxy) => {
+          proxy.on('error', (_error, _request, response) => {
+            if (!('writeHead' in response) || response.headersSent || response.writableEnded) return;
+            response.writeHead(503, { 'Content-Type': 'application/json' });
+            response.end(JSON.stringify({
+              error: { code: 'server_unavailable', message: `The OSRIP API is not reachable at ${apiTarget}.` },
+            }));
+          });
+        },
+      },
+    },
   },
 });

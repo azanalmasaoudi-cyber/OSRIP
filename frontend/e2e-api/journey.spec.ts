@@ -48,7 +48,7 @@ function consumptionGrowth(page: Page) {
 
 test('upload -> validate -> approve -> publish -> report -> revision; the report keeps its inputs', async ({ browser }) => {
   test.setTimeout(120_000);
-  const manager = await signedIn(browser, 'manager@e2e.invalid');
+  const manager = await signedIn(browser, 'e2emanager');
 
   // 1. Register a synthetic source and publish v1 (one invalid row is rejected, not dropped silently).
   await manager.goto('/data-management');
@@ -64,7 +64,7 @@ test('upload -> validate -> approve -> publish -> report -> revision; the report
   ], 1);
 
   // 2. An analyst sees the published values and the calculation, then freezes a report.
-  const analyst = await signedIn(browser, 'analyst@e2e.invalid');
+  const analyst = await signedIn(browser, 'e2eanalyst');
   await analyst.goto('/energy/electricity?mode=synthetic');
   // The 2013 row in another unit was rejected, so only 2011 and 2012 can be chosen.
   await analyst.getByTestId('sector-indicator').selectOption('ELEC_CONSUMPTION');

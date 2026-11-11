@@ -139,19 +139,20 @@ def test_another_browser_starts_its_own_count_and_says_so(app) -> None:  # noqa:
     assert "fair-use measure, not a guarantee" in b["notice"]["en"]
 
 
-def test_registration_ignores_requested_roles_permissions_and_verification(anonymous, db) -> None:  # noqa: ANN001
+def test_registration_ignores_requested_roles_and_permissions(anonymous, db) -> None:  # noqa: ANN001
     from app.models import AppUser, UserPermissionGrant, UserRole
 
-    address = f"sneaky-{uuid.uuid4().hex[:8]}@test.invalid"
+    name = f"sn{uuid.uuid4().hex[:8]}"
+    password = f"pw-{uuid.uuid4().hex}"
     r = anonymous.post(
-        f"{API}/auth/register",
-        json={"email": address, "display_name": "X", "password": "pw-a-long-enough-password-1",
-              "roles": ["admin", "data_manager"], "permissions": ["user.manage", "import.publish"],
-              "email_verified": True, "email_verified_at": "2026-01-01T00:00:00Z", "status": "active"},
+        f"{API}/auth/register/username",
+        json={"username": name, "password": password, "password_confirm": password,
+              "roles": ["administrator", "data_manager"], "permissions": ["user.manage"],
+              "is_admin": True, "email": "x@test.invalid", "status": "active"},
     )  # fmt: skip
-    assert r.status_code == 202, r.text
-    user = db.scalar(select(AppUser).where(AppUser.email == address))
-    assert user is not None and user.email_verified_at is None
+    assert r.status_code == 201, r.text
+    user = db.scalar(select(AppUser).where(AppUser.username == name))
+    assert user is not None and user.email is None and user.created_via == "self_registration"
     roles = set(db.scalars(select(UserRole.role_code).where(UserRole.user_id == user.id)))
     assert roles == {"viewer"}
     grants = list(
@@ -162,8 +163,11 @@ def test_registration_ignores_requested_roles_permissions_and_verification(anony
         )
     )
     assert grants == []
-    # Unverified: the password alone does not open a session.
-    login = anonymous.post(
-        f"{API}/auth/login", json={"email": address, "password": "pw-a-long-enough-password-1"}
+    # The retired e-mail registration creates nothing.
+    address = f"sneaky-{uuid.uuid4().hex[:8]}@test.invalid"
+    old = anonymous.post(
+        f"{API}/auth/register",
+        json={"email": address, "display_name": "X", "password": password, "roles": ["admin"]},
     )
-    assert login.status_code == 403 and login.json()["error"]["code"] == "email_not_verified"
+    assert old.status_code == 410 and old.json()["error"]["code"] == "sign_in_method_retired"
+    assert db.scalar(select(AppUser).where(AppUser.email == address)) is None

@@ -11,7 +11,7 @@ import { StatePanel } from '@/components/common/StatePanel';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 
-const NAMES = ['email', 'assistant', 'google', 'microsoft', 'official_statistics'] as const;
+const NAMES = ['email', 'assistant', 'official_statistics'] as const;
 
 /** Service health and recent errors (administrators with audit access). */
 export function HealthPage() {

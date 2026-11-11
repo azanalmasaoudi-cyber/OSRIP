@@ -13,7 +13,7 @@ async function snap(page: Page, name: string): Promise<void> {
 }
 
 function uniqueName(): string {
-  return `wl${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`.slice(0, 32);
+  return `wl${Math.random().toString(36).slice(2, 10)}`; // 10 characters, the most a username may have
 }
 
 test('only a username and a password; Show reveals the password; Remember me is off', async ({ page }) => {
@@ -32,7 +32,7 @@ test('only a username and a password; Show reveals the password; Remember me is 
   await form.getByTestId('sign-in-reveal').click();
   await expect(password).toHaveAttribute('type', 'password');
   await expect(form.getByTestId('sign-in-remember')).not.toBeChecked();
-  await expect(page.getByTestId('sign-in-only-username')).toHaveText('Only a username and password — no phone number or email required.');
+  await expect(page.getByTestId('sign-in-card')).not.toContainText(/e-mail|email|phone|Google|Microsoft/i); // nothing else is offered
   await expect(form.getByRole('button', { name: 'Sign in' })).toBeDisabled(); // nothing typed yet
   await snap(page, 'sign-in-light-en');
 });
@@ -71,7 +71,7 @@ test('a new account signs in with its username and password; a wrong password is
 test('the administrator signs in on the same screen and keeps administration', async ({ page }) => {
   await page.goto('/sign-in');
   const form = page.getByTestId('sign-in-form');
-  await form.getByLabel('Username').fill('admin@e2e.invalid');
+  await form.getByLabel('Username').fill('e2eadmin');
   await form.getByLabel('Password').fill(PASSWORD);
   await form.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByTestId('signed-in-as')).toBeVisible();

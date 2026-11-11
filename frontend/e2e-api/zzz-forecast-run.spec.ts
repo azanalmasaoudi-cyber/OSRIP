@@ -17,7 +17,7 @@ async function signIn(page: Page, email: string): Promise<void> {
 }
 
 test('a data manager publishes an eligible monthly synthetic series', async ({ page }) => {
-  await signIn(page, 'manager@e2e.invalid');
+  await signIn(page, 'e2emanager');
   const status = await page.evaluate(async () => {
     const csrf = decodeURIComponent(document.cookie.split('; ').find((c) => c.startsWith('osrip_csrf='))?.split('=')[1] ?? '');
     const headers = { 'X-CSRF-Token': csrf };
@@ -50,7 +50,7 @@ test('a data manager publishes an eligible monthly synthetic series', async ({ p
 });
 
 test('an analyst runs a forecast: baseline comparison, intervals, labels and an assistant hand-off', async ({ page }) => {
-  await signIn(page, 'analyst@e2e.invalid');
+  await signIn(page, 'e2eanalyst');
   await page.goto('/forecasts?mode=synthetic');
   const target = page.locator('[data-testid="forecast-target"][data-indicator="ELEC_CONSUMPTION"]');
   await expect(target).toHaveAttribute('data-status', 'available');

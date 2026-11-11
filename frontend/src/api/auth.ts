@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 
 import { apiFetch, apiJson, jsonBody } from './client';
-import { adapterKind, apiBaseUrl } from './config';
+import { adapterKind } from './config';
 
 const meSchema = z.object({
   authenticated: z.boolean(),
@@ -43,10 +43,11 @@ export function hasPermission(me: Me | undefined, permission: string): boolean {
   return Boolean(me?.permissions.includes(permission));
 }
 
+/** Sign-in with a username and a password: the only way in. */
 export function useLogin() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (credentials: { email: string; password: string; remember?: boolean }) =>
+    mutationFn: (credentials: { username: string; password: string; remember?: boolean }) =>
       apiJson('/auth/login', meSchema, jsonBody('POST', credentials)),
     onSuccess: (me) => {
       client.setQueryData(ME_KEY, me);
@@ -122,169 +123,6 @@ export function useLogout() {
   });
 }
 
-// ------------------------------------------------------------------ sign-in methods
-
-const providersSchema = z.object({
-  password: z.boolean(),
-  registration: z.boolean(),
-  magic_link: z.boolean(),
-  email_delivery: z.enum(['smtp', 'outbox', 'disabled']),
-  oidc: z.object({ google: z.boolean(), microsoft: z.boolean() }),
-  sms: z.object({
-    available: z.boolean(),
-    // sandbox: real WhatsApp messages from Meta's test sender, to approved test numbers only.
-    status: z.enum(['disabled', 'not_configured', 'test', 'sandbox', 'configured']),
-    channel: z.enum(['sms', 'whatsapp']).default('sms'),
-    provider: z.string().nullable(),
-    note: z.string().nullable(),
-    default_country: z.string(),
-    resend_seconds: z.number(),
-    code_minutes: z.number(),
-  }),
-  country_codes: z.array(z.string()),
-});
-export type Providers = z.infer<typeof providersSchema>;
-export const OIDC_PROVIDERS = ['google', 'microsoft'] as const;
-export type OidcProvider = (typeof OIDC_PROVIDERS)[number];
-
-export function useProviders() {
-  return useQuery({
-    queryKey: ['auth', 'providers'],
-    queryFn: () => apiJson('/auth/providers', providersSchema),
-    enabled: adapterKind === 'http',
-    staleTime: 5 * 60_000,
-  });
-}
-
-/** Full-page navigation to the backend, which redirects to the provider. */
-export function oidcStartUrl(provider: OidcProvider, intent: 'sign_in' | 'link' = 'sign_in'): string {
-  return `${apiBaseUrl}/auth/oidc/${provider}/start?intent=${intent}`;
-}
-
-const accepted = z.object({ status: z.string(), message: z.string().optional() });
-
-/** The page's language: account e-mails and SMS codes are sent in it first (both languages
- * are always in an e-mail). */
-function pageLanguage(): 'en' | 'ar' {
-  return document.documentElement.lang === 'ar' ? 'ar' : 'en';
-}
-
-export function useRegister() {
-  return useMutation({
-    mutationFn: (body: { email: string; display_name: string; password: string }) =>
-      apiJson('/auth/register', accepted, jsonBody('POST', { ...body, language: pageLanguage() })),
-  });
-}
-
-export function useEmailRequest(path: '/auth/password/forgot' | '/auth/magic-link' | '/auth/verify-email/resend') {
-  return useMutation({ mutationFn: (email: string) => apiJson(path, accepted, jsonBody('POST', { email, language: pageLanguage() })) });
-}
-
-export function useVerifyEmail() {
-  return useMutation({ mutationFn: (token: string) => apiJson('/auth/verify-email', accepted, jsonBody('POST', { token })) });
-}
-
-export function useResetPassword() {
-  return useMutation({
-    mutationFn: (body: { token: string; password: string }) => apiJson('/auth/password/reset', accepted, jsonBody('POST', body)),
-  });
-}
-
-export function useConsumeMagicLink() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: (token: string) => apiJson('/auth/magic-link/consume', meSchema, jsonBody('POST', { token })),
-    onSuccess: (me) => client.setQueryData(ME_KEY, me),
-  });
-}
-
-const identitySchema = z.object({
-  id: z.string(),
-  provider: z.enum(OIDC_PROVIDERS),
-  email: z.string().nullable(),
-  linked_at: z.string(),
-  last_used_at: z.string().nullable(),
-});
-
-export function useIdentities(enabled: boolean) {
-  return useQuery({
-    queryKey: ['auth', 'identities'],
-    queryFn: () => apiJson('/auth/identities', z.array(identitySchema)),
-    enabled: adapterKind === 'http' && enabled,
-  });
-}
-
-export function useUnlinkIdentity() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => apiFetch(`/auth/identities/${id}`, { method: 'DELETE' }),
-    onSettled: () => void client.invalidateQueries({ queryKey: ['auth', 'identities'] }),
-  });
-}
-
-// ------------------------------------------------------------------ phone (SMS verification)
-
-const challengeSchema = z.object({
-  challenge_id: z.string(),
-  phone_masked: z.string(),
-  expires_in: z.number(),
-  resend_after: z.number(),
-  max_attempts: z.number(),
-});
-export type PhoneChallenge = z.infer<typeof challengeSchema>;
-
-export function usePhoneRequest() {
-  return useMutation({
-    // password: needed to replace a verified number on an account that has one.
-    mutationFn: (body: { country_code: string; number: string; purpose: 'sign_in' | 'link'; password?: string }) =>
-      apiJson('/auth/phone/request', challengeSchema, jsonBody('POST', { ...body, language: pageLanguage() })),
-  });
-}
-
-const verifiedSchema = z.object({ status: z.enum(['registered', 'signed_in', 'linked', 'changed']), me: meSchema });
-export type PhoneOutcome = z.infer<typeof verifiedSchema>['status'];
-
-export function usePhoneVerify() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: (body: { challenge_id: string; code: string; display_name?: string }) =>
-      apiJson('/auth/phone/verify', verifiedSchema, jsonBody('POST', { ...body, language: pageLanguage() })),
-    onSuccess: (result) => {
-      client.setQueryData(ME_KEY, result.me);
-      void client.invalidateQueries({ queryKey: ['imports'] });
-    },
-  });
-}
-
-/** Add an e-mail address, or change a confirmed one (password needed for accounts that have one). */
-export function useLinkEmail() {
-  return useMutation({
-    mutationFn: (vars: { email: string; password?: string }) =>
-      apiJson('/auth/email/link', accepted, jsonBody('POST', { ...vars, language: pageLanguage() })),
-  });
-}
-
-export function useConfirmEmailLink() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: (token: string) => apiJson('/auth/email/link/confirm', accepted, jsonBody('POST', { token, language: pageLanguage() })),
-    onSuccess: () => void client.invalidateQueries({ queryKey: ME_KEY }),
-  });
-}
-
-const smsMessage = z.object({ to: z.string(), code: z.string(), sent_at: z.number() });
-
-/** Development and tests only: codes from the scripted SMS test provider (404 otherwise). */
-export function useDevSmsOutbox(enabled: boolean) {
-  return useQuery({
-    queryKey: ['dev', 'sms-outbox'],
-    queryFn: () => apiJson('/dev/sms-outbox', z.array(smsMessage)),
-    enabled: adapterKind === 'http' && enabled,
-    retry: false,
-    refetchInterval: 3000,
-  });
-}
-
 // ------------------------------------------------------------------ administration
 
 const adminUser = z.object({
@@ -298,12 +136,23 @@ const adminUser = z.object({
   email_verified: z.boolean(),
   created_via: z.string(),
   username: z.string().nullable().optional(),
+  service_account: z.boolean().optional(),
 });
 export type AdminUser = z.infer<typeof adminUser>;
 export const ROLES = ['viewer', 'analyst', 'data_manager', 'administrator'] as const;
 
 export function useAdminUsers(enabled: boolean) {
   return useQuery({ queryKey: ['admin', 'users'], queryFn: () => apiJson('/admin/users', z.array(adminUser)), enabled });
+}
+
+/** An administrator gives an account a username (or changes it); audited by the server. */
+export function useSetUsername() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, username }: { userId: string; username: string }) =>
+      apiJson(`/admin/users/${userId}/username`, adminUser, jsonBody('POST', { username })),
+    onSettled: () => void client.invalidateQueries({ queryKey: ['admin', 'users'] }),
+  });
 }
 
 // ------------------------------------------------------------------ roles and groups (migration 0026)
@@ -393,20 +242,5 @@ export function useSetRole() {
         ? apiJson(`/admin/users/${userId}/roles`, adminUser, jsonBody('POST', { role }))
         : apiJson(`/admin/users/${userId}/roles/${role}`, adminUser, { method: 'DELETE' }),
     onSettled: () => void client.invalidateQueries({ queryKey: ['admin', 'users'] }),
-  });
-}
-
-const outboxMessage = z.object({
-  id: z.number(), to: z.string(), subject: z.string(), body: z.string(), purpose: z.string(), created_at: z.string(),
-});
-export type OutboxMessage = z.infer<typeof outboxMessage>;
-
-export function useDevOutbox() {
-  return useQuery({
-    queryKey: ['dev', 'outbox'],
-    queryFn: () => apiJson('/dev/outbox', z.array(outboxMessage)),
-    enabled: adapterKind === 'http',
-    retry: false,
-    refetchInterval: 5000,
   });
 }

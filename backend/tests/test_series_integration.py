@@ -36,9 +36,9 @@ def published(database_url: str) -> None:
     from app.services.fixtures import seed_booklet_fixtures
     from app.services.principal import Principal
 
-    email, password = f"series-{uuid.uuid4().hex[:6]}@test.invalid", "pw-series-manager-00"
+    email, password = f"se{uuid.uuid4().hex[:8]}", "pw-series-manager-00"
     with session_factory()() as s, s.begin():
-        user = accounts.create_user(s, Principal(None, "t"), email=email, display_name="M",
+        user = accounts.create_user(s, Principal(None, "t"), username=email, display_name="M",
                                     password=password, roles=[Role.DATA_MANAGER])  # fmt: skip
         s.flush()
         for p in (Permission.IMPORT_APPROVE, Permission.IMPORT_PUBLISH):
@@ -46,7 +46,7 @@ def published(database_url: str) -> None:
     with session_factory()() as s:
         seed_booklet_fixtures(s)
     client = TestClient(create_app())
-    client.post(f"{API}/auth/login", json={"email": email, "password": password})
+    client.post(f"{API}/auth/login", json={"username": email, "password": password})
     client.headers["X-CSRF-Token"] = client.cookies["osrip_csrf"]
     source = register_synthetic_source(client)
     lines = [

@@ -41,7 +41,7 @@ test('datasets need a signed-in account with the analysis permission', async ({ 
 });
 
 test('an analyst uploads a CSV, reads computed results and charts, and downloads a report', async ({ page }) => {
-  await signIn(page, 'analyst@e2e.invalid');
+  await signIn(page, 'e2eanalyst');
   await page.goto('/datasets');
   await page.getByLabel('File (CSV, Excel .xlsx or JSON)').setInputFiles({
     name: 'generation-by-region.csv', mimeType: 'text/csv', buffer: Buffer.from(CSV),

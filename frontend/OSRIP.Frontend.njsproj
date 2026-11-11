@@ -60,7 +60,6 @@
     <Folder Include="src\components\admin\" />
     <Folder Include="src\components\analysis\" />
     <Folder Include="src\components\assistant\" />
-    <Folder Include="src\components\auth\" />
     <Folder Include="src\components\brand\" />
     <Folder Include="src\components\common\" />
     <Folder Include="src\components\dashboard\" />
@@ -105,7 +104,6 @@
     <TypeScriptCompile Include="e2e-api\oman-map-maptiler.spec.ts" />
     <TypeScriptCompile Include="e2e-api\oman-map.spec.ts" />
     <TypeScriptCompile Include="e2e-api\personas.spec.ts" />
-    <TypeScriptCompile Include="e2e-api\phone.spec.ts" />
     <TypeScriptCompile Include="e2e-api\quality.spec.ts" />
     <TypeScriptCompile Include="e2e-api\research-brief.spec.ts" />
     <TypeScriptCompile Include="e2e-api\research-modes.spec.ts" />
@@ -116,10 +114,8 @@
     <TypeScriptCompile Include="e2e-api\source-feeds.spec.ts" />
     <TypeScriptCompile Include="e2e-api\studies.spec.ts" />
     <TypeScriptCompile Include="e2e-api\upgrade.spec.ts" />
-    <TypeScriptCompile Include="e2e-api\verification-change.spec.ts" />
     <TypeScriptCompile Include="e2e-api\voice-gender.spec.ts" />
     <TypeScriptCompile Include="e2e-api\welcome-sign-in.spec.ts" />
-    <TypeScriptCompile Include="e2e-api\whatsapp.spec.ts" />
     <TypeScriptCompile Include="e2e-api\workflow.spec.ts" />
     <TypeScriptCompile Include="e2e-api\workspace-phone.spec.ts" />
     <TypeScriptCompile Include="e2e-api\workspace.spec.ts" />
@@ -190,7 +186,6 @@
     <TypeScriptCompile Include="src\components\assistant\StructuredReply.tsx" />
     <TypeScriptCompile Include="src\components\assistant\VoicePanel.tsx" />
     <TypeScriptCompile Include="src\components\assistant\VoiceVolume.tsx" />
-    <TypeScriptCompile Include="src\components\auth\PhoneVerification.tsx" />
     <TypeScriptCompile Include="src\components\brand\BrandMark.tsx" />
     <TypeScriptCompile Include="src\components\brand\EditorialImage.tsx" />
     <TypeScriptCompile Include="src\components\brand\SectorArtwork.tsx" />
@@ -298,6 +293,7 @@
     <TypeScriptCompile Include="src\lib\useDocumentTitle.ts" />
     <TypeScriptCompile Include="src\lib\useLabels.ts" />
     <TypeScriptCompile Include="src\lib\useMediaQuery.ts" />
+    <TypeScriptCompile Include="src\lib\username.ts" />
     <TypeScriptCompile Include="src\lib\useVoiceVolume.ts" />
     <TypeScriptCompile Include="src\lib\utils.ts" />
     <TypeScriptCompile Include="src\lib\voicePlayer.ts" />
@@ -432,6 +428,7 @@
     <Content Include="tests\export-results.test.mjs" />
     <Content Include="tests\research-brief.test.mjs" />
     <Content Include="tests\talk-redirect.test.mjs" />
+    <Content Include="tests\username.test.mjs" />
     <Content Include="tsconfig.app.json" />
     <Content Include="tsconfig.json" />
     <Content Include="tsconfig.node.json" />

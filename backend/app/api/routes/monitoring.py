@@ -9,7 +9,7 @@ from app.api.deps import DbSession, require
 from app.core import ratelimit, security
 from app.core.config import get_settings
 from app.domain.enums import Permission
-from app.services import monitoring, providers, sms
+from app.services import monitoring, providers
 from app.services.principal import Principal
 
 router = APIRouter(tags=["monitoring"])
@@ -55,8 +55,6 @@ def monitoring_view(
             "sync": monitoring.sync_summary(session),
         }
     report["performance"] = monitoring.performance()
-    # Administrators also see which SMS settings are missing (names only, never values).
-    report["integrations"]["sms"]["missing_settings"] = sms.status(admin=True)["missing_settings"]
     return report
 
 
