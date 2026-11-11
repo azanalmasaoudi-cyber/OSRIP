@@ -1,5 +1,45 @@
 # Test results
 
+## 2026-11-10 (evening): username and password only; usernames of 1-10 characters; the 502 on sign-in (branch `feature/username-password-auth`)
+
+**The 502.** Nothing answered behind the page. Port 8000 belonged to Incredibuild's Manager service (installed with Visual Studio), but this branch's API uses 8010. The launcher had started the API on 8010 at 17:58 and its log ends at 17:59:05; both the launcher and the API had gone. A frontend-only preview server, started from a Claude session at 07:38, still held port 5173 and forwarded `/api` to the empty port 8010. That pushed the launcher's frontend to 5174, and every sign-in through 5173 got a bare 502, shown as "Request failed with status 502". Fixes:
+- the stray preview server was stopped;
+- the Vite proxy now answers 503 with the API's error envelope (`server_unavailable`) when the API is not reachable;
+- the client turns a network failure, or a 502/503/504 without that envelope, into `server_unavailable`, shown as "The OSRIP server is not responding right now…" / "خادم OSRIP لا يستجيب الآن…". Nothing is faked as success.
+
+**What changed.**
+- **Sign-in:** a username and a password are the only way in.
+- **Registration:** asks for a username, a password and the password again, and creates an ordinary (viewer) account with a recovery code shown once.
+- **Forgotten password:** recovered with that code, or by an administrator's reset; a username alone never resets anything.
+- **Retired methods, code removed:** e-mail registration, e-mail verification, e-mail reset and sign-in links, phone codes (SMS and WhatsApp), and Google and Microsoft. Their endpoints answer 410 `sign_in_method_retired` without reading the body; their pages redirect to `/sign-in`, dropping any token.
+- **Usernames (migration 0033):**
+  - 1-10 Arabic or English letters and digits, starting with a letter (`_ . -` allowed);
+  - trimmed, NFKC-normalised, Arabic-Indic digits stored as 0-9;
+  - unique without regard to case or Arabic look-alike letters (`username_key`);
+  - reserved names refused, also with digits or punctuation added (Azzan, admin, المدير, الملهم…).
+- **Enforced in four places:** the frontend (`maxLength` 10 and the messages "Username must not exceed 10 characters." / "اسم المستخدم يجب ألا يتجاوز 10 أحرف."), FastAPI, the Pydantic schemas, and a database trigger.
+- **Older accounts:** the trigger checks only a new or changed name, so older usernames keep working (such as the 12-character one in the development database). Nothing was renamed or deleted; e-mail addresses and phone numbers stay as records.
+- **Administrators:** they can give an account without a username one (audited `user.username`); the Users page shows the old address or number as a record only.
+- **Removed with the methods:**
+  - `identity.py`, `phone.py`, `oidc.py`, `sms.py`, `mail_templates.py` and the WhatsApp/SMS scripts;
+  - their tests and the three browser specs;
+  - SMS, Google and Microsoft from Service health;
+  - 82 translation keys that nothing used any more, in both languages.
+
+| Check | Result |
+|---|---|
+| Backend whole suite with database tests | **973 passed** (2 min 40 s; fewer than before because the tests of the removed methods went with them); migration round trip with 0033: pass |
+| Of which, sign-in and usernames (`test_username_accounts_integration.py`, `test_auth_integration.py`) | **57 passed**. Covered: Arabic and English registration; exactly 10 characters; 11 refused with `username_too_long` and the exact message; look-alike Arabic names taken; the database refuses bad names on insert and on rename; an older 13-character username signs in, changes its password and gets a recovery code; e-mail address and phone number find nothing; 14 retired endpoints answer 410 with no session and no account; an administrator gives an e-mail-only account a username (audited) |
+| `ruff check`, `ruff format --check` | Clean |
+| `npm run typecheck`, `lint`, `check:contrast`, `build` | Pass |
+| Frontend unit tests | **23 passed** (new `username.test.mjs`: 3) |
+| Full-stack browser suite (Chrome) | **178 passed**, 2 skipped as designed, 0 failed (25.3 min). An earlier run while the computer was busy: 174 passed, 4 failed. Three were timing failures that passed when rerun; the fourth was the service-health test still expecting a Google row, which was updated |
+| `accounts` and `welcome-sign-in` specs alone, first run | **21 passed**. Covered: registration fields (3 inputs, `maxlength` 10); eleven letters typed stop at ten with the message; the API's 422; ten characters register; an Arabic name registers and signs in; a look-alike is taken; reload keeps the session; sign-out ends it; retired links land on `/sign-in`; an e-mail address does not sign in; the retired API answers 410; the older long username signs in; an administrator assigns a username; no 502/503/504 during the journey |
+| Mock-data browser suite | **45 passed**, 3 skipped as designed. Two earlier runs were disturbed: the computer slept during one (9.5 h), and in the other three shell tests hit a cold server, then passed on their own (15 of 15) |
+| Copy of the development database (`osrip_livecheck`, since dropped) | Migrated 0032 → 0033. All 11 accounts kept; the administrator account and the 12-character older username unchanged, each with its lower-case key; the trigger is in place. Through this branch's API on the copy: providers report username and password only; a wrong password for the 12-character older username gives `invalid_credentials` (not an error); `/auth/magic-link` gives 410. In the browser pane, Arabic and the dark theme: the registration field stops at 10 with the Arabic message; `سالم١` registered as `سالم1`, viewer, no e-mail or phone; the recovery code was shown in the glass card. With the API stopped, sign-in showed the Arabic "server not responding" message after a 503 from the proxy |
+
+**Not done here:** the development database `osrip_dev` is still at 0032; the launcher applies 0033 the next time OSRIP starts from this branch. Five personal accounts there have no username (two analysts and two viewers who used e-mail, one viewer who used a phone number): they cannot sign in until an administrator gives each a username on the Users page, then a temporary password where needed (the phone account has none). No live provider was called.
+
 ## 2026-11-10: wilayat evidence through the reviewed import; map provenance; unused UI removed (branch `feature/wilayat-evidence`)
 
 What changed: the evidence workbook of November 2026 (`OSRIP_Wilayat_Evidence_Development_Review_2026.xlsx`) is mapped by `app/services/imports/wilayat_evidence.py` and staged by `scripts/stage_wilayat_evidence.py` (dry run by default; `--stage --as USER`; rollback `--reject --as USER`). Migration 0032 adds population (context, not a fifth axis: total, Omani, non-Omani; persons) and commercial registrations (new in a period; on record at a date). Water stays at governorate level; quarters and January-September stay partial periods; the Nama service-area supply, the derived national total and rounded summaries are not imported (README in `docs/data-imports/2026-11-wilayat`). The map's tooltip names the source and the review status of the value under the cursor. Removed after a reference and history check: `common/Charts.tsx` and `geography/Basemap.tsx` (no importer; the map replaced Basemap in 9558bbb), their 9 strings, the 4 opening images (unused since e611fb2) and the 9 files of the retired home portrait; masters and provenance records stay, marked "retired".
