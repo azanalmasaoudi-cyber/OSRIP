@@ -58,6 +58,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{951A985D-D
 		docs\DEPLOYMENT.md = docs\DEPLOYMENT.md
 		docs\DESIGN_SYSTEM.md = docs\DESIGN_SYSTEM.md
 		docs\ENTRANCE.md = docs\ENTRANCE.md
+		docs\ICDL_ساسيات_الحاسوب_والنترنت_.pdf = docs\ICDL_ساسيات_الحاسوب_والنترنت_.pdf
 		docs\implementation-notes.md = docs\implementation-notes.md
 		docs\implementation-status.md = docs\implementation-status.md
 		docs\INTEGRATIONS.md = docs\INTEGRATIONS.md
@@ -71,6 +72,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{951A985D-D
 		docs\OSRIP_Academic_Booklet_Expanded_2026_Wilayat_Research.pdf = docs\OSRIP_Academic_Booklet_Expanded_2026_Wilayat_Research.pdf
 		docs\OSRIP_Academic_Booklet_Nov_2026_60_Pages.docx = docs\OSRIP_Academic_Booklet_Nov_2026_60_Pages.docx
 		docs\OSRIP_Academic_Booklet_Nov_2026_60_Pages.pdf = docs\OSRIP_Academic_Booklet_Nov_2026_60_Pages.pdf
+		docs\OSRIP_Booklet_And_Claude_Package_Nov2026.zip = docs\OSRIP_Booklet_And_Claude_Package_Nov2026.zip
+		docs\OSRIP_Intro_Single_File.html = docs\OSRIP_Intro_Single_File.html
+		docs\OSRIP_Research_63_Wilayats_Updated_Booklet_2026.zip = docs\OSRIP_Research_63_Wilayats_Updated_Booklet_2026.zip
 		docs\PREMIUM_REDESIGN.md = docs\PREMIUM_REDESIGN.md
 		docs\progress.md = docs\progress.md
 		docs\requirements.md = docs\requirements.md
@@ -288,6 +292,34 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workspace", "workspace", "{
 		docs\evidence\workspace\phone-study.png = docs\evidence\workspace\phone-study.png
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "OSRIP_Premium_Sector_Cards", "OSRIP_Premium_Sector_Cards", "{84EC1646-7EBA-5F9E-A392-01438E533022}"
+	ProjectSection(SolutionItems) = preProject
+		docs\OSRIP_Premium_Sector_Cards\osrip_electricity.png = docs\OSRIP_Premium_Sector_Cards\osrip_electricity.png
+		docs\OSRIP_Premium_Sector_Cards\osrip_food_security.png = docs\OSRIP_Premium_Sector_Cards\osrip_food_security.png
+		docs\OSRIP_Premium_Sector_Cards\osrip_trade.png = docs\OSRIP_Premium_Sector_Cards\osrip_trade.png
+		docs\OSRIP_Premium_Sector_Cards\osrip_water.png = docs\OSRIP_Premium_Sector_Cards\osrip_water.png
+		docs\OSRIP_Premium_Sector_Cards\README.md = docs\OSRIP_Premium_Sector_Cards\README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "OSRIP_Welcome_Login_Design", "OSRIP_Welcome_Login_Design", "{6E5961BD-96F4-5C4D-A09E-58B5B8F57772}"
+	ProjectSection(SolutionItems) = preProject
+		docs\OSRIP_Welcome_Login_Design\CLAUDE_IMPLEMENTATION_PROMPT.md = docs\OSRIP_Welcome_Login_Design\CLAUDE_IMPLEMENTATION_PROMPT.md
+		docs\OSRIP_Welcome_Login_Design\index.html = docs\OSRIP_Welcome_Login_Design\index.html
+		docs\OSRIP_Welcome_Login_Design\OSRIP_Login_Desktop.png = docs\OSRIP_Welcome_Login_Design\OSRIP_Login_Desktop.png
+		docs\OSRIP_Welcome_Login_Design\OSRIP_Login_Mobile.png = docs\OSRIP_Welcome_Login_Design\OSRIP_Login_Mobile.png
+		docs\OSRIP_Welcome_Login_Design\OSRIP_Welcome_Desktop.png = docs\OSRIP_Welcome_Login_Design\OSRIP_Welcome_Desktop.png
+		docs\OSRIP_Welcome_Login_Design\OSRIP_Welcome_Mobile.png = docs\OSRIP_Welcome_Login_Design\OSRIP_Welcome_Mobile.png
+		docs\OSRIP_Welcome_Login_Design\README.md = docs\OSRIP_Welcome_Login_Design\README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "assets", "assets", "{E1F622EF-963B-56F4-8C98-42DB511E1C40}"
+	ProjectSection(SolutionItems) = preProject
+		docs\OSRIP_Welcome_Login_Design\assets\osrip_electricity.png = docs\OSRIP_Welcome_Login_Design\assets\osrip_electricity.png
+		docs\OSRIP_Welcome_Login_Design\assets\osrip_food_security.png = docs\OSRIP_Welcome_Login_Design\assets\osrip_food_security.png
+		docs\OSRIP_Welcome_Login_Design\assets\osrip_trade.png = docs\OSRIP_Welcome_Login_Design\assets\osrip_trade.png
+		docs\OSRIP_Welcome_Login_Design\assets\osrip_water.png = docs\OSRIP_Welcome_Login_Design\assets\osrip_water.png
+	EndProjectSection
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "perf", "perf", "{905C8A1C-3512-58AB-9365-318FFA4AF538}"
 	ProjectSection(SolutionItems) = preProject
 		docs\perf\Electricity · OSRIP-screenshot.png = docs\perf\Electricity · OSRIP-screenshot.png
@@ -357,6 +389,9 @@ Global
 		{B08B19CE-18D4-5C93-96A3-78013F0A3F1E} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{56A21D90-4A13-5631-8986-D1F0AFE4EFAE} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
 		{B34D6E13-8B80-59FA-9AED-693C622716DD} = {0B712951-2047-5BE0-A42C-68C45DAA3B66}
+		{84EC1646-7EBA-5F9E-A392-01438E533022} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
+		{6E5961BD-96F4-5C4D-A09E-58B5B8F57772} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
+		{E1F622EF-963B-56F4-8C98-42DB511E1C40} = {6E5961BD-96F4-5C4D-A09E-58B5B8F57772}
 		{905C8A1C-3512-58AB-9365-318FFA4AF538} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
 		{71053B50-9D45-5F8A-BD57-BC8B928B1A58} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
 		{4250D740-59DD-5C9C-AF33-519CAA508995} = {71053B50-9D45-5F8A-BD57-BC8B928B1A58}

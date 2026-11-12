@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#101419" />
+  <meta name="description" content="OSRIP welcome and login visual concept - username and password" />
+  <title>OSRIP — Welcome & Sign In | Design Preview</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0e1217;
+      --ink: #fff7ec;
+      --muted: #afb9bb;
+      --glass: rgba(255,255,255,.065);
+      --glass-line: rgba(255,225,190,.16);
+      --card: rgba(27,31,36,.77);
+      --surface: rgba(255,255,255,.065);
+      --peach: #ffbd8b;
+      --gold: #eeb67c;
+      --btn-ink: #28201d;
+      --outline: rgba(255,255,255,.16);
+      --field: rgba(13,17,22,.55);
+      --shadow: 0 28px 85px rgba(0,0,0,.32);
+    }
+    :root[data-theme="light"] {
+      color-scheme: light;
+      --bg: #f5f0e9;
+      --ink: #292521;
+      --muted: #6b6a68;
+      --glass: rgba(255,255,255,.62);
+      --glass-line: rgba(160,107,67,.19);
+      --card: rgba(255,252,248,.90);
+      --surface: rgba(255,255,255,.72);
+      --peach: #a85832;
+      --gold: #9b5b36;
+      --btn-ink: #fffaf5;
+      --outline: rgba(107,81,61,.17);
+      --field: rgba(255,255,255,.77);
+      --shadow: 0 28px 85px rgba(83,53,32,.15);
+    }
+    *,*::before,*::after{box-sizing:border-box}
+    html{min-height:100%;background:var(--bg);scroll-behavior:smooth}
+    body{min-width:320px;min-height:100vh;margin:0;font-family:Tahoma,'Arial',system-ui,sans-serif;color:var(--ink);background:var(--bg);transition:background .25s,color .25s}
+    button,input{font:inherit}
+    button{cursor:pointer}
+    button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--peach);outline-offset:3px}
+    .app{position:relative;min-height:100vh;isolation:isolate;overflow:hidden}
+    .aurora{position:fixed;z-index:-3;inset:0;pointer-events:none;background:
+      radial-gradient(ellipse 39% 50% at 88% 22%,rgba(213,125,72,.29),transparent 80%),
+      radial-gradient(ellipse 43% 65% at 8% 78%,rgba(36,95,113,.28),transparent 79%),
+      radial-gradient(ellipse 60% 30% at 40% 98%,rgba(165,94,48,.18),transparent 85%),var(--bg)}
+    :root[data-theme="light"] .aurora{background:
+      radial-gradient(ellipse 48% 50% at 94% 18%,rgba(227,164,116,.27),transparent 75%),
+      radial-gradient(ellipse 38% 55% at 10% 75%,rgba(154,181,177,.23),transparent 80%),var(--bg)}
+    .gridlines{position:fixed;z-index:-2;inset:0;pointer-events:none;opacity:.23;background-image:linear-gradient(rgba(255,255,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.055) 1px,transparent 1px);background-size:58px 58px;mask-image:linear-gradient(to bottom,transparent,black 45%,black 80%,transparent)}
+    :root[data-theme="light"] .gridlines{opacity:.17;background-image:linear-gradient(rgba(70,59,48,.15) 1px,transparent 1px),linear-gradient(90deg,rgba(70,59,48,.15) 1px,transparent 1px)}
+    .topbar{max-width:1440px;margin:0 auto;padding:26px clamp(22px,4.5vw,72px);display:flex;align-items:center;justify-content:space-between;gap:16px}
+    .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+    .brand-symbol{display:grid;place-items:center;width:50px;height:50px;border-radius:15px;background:linear-gradient(135deg,#facb94,#bb693e);box-shadow:0 0 0 1px #ffe8ce inset,0 6px 35px rgba(213,116,66,.25);color:#30201a;font-size:22px;font-weight:900;letter-spacing:-2px}
+    .brand-word{display:block;font-size:19px;letter-spacing:.12em;font-weight:800;text-align:start}
+    .brand-sub{display:block;color:var(--muted);font-size:10px;text-align:start;margin-top:3px;letter-spacing:.06em}
+    .tools{display:flex;align-items:center;gap:9px}
+    .chip{border:1px solid var(--outline);background:var(--glass);backdrop-filter:blur(14px);border-radius:999px;color:var(--ink);padding:11px 15px;font-weight:600;font-size:13px;white-space:nowrap;transition:.2s}
+    .chip:hover{border-color:var(--peach);transform:translateY(-1px)}
+    .frame{max-width:1440px;margin:auto;padding:30px clamp(22px,4.5vw,72px) 35px}
+    .welcome{display:grid;grid-template-columns:1.03fr 1.02fr;align-items:center;gap:clamp(34px,5vw,86px);min-height:min(700px,calc(100vh - 150px))}
+    .hero-copy{padding:18px 0 45px;max-width:620px}
+    .eyebrow{display:inline-flex;align-items:center;gap:9px;color:var(--peach);border:1px solid rgba(245,178,121,.24);border-radius:999px;padding:10px 15px;background:rgba(244,175,118,.05);font-size:12px;font-weight:700}
+    .status-dot{width:7px;height:7px;border-radius:50%;background:#9be0b6;box-shadow:0 0 0 4px rgba(155,224,182,.12)}
+    h1,h2,p{margin:0}
+    .hero-title{font-family:Arial,system-ui,sans-serif;font-size:clamp(82px,9vw,150px);line-height:.95;letter-spacing:-.07em;margin:25px 0 14px;font-weight:900;direction:ltr;text-align:end;background:linear-gradient(120deg,#fff9ee 20%,#f5c494 52%,#fff9ee 76%);background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 8px 30px rgba(240,164,99,.13))}
+    :root[data-theme="light"] .hero-title{background-image:linear-gradient(120deg,#5e3929,#c07448 48%,#5d3a2d)}
+    .ar-name{font-size:clamp(20px,2.5vw,33px);line-height:1.6;font-weight:700;letter-spacing:-.02em}
+    .english-name{margin-top:5px;font-family:Arial,system-ui,sans-serif;font-size:clamp(12px,1.2vw,16px);letter-spacing:.055em;color:var(--peach);line-height:1.6;direction:ltr;text-align:end}
+    .lead{font-size:clamp(15px,1.4vw,18px);line-height:2;max-width:590px;color:var(--muted);margin:27px 0 30px}
+    .action-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+    .primary,.secondary{display:inline-flex;justify-content:center;align-items:center;gap:9px;padding:15px 25px;border-radius:14px;font-size:15px;font-weight:800;transition:transform .2s,box-shadow .2s;min-height:51px}
+    .primary{border:1px solid rgba(255,226,196,.35);background:linear-gradient(120deg,#ffdbad,#eba877 75%,#e5956b);color:#2a2421;box-shadow:0 9px 33px rgba(226,144,86,.28)}
+    .primary:hover,.secondary:hover{transform:translateY(-2px)}
+    .primary:hover{box-shadow:0 15px 40px rgba(226,144,86,.39)}
+    .secondary{color:var(--ink);border:1px solid var(--outline);background:var(--glass)}
+    :root[data-theme="light"] .primary{background:linear-gradient(120deg,#b4623b,#a25132);color:white}
+    .meta-row{margin-top:40px;display:flex;gap:24px;flex-wrap:wrap;color:var(--muted);font-size:12px}
+    .meta-row span{display:flex;align-items:center;gap:8px}
+    .meta-row b{color:var(--peach);font-size:14px}
+    .art{position:relative;min-height:525px;display:flex;align-items:center;justify-content:center}
+    .art::before{content:'';position:absolute;width:83%;aspect-ratio:1;border:1px solid rgba(243,173,115,.25);border-radius:50%;box-shadow:0 0 0 56px rgba(255,207,150,.02),0 0 0 112px rgba(255,207,150,.014);inset:7% auto auto 9%;pointer-events:none}
+    .art::after{content:'';position:absolute;width:130px;height:130px;right:4%;top:4%;background:radial-gradient(circle,rgba(255,166,96,.22),transparent 68%);filter:blur(10px);pointer-events:none}
+    .glass-panel{position:relative;padding:17px;border-radius:34px;box-shadow:var(--shadow);border:1px solid var(--glass-line);background:linear-gradient(125deg,rgba(255,255,255,.1),rgba(255,255,255,.018) 44%),var(--card);backdrop-filter:blur(24px);width:min(100%,608px);transform:perspective(1200px) rotateY(-4deg)}
+    .glass-panel::after{position:absolute;content:'';inset:0;border-radius:34px;pointer-events:none;border-top:1px solid rgba(255,230,209,.35)}
+    .panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 8px 17px}
+    .panel-title{font-weight:800;font-size:14px}
+    .panel-sub{font-size:11px;color:var(--muted);margin-top:4px}
+    .panel-pill{font-size:11px;color:var(--peach);padding:8px 11px;border-radius:999px;border:1px solid var(--glass-line);white-space:nowrap}
+    .cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+    .sector{position:relative;display:block;aspect-ratio:16/9;border:1px solid rgba(255,231,210,.23);overflow:hidden;border-radius:18px;transition:transform .2s,box-shadow .2s;box-shadow:0 13px 22px rgba(0,0,0,.16)}
+    .sector img{width:100%;height:100%;object-fit:contain;display:block}
+    .sector:hover{transform:translateY(-4px);box-shadow:0 20px 35px rgba(0,0,0,.24)}
+    .sector .overlay{position:absolute;inset:auto 0 0;background:linear-gradient(transparent,rgba(9,13,17,.57));height:30%;pointer-events:none}
+    .panel-bottom{padding:14px 8px 5px;display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-size:11px;gap:10px}
+    .panel-bottom strong{font-weight:600;color:var(--peach)}
+    .footer{max-width:1440px;margin:0 auto;padding:0 clamp(22px,4.5vw,72px) 22px;display:flex;justify-content:space-between;gap:15px;color:var(--muted);font-size:11px}
+    .hide{display:none!important}
+    .login-stage{min-height:min(730px,calc(100vh - 130px));display:grid;grid-template-columns:1fr 440px;align-items:center;gap:clamp(28px,6vw,100px);padding:32px 0 62px}
+    .login-showcase{position:relative;overflow:hidden;min-height:545px;border-radius:35px;background:radial-gradient(ellipse at 88% 20%,rgba(247,182,130,.23),transparent 48%),radial-gradient(ellipse at 22% 86%,rgba(34,92,105,.3),transparent 60%),linear-gradient(135deg,#243240,#171f2a 48%,#3a2b28);border:1px solid var(--glass-line);box-shadow:var(--shadow);display:flex;flex-direction:column;justify-content:space-between;padding:40px}
+    .login-showcase:before{content:'';position:absolute;inset:10% 12%;border:1px solid rgba(255,210,170,.2);border-radius:50%;box-shadow:0 0 0 55px rgba(255,210,170,.025),0 0 0 110px rgba(255,210,170,.012);pointer-events:none}
+    .login-showcase>*{z-index:1;position:relative}
+    .showcase-name{font:900 clamp(70px,8vw,110px)/1 Arial,sans-serif;letter-spacing:-.06em;color:#fff9ef;direction:ltr;text-align:start}
+    .showcase-caption{font-size:clamp(22px,2.7vw,35px);font-weight:800;color:#fff6eb;line-height:1.5;margin-top:22px;max-width:450px}
+    .showcase-small{font-size:14px;line-height:1.9;color:#ebd6c4;max-width:440px;margin-top:12px}
+    .showcase-badges{display:flex;gap:10px;flex-wrap:wrap}
+    .showcase-badges span{border:1px solid rgba(255,235,218,.26);background:rgba(255,255,255,.1);border-radius:999px;padding:10px 14px;color:#fff7ee;font-size:12px;backdrop-filter:blur(12px)}
+    .login-box{border:1px solid var(--glass-line);background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.01)),var(--card);backdrop-filter:blur(28px);box-shadow:var(--shadow);border-radius:30px;padding:clamp(26px,4.5vw,45px);max-width:490px;width:100%;margin:auto}
+    .login-symbol{display:grid;place-items:center;width:59px;height:59px;border-radius:18px;background:linear-gradient(135deg,#f9d2a1,#c87b4e);color:#2b231f;font-size:27px;font-weight:900;box-shadow:0 10px 30px rgba(231,147,87,.24)}
+    .login-heading{font-size:clamp(24px,2.5vw,33px);margin:23px 0 8px;font-weight:800}
+    .login-intro{color:var(--muted);font-size:14px;line-height:1.9;margin-bottom:33px}
+    .field{display:block;margin-bottom:19px}
+    .field label{display:block;margin-bottom:10px;font-size:13px;font-weight:700}
+    .field-wrap{position:relative}
+    .field input{width:100%;height:55px;padding:0 18px;border-radius:14px;border:1px solid var(--outline);background:var(--field);color:var(--ink);transition:border-color .2s,box-shadow .2s}
+    .field input:focus{outline:none;border-color:var(--peach);box-shadow:0 0 0 3px rgba(231,165,117,.13)}
+    .field input::placeholder{color:var(--muted);opacity:.7}
+    .show-pass{position:absolute;inset-inline-end:7px;top:7px;height:41px;padding:0 13px;color:var(--muted);border:0;background:transparent;border-radius:9px;font-size:12px}
+    .show-pass:hover{background:var(--surface);color:var(--ink)}
+    .login-submit{width:100%;margin:7px 0 14px}
+    .login-fine{font-size:12px;line-height:1.9;text-align:center;color:var(--muted)}
+    .login-fine b{color:var(--peach);font-weight:700}
+    .demo-message{border:1px solid rgba(228,163,114,.33);background:var(--surface);border-radius:13px;padding:12px;color:var(--ink);font-size:12px;line-height:1.8;margin-top:13px}
+    .form-error{font-size:12px;color:#ed9d8d;min-height:18px;margin-top:-10px;margin-bottom:12px}
+    .bottom-link{margin-top:23px;border:0;background:transparent;color:var(--muted);font-size:13px;padding:5px}
+    .bottom-link:hover{color:var(--peach)}
+    @media(max-width:1050px){.welcome{grid-template-columns:1fr 1fr;gap:22px}.glass-panel{transform:none}.hero-title{font-size:clamp(68px,10vw,120px)}.art{min-height:420px}}
+    @media(max-width:790px){.topbar{padding-block:18px}.frame{padding-top:7px}.welcome{grid-template-columns:1fr;gap:30px}.hero-copy{max-width:none;padding-bottom:0;text-align:center}.hero-title{text-align:center}.english-name{text-align:center}.action-row,.meta-row{justify-content:center}.art{min-height:0;padding:0 2px 30px}.glass-panel{max-width:550px}.art:before{inset:-5% auto auto 10%}.login-stage{grid-template-columns:1fr}.login-showcase{min-height:260px;padding:26px}.showcase-name{font-size:72px}.showcase-caption{font-size:25px;margin-top:8px}.login-box{max-width:550px}.footer{flex-wrap:wrap;justify-content:center;text-align:center}}
+    @media(max-width:470px){.brand-symbol{width:42px;height:42px;border-radius:12px}.brand-sub{display:none}.brand-word{font-size:16px}.chip{font-size:11px;padding:9px 10px}.topbar{gap:8px}.hero-title{font-size:71px}.ar-name{font-size:21px}.lead{margin:18px 0 25px;font-size:14px}.action-row{display:grid;grid-template-columns:1fr}.primary,.secondary{width:100%}.meta-row{gap:9px 18px}.art{padding-bottom:20px}.glass-panel{padding:11px;border-radius:24px}.cards{gap:8px}.sector{border-radius:12px}.panel-head{padding:5px 4px 12px}.panel-pill{font-size:10px}.footer{padding-top:10px}.login-showcase{min-height:230px}.login-stage{padding-top:5px;gap:17px}.login-box{border-radius:23px}.showcase-badges span{font-size:10px}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="aurora" aria-hidden="true"></div><div class="gridlines" aria-hidden="true"></div>
+  <header class="topbar">
+    <a class="brand" href="#welcome" aria-label="OSRIP home"><span class="brand-symbol">O</span><span><span class="brand-word">OSRIP</span><span class="brand-sub">OMAN RESOURCE INTELLIGENCE</span></span></a>
+    <div class="tools"><button type="button" class="chip" id="language" title="Switch language">English</button><button type="button" class="chip" id="theme" title="Change theme">☀ &nbsp; Light</button></div>
+  </header>
+  <main class="frame">
+    <section id="welcome" class="welcome" aria-labelledby="welcome-name">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="status-dot"></span><span data-ar="منصة أبحاث وذكاء الموارد" data-en="RESOURCE INTELLIGENCE PLATFORM">منصة أبحاث وذكاء الموارد</span></div>
+        <h1 class="hero-title" id="welcome-name">OSRIP</h1>
+        <h2 class="ar-name" data-ar="منصة عُمان الذكية لمعلومات الموارد" data-en="Oman Smart Resource Intelligence Platform">منصة عُمان الذكية لمعلومات الموارد</h2>
+        <p class="english-name">OMAN SMART RESOURCE INTELLIGENCE PLATFORM</p>
+        <p class="lead" data-ar="انطلق إلى عالم التحليل الذكي. استكشف الكهرباء والمياه والأمن الغذائي والتجارة في سلطنة عُمان من مكان واحد، بواجهة واضحة وتجربة احترافية." data-en="Explore electricity, water, food security and trade in Oman through an intelligent, unified research and analysis experience.">انطلق إلى عالم التحليل الذكي. استكشف الكهرباء والمياه والأمن الغذائي والتجارة في سلطنة عُمان من مكان واحد، بواجهة واضحة وتجربة احترافية.</p>
+        <div class="action-row"><button class="primary" id="enter" type="button"><span data-ar="الدخول إلى المنصة" data-en="Enter platform">الدخول إلى المنصة</span><span aria-hidden="true">←</span></button><button class="secondary" id="skip" type="button"><span data-ar="تجاوز المقدمة" data-en="Skip introduction">تجاوز المقدمة</span></button></div>
+        <div class="meta-row"><span><b>✧</b><span data-ar="تصميم عصري" data-en="Premium interface">تصميم عصري</span></span><span><b>◎</b><span data-ar="العربية والإنجليزية" data-en="Arabic & English">العربية والإنجليزية</span></span><span><b>◈</b><span data-ar="أربعة محاور رئيسية" data-en="Four research domains">أربعة محاور رئيسية</span></span></div>
+      </div>
+      <div class="art"><div class="glass-panel">
+        <div class="panel-head"><div><p class="panel-title" data-ar="اكتشف محاور OSRIP" data-en="Explore OSRIP domains">اكتشف محاور OSRIP</p><p class="panel-sub" data-ar="أربعة محاور، منصة موحّدة" data-en="Four domains. One intelligent platform.">أربعة محاور، منصة موحّدة</p></div><span class="panel-pill">OSRIP / 04</span></div>
+        <div class="cards"><a class="sector" href="#login" aria-label="Electricity"><img src="assets/osrip_electricity.png" alt="Electricity: Oman electricity infrastructure" /><span class="overlay"></span></a><a class="sector" href="#login" aria-label="Water"><img src="assets/osrip_water.png" alt="Water: reservoir and treatment facilities" /><span class="overlay"></span></a><a class="sector" href="#login" aria-label="Food security"><img src="assets/osrip_food_security.png" alt="Food security: Oman agriculture and crops"/><span class="overlay"></span></a><a class="sector" href="#login" aria-label="Trade"><img src="assets/osrip_trade.png" alt="Trade: Oman cargo port"/><span class="overlay"></span></a></div>
+        <div class="panel-bottom"><span data-ar="نظرة واحدة. آفاق أكثر." data-en="One platform. More possibilities.">نظرة واحدة. آفاق أكثر.</span><strong data-ar="اكتشف ←" data-en="Explore →">اكتشف ←</strong></div>
+      </div></div>
+    </section>
+    <section id="login" class="login-stage hide" aria-labelledby="login-title">
+      <div class="login-showcase"><div><div class="showcase-name">OSRIP</div><div class="showcase-caption" data-ar="البيانات تمنحك الصورة. والتحليل يمنحك الرؤية." data-en="Data provides the picture. Analysis reveals the insight.">البيانات تمنحك الصورة. والتحليل يمنحك الرؤية.</div><p class="showcase-small" data-ar="منصة عُمانية تجمع المعرفة والتحليل والابتكار في تجربة واحدة." data-en="A unified Omani platform for knowledge, analysis and innovation.">منصة عُمانية تجمع المعرفة والتحليل والابتكار في تجربة واحدة.</p></div><div class="showcase-badges"><span data-ar="الكهرباء" data-en="Electricity">الكهرباء</span><span data-ar="المياه" data-en="Water">المياه</span><span data-ar="الأمن الغذائي" data-en="Food security">الأمن الغذائي</span><span data-ar="التجارة" data-en="Trade">التجارة</span></div></div>
+      <div class="login-box"><div class="login-symbol">O</div><h2 class="login-heading" id="login-title" data-ar="مرحبًا بعودتك" data-en="Welcome back">مرحبًا بعودتك</h2><p class="login-intro" data-ar="سجّل الدخول إلى OSRIP باستخدام اسم المستخدم وكلمة المرور." data-en="Sign in to OSRIP with your username and password.">سجّل الدخول إلى OSRIP باستخدام اسم المستخدم وكلمة المرور.</p>
+        <form id="login-form" novalidate><div class="field"><label for="username" data-ar="اسم المستخدم" data-en="Username">اسم المستخدم</label><div class="field-wrap"><input id="username" name="username" autocomplete="username" required spellcheck="false" maxlength="80" placeholder="" /></div></div><div class="field"><label for="password" data-ar="كلمة المرور" data-en="Password">كلمة المرور</label><div class="field-wrap"><input id="password" name="password" type="password" autocomplete="current-password" required minlength="1" placeholder=""/><button class="show-pass" id="toggle-password" type="button" aria-pressed="false" data-ar="إظهار" data-en="Show">إظهار</button></div></div>
+          <p id="form-error" class="form-error" role="alert"></p><button type="submit" class="primary login-submit"><span data-ar="تسجيل الدخول" data-en="Sign in">تسجيل الدخول</span> <span aria-hidden="true">←</span></button>
+        </form>
+        <p class="login-fine" data-ar="اسم مستخدم وكلمة مرور فقط — دون طلب هاتف أو بريد إلكتروني." data-en="Only a username and password — no phone number or email required.">اسم مستخدم وكلمة مرور فقط — دون طلب هاتف أو بريد إلكتروني.</p>
+        <div class="demo-message hide" id="demo-message" role="status"></div>
+        <button type="button" class="bottom-link" id="back"><span data-ar="→ العودة إلى المقدمة" data-en="← Back to introduction">→ العودة إلى المقدمة</span></button>
+      </div>
+    </section>
+  </main>
+  <footer class="footer"><span>OSRIP © 2026 · Interface concept</span><span data-ar="نموذج بصري قابل للتجربة — لا يُجري مصادقة حقيقية" data-en="Interactive visual prototype — no real authentication">نموذج بصري قابل للتجربة — لا يُجري مصادقة حقيقية</span></footer>
+</div>
+<script>
+(()=>{
+  const root=document.documentElement;
+  let language='ar';let theme='dark';
+  const $=id=>document.getElementById(id);
+  function display(){const page=location.hash==='#login'?'login':'welcome';$('welcome').classList.toggle('hide',page!=='welcome');$('login').classList.toggle('hide',page!=='login');document.title=`OSRIP — ${page==='login'?'Sign In':'Welcome'} | Design Preview`;if(page==='login'){$('form-error').textContent='';$('demo-message').classList.add('hide')}}
+  function changeLang(){language=language==='ar'?'en':'ar';root.lang=language;root.dir=language==='ar'?'rtl':'ltr';for(const el of document.querySelectorAll('[data-ar][data-en]'))el.textContent=el.dataset[language];$('language').textContent=language==='ar'?'English':'العربية';$('toggle-password').textContent=$('password').type==='password'?(language==='ar'?'إظهار':'Show'):(language==='ar'?'إخفاء':'Hide');}
+  $('language').addEventListener('click',changeLang);
+  $('theme').addEventListener('click',()=>{theme=theme==='dark'?'light':'dark';root.dataset.theme=theme;$('theme').textContent=theme==='dark'?'☀  Light':'☾  Dark'});
+  $('enter').addEventListener('click',()=>location.hash='login');$('skip').addEventListener('click',()=>location.hash='login');$('back').addEventListener('click',()=>location.hash='welcome');
+  $('toggle-password').addEventListener('click',()=>{const input=$('password');input.type=input.type==='password'?'text':'password';$('toggle-password').setAttribute('aria-pressed',String(input.type==='text'));$('toggle-password').textContent=input.type==='password'?(language==='ar'?'إظهار':'Show'):(language==='ar'?'إخفاء':'Hide')});
+  $('login-form').addEventListener('submit',e=>{e.preventDefault();const username=$('username').value.trim();const password=$('password').value;if(!username||!password){$('form-error').textContent=language==='ar'?'أدخل اسم المستخدم وكلمة المرور.':'Enter your username and password.';return;}const msg=$('demo-message');msg.textContent=language==='ar'?'هذه واجهة تصميمية فقط. اربط النموذج بنظام المصادقة الآمن الموجود في OSRIP عبر Claude Code؛ لم يتم تسجيل الدخول.':'This is a visual prototype only. Connect it to OSRIP’s secure backend authentication; no login has occurred.';msg.classList.remove('hide');$('form-error').textContent='';$('password').value='';});
+  window.addEventListener('hashchange',display);display();
+})();
+</script>
+</body>
+</html>
