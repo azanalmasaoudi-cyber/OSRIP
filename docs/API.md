@@ -234,6 +234,19 @@ in the `X-Transcript` header (percent-encoded UTF-8). Analyses built since 0021 
 | `POST /research/candidates/{id}/review` `{decision: accepted\|rejected\|duplicate, note}` | A note is required to accept. 409 `already_reviewed`. Never publishes anything |
 | `GET /research/candidates/accepted.csv` | Accepted figures as CSV, to prepare a normal import |
 
+### Roles, groups, monitoring and decision brief (migration 0026)
+
+| Method and path | Permission | Purpose |
+|---|---|---|
+| `GET /admin/permissions` | `user.manage` | Every permission code |
+| `GET /admin/roles`, `POST /admin/roles` | `user.manage` | Built-in and custom roles with usage counts; create a custom role (`code`, `description`, `permissions`) |
+| `PUT /admin/roles/{code}`, `DELETE /admin/roles/{code}` | `user.manage` | Change or remove a custom role (built-in roles: 409 `builtin_role`) |
+| `GET /admin/groups`, `POST /admin/groups` | `user.manage` | Groups with members, roles and permissions; create a group |
+| `PUT /admin/groups/{id}`, `DELETE /admin/groups/{id}` | `user.manage` | Change or remove a group (the administrator role by group: 409 `administrator_by_group`) |
+| `POST /admin/groups/{id}/members`, `DELETE /admin/groups/{id}/members/{user_id}` | `user.manage` | Add or remove a member |
+| `GET /admin/monitoring` | `audit.read` | Readiness, integrations, recent errors, plus `usage` (24 h and 30 days per provider), `sync` (feeds, releases awaiting approval) and `performance` (this process, by route pattern) |
+| `GET /analysis/{section}/brief?data_mode=` | public | Decision brief from published data only; findings carry reference ids into `provenance` |
+
 ### Protected actions
 
 | Method and path | Permission |

@@ -272,6 +272,22 @@ What changed (details and screenshots in PREMIUM_REDESIGN.md): the warm glass de
 | Browser, by hand (copy of the development database) | Sign-in in light and dark, password toggle, Remember me stored as a 14-day persistent session; dashboard KPIs and analysis; Audit Logs (119 events); map relief in light and dark; an assistant reply; Arabic at phone width with no sideways scroll |
 | OpenAI, live | **Not tested**: no API key configured |
 
+## 2026-11-02: platform upgrade (branch `feature/osrip-platform-upgrade`)
+
+What changed (details in PLATFORM_UPGRADE.md): custom roles and groups (migration 0026), the
+module navigation, glass surfaces, Service Health usage, sync and performance sections, the
+decision brief on each axis page, and the Oman map with OpenStreetMap boundaries.
+
+| Check | Result |
+|---|---|
+| `ruff`, backend `pytest` with database tests | Pass; **939 passed**. New tests: `test_groups_roles_integration.py` (6), `test_service_health_integration.py` (1), `test_decision_brief_integration.py` (3). The 0026 migration round trip passes |
+| `npm run typecheck`, `npm run lint`, `npm run check:contrast`, `npm run build` | Pass |
+| Mock-data browser tests (Chrome, `PW_CHANNEL=chrome`) | **40 passed, 3 skipped** |
+| Full-stack browser tests (Chrome) | **186 passed, 3 skipped, 3 failed** in the full run (192 tests). The three failures were fixed and their spec files rerun in full: **25 passed**. They were: a home-page figure card 21 px too wide at 360 px, the geography test expecting the old "no boundaries" panel, and a timeout while the machine slept |
+| Browser, by hand, against a copy of the development database (real verified data) | Decision brief on all four axes in English and Arabic, at desktop and phone width: no sideways scroll, references hidden until switched on, 47 provenance rows on Food Security. Map: shading by values and by the compared indicator, hover details, click to select, wilayat level ("No data" throughout, since no wilayat figures are published). Service Health usage table checked with labelled rows on a test database, then removed |
+| Boundary match | 11/11 governorates and 63/63 wilayats, no geometry problems, one documented correction (Sur) |
+| OpenAI, live | **Not tested**: no API key configured |
+
 ## 2026-10-27 (evening): WhatsApp verification, Meta Cloud API (branch `feature/whatsapp-verification`)
 
 What changed (details in INTEGRATIONS.md, "WhatsApp verification"):
