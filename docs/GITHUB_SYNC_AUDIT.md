@@ -5,7 +5,7 @@ This is a check of whether everything that belongs to OSRIP on this computer is 
 
 **Result:** apart from one documentation commit (see "GitHub branches not in main"), every project
 file was already on GitHub. That commit had reached GitHub on another branch but never `main`;
-branch `sync/github-audit-2026-11-12` brings it into `main`. Nothing failed to upload.
+PR #21, from branch `sync/github-audit-2026-11-12`, brought it into `main`. Nothing failed to upload.
 
 ## Repository and access
 
@@ -38,7 +38,7 @@ branch `sync/github-audit-2026-11-12` brings it into `main`. Nothing failed to u
 
 | Branch | Commits not in `main` | What happened |
 |---|---|---|
-| `feature/osrip-platform-upgrade` (open PR #4) | 1: `f65210b`, docs only | Merged into the sync branch: `docs/PLATFORM_UPGRADE.md`, the API table for roles, groups, monitoring and the decision brief, and its test-results entry. The code they describe (migration 0026, `admin.py`, `analysis.py`) is already in `main`. Once the sync branch is merged, GitHub will show PR #4 as merged |
+| `feature/osrip-platform-upgrade` (PR #4) | 1: `f65210b`, docs only | Brought into `main` by PR #21: `docs/PLATFORM_UPGRADE.md`, the API table for roles, groups, monitoring and the decision brief, and its test-results entry. The code they describe (migration 0026, `admin.py`, `analysis.py`) was already in `main`. PR #4 targeted `feature/email-phone-verification`, not `main`, so GitHub could not mark it merged. With all its commits in `main`, it was closed by hand on 2026-11-12 |
 | `v0/osrip-dashboard-redesign-8aa659ba` | 2, made by v0 | No net change: the second commit reverses the first line for line. Nothing to bring over |
 
 ## Left out on purpose (`.gitignore`)
