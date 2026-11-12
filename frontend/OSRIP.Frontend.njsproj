@@ -404,12 +404,12 @@
     <Content Include="public\images\photos\bahla-fort.jpg" />
     <Content Include="public\images\photos\desalination-al-khaluf.jpg" />
     <Content Include="public\images\photos\duqm-port.jpg" />
+    <Content Include="public\images\photos\electricity-pylons-oman-1598.webp" />
+    <Content Include="public\images\photos\electricity-pylons-oman-800.webp" />
+    <Content Include="public\images\photos\electricity-pylons-oman.jpg" />
     <Content Include="public\images\photos\falaj-misfah.jpg" />
     <Content Include="public\images\photos\misfat-al-abriyeen-village.jpg" />
     <Content Include="public\images\photos\wahiba-sands.jpg" />
-    <Content Include="public\images\sectors\osrip_electricity-1672.webp" />
-    <Content Include="public\images\sectors\osrip_electricity-836.webp" />
-    <Content Include="public\images\sectors\osrip_electricity.png" />
     <Content Include="public\images\sectors\osrip_food_security-1672.webp" />
     <Content Include="public\images\sectors\osrip_food_security-836.webp" />
     <Content Include="public\images\sectors\osrip_food_security.png" />

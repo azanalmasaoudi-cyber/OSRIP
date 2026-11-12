@@ -118,7 +118,7 @@ placed behind charts.
 | Dialog | `components/ui/dialog.tsx` | Native `<dialog>` with `showModal()`: inert background, Escape to close, focus returns to the opener. Also used for the mobile drawer. |
 | Source details | `components/common/SourceDetails.tsx` | Definition, unit, value type, mode, source, publisher, version, access date, link and note. |
 | States | `components/common/StatePanel.tsx` | `loading` (skeleton), `empty` (with reset), `no_verified_data`, `error` (with retry and detail), `not_implemented`, `restricted`. Missing values are shown as the text "Missing", never 0. |
-| Photo, sector image | `components/common/Photo.tsx`, `components/brand/SectorImage.tsx` | Credited figures of real places (Wikimedia Commons). Used on the landing page, the Overview and the sector headers; electricity has no licensed photograph yet and shows the labelled project illustration. |
+| Photo, sector image | `components/common/Photo.tsx`, `components/brand/SectorImage.tsx` | Credited figures of real places (Wikimedia Commons). Used on the landing page, the Overview and the sector headers. Electricity is a photograph of pylons in Oman (CC BY-SA 4.0); on the sector cards (`SectorArtwork`) it is framed like the other artworks, with the name and a short credit laid over it. |
 | Quality badges | `components/common/QualityBadges.tsx` | Verified / Synthetic, Pending review, Missing data, Last updated, Source, from the rows on screen; `QualityLegend` explains them. |
 | Chart on request | `components/ui/chart-on-request.tsx` | Show chart / Hide chart; the chart is not rendered until asked for. |
 

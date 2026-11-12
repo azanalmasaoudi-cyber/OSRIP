@@ -1,5 +1,24 @@
 # Test results
 
+## 2026-11-12: a real photograph of Oman for the electricity sector (branch `feature/electricity-oman-photo`)
+
+**What changed.**
+- **The photograph:** the electricity artwork is replaced by [Electricity_pylons_in_Oman.png](https://commons.wikimedia.org/wiki/File:Electricity_pylons_in_Oman.png). It was taken by kaartcam (via Mapillary) and is licensed CC BY-SA 4.0, as read from the Commons metadata. The downloaded file's SHA-1 matches the one Commons publishes.
+- **Image files:** cropped to 16:9 (both pylons whole, never enlarged) and saved as JPEG (86 KB) and WebP (800 px 15 KB, 1598 px 36 KB). The old artwork was a 2.0 MB PNG.
+- **On the cards** (dashboard, welcome, electricity page header): the photograph sits in the same dark, warm-glow frame as the other three artworks, with "الكهرباء / Electricity" and the lightning tile over the empty sky and a short credit.
+- **Overview card:** the full caption with a link to the file, and no "Illustration" label any more.
+- **Sources → Image credits:** a seventh entry with the licence and file links and a **Changes** line.
+- **Unchanged:** the other three sector images, the title, description and button of the electricity card.
+
+| Check | Result |
+|---|---|
+| Frontend typecheck, lint | pass |
+| Frontend unit tests | 23 passed |
+| Colour contrast check | 0 failing pairs |
+| Production build | pass; the three new image files are in `dist/images/photos/`; the old electricity artwork is gone |
+| Browser tests: sector cards, welcome, shell (desktop and phone) | **40 passed**, 3 skipped as designed, 0 failed (1.7 min). The first run, on a freshly started test server, had 37 passed and 3 failed. Two sector-card tests hit the 30 s limit partway through, and the reduced-motion welcome test lost the welcome after a reload. All three passed when rerun on their own (6 of 6) and in the full rerun. |
+| In the running app (`localhost:5173`) | English dark and Arabic light at 1280 px, the phone welcome and the Arabic dark dashboard at 390 px: the photograph loads (WebP 800 px), is drawn at the cards' ratio with no stretching, and has no "Illustration" label. Overview and the credits page show the full credit. Nothing scrolls sideways. The browser console showed no errors from these pages; the only errors were from the computer sleeping overnight. |
+
 ## 2026-11-10 (evening): username and password only; usernames of 1-10 characters; the 502 on sign-in (branch `feature/username-password-auth`)
 
 **The 502.** Nothing answered behind the page. Port 8000 belonged to Incredibuild's Manager service (installed with Visual Studio), but this branch's API uses 8010. The launcher had started the API on 8010 at 17:58 and its log ends at 17:59:05; both the launcher and the API had gone. A frontend-only preview server, started from a Claude session at 07:38, still held port 5173 and forwarded `/api` to the empty port 8010. That pushed the launcher's frontend to 5174, and every sign-in through 5173 got a bare 502, shown as "Request failed with status 502". Fixes:
