@@ -556,17 +556,16 @@ export const en = {
   },
   photo: {
     credit: 'Photo: {{creator}} · {{license}} · Wikimedia Commons',
-    label: 'Photo',
-    creditShort: '{{creator}} · {{license}}',
   },
   illustrations: {
     label: 'Illustration',
+    electricity: 'Illustration: a transmission tower and solar panels below mountains',
     water: 'Illustration: a falaj channel between date palms, with a water drop',
     food: 'Illustration: a date palm with fruit, wheat and a woven basket',
     trade: 'Illustration: a dhow at sea beside a port crane and shipping containers',
   },
   sectorArt: {
-    electricity: 'Electricity (الكهرباء). Photograph: two steel pylons carrying high-voltage power lines in Oman, with more pylons and a rocky hill behind',
+    electricity: 'Electricity (الكهرباء). Illustration: a power station, a transmission tower, wind turbines and solar panels below mountains at dusk',
     water: 'Water (المياه). Illustration: a dam releasing water from a mountain reservoir, beside a water treatment plant',
     food: 'Food Security (الأمن الغذائي). Illustration: date palms, fields and greenhouses below a hilltop fort, with vegetables and a sack of grain',
     trade: 'Trade (التجارة). Illustration: a container port with cranes and a container ship, below a fort flying the flag of Oman',

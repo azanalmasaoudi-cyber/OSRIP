@@ -132,8 +132,8 @@ export const PHOTOS = {
     licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Electricity_pylons_in_Oman.png',
     changes: {
-      en: 'Cropped to 16:9 and saved as WebP and JPEG for the web; on the sector cards it is shown in a dark frame with a warm tint and the sector name over it. This adaptation is shared under the same licence, CC BY-SA 4.0.',
-      ar: 'قُصّت إلى نسبة 16:9 وحُفظت بصيغتي WebP وJPEG للويب، وتظهر في بطاقات القطاع داخل إطار داكن بلون دافئ يعلوه اسم القطاع. هذه النسخة المعدّلة متاحة بالترخيص نفسه CC BY-SA 4.0.',
+      en: 'Cropped to 16:9 and saved as WebP and JPEG for the web. This adaptation is shared under the same licence, CC BY-SA 4.0.',
+      ar: 'قُصّت إلى نسبة 16:9 وحُفظت بصيغتي WebP وJPEG للويب. هذه النسخة المعدّلة متاحة بالترخيص نفسه CC BY-SA 4.0.',
     },
   },
 } as const satisfies Record<string, PhotoCredit>;
