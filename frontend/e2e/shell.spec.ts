@@ -6,8 +6,9 @@ test('landing page explains the project and credits every photograph', async ({ 
   await page.goto('/');
   await expect(page.getByTestId('home-page')).toBeVisible();
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  // The four sectors show OSRIP's own sector artwork (e2e/sector-cards.spec.ts); the hero
-  // background is a credited photograph.
+  // The four sector cards (e2e/sector-cards.spec.ts): three artworks and a credited photograph
+  // of electricity pylons, whose short credit is checked there; the hero background is a
+  // credited photograph.
   await expect(page.getByTestId('sector-art')).toHaveCount(4);
   await expect(page.getByTestId('home-hero-image')).toBeVisible();
   const credits = page.getByTestId('photo-credit');
@@ -214,7 +215,7 @@ test('data management is restricted to authorized users', async ({ page }) => {
 test('old /methodology links redirect to Sources and Methodology', async ({ page }) => {
   await page.goto('/methodology?mode=synthetic');
   await expect(page).toHaveURL(/\/sources\?mode=synthetic$/);
-  await expect(page.getByTestId('image-credits').locator('li')).toHaveCount(6);
+  await expect(page.getByTestId('image-credits').locator('li')).toHaveCount(7);
 });
 
 test('@mobile menu opens as a drawer and navigates', async ({ page, isMobile }) => {

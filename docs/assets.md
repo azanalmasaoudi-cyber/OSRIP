@@ -32,8 +32,9 @@ Generated infrastructure is conceptual and is never presented as a photograph of
 
 ## Photographs
 
-All six photographs were obtained from Wikimedia Commons on 2026-09-25. The only
-change was resizing to web dimensions and re-encoding as JPEG at quality 80.
+The first six photographs were obtained from Wikimedia Commons on 2026-09-25. Their only
+change was resizing to web dimensions and re-encoding as JPEG at quality 80. The electricity
+photograph was added on 2026-11-12 and was also cropped (see *Electricity photograph* below).
 
 Location check: each file's description, Commons categories and (where recorded)
 embedded GPS coordinates were read, and the thumbnail was viewed to confirm the
@@ -48,6 +49,7 @@ place.
 | `duqm-port.jpg` (1400×685) | Port of Duqm breakwater and quays, Al Wusta | AbdullahAlMaani | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) | GPS 19.6611, 57.7285; categories *Duqm Port*, *Ports and harbours in Oman* | [File:ميناء_الدقم_الجديد.jpg](https://commons.wikimedia.org/wiki/File:%D9%85%D9%8A%D9%86%D8%A7%D8%A1_%D8%A7%D9%84%D8%AF%D9%82%D9%85_%D8%A7%D9%84%D8%AC%D8%AF%D9%8A%D8%AF.jpg) | Landing, Trade card |
 | `wahiba-sands.jpg` (1600×900) | Dunes of the Sharqiya (Wahiba) Sands near Al Raka | Francesco Bini (User:Sailko) | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) | GPS 22.3611, 58.7714; category *Wahiba Sands* | [File:Al-raka,_dune_del_deserto_Sharqiya_01.jpg](https://commons.wikimedia.org/wiki/File:Al-raka,_dune_del_deserto_Sharqiya_01.jpg) | Landing, prototype-status panel |
 | `desalination-al-khaluf.jpg` (1400×1050) | Containerised forward-osmosis desalination plant, Al Khaluf, Al Wusta | Starsend (English Wikipedia) | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) | Description names Al Khaluf, Oman; category *Desalination plants in Oman* (no GPS) | [File:Modern_Water_FO_Plant_Al_Khaluf_Oman.jpg](https://commons.wikimedia.org/wiki/File:Modern_Water_FO_Plant_Al_Khaluf_Oman.jpg) | Landing, Energy and Essential Services card |
+| `electricity-pylons-oman.jpg` (1598×899), with WebP copies at 800 and 1598 px | Steel lattice electricity pylons carrying high-voltage lines beside a road, Oman (place not recorded) | kaartcam (via Mapillary) | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) | Description "Typical electricity pylons in Oman"; category *Electricity pylons in Oman* (no GPS) | [File:Electricity_pylons_in_Oman.png](https://commons.wikimedia.org/wiki/File:Electricity_pylons_in_Oman.png) | Electricity: dashboard cards, welcome, sector header, Overview card (cropped; see below) |
 
 **Attribution.** CC BY-SA images need visible credit. Each photograph on the
 landing page has a caption with the location, creator, licence and a link to the
@@ -71,10 +73,9 @@ prominent in the frame, which could suggest official endorsement.
 
 ### Gaps: what should still be sourced
 
-- **Electricity infrastructure.** No licensed, location-verified photo of an
-  Omani power station, grid or solar/wind site was found on Commons. The Energy
-  card uses the Al Khaluf desalination plant (water) instead. Replace it or add
-  an electricity image when a suitable one is available.
+- **Electricity infrastructure.** Partly filled on 2026-11-12: electricity pylons in Oman
+  (place not recorded; see *Electricity photograph* below). A licensed, location-verified photo
+  of an Omani power station or solar or wind site is still wanted.
 - **Agriculture with people at work.** If one is added, check that clothing
   and workplaces are shown accurately and respectfully, and get consent or a
   licence that covers identifiable people.
@@ -161,7 +162,7 @@ drawings, are shown. Nothing was downloaded, generated or edited for this releas
 | Water (Overview sector cards; until 2026-11-02 also the sector header and dashboard cards) | `desalination-al-khaluf.jpg` | Photograph, CC BY-SA 3.0 |
 | Food Security (as for Water) | `falaj-misfah.jpg` | Photograph, CC BY-SA 3.0 |
 | Trade (as for Water) | `duqm-port.jpg` | Photograph, CC BY-SA 4.0 |
-| Electricity (as for Water) | `illustrations/sector-electricity.svg` | Project drawing, labelled "Illustration" (no licensed photograph of an Omani power or solar plant is in the repository yet) |
+| Electricity (as for Water) | `illustrations/sector-electricity.svg` until 2026-11-12, then `electricity-pylons-oman.jpg` | Project drawing, labelled "Illustration"; since 2026-11-12 a photograph, CC BY-SA 4.0 |
 
 No longer shown: the generated Omani-professional portrait (landing hero), the booklet's
 conceptual electricity, water and trade rasters (sector headers) and the floating sector tiles.
@@ -178,7 +179,7 @@ photographs above.
 
 | Sector | Original (kept as supplied) | Delivered as |
 |---|---|---|
-| Electricity | `frontend/public/images/sectors/osrip_electricity.png` (2.0 MB) | WebP 836 px (64 KB) or 1672 px (198 KB) |
+| Electricity | `frontend/public/images/sectors/osrip_electricity.png` (2.0 MB), replaced on 2026-11-12 by the photograph below | WebP 836 px (64 KB) or 1672 px (198 KB) |
 | Water | `frontend/public/images/sectors/osrip_water.png` (2.3 MB) | WebP 836 px (87 KB) or 1672 px (278 KB) |
 | Food Security | `frontend/public/images/sectors/osrip_food_security.png` (2.5 MB) | WebP 836 px (99 KB) or 1672 px (316 KB) |
 | Trade | `frontend/public/images/sectors/osrip_trade.png` (2.1 MB) | WebP 836 px (69 KB) or 1672 px (211 KB) |
@@ -189,3 +190,36 @@ photographs above.
 - **Delivery:** the browser picks the WebP copy it needs (quality 86–88, made with Pillow), and
   falls back to the original PNG. Dashboard cards load lazily; the sector header loads at once.
 - **Rights:** owner-supplied for this project.
+
+## Electricity photograph (2026-11-12, branch `feature/electricity-oman-photo`)
+
+The electricity artwork is replaced by a real photograph taken in Oman, so the electricity
+sector no longer shows an illustration anywhere. The other three sector artworks are unchanged.
+
+- **Source:** [File:Electricity_pylons_in_Oman.png](https://commons.wikimedia.org/wiki/File:Electricity_pylons_in_Oman.png)
+  on Wikimedia Commons, 1598 × 1153 px PNG, taken on 2017-06-09 by **kaartcam** and imported from
+  Mapillary. Licence [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) (attribution
+  required), read from the file's Commons metadata on 2026-11-12. Downloaded the same day from
+  `upload.wikimedia.org`; its SHA-1 matched the one Commons publishes
+  (`aa267042c4ec9e62573b7f449a65e0f33aaf7369`). The original is not stored in the repository.
+- **Location:** Commons records "Oman" only (no coordinates), so the credit names Oman and no town.
+- **Changes (disclosed in the credit):** cropped to 16:9 (rows 96–995 of 1153, full width, so both
+  pylons stay whole), saved as JPEG (quality 82, 86 KB) and WebP (quality 80: 800 px 15 KB,
+  1598 px 36 KB) with Pillow. It is never enlarged. On the sector cards it is shown under a warm
+  tint and a dark veil in a frame like the other artworks, with the sector name in Arabic and
+  English laid over it as text; nothing is written into the image file.
+- **Files** (`frontend/public/images/photos/`): `electricity-pylons-oman.jpg`,
+  `electricity-pylons-oman-800.webp`, `electricity-pylons-oman-1598.webp`. Browsers that read
+  WebP get the width they need; others get the JPEG.
+- **Where:** `components/brand/SectorArtwork.tsx` (dashboard cards, welcome, sector page header),
+  `components/brand/SectorImage.tsx` (Overview card), `components/brand/SectorIllustration.tsx`
+  (page-header thumbnail, currently unused). None carries the "Illustration" label.
+- **Attribution:** every placement shows the creator and licence. The Overview caption also links
+  to the Commons file. The dashboard and welcome cards are links themselves, so their short credit
+  ("Photo: kaartcam · CC BY-SA 4.0") is plain text. The full entry under **Sources and Methodology
+  → Image credits** links the licence and the file and lists the changes.
+- **Share-alike:** the cropped files are an adaptation and are shared under CC BY-SA 4.0. This does
+  not affect the licence of the OSRIP code.
+- **People:** none identifiable (one distant parked car).
+- **Removed:** `frontend/public/images/sectors/osrip_electricity.png` and its two WebP copies. The
+  owner's original stays in `docs/OSRIP_Premium_Sector_Cards/osrip_electricity.png`.

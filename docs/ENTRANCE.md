@@ -26,7 +26,8 @@ to `#A25132`).
 Text uses the application's typefaces (IBM Plex Sans and IBM Plex Sans Arabic); the large OSRIP
 wordmark keeps the design's heavy Arial. The sector images are the supplied PNGs, already in
 `frontend/public/images/sectors/` (byte-identical) and served as WebP
-(`components/brand/SectorArtwork.tsx`).
+(`components/brand/SectorArtwork.tsx`). The exception is electricity: since 2026-11-12 it is a
+credited photograph of pylons in Oman, framed like the others (see `docs/assets.md`).
 
 The prototype's own footer line ("no real authentication") and its demonstration submit are
 not used: the form signs in through the real API. The footer carries the application's

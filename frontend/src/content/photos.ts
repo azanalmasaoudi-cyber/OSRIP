@@ -1,15 +1,17 @@
 import type { BilingualText } from '@/domain/types';
 
 /**
- * Photographs used on the landing page. Every entry is a Wikimedia Commons file
+ * Credited photographs of real places in Oman. Every entry is a Wikimedia Commons file
  * whose location was checked against its description, categories and (where
  * recorded) GPS coordinates. Keep in sync with docs/assets.md.
- * Files were only resized; no other edits.
+ * Files were only resized unless `changes` says otherwise.
  */
 export interface PhotoCredit {
   id: string;
-  /** Path under /public. */
+  /** Path under /public: the JPEG every browser reads. */
   src: string;
+  /** Optional WebP copies by width (`srcset` syntax), for browsers that read WebP. */
+  webp?: string;
   width: number;
   height: number;
   alt: BilingualText;
@@ -18,6 +20,8 @@ export interface PhotoCredit {
   license: string;
   licenseUrl: string;
   sourceUrl: string;
+  /** What was changed beyond resizing, when anything was (the licence asks for it to be said). */
+  changes?: BilingualText;
 }
 
 export const PHOTOS = {
@@ -111,6 +115,26 @@ export const PHOTOS = {
     license: 'CC BY-SA 3.0',
     licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/',
     sourceUrl: 'https://commons.wikimedia.org/wiki/File:Modern_Water_FO_Plant_Al_Khaluf_Oman.jpg',
+  },
+  pylons: {
+    id: 'pylons',
+    src: '/images/photos/electricity-pylons-oman.jpg',
+    webp: '/images/photos/electricity-pylons-oman-800.webp 800w, /images/photos/electricity-pylons-oman-1598.webp 1598w',
+    width: 1598,
+    height: 899,
+    alt: {
+      en: 'Two steel lattice pylons carrying high-voltage power lines beside a road, with more pylons and a rocky hill behind.',
+      ar: 'برجان فولاذيان شبكيان يحملان خطوط الكهرباء ذات الجهد العالي بجانب طريق، وخلفهما أبراج أخرى وتلّ صخري.',
+    },
+    location: { en: 'Oman', ar: 'عُمان' },
+    creator: 'kaartcam',
+    license: 'CC BY-SA 4.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/',
+    sourceUrl: 'https://commons.wikimedia.org/wiki/File:Electricity_pylons_in_Oman.png',
+    changes: {
+      en: 'Cropped to 16:9 and saved as WebP and JPEG for the web; on the sector cards it is shown in a dark frame with a warm tint and the sector name over it. This adaptation is shared under the same licence, CC BY-SA 4.0.',
+      ar: 'قُصّت إلى نسبة 16:9 وحُفظت بصيغتي WebP وJPEG للويب، وتظهر في بطاقات القطاع داخل إطار داكن بلون دافئ يعلوه اسم القطاع. هذه النسخة المعدّلة متاحة بالترخيص نفسه CC BY-SA 4.0.',
+    },
   },
 } as const satisfies Record<string, PhotoCredit>;
 

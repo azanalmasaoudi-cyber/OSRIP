@@ -16,7 +16,8 @@ async function snap(page: Page, name: string): Promise<void> {
 
 async function imagesLoaded(page: Page): Promise<boolean[]> {
   return page.getByTestId('welcome-sector').locator('img').evaluateAll((imgs) =>
-    (imgs as HTMLImageElement[]).map((i) => i.complete && i.naturalWidth > 0 && i.currentSrc.includes('/images/sectors/')));
+    (imgs as HTMLImageElement[]).map((i) => i.complete && i.naturalWidth > 0
+      && (i.currentSrc.includes('/images/sectors/') || i.currentSrc.includes('/images/photos/electricity-pylons-oman'))));
 }
 
 test('first visit: the welcome in the visitor\'s language; it waits; Enter platform opens the dashboard', async ({ page }) => {

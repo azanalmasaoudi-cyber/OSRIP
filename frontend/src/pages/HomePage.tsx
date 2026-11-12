@@ -99,8 +99,9 @@ export function HomePage() {
         {/* The four sectors */}
         <section aria-labelledby="domains-heading" className="flex flex-col gap-4">
           <h2 id="domains-heading" className="gold-rule text-xl font-semibold sm:text-2xl">{t('overviewIntro.sectorsHeading')}</h2>
-          {/* Each card is the sector's artwork (its title is in the image, so none is laid over
-              it) and opens the sector's page; the alt text names the sector for screen readers. */}
+          {/* Each card is the sector's image and opens the sector's page; the alt text names the
+              sector for screen readers. Three are artworks with their title drawn in; electricity
+              is a credited photograph with the title laid over it (components/brand/SectorArtwork). */}
           <ul className="grid gap-5 sm:grid-cols-2">
             {SECTORS.map((s) => (
               <li key={s.section} className="flex">

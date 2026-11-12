@@ -92,6 +92,12 @@ export function SourcesPage() {
                       Wikimedia Commons
                     </a>
                   </dd>
+                  {photo.changes ? (
+                    <>
+                      <dt className="text-muted-foreground">{t('pages.sources.imageChangesLabel')}</dt>
+                      <dd data-testid="image-changes">{photo.changes[language]}</dd>
+                    </>
+                  ) : null}
                 </dl>
               </li>
             ))}
