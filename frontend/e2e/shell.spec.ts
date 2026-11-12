@@ -6,9 +6,8 @@ test('landing page explains the project and credits every photograph', async ({ 
   await page.goto('/');
   await expect(page.getByTestId('home-page')).toBeVisible();
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  // The four sector cards (e2e/sector-cards.spec.ts): three artworks and a credited photograph
-  // of electricity pylons, whose short credit is checked there; the hero background is a
-  // credited photograph.
+  // The four sectors show OSRIP's own sector artwork (e2e/sector-cards.spec.ts); the hero
+  // background is a credited photograph.
   await expect(page.getByTestId('sector-art')).toHaveCount(4);
   await expect(page.getByTestId('home-hero-image')).toBeVisible();
   const credits = page.getByTestId('photo-credit');

@@ -1,5 +1,29 @@
 # Test results
 
+## 2026-11-12: the electricity photograph on the Overview only (branch `fix/electricity-photo-overview-only`)
+
+**What changed.** PR #19 had put the electricity photograph (pylons in Oman, kaartcam, CC BY-SA 4.0)
+on the dashboard cards, the welcome and the electricity page header too. At the owner's request it
+now appears only on the Overview page:
+- **Overview (`/overview`):** unchanged. The Electricity card shows the credited photograph with its caption.
+- **Dashboard (`/`), welcome and `/energy/electricity`:** the original electricity artwork is back, restored from Git history.
+  - `osrip_electricity.png` is identical to the owner's file in `docs/OSRIP_Premium_Sector_Cards/`.
+  - `SectorArtwork`, `SectorIllustration` and the `HomePage` comment are as they were before PR #19.
+- **Translations:** the artwork's alt text and the illustration label are back. The short-credit keys that only the card overlay used are gone.
+- **Credits page:** the "Changes" line no longer mentions the card overlay.
+- **Water, food security and trade:** the images are unchanged everywhere.
+- **Academic booklets (`docs/*.docx`):** checked, not changed. They describe the welcome and the four sector cards as generated artworks, which is true again. None mentions the Overview images.
+
+| Check | Result |
+|---|---|
+| Frontend typecheck, lint | pass |
+| Frontend unit tests | 23 passed |
+| Colour contrast check | 0 failing pairs |
+| Production build | pass; `dist/images/sectors/` has the electricity artwork again and `dist/images/photos/` the photograph |
+| Browser tests: sector cards, welcome, shell (desktop and phone) | **43 passed**, 3 skipped as designed, 0 failed (1.7 min). New tests cover:<br>• the photograph only on `/overview`, with its caption, link and credits entry;<br>• no photograph on `/` or `/energy/electricity`;<br>• Arabic and the dark theme;<br>• the Overview card at phone width. |
+| Earlier runs of the same suites (not counted as results) | The first run, 32 passed and 12 failed, was cut short by the computer going to sleep (`ERR_NETWORK_IO_SUSPENDED`, 30 s timeouts). The second, 38 passed and 5 failed, showed blank pages while I browsed the same frontend's other dev server at the same time. Both servers share Vite's dependency cache, which was rebuilt mid-run. The third run, left undisturbed, is the result above. |
+| In the running app (`localhost:5173`) | All images loaded, at their own ratio, with no sideways scroll:<br>• `/`: the original artwork on all four cards (Arabic and English, dark);<br>• `/energy/electricity`: the artwork (Arabic; English light);<br>• `/overview`: the photograph, with the caption "عُمان · تصوير: kaartcam · CC BY-SA 4.0 · ويكيميديا كومنز" and the other three photographs unchanged. |
+
 ## 2026-11-12: a real photograph of Oman for the electricity sector (branch `feature/electricity-oman-photo`)
 
 **What changed.**

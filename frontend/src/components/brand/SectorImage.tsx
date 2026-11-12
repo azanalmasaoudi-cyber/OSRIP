@@ -4,7 +4,13 @@ import { PHOTOS, type PhotoCredit } from '@/content/photos';
 import { useAppLanguage } from '@/lib/useAppLanguage';
 import { cn } from '@/lib/utils';
 
-/** Credited photographs of real Omani places (Wikimedia Commons, see content/photos.ts). */
+/**
+ * Credited photographs of real Omani places (Wikimedia Commons, see content/photos.ts).
+ *
+ * Used only on the Overview page. The electricity photograph (pylons in Oman) belongs here and
+ * nowhere else: the dashboard cards, the welcome and the sector pages show the sector artworks
+ * (SectorArtwork), and the page-header thumbnail shows the labelled illustration (SectorIllustration).
+ */
 export const SECTOR_PHOTO: Record<Sector, PhotoCredit> = {
   electricity: PHOTOS.pylons,
   water: PHOTOS.desalination,
