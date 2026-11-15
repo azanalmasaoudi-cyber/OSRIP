@@ -1,5 +1,68 @@
 # Test results
 
+## 2026-11-13 to 15: backend connectivity, error states and Al Mulhim's saving (branch `fix/backend-connectivity-and-error-states`)
+
+**Root causes found.**
+- **The published site** (`https://osrip.vercel.app`, Vercel, builds `main`) is the interface only:
+  - every `/api/v1/...` request got Vercel's own `404` (`X-Vercel-Error: NOT_FOUND`) with the JSON body `{"error": {"code": "404", "message": "The page could not be found"}}`;
+  - opening any page other than `/` directly also gave a `404`.
+
+  No API or database was ever deployed there (docs/DEPLOYMENT.md).
+- **The interface misread that 404.** Vercel's JSON has the shape of OSRIP's own errors, so the interface took it for an API error. The result:
+  - "Data unavailable" cards;
+  - "Something went wrong … The page could not be found";
+  - "Authorized access only" on signed-in pages;
+  - Al Mulhim showing "Ready".
+- **Al Mulhim's internet answers** failed to save when they cited a 2021 figure. The database rule `ck_research_candidate_scope` (migration 0011) still required 2022, while the application's scope starts on 2021-01-01. The `IntegrityError` was then reported as `503 database_unavailable`.
+
+**What changed.**
+- **Interface:**
+  - API answers are recognised by `X-Request-ID` or the new `X-OSRIP-API` header; anything else is "not connected to the OSRIP server", or "not responding" for a gateway error.
+  - A banner on every page, with Try again.
+  - Every error panel names its kind in Arabic and English: not connected, not responding, database unavailable, sign-in needed, no permission, unexpected answer, refused.
+  - Protected pages say "Sign in to continue" when signed out, and show the real failure when the account check fails.
+  - Cards with no figure say "No published figure yet".
+  - Retries only where they can help.
+- **API:**
+  - `X-OSRIP-API` on every answer.
+  - A refused write is `500 internal_error`, recorded by constraint name; only an unreachable database is `503`.
+  - Migration 0034 moves the candidate scope to 2021.
+  - Each web figure is queued in its own savepoint, so a refused one no longer loses the answer, and the queued count is now correct.
+- **Vercel:** `vercel.json` sends every page address to the app but never `/api/`.
+
+**The local application against its real API and database (`osrip_dev`).**
+- **Pages, signed out:** all 20 routes load and every API request returns 200. Restricted pages ask for a sign-in.
+- **Published verified data:**
+
+  | Sector | Annual | Year to date | Monthly | Quarterly |
+  |---|---|---|---|---|
+  | Electricity | 28 series, 2022–2025 | 18 series, 2025–2026 | 2 series, 2026 | none published |
+  | Water | 8 series, 2022–2025 | 4 series, 2025–2026 | 1 series, 2026 | none published |
+  | Food security | 34 series, 2022–2025 | 11 series, 2025–2026 | none published | none published |
+  | Trade | 34 series, 2022–2025 (national only) | 33 series, 2025–2026 | none published | none published |
+
+**Al Mulhim with the configured provider** (DeepSeek, as a visitor, Quick answer mode, in the running application).
+
+| Try | Result |
+|---|---|
+| 1, before the fix | Answer streamed, then `POST /assistant/guest/messages` 503: `IntegrityError`, `ck_research_candidate_scope` (Ibri II solar, 560 MW, 2021) |
+| 2, after migration 0034 | `201`; streamed (812 → 1,699 → 2,293 characters). OSRIP's evidence check withheld the answer because two capacities had no inline citation; the visitor was not charged. Evidence: 1 web search and 6 web pages (OETC, Oman News Agency, Bank Muscat); no internal data |
+| 3, in Arabic | `201`, status `answered`: the Authority for Public Services Regulation and its role, with inline citations to 7 web sources (gov.om, apsr.om, mjla.gov.om); no internal data |
+
+**Checks.**
+
+| Check | Result |
+|---|---|
+| Frontend typecheck, lint (whole project), contrast | pass; 0 failing pairs |
+| Frontend unit tests | 28 passed (5 new: sorting failures, retry rule, the Vercel rule) |
+| Production build | pass |
+| Backend `ruff` | pass |
+| Backend `pytest` with database tests | **979 passed**. New tests:<ul><li>the marker header and the 500 or 503 mapping;</li><li>a 2021 web figure is queued;</li><li>a refused figure is skipped, and the others are kept.</li></ul> |
+| Mock-data browser tests (sector cards, welcome, shell) | 43 passed, 3 skipped as designed |
+| Full-stack browser tests, real API and database (Chrome, desktop and phone) | **179 passed, 2 skipped, 4 failed**. Three of the failures expected the old behaviour, and those tests were updated:<ul><li>"Authorized access only" when signed out;</li><li>a faked 503 without the API's headers.</li></ul>The fourth timed out while the scripted answer was still being written. The three spec files then ran in full: **24 passed**. The 5 new connection-state tests passed in the full run: Vercel's 404, Arabic, database down, gateway error, Try again and the signed-out state |
+
+**Not tested.** The published site with an API behind it: none exists yet (see docs/DEPLOYMENT.md). The `vercel.json` change can be checked on `osrip.vercel.app` only after this branch is merged.
+
 ## 2026-11-12: the electricity photograph on the Overview only (branch `fix/electricity-photo-overview-only`)
 
 **What changed.** PR #19 had put the electricity photograph (pylons in Oman, kaartcam, CC BY-SA 4.0)

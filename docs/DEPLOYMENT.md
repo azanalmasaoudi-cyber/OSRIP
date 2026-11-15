@@ -1,12 +1,56 @@
 # Deployment guide
 
-**Status: prepared, not performed. There is no public URL.** The configuration in
-`deploy/` has not been built or run, because Docker is not installed in the
-development environment and no hosting account, server, domain or DNS access was
-provided. Nothing has been created or published. Creating any paid resource, or
-making the application public, needs an explicit decision by the project team and
-supervisor first. `localhost` addresses in this repository are development
-addresses only.
+**Status (2026-11-13): only the interface is public; the API and database are not deployed.**
+- **The published site:** https://osrip.vercel.app is the built interface, served by Vercel (see the next section).
+- **No server behind it:** no OSRIP API or database runs there, so it cannot show data, sign anyone in or run Al Mulhim. Since this release it says so on every page.
+- **`deploy/`:** the full configuration has not been built or run. Docker is not installed in the development environment, and no server, domain or DNS access was provided.
+- **Decisions needed:** creating any paid resource, or making the API and data public, needs an explicit decision by the project team and supervisor first.
+
+`localhost` addresses in this repository are development addresses only.
+
+## The published site on Vercel (https://osrip.vercel.app)
+
+**What it is.** A Vercel project (`osrip`) created through the v0 integration.
+- **What it serves:** it builds `main` on every merge and serves the built interface only. Vercel serves static files and does not run the FastAPI server or PostgreSQL.
+- **Addresses:** `https://osrip.vercel.app` is public. The team and deployment addresses (`osrip-…-azan-f208.vercel.app`) ask for a Vercel sign-in (deployment protection).
+- **Root folder:** this repository cannot see the project's root-folder setting, so the same `vercel.json` is kept in `frontend/` and at the repository root. Vercel reads the one in the project's root folder and ignores the other. A unit test keeps the two identical.
+
+**What happened before 2026-11-13 (measured on the live site).**
+
+| Request | Answer from Vercel | What the page showed |
+|---|---|---|
+| Every `/api/v1/...` call (`auth/me`, `observations`, `analysis/.../brief`, ...) | `404`, `X-Vercel-Error: NOT_FOUND`, body `{"error": {"code": "404", "message": "The page could not be found"}}` | Six "Data unavailable" cards on the dashboard; "Something went wrong … Technical detail: The page could not be found" on the sector, map, forecast, report, library and source pages; "Authorized access only" on Account, Users and Service Health; Al Mulhim "Ready" |
+| Opening `/overview`, `/energy/electricity` or any address other than `/` directly, or refreshing it | `404` text page | Vercel's "page not found" |
+
+Vercel's JSON 404 has the same shape as OSRIP's own errors, so the interface took it for an API error.
+
+**What changed on branch `fix/backend-connectivity-and-error-states`.**
+- **`vercel.json`:** every address without a file extension is answered with `index.html`, so pages open and refresh. `/api/` is never rewritten.
+- **The interface:**
+  - It treats an answer as the API's own only when it carries `X-Request-ID` (every OSRIP release) or `X-OSRIP-API` (added in this release).
+  - Anything else in the API's place counts as "not connected to the OSRIP server". A gateway error means "not responding".
+  - A banner on every page says so, with Try again. Every panel, card and the assistant give the same reason in Arabic or English.
+
+**What it still needs before data, sign-in and Al Mulhim work there (a decision for the team).**
+1. **An HTTPS host for the API and a persistent PostgreSQL database.** Options are in "What is needed from the team" below:
+   - a small virtual machine running `deploy/` (US$5–25 a month, or free on university infrastructure);
+   - a container host together with a managed PostgreSQL service, usually with a free tier that sleeps or is size-limited.
+
+   Each needs an account the owner creates; nothing was created or paid for.
+2. **The same-origin proxy.** Once the API has an address, add this rule as the first entry of `rewrites` in both copies of `vercel.json`. The browser then sees one origin, so the session cookie (`SameSite=Strict`) and the CSRF check work without CORS:
+   ```json
+   { "source": "/api/:path*", "destination": "https://<api-host>/api/:path*" }
+   ```
+3. **The API's settings, on the API host only** (never in a `VITE_*` variable):
+   - `OSRIP_ENVIRONMENT=production`;
+   - `OSRIP_PUBLIC_BASE_URL=https://osrip.vercel.app` and `OSRIP_CORS_ORIGINS=["https://osrip.vercel.app"]`;
+   - `OSRIP_DATABASE_URL`, `OSRIP_CLIENT_HASH_KEY` and the AI provider key.
+4. **The data.** A new database starts empty. Run the migrations (`alembic upgrade head`), then load the same reviewed releases as the development database:
+   - `python -m app.cli import-reference-pack --publish`;
+   - the reviewed imports in `docs/data-imports/`.
+
+   Then create the administrator with `ensure-admin`; its password is prompted, never stored. Synthetic data is never loaded as official figures.
+5. **Checks.** Test every page against that API, in Arabic and English, before calling the site working.
 
 ## Requested hostname: https://osrip.project.com (2026-10-02)
 
