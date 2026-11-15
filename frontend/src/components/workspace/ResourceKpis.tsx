@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useSeries } from '@/api/queries';
 import { DataModeBadge } from '@/components/common/DataModeBadge';
+import { NoFigure } from '@/components/common/NoFigure';
 import { Button } from '@/components/ui/button';
 import { HEADLINE, latestOf, type SeriesQuery } from '@/domain/headline';
 import type { ObservationRecord, SectionCode } from '@/domain/types';
@@ -132,7 +133,7 @@ function ResourceKpi({ section, queries, indicators, selected, onAnalyse }: {
       ) : (
         <p role="status" className="flex-1 rounded-md border border-dashed border-border-strong/40 p-3 text-xs text-muted-foreground"
           data-state={state === 'error' ? 'error' : 'data-unavailable'}>
-          {state === 'error' ? t('states.dataUnavailable') : t('workspace.kpis.unavailable')}
+          {state === 'error' ? <NoFigure error={queries.find((q) => q.isError)?.error ?? undefined} /> : t('workspace.kpis.unavailable')}
         </p>
       )}
     </article>

@@ -279,7 +279,7 @@ function ErrorPreview({ imp }: { imp: ImportRecord }) {
         ))}
       </div>
       {rows.isPending ? <StatePanel kind="loading" skeleton="lines" /> : null}
-      {rows.isError ? <StatePanel kind="error" detail={rows.error.message} /> : null}
+      {rows.isError ? <StatePanel kind="error" error={rows.error} /> : null}
       {rows.data && rows.data.rows.length === 0 ? <p className="text-sm text-muted-foreground">{t('dm.noIssues')}</p> : null}
       {rows.data && rows.data.rows.length > 0 ? (
         // Phones: one stacked item per issue. Wider screens: the table below.
@@ -408,7 +408,7 @@ function ImportDetail({ id, me, onBack }: { id: string; me: Me; onBack: () => vo
   const to = usePreservedSearch();
   const query = useImport(id);
   if (query.isPending) return <StatePanel kind="loading" skeleton="lines" />;
-  if (query.isError) return <StatePanel kind="error" detail={query.error.message} onRetry={() => void query.refetch()} />;
+  if (query.isError) return <StatePanel kind="error" error={query.error} onRetry={() => void query.refetch()} />;
   const imp = query.data;
   const status = imp.version.status;
   const open = status === 'draft' || status === 'validated' || status === 'approved';
@@ -526,7 +526,7 @@ function Workspace({ me }: { me: Me }) {
         <CardHeader><CardTitle>{t('dm.importsHeading')}</CardTitle></CardHeader>
         <CardContent>
           {imports.isPending ? <StatePanel kind="loading" skeleton="lines" /> : null}
-          {imports.isError ? <StatePanel kind="error" detail={imports.error.message} /> : null}
+          {imports.isError ? <StatePanel kind="error" error={imports.error} /> : null}
           {imports.data?.length === 0 ? <p className="text-sm text-muted-foreground">{t('dm.noImports')}</p> : null}
           {imports.data && imports.data.length > 0 ? (
             <div className="relative overflow-x-auto">
@@ -579,7 +579,7 @@ export function DataManagementPage() {
   } else if (me.isPending) {
     body = <StatePanel kind="loading" skeleton="lines" />;
   } else if (me.isError) {
-    body = <StatePanel kind="error" detail={me.error.message} onRetry={() => void me.refetch()} />;
+    body = <StatePanel kind="error" error={me.error} onRetry={() => void me.refetch()} />;
   } else if (!me.data.authenticated) {
     body = (
       <StatePanel kind="restricted">

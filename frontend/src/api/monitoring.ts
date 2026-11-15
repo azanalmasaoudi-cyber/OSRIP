@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 
-import { apiJson } from './client';
+import { ApiRequestError, apiJson } from './client';
 import { adapterKind, apiBaseUrl } from './config';
+import { CONTRACT_MISMATCH, SERVER_UNAVAILABLE, foreignFailureCode, isFromOsripApi } from './problems';
 
 const integration = z.object({
   configured: z.boolean(),
@@ -113,6 +114,55 @@ export function useTestProvider() {
       apiJson(`/admin/providers/${provider}/test?capability=${capability}`,
         z.object({ provider: z.string(), capability: z.string(), status: z.string() }).passthrough(), { method: 'POST' }),
     onSettled: () => void client.invalidateQueries({ queryKey: ['admin', 'providers'] }),
+  });
+}
+
+const readinessBody = z.object({
+  ready: z.boolean(),
+  checks: z.object({ database: z.string(), migration: z.string().nullish() }).passthrough(),
+}).passthrough();
+
+export interface ServerConnection {
+  /** Database reachable and migrated to the version this server expects. */
+  ready: boolean;
+  database: string;
+  migration: string | null;
+}
+
+/**
+ * The server's own readiness check (public, `GET /health/ready`), read directly rather than through
+ * apiJson because its 503 with `ready: false` is the API's answer (the database is not migrated),
+ * not a failure to reach it. Throws ApiRequestError for everything else: no API at this address,
+ * a gateway error, or the API's `database_unavailable`.
+ */
+export async function readServerConnection(): Promise<ServerConnection> {
+  let response: Response;
+  try {
+    response = await fetch(`${apiBaseUrl}/health/ready`, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+  } catch {
+    throw new ApiRequestError(0, SERVER_UNAVAILABLE, 'The OSRIP server is not responding right now.');
+  }
+  if (!isFromOsripApi(response.headers)) {
+    throw new ApiRequestError(response.status, foreignFailureCode(response.status), 'No OSRIP API answers at this address.');
+  }
+  const body: unknown = await response.json().catch(() => null);
+  const envelope = z.object({ error: z.object({ code: z.string(), message: z.string() }) }).safeParse(body);
+  if (envelope.success) throw new ApiRequestError(response.status, envelope.data.error.code, envelope.data.error.message);
+  const parsed = readinessBody.safeParse(body);
+  if (!parsed.success) throw new ApiRequestError(response.status, CONTRACT_MISMATCH, 'The readiness answer did not have the expected shape.');
+  return { ready: parsed.data.ready, database: parsed.data.checks.database, migration: parsed.data.checks.migration ?? null };
+}
+
+/** Whether this site can reach a working OSRIP server: checked on every page (the connection
+ * banner), every five minutes while all is well and every 30 seconds while something is wrong. */
+export function useServerConnection() {
+  return useQuery({
+    queryKey: ['server', 'connection'],
+    queryFn: readServerConnection,
+    enabled: adapterKind === 'http',
+    staleTime: 30_000,
+    retry: false,
+    refetchInterval: (query) => (query.state.status === 'error' || query.state.data?.ready === false ? 30_000 : 300_000),
   });
 }
 

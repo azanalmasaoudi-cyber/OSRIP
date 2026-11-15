@@ -7,6 +7,7 @@ import { hasPermission, useMe } from '@/api/auth';
 import { apiJson } from '@/api/client';
 import { adapterKind } from '@/api/config';
 import { PageHeader } from '@/components/common/PageHeader';
+import { accessPanel } from '@/components/common/accessPanel';
 import { StatePanel } from '@/components/common/StatePanel';
 import { Badge } from '@/components/ui/badge';
 import { DataTable, type Column } from '@/components/ui/data-table';
@@ -55,8 +56,8 @@ export function AuditPage() {
   return (
     <>
       <PageHeader title={t('audit.title')} intro={t('audit.intro')} />
-      {!allowed ? <StatePanel kind="restricted" /> : events.isPending ? <StatePanel kind="loading" skeleton="lines" /> : events.isError ? (
-        <StatePanel kind="error" detail={events.error.message} onRetry={() => void events.refetch()} />
+      {!allowed ? (accessPanel(me) ?? <StatePanel kind="restricted" />) : events.isPending ? <StatePanel kind="loading" skeleton="lines" /> : events.isError ? (
+        <StatePanel kind="error" error={events.error} onRetry={() => void events.refetch()} />
       ) : (
         <DataTable rows={rows} columns={columns} rowKey={(e) => String(e.id)} caption={t('audit.caption')} pageSize={25}
           search={(e) => [e.actor, e.action, e.entity_type, e.entity_id, e.outcome].filter(Boolean).join(' ')}

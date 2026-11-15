@@ -29,7 +29,7 @@ export function SelectionStudy({ indicator, area, periodKind, mode, section }: {
   if (adapterKind !== 'http') return <StatePanel kind="not_implemented" />;
   if (!indicator) return <StatePanel kind="empty"><p className="text-sm text-muted-foreground">{t('workspace.selection.choose')}</p></StatePanel>;
   if (preview.isPending) return <StatePanel kind="loading" skeleton="lines" />;
-  if (preview.isError) return <StatePanel kind="error" detail={preview.error.message} onRetry={() => void preview.refetch()} />;
+  if (preview.isError) return <StatePanel kind="error" error={preview.error} onRetry={() => void preview.refetch()} />;
   const study = preview.data.study;
   return (
     <article className="@container flex flex-col gap-5" data-testid="selection-study" data-status={study.status}>

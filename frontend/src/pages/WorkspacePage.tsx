@@ -270,7 +270,7 @@ function IndicatorCards({ query, shown, focus, onAnalyse, onChooseFrequency }: {
     // The choice stays in the workspace (the frequency filter above).
     if (mixed) return <MixedFrequencyNotice frequencies={mixed} onChoose={onChooseFrequency} />;
     if (err instanceof DataAdapterError && err.code === 'not_implemented') return <StatePanel kind="not_implemented" detail={err.message} />;
-    return <StatePanel kind="error" detail={err.message} onRetry={() => void query.refetch()} />;
+    return <StatePanel kind="error" error={err} onRetry={() => void query.refetch()} />;
   }
   if (query.data.status === 'no_published_data') return <StatePanel kind="no_verified_data" />;
   if (!shown.length) return <StatePanel kind="empty" />;
@@ -314,7 +314,7 @@ function GeographyView({ indicator, frequency }: { indicator: string | null; fre
       {adapterKind !== 'http' ? <StatePanel kind="not_implemented" />
         : !indicator ? null
           : comparison.isPending ? <StatePanel kind="loading" skeleton="lines" />
-            : comparison.isError ? <StatePanel kind="error" detail={comparison.error.message} onRetry={() => void comparison.refetch()} />
+            : comparison.isError ? <StatePanel kind="error" error={comparison.error} onRetry={() => void comparison.refetch()} />
               : dataset ? (
                 <>
                   <p className="text-xs text-muted-foreground">{t('workspace.geography.note')}</p>

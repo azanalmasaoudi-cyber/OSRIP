@@ -17,7 +17,7 @@ export function AnalysisPanel({ section, mode, filters, headingLevel = 2 }: {
 
   let body;
   if (query.isPending) body = <StatePanel kind="loading" skeleton="lines" />;
-  else if (query.isError) body = <StatePanel kind="error" detail={query.error.message} onRetry={() => void query.refetch()} />;
+  else if (query.isError) body = <StatePanel kind="error" error={query.error} onRetry={() => void query.refetch()} />;
   else if (query.data.calculations.length === 0) body = <StatePanel kind="empty"><p className="text-sm text-muted-foreground">{t('analysis.none')}</p></StatePanel>;
   else {
     body = (

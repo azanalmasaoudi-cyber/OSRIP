@@ -2,6 +2,7 @@ import { ArrowDownRight, ArrowRight, ArrowUpRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { problemOf } from '@/api/problems';
 import { cn } from '@/lib/utils';
 
 /** A small line of the values over time (decorative; the card states the figures in words). */
@@ -40,9 +41,11 @@ export interface KpiChange {
 /**
  * One headline figure: title, value and unit, its period, the change against the previous
  * comparable period with its direction, a sparkline, and when the source was published or read.
- * With no published value it says "Data unavailable" and nothing else: no zero, no estimate.
+ * With no published value it says so and nothing else: no zero, no estimate. When the figures
+ * could not be loaded at all (`problem`), it names the reason instead (server not connected,
+ * database unavailable), so a failure never reads as missing data.
  */
-export function KpiCard({ title, value, unit, period, change, trend, freshness, footer, icon, testId = 'kpi-card', state, ...data }: {
+export function KpiCard({ title, value, unit, period, change, trend, freshness, footer, icon, testId = 'kpi-card', state, problem, ...data }: {
   title: string;
   value: string | null;
   unit?: string;
@@ -54,6 +57,8 @@ export function KpiCard({ title, value, unit, period, change, trend, freshness, 
   icon?: ReactNode;
   testId?: string;
   state?: 'loading' | 'ready';
+  /** What the failed query threw, when the value could not be loaded. */
+  problem?: unknown;
 } & Record<`data-${string}`, string | undefined>) {
   const { t } = useTranslation();
   const direction = !change ? null : Math.abs(change.pct) < 0.05 ? 'flat' : change.pct > 0 ? 'up' : 'down';
@@ -65,7 +70,11 @@ export function KpiCard({ title, value, unit, period, change, trend, freshness, 
         {icon ? <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-brand">{icon}</span> : null}
       </div>
       {state === 'loading' ? <p className="text-base text-muted-foreground">{t('states.loading')}</p> : value === null ? (
-        <p className="text-base font-medium text-muted-foreground" data-state="data-unavailable">{t('states.dataUnavailable')}</p>
+        problem !== undefined ? (
+          <p className="text-base font-medium text-destructive" data-state="error" data-problem={problemOf(problem).kind}>
+            {t(`problems.${problemOf(problem).kind}.short`)}
+          </p>
+        ) : <p className="text-base font-medium text-muted-foreground" data-state="data-unavailable">{t('states.noPublishedValue')}</p>
       ) : (
         <>
           <p className="flex flex-wrap items-baseline gap-x-2">

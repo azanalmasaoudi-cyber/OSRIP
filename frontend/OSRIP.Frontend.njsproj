@@ -94,6 +94,7 @@
     <TypeScriptCompile Include="e2e-api\assistant.spec.ts" />
     <TypeScriptCompile Include="e2e-api\chat-phone.spec.ts" />
     <TypeScriptCompile Include="e2e-api\chat.ts" />
+    <TypeScriptCompile Include="e2e-api\connection-states.spec.ts" />
     <TypeScriptCompile Include="e2e-api\datasets.spec.ts" />
     <TypeScriptCompile Include="e2e-api\geography-forecast.spec.ts" />
     <TypeScriptCompile Include="e2e-api\governed-ai.spec.ts" />
@@ -147,6 +148,7 @@
     <TypeScriptCompile Include="src\api\library.ts" />
     <TypeScriptCompile Include="src\api\mockAdapter.ts" />
     <TypeScriptCompile Include="src\api\monitoring.ts" />
+    <TypeScriptCompile Include="src\api\problems.ts" />
     <TypeScriptCompile Include="src\api\queries.ts" />
     <TypeScriptCompile Include="src\api\referencePack.ts" />
     <TypeScriptCompile Include="src\api\researchJobs.ts" />
@@ -191,6 +193,7 @@
     <TypeScriptCompile Include="src\components\brand\SectorArtwork.tsx" />
     <TypeScriptCompile Include="src\components\brand\SectorIllustration.tsx" />
     <TypeScriptCompile Include="src\components\brand\SectorImage.tsx" />
+    <TypeScriptCompile Include="src\components\common\accessPanel.tsx" />
     <TypeScriptCompile Include="src\components\common\CommodityRegistry.tsx" />
     <TypeScriptCompile Include="src\components\common\DataModeBadge.tsx" />
     <TypeScriptCompile Include="src\components\common\DataQualityNotes.tsx" />
@@ -200,6 +203,7 @@
     <TypeScriptCompile Include="src\components\common\FilterBar.tsx" />
     <TypeScriptCompile Include="src\components\common\IndicatorCard.tsx" />
     <TypeScriptCompile Include="src\components\common\MixedFrequency.tsx" />
+    <TypeScriptCompile Include="src\components\common\NoFigure.tsx" />
     <TypeScriptCompile Include="src\components\common\PageHeader.tsx" />
     <TypeScriptCompile Include="src\components\common\Photo.tsx" />
     <TypeScriptCompile Include="src\components\common\ProviderReadiness.tsx" />
@@ -427,6 +431,7 @@
     <Content Include="src\components\layout\welcome.css" />
     <Content Include="src\index.css" />
     <Content Include="tests\answer-stream.test.mjs" />
+    <Content Include="tests\api-problems.test.mjs" />
     <Content Include="tests\arabic-plurals.test.mjs" />
     <Content Include="tests\export-results.test.mjs" />
     <Content Include="tests\research-brief.test.mjs" />
@@ -435,6 +440,7 @@
     <Content Include="tsconfig.app.json" />
     <Content Include="tsconfig.json" />
     <Content Include="tsconfig.node.json" />
+    <Content Include="vercel.json" />
   </ItemGroup>
   <Import Project="$(VSToolsPath)\Node.js Tools\Microsoft.NodejsToolsV2.targets" />
   <!--

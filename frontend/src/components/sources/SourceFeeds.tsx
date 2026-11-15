@@ -70,7 +70,7 @@ export function PublicFeedStatus() {
   const language = useAppLanguage();
   const feeds = useSourceFeeds();
   if (feeds.isPending) return <StatePanel kind="loading" skeleton="lines" />;
-  if (feeds.isError) return <StatePanel kind="error" detail={feeds.error.message} onRetry={() => void feeds.refetch()} />;
+  if (feeds.isError) return <StatePanel kind="error" error={feeds.error} onRetry={() => void feeds.refetch()} />;
   return (
     <ul className="flex flex-col gap-4" data-testid="public-feeds">
       {feeds.data.map((feed) => (
@@ -277,7 +277,7 @@ export function SourceFeedsAdmin({ canManage }: { canManage: boolean }) {
         <p className="max-w-3xl text-sm text-muted-foreground">{t('feeds.intro')}</p>
       </div>
       {feeds.isPending ? <StatePanel kind="loading" skeleton="lines" /> : null}
-      {feeds.isError ? <StatePanel kind="error" detail={feeds.error.message} onRetry={() => void feeds.refetch()} /> : null}
+      {feeds.isError ? <StatePanel kind="error" error={feeds.error} onRetry={() => void feeds.refetch()} /> : null}
       {feeds.data?.map((feed) => <FeedAdmin key={feed.code} feed={feed} canManage={canManage} />)}
     </section>
   );

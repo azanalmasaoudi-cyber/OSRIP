@@ -51,7 +51,7 @@ export function ReportsPage() {
   } else if (reports.isPending) {
     body = <StatePanel kind="loading" skeleton="lines" />;
   } else if (reports.isError) {
-    body = <StatePanel kind="error" detail={reports.error.message} onRetry={() => void reports.refetch()} />;
+    body = <StatePanel kind="error" error={reports.error} onRetry={() => void reports.refetch()} />;
   } else if (reports.data.length === 0) {
     body = (
       <StatePanel kind="empty">
@@ -138,7 +138,7 @@ function AnalysisReportList() {
   if (!signedIn || adapterKind !== 'http') return null;
   let body;
   if (reports.isPending) body = <StatePanel kind="loading" skeleton="lines" />;
-  else if (reports.isError) body = <StatePanel kind="error" detail={reports.error.message} onRetry={() => void reports.refetch()} />;
+  else if (reports.isError) body = <StatePanel kind="error" error={reports.error} onRetry={() => void reports.refetch()} />;
   else if (reports.data.length === 0) body = <p className="text-sm text-muted-foreground">{t('reportsAi.none')}</p>;
   else {
     body = (

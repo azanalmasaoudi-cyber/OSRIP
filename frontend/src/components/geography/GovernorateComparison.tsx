@@ -84,7 +84,7 @@ export function GovernorateComparison({ mode, indicators: all, onResult, level =
         ) : null}
       </div>
       {comparison.isPending ? <StatePanel kind="loading" skeleton="lines" />
-        : comparison.isError ? <StatePanel kind="error" detail={comparison.error.message} onRetry={() => void comparison.refetch()} />
+        : comparison.isError ? <StatePanel kind="error" error={comparison.error} onRetry={() => void comparison.refetch()} />
           : data?.status === 'no_data' ? <p className="text-sm" role="status">{t('compare.noData')}</p>
             : data?.status === 'choose_flow' ? <p className="text-sm" role="status">{t('compare.chooseFlow')}</p>
               : data ? (
