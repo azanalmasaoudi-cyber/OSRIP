@@ -120,7 +120,9 @@ test('no decorative motion: the landing hero is a still, credited photograph tha
 
 test('service health: administrators only; integrations and errors are listed without personal data', async ({ page }) => {
   await page.goto('/admin/health');
-  await expect(page.locator('[data-state="restricted"]')).toBeVisible();
+  // Signed out: asked to sign in (with a link), not told "authorized access only".
+  await expect(page.locator('[data-state="sign_in_required"]')).toBeVisible();
+  await expect(page.getByTestId('state-sign-in')).toBeVisible();
   await signIn(page, 'e2eadmin');
   await page.goto('/admin/health');
   await expect(page.getByTestId('health-page')).toContainText('Ready');

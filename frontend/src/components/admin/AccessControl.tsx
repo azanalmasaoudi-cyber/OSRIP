@@ -82,7 +82,7 @@ export function RolesPanel() {
   const [editing, setEditing] = useState<AccessRole | 'new' | null>(null);
 
   if (roles.isPending) return <StatePanel kind="loading" skeleton="lines" />;
-  if (roles.isError) return <StatePanel kind="error" detail={roles.error.message} onRetry={() => void roles.refetch()} />;
+  if (roles.isError) return <StatePanel kind="error" error={roles.error} onRetry={() => void roles.refetch()} />;
   return (
     <section className="flex flex-col gap-4" data-testid="roles-panel">
       <p className="text-base text-muted-foreground">{t('access.rolesIntro')}</p>
@@ -157,7 +157,7 @@ export function GroupsPanel() {
   const groups = useAdminGroups(true);
   const [editing, setEditing] = useState<AccessGroup | 'new' | null>(null);
   if (groups.isPending) return <StatePanel kind="loading" skeleton="lines" />;
-  if (groups.isError) return <StatePanel kind="error" detail={groups.error.message} onRetry={() => void groups.refetch()} />;
+  if (groups.isError) return <StatePanel kind="error" error={groups.error} onRetry={() => void groups.refetch()} />;
   return (
     <section className="flex flex-col gap-4" data-testid="groups-panel">
       <p className="text-base text-muted-foreground">{t('access.groupsIntro')}</p>

@@ -17,7 +17,8 @@ development, Caddy in the deployment configuration).
 | Values | Decimal strings, unrounded. Missing values are `null` in JSON and empty cells in CSV, never `0` |
 | Metadata | Observations come with indicator (definition, limitation), unit, frequency, area, source, dataset version and data mode |
 | Compatibility | A read that would mix frequencies or units for one indicator is refused: `422 incompatible_series`, with the combinations in `details`. Add `frequency=` to choose one |
-| Errors | `{"error": {"code": "...", "message": "...", "details": ...}}`. Codes are stable; messages are English; no internals or credentials are returned. Database outages return `503 database_unavailable` |
+| Errors | `{"error": {"code": "...", "message": "...", "details": ...}}`. Codes are stable; messages are English; no internals or credentials are returned. A database that cannot be reached returns `503 database_unavailable`. A write the database refuses (a constraint or a type) is a fault in OSRIP: `500 internal_error`, recorded with the constraint's name only |
+| Response headers | Every answer carries `X-Request-ID` and `X-OSRIP-API` (the release). The interface relies on them to tell the API's own answers from a host or proxy answering in its place, such as a static host's JSON 404, and exposes both to cross-origin clients |
 | Sessions | `POST /auth/login` sets an HttpOnly, SameSite=Strict, Secure session cookie and a readable `osrip_csrf` cookie |
 | CSRF | Every POST, PUT and DELETE made with a session must send the `osrip_csrf` value in the `X-CSRF-Token` header |
 | Authorization | Checked on the server for every protected route, with permissions reloaded from the database on each request. Denials return 401 (not signed in) or 403 (`permission_denied`) and are audited |

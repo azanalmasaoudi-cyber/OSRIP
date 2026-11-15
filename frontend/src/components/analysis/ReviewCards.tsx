@@ -132,7 +132,7 @@ export function ReviewCards({ mode, section, headingLevel = 2, compact = false }
 
   let body;
   if (cards.isPending) body = <StatePanel kind="loading" skeleton="lines" />;
-  else if (cards.isError) body = <StatePanel kind="error" detail={cards.error.message} onRetry={() => void cards.refetch()} />;
+  else if (cards.isError) body = <StatePanel kind="error" error={cards.error} onRetry={() => void cards.refetch()} />;
   else if (!cards.data.run) body = <p className="text-sm text-muted-foreground" data-testid="no-rule-run">{t('cards.noRun')}</p>;
   else if (cards.data.cards.length === 0) body = <p className="text-sm text-muted-foreground">{t('cards.none')}</p>;
   else body = <div className="grid gap-4 xl:grid-cols-2">{cards.data.cards.map((c) => <ReviewCardView key={c.id} card={c} />)}</div>;

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useDecisionBrief } from '@/api/decision';
 import { useSeries } from '@/api/queries';
+import { NoFigure } from '@/components/common/NoFigure';
 import { KpiCard, type KpiChange } from '@/components/dashboard/KpiCard';
 import { TrendChart, type TrendPoint } from '@/components/dashboard/TrendChart';
 import { DataModeBadge } from '@/components/common/DataModeBadge';
@@ -84,7 +85,7 @@ export function LatestFigures() {
           return (
             <KpiCard key={section} testId="latest-card" data-section={section} data-indicator={kpi?.series.indicatorCode ?? indicators[0]}
               title={kpi ? kpi.series.name[language] : t(`pages.home.headline.${section}`)} icon={<Icon className="size-4" />}
-              state={qs.some((q) => q.isPending) ? 'loading' : 'ready'}
+              state={qs.some((q) => q.isPending) ? 'loading' : 'ready'} problem={qs.find((q) => q.isError)?.error ?? undefined}
               value={kpi && shown ? shown.text : null} unit={kpi?.series.unit.label[language]}
               period={kpi ? `${formatPeriodShort(kpi.obs.periodStart, kpi.obs.periodEnd, language)}${kpi.series.frequency === 'year_to_date' ? ` · ${t('frequency.year_to_date')}` : ''}` : undefined}
               change={kpi?.change} trend={kpi?.trend} freshness={freshness} />
@@ -126,6 +127,8 @@ export function AxisAnalysis() {
   const axis = AXES.find((a) => a.section === section) ?? AXES[0]!;
   const headline = HEADLINE.find((h) => h.section === section);
   const trend = useAxisTrend(section, headline?.indicators ?? []);
+  // The same query as the trend (shared cache): its failure, if any, explains a missing chart.
+  const annualError = useSeries(section, mode, 'annual').error ?? undefined;
   const brief = useDecisionBrief(section, mode);
   const b = brief.data;
   const region = b?.regional[0];
@@ -145,7 +148,7 @@ export function AxisAnalysis() {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <div className="surface-card flex min-w-0 flex-col gap-3 p-5">
           {trend ? <TrendChart points={trend.points} unit={trend.unit} title={trend.title} />
-            : <p className="text-sm text-muted-foreground">{t('states.dataUnavailable')}</p>}
+            : <p className="text-sm text-muted-foreground"><NoFigure error={annualError} /></p>}
         </div>
         <div className="surface-card flex min-w-0 flex-col gap-3 p-5" data-testid="dashboard-regional">
           <h3 className="flex items-center gap-2 font-semibold"><MapPinned aria-hidden="true" className="size-4 text-brand" />{t('dashboard.regional')}</h3>
@@ -196,7 +199,7 @@ export function AxisAnalysis() {
             <h3 className="flex items-center gap-2 font-semibold"><ShieldAlert aria-hidden="true" className="size-4 text-brand" />{t('dashboard.quality')}</h3>
             <p className="text-sm text-muted-foreground">
               {b ? t('dashboard.qualityText', { gaps: b.gaps.filter((g) => g.kind !== 'regional').length, governorates: b.coverage.governorates.length, of: b.coverage.of })
-                : brief.isPending ? t('states.loading') : t('states.dataUnavailable')}
+                : brief.isPending ? t('states.loading') : <NoFigure error={brief.error ?? undefined} />}
             </p>
           </div>
           <nav aria-label={t('dashboard.quick')} className="surface-card flex flex-col gap-1 p-3" data-testid="dashboard-quick">

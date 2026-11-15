@@ -32,7 +32,7 @@ import {
   DATA_MODES, INTERNET_MODES, isInternetMode, useAssistantStatus, useCancelRequest, useVoiceStatus,
   type Allowance, type AskSelection, type AssistantMessage, type ConversationSummary, type Evidence, type RequestMode,
 } from '@/api/assistant';
-import { ApiRequestError, SERVER_UNAVAILABLE } from '@/api/client';
+import { problemOf } from '@/api/problems';
 import type { DataMode } from '@/domain/types';
 import { DataModeBadge } from '@/components/common/DataModeBadge';
 import { Badge } from '@/components/ui/badge';
@@ -106,10 +106,21 @@ const NEAR_BOTTOM = 96; // px: closer than this to the end counts as reading the
  * OSRIP's synthetic demonstration data say so; internet research answers carry no data-mode
  * label. Settings and the optional Tools menu are drawers, not part of the conversation.
  */
+/** The chat's error in the reader's language: a connection problem by its kind, the network by the
+ * chat's own wording, anything else by the server's message. */
+function ChatErrorText({ error }: { error: unknown }) {
+  const { t } = useTranslation();
+  const problem = problemOf(error).kind;
+  if (problem === 'server_unavailable') return <>{t('chat.errorNetwork')}</>;
+  if (problem === 'not_connected' || problem === 'database_unavailable') return <>{t(`problems.${problem}.body`)}</>;
+  return <>{error instanceof Error ? error.message : t('chat.errorNetwork')}</>;
+}
+
 export function ChatView({ chat, layout = 'page' }: { chat: ChatModel; layout?: 'page' | 'embedded' }) {
   const { t } = useTranslation();
   const language = useAppLanguage();
   const ui = useAssistantUi();
+  const service = useAssistantStatus();
   const { persona } = usePersona();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -183,9 +194,16 @@ export function ChatView({ chat, layout = 'page' }: { chat: ChatModel; layout?: 
           <AssistantAvatar state={ui.state} size="2.25rem" decorative={false} />
           <div className="flex min-w-0 flex-1 flex-col leading-tight">
             <h1 className="truncate text-base font-semibold sm:text-lg" data-testid="mulhim-name" data-persona={persona.code}>{name}</h1>
-            <span className="truncate text-xs text-muted-foreground" role="status" data-testid="chat-state" data-state={ui.state}>
-              {ui.state === 'idle' ? t('assistant.aiAssistant') : t(ORB_STATE_KEY[ui.state])}
-            </span>
+            {service.isError && ui.state === 'idle' ? (
+              <span className="truncate text-xs font-medium text-destructive" role="status" data-testid="chat-state" data-state="unavailable"
+                data-problem={problemOf(service.error).kind}>
+                {t(`problems.${problemOf(service.error).kind}.short`)}
+              </span>
+            ) : (
+              <span className="truncate text-xs text-muted-foreground" role="status" data-testid="chat-state" data-state={ui.state}>
+                {ui.state === 'idle' ? t('assistant.aiAssistant') : t(ORB_STATE_KEY[ui.state])}
+              </span>
+            )}
           </div>
           <Button type="button" variant="ghost" size="sm" onClick={startNew} data-testid="chat-new" title={t('chat.newConversation')}>
             <MessageSquarePlus aria-hidden="true" /><span className={page ? 'max-sm:sr-only' : 'sr-only'}>{t('chat.newConversation')}</span>
@@ -215,7 +233,7 @@ export function ChatView({ chat, layout = 'page' }: { chat: ChatModel; layout?: 
               {chat.error ? (
                 <div role="alert" className="flex flex-wrap items-center gap-2 rounded-2xl border border-destructive/40 bg-destructive/5 px-4 py-3 text-base text-destructive"
                   data-testid="assistant-error">
-                  <p>{chat.error instanceof ApiRequestError && chat.error.code === SERVER_UNAVAILABLE ? t('chat.errorNetwork') : chat.error.message}</p>
+                  <p><ChatErrorText error={chat.error} /></p>
                   <Button variant="outline" size="sm" onClick={chat.retry} data-testid="error-retry"><RotateCcw aria-hidden="true" />{t('states.retry')}</Button>
                 </div>
               ) : null}

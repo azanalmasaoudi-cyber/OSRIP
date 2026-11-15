@@ -140,7 +140,7 @@ export function ResearchQueue() {
       <Segmented label={t('research.tab')} value={status} onChange={setStatus} testId="research-status"
         options={STATUSES.map((s) => ({ value: s, label: t(`research.status.${s}`) }))} />
       {items.isPending ? <StatePanel kind="loading" skeleton="lines" /> : items.isError ? (
-        <StatePanel kind="error" detail={items.error.message} onRetry={() => void items.refetch()} />
+        <StatePanel kind="error" error={items.error} onRetry={() => void items.refetch()} />
       ) : items.data.length === 0 ? <p className="text-sm text-muted-foreground">{t('research.empty')}</p> : (
         <ul className="grid gap-4 lg:grid-cols-2">{items.data.map((c) => <Candidate key={c.id} item={c} />)}</ul>
       )}

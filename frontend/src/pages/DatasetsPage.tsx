@@ -46,7 +46,7 @@ function Gate({ children }: { children: (allowed: boolean) => ReactNode }) {
     return <StatePanel kind="not_implemented"><p className="text-sm text-muted-foreground">{t('analysis.requiresApi')}</p></StatePanel>;
   }
   if (me.isPending) return <StatePanel kind="loading" skeleton="lines" />;
-  if (me.isError) return <StatePanel kind="error" detail={me.error.message} onRetry={() => void me.refetch()} />;
+  if (me.isError) return <StatePanel kind="error" error={me.error} onRetry={() => void me.refetch()} />;
   if (!me.data.authenticated) {
     return (
       <StatePanel kind="restricted">
@@ -117,7 +117,7 @@ function DatasetList() {
   const to = usePreservedSearch();
   const datasets = useDatasets(true);
   if (datasets.isPending) return <StatePanel kind="loading" skeleton="lines" />;
-  if (datasets.isError) return <StatePanel kind="error" detail={datasets.error.message} onRetry={() => void datasets.refetch()} />;
+  if (datasets.isError) return <StatePanel kind="error" error={datasets.error} onRetry={() => void datasets.refetch()} />;
   if (datasets.data.length === 0) {
     return <StatePanel kind="empty"><p className="text-sm text-muted-foreground">{t('datasets.none')}</p></StatePanel>;
   }
@@ -309,7 +309,7 @@ function DataTab({ dataset }: { dataset: DatasetDetail }) {
   const { t } = useTranslation();
   const rows = useDatasetRows(dataset.id);
   if (rows.isPending) return <StatePanel kind="loading" skeleton="lines" />;
-  if (rows.isError) return <StatePanel kind="error" detail={rows.error.message} onRetry={() => void rows.refetch()} />;
+  if (rows.isError) return <StatePanel kind="error" error={rows.error} onRetry={() => void rows.refetch()} />;
   const kinds = new Map(dataset.analysis.profile.map((p) => [p.index, p.kind]));
   return (
     <div className="flex flex-col gap-2">
@@ -333,7 +333,7 @@ function DatasetDetailView({ id }: { id: string }) {
   const remove = useDeleteDataset();
   const [tab, setTab] = useState<Tab>('overview');
   if (dataset.isPending) return <StatePanel kind="loading" />;
-  if (dataset.isError) return <StatePanel kind="error" detail={dataset.error.message} onRetry={() => void dataset.refetch()} />;
+  if (dataset.isError) return <StatePanel kind="error" error={dataset.error} onRetry={() => void dataset.refetch()} />;
   const d = dataset.data;
   const a = d.analysis;
   const missing = a.profile.reduce((sum, c) => sum + c.missing, 0);

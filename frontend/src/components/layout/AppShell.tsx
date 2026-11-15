@@ -18,7 +18,7 @@ import { EntranceReplayContext } from './entranceControl';
 import { GlobalSearch } from './GlobalSearch';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { NAV_ITEMS, SidebarNav, isCurrentItem } from './SidebarNav';
-import { StatusBanners } from './StatusBanners';
+import { ConnectionBanner, StatusBanners } from './StatusBanners';
 import { ThemeSelector } from './ThemeSelector';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { Dialog } from '@/components/ui/dialog';
@@ -268,7 +268,7 @@ export function AppShell() {
           {searchOpen ? <GlobalSearch focusOnOpen inline onDone={() => setSearchOpen(false)} /> : null}
         </Dialog>
 
-        <div className="print:hidden"><StatusBanners /><PasswordChangeBanner /></div>
+        <div className="print:hidden"><ConnectionBanner /><StatusBanners /><PasswordChangeBanner /></div>
 
         <main
           id="main"

@@ -149,7 +149,7 @@ function AreaObservations({ mode, area }: { mode: DataMode; area: RegistryArea }
   if (query.isPending) return <StatePanel kind="loading" skeleton="lines" />;
   const mixed = query.isError ? mixedFrequencies(query.error) : null;
   if (mixed) return <MixedFrequencyNotice frequencies={mixed} onChoose={setFrequency} />;
-  if (query.isError) return <StatePanel kind="error" detail={query.error.message} onRetry={() => void query.refetch()} />;
+  if (query.isError) return <StatePanel kind="error" error={query.error} onRetry={() => void query.refetch()} />;
   if (query.data.series.length === 0) {
     return (
       <div role="status" className="rounded-md border border-dashed border-border-strong/50 p-4 text-sm" data-testid="area-no-data">
@@ -426,14 +426,14 @@ export function GeographyPage() {
     <>
       <PageHeader title={t('pages.geography.title')} intro={t('pages.geography.intro')} />
       {registry.isPending ? <StatePanel kind="loading" skeleton="cards" /> : null}
-      {registry.isError ? <StatePanel kind="error" detail={registry.error.message} onRetry={() => void registry.refetch()} /> : null}
+      {registry.isError ? <StatePanel kind="error" error={registry.error} onRetry={() => void registry.refetch()} /> : null}
       {registry.data ? (
         <div className="flex flex-col gap-8">
           <div className="grid gap-4 lg:grid-cols-2">
             <RegistrySummary registry={registry.data} />
             <CoverageSummary coverage={coverage.data} total={areas.length} mode={mode} />
           </div>
-          {coverage.isError ? <StatePanel kind="error" detail={coverage.error.message} onRetry={() => void coverage.refetch()} /> : null}
+          {coverage.isError ? <StatePanel kind="error" error={coverage.error} onRetry={() => void coverage.refetch()} /> : null}
 
           <section aria-labelledby="map-heading" className="flex flex-col gap-3">
             <h2 id="map-heading" className="text-xl font-semibold">{t('pages.geography.mapHeading')}</h2>

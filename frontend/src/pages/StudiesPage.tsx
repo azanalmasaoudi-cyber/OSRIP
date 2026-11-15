@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useMe } from '@/api/auth';
 import { ApiRequestError } from '@/api/client';
 import { adapterKind } from '@/api/config';
+import { problemOf } from '@/api/problems';
 import { useAreaCoverage, useAreaRegistry } from '@/api/geography';
 import { useCommodities } from '@/api/queries';
 import { STUDY_KINDS, useDeleteStudy, useMyStudies, useRunStudy, useStudy, type StudyKind } from '@/api/studies';
@@ -237,8 +238,10 @@ function OpenStudy({ id }: { id: string }) {
   useEffect(() => { if (study.data) ref.current?.focus(); }, [study.data?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   if (study.isPending) return <StatePanel kind="loading" skeleton="cards" />;
   if (study.isError) {
-    const gone = study.error instanceof ApiRequestError && study.error.status === 404;
-    return <StatePanel kind="error" detail={gone ? t('studies.notFound') : study.error.message} />;
+    // A 404 from the API itself: the study is gone. A host answering in its place is not that.
+    const gone = study.error instanceof ApiRequestError && study.error.status === 404 && problemOf(study.error).kind === 'request_failed';
+    return gone ? <StatePanel kind="error" detail={t('studies.notFound')} />
+      : <StatePanel kind="error" error={study.error} onRetry={() => void study.refetch()} />;
   }
   return (
     <div ref={ref} tabIndex={-1} className="surface-card p-4 outline-none sm:p-5">

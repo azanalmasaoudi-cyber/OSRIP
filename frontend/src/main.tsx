@@ -13,6 +13,7 @@ import '@fontsource/ibm-plex-sans-arabic/500.css';
 import '@fontsource/ibm-plex-sans-arabic/600.css';
 
 import { installClientErrorReporting } from '@/api/monitoring';
+import { isWorthRetrying } from '@/api/problems';
 import { router } from '@/app/router';
 import '@/i18n';
 import '@/lib/theme';
@@ -24,7 +25,9 @@ z.config({ jitless: true });
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 5 * 60 * 1000, retry: 1, refetchOnWindowFocus: false },
+    // One retry, and only where asking again can help (not with no API at this address, a
+    // sign-in, a permission or a refused request): pages show the reason at once.
+    queries: { staleTime: 5 * 60 * 1000, retry: (count, error) => count < 1 && isWorthRetrying(error), refetchOnWindowFocus: false },
   },
 });
 

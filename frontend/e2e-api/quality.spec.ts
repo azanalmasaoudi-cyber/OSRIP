@@ -76,15 +76,19 @@ test('keyboard: skip link, visible focus on navigation, and a keyboard-only sele
 });
 
 test('failed requests show an explained error with retry, and the rest of the page keeps working', async ({ page }) => {
+  // The API's own 503 (it marks every answer with X-Request-ID and X-OSRIP-API).
   await page.route('**/api/v1/analysis/**', (route) =>
-    route.fulfill({ status: 503, contentType: 'application/json',
+    route.fulfill({ status: 503, contentType: 'application/json', headers: { 'x-request-id': 'e2e', 'x-osrip-api': '0.8.0' },
       body: JSON.stringify({ error: { code: 'database_unavailable', message: 'The data store is not available.' } }) }));
   await page.goto('/energy/electricity?mode=synthetic');
   await showResults(page, { indicator: 'ELEC_GENERATION', view: 'annual', from: '2001-01-01', to: '2002-01-01' });
   await openCalculations(page);
   const error = page.locator('[data-state="error"]').first();
   await expect(error).toBeVisible();
-  await expect(error).toContainText('The data store is not available.');
+  // Explained by its kind in the reader's language, with the code and status as technical detail.
+  await expect(error).toHaveAttribute('data-problem', 'database_unavailable');
+  await expect(error).toContainText('The OSRIP database is unavailable');
+  await expect(error).toContainText('database_unavailable · HTTP 503');
   await expect(error.getByRole('button', { name: 'Try again' })).toBeVisible();
   // The table comes from another request and is still shown.
   await expect(page.getByTestId('series-row').first().locator('td').first()).toHaveText('48,000');

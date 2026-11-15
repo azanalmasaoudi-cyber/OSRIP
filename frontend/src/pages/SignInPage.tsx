@@ -20,11 +20,13 @@ import {
 } from '@/api/auth';
 import { ApiRequestError } from '@/api/client';
 import { adapterKind } from '@/api/config';
+import { problemOf } from '@/api/problems';
 import { GroupsPanel, RolesPanel, useRoleLabel } from '@/components/admin/AccessControl';
 import { useDocumentTitle } from '@/lib/useDocumentTitle';
 import { normalizeUsername, SIGN_IN_USERNAME_MAX, USERNAME_MAX, usernameProblem, wouldExceed } from '@/lib/username';
 import { PageHeader } from '@/components/common/PageHeader';
 import { SettingsSection } from '@/components/settings/SettingsSection';
+import { accessPanel } from '@/components/common/accessPanel';
 import { StatePanel } from '@/components/common/StatePanel';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -59,7 +61,11 @@ function ErrorText({ error, className = 'text-sm text-destructive' }: { error: u
   const { t } = useTranslation();
   if (!error) return null;
   let message = error instanceof Error ? error.message : t('auth.errors.server_unavailable');
-  if (error instanceof ApiRequestError && (ERROR_CODES as readonly string[]).includes(error.code)) {
+  // No API at this address, the server or its database down: said as such, in the reader's language.
+  const problem = problemOf(error).kind;
+  if (problem === 'not_connected' || problem === 'server_unavailable' || problem === 'database_unavailable') {
+    message = t(`problems.${problem}.body`);
+  } else if (error instanceof ApiRequestError && (ERROR_CODES as readonly string[]).includes(error.code)) {
     const details = (error.details ?? {}) as { minutes?: number };
     message = t(`auth.errors.${error.code as (typeof ERROR_CODES)[number]}`, { minutes: details.minutes ?? 10 });
   }
@@ -384,11 +390,20 @@ export function AccountPage() {
   // Settings stored in this browser are available signed in or not, and without the API.
   if (adapterKind !== 'http') return <><RequiresApi title={t('account.title')} /><div className="mt-6 max-w-3xl"><SettingsSection /></div></>;
   if (me.isPending) return <StatePanel kind="loading" skeleton="lines" />;
+  if (me.isError) {
+    return (
+      <>
+        <PageHeader title={t('account.title')} />
+        <StatePanel kind="error" error={me.error} onRetry={() => void me.refetch()} />
+        <div className="mt-6 max-w-3xl"><SettingsSection /></div>
+      </>
+    );
+  }
   if (!me.data?.authenticated) {
     return (
       <>
         <PageHeader title={t('account.title')} />
-        <StatePanel kind="restricted">
+        <StatePanel kind="sign_in_required">
           <Link to={to('/sign-in')} className="text-sm text-primary underline">{t('auth.signIn')}</Link>
         </StatePanel>
         <div className="mt-6 max-w-3xl"><SettingsSection /></div>
@@ -547,8 +562,8 @@ export function AdminUsersPage() {
           { value: 'groups', label: t('access.tabGroups') },
         ]} />
       ) : null}
-      {allowed && tab === 'roles' ? <RolesPanel /> : allowed && tab === 'groups' ? <GroupsPanel /> : !allowed ? <StatePanel kind="restricted" /> : users.isPending ? <StatePanel kind="loading" skeleton="lines" /> : users.isError ? (
-        <StatePanel kind="error" detail={users.error.message} onRetry={() => void users.refetch()} />
+      {allowed && tab === 'roles' ? <RolesPanel /> : allowed && tab === 'groups' ? <GroupsPanel /> : !allowed ? (accessPanel(me) ?? <StatePanel kind="restricted" />) : users.isPending ? <StatePanel kind="loading" skeleton="lines" /> : users.isError ? (
+        <StatePanel kind="error" error={users.error} onRetry={() => void users.refetch()} />
       ) : (
         <div className="relative overflow-x-auto rounded-lg border border-border bg-card">
           <table className="w-full min-w-[44rem] text-sm" data-testid="admin-users">

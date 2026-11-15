@@ -210,7 +210,7 @@ export function JobView({ id }: { id: string }) {
   const job = useJob(id);
   const action = useJobAction();
   if (job.isPending) return <StatePanel kind="loading" skeleton="lines" />;
-  if (job.isError) return <StatePanel kind="error" detail={job.error.message} />;
+  if (job.isError) return <StatePanel kind="error" error={job.error} />;
   const j = job.data;
   const finished = FINISHED.includes(j.state);
   const r = j.result ?? {};

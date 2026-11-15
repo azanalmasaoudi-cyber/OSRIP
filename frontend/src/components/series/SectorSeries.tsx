@@ -17,7 +17,7 @@ export const HEADLINES: Record<SectionCode, readonly string[]> = {
 export function TimelineState({ query, children }: { query: ReturnType<typeof useTimeline>; children: (timeline: Timeline) => ReactNode }) {
   const { t } = useTranslation();
   if (query.isPending) return <p className="text-sm text-muted-foreground" role="status">{t('states.loading')}</p>;
-  if (query.isError) return <StatePanel kind="error" detail={query.error.message} onRetry={() => void query.refetch()} />;
+  if (query.isError) return <StatePanel kind="error" error={query.error} onRetry={() => void query.refetch()} />;
   const data = query.data;
   if (data.status === 'needs_selection') return <p className="text-sm" data-testid="series-needs-selection">{t('series.needsSelection')}</p>;
   // A range can hold only year-to-date totals (a year not yet complete): those are shown.

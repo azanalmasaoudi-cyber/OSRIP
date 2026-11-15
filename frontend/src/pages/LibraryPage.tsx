@@ -127,7 +127,7 @@ function SourcesTab() {
       </div>
       {query.data ? <p className="text-xs text-muted-foreground">{language === 'ar' ? query.data.note.ar : query.data.note.en}</p> : null}
       {query.isPending ? <StatePanel kind="loading" skeleton="lines" />
-        : query.isError ? <StatePanel kind="error" detail={query.error.message} onRetry={() => void query.refetch()} />
+        : query.isError ? <StatePanel kind="error" error={query.error} onRetry={() => void query.refetch()} />
           : query.data.sources.length === 0 ? <p className="text-sm" role="status">{t('library.noSources')}</p>
             : (
               <ul className="grid gap-2 md:grid-cols-2" aria-busy={query.isFetching}>
@@ -200,7 +200,7 @@ function SavedTab({ signedIn }: { signedIn: boolean }) {
   const saved = useSavedResearch(signedIn);
   if (!signedIn) return <SignInNeeded />;
   if (saved.isPending) return <StatePanel kind="loading" skeleton="lines" />;
-  if (saved.isError) return <StatePanel kind="error" detail={saved.error.message} onRetry={() => void saved.refetch()} />;
+  if (saved.isError) return <StatePanel kind="error" error={saved.error} onRetry={() => void saved.refetch()} />;
   if (!saved.data.length) return <p className="text-sm" role="status" data-testid="saved-empty">{t('library.savedEmpty')}</p>;
   return <ul className="flex flex-col gap-2">{saved.data.map((s) => <SavedItem key={s.id} item={s} />)}</ul>;
 }
@@ -336,7 +336,7 @@ function WatchTab({ signedIn }: { signedIn: boolean }) {
     <div className="flex flex-col gap-4">
       <p className="text-xs text-muted-foreground">{t('library.alertsNote')}</p>
       {watchlist.isPending ? <StatePanel kind="loading" skeleton="lines" />
-        : watchlist.isError ? <StatePanel kind="error" detail={watchlist.error.message} onRetry={() => void watchlist.refetch()} />
+        : watchlist.isError ? <StatePanel kind="error" error={watchlist.error} onRetry={() => void watchlist.refetch()} />
           : watchlist.data.length === 0 ? <p className="flex items-center gap-1 text-sm" role="status"><Eye aria-hidden="true" className="size-4" />{t('library.watchEmpty')}</p>
             : <ul className="flex flex-col gap-2">{watchlist.data.map((w) => <WatchRow key={w.id} item={w} />)}</ul>}
       <AlertsList signedIn={signedIn} />

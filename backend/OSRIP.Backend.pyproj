@@ -294,6 +294,7 @@
     <Compile Include="tests\test_reports_export_integration.py" />
     <Compile Include="tests\test_research.py" />
     <Compile Include="tests\test_research_assistant_units.py" />
+    <Compile Include="tests\test_research_candidate_scope_integration.py" />
     <Compile Include="tests\test_research_jobs_integration.py" />
     <Compile Include="tests\test_research_modes.py" />
     <Compile Include="tests\test_research_modes_integration.py" />
@@ -372,6 +373,7 @@
     <Compile Include="alembic\versions\0031_answer_stream.py" />
     <Compile Include="alembic\versions\0032_wilayat_context.py" />
     <Compile Include="alembic\versions\0033_username_policy.py" />
+    <Compile Include="alembic\versions\0034_candidate_scope_2021.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="alembic\sql\0001_core_down.sql" />
@@ -439,6 +441,8 @@
     <Content Include="alembic\sql\0032_wilayat_context_up.sql" />
     <Content Include="alembic\sql\0033_username_policy_down.sql" />
     <Content Include="alembic\sql\0033_username_policy_up.sql" />
+    <Content Include="alembic\sql\0034_candidate_scope_2021_down.sql" />
+    <Content Include="alembic\sql\0034_candidate_scope_2021_up.sql" />
     <Content Include="app\knowledge\assistant_profile_v1.json" />
     <Content Include="app\knowledge\assistant_profile_v2.json" />
     <Content Include="app\knowledge\assistant_profile_v3.json" />

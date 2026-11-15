@@ -334,7 +334,7 @@ function ScenarioExplorer({ domains, conditions }: { domains: readonly Domain[];
         {slider(oneOffId, t('forecasts.oneOff'), oneOff, setOneOff, -50, 50, 1, '%', 'scenario-oneoff')}
       </div>
       {projection.isFetching ? <ProgressBar label={t('forecasts.calculating')} /> : null}
-      {projection.isError ? <StatePanel kind="error" detail={projection.error.message} /> : null}
+      {projection.isError ? <StatePanel kind="error" error={projection.error} /> : null}
       {p ? (
         <>
           <ChartOnRequest label={seriesLabel(p.series, language, flowLabel)} testId="scenario-chart-toggle">
@@ -432,7 +432,7 @@ export function ForecastPage() {
           <h2 id="stat-forecasts" className="flex items-center gap-2 text-xl font-semibold"><LineChart aria-hidden="true" className="size-5 text-accent" />{t('forecasts.statHeading')}</h2>
           <p className="max-w-3xl text-sm text-muted-foreground">{t('forecasts.statIntro')}</p>
           {overview.isPending ? <StatePanel kind="loading" /> : null}
-          {overview.isError ? <StatePanel kind="error" detail={overview.error.message} onRetry={() => void overview.refetch()} /> : null}
+          {overview.isError ? <StatePanel kind="error" error={overview.error} onRetry={() => void overview.refetch()} /> : null}
           {filtered ? (
             <>
               {filtered.demonstration_label ? <DemonstrationBanner text={filtered.demonstration_label} /> : null}
@@ -443,7 +443,7 @@ export function ForecastPage() {
               ) : null}
               <TargetCards data={filtered} canRun={canRun} running={running} onRun={onRun} onShow={setShown} shown={shown} />
               {!canRun ? <p className="text-xs text-muted-foreground">{t('pages.forecast.analystsOnly')}</p> : null}
-              {runForecast.isError ? <StatePanel kind="error" detail={runForecast.error.message} /> : null}
+              {runForecast.isError ? <StatePanel kind="error" error={runForecast.error} /> : null}
               {run.isPending && shown ? <StatePanel kind="loading" skeleton="lines" /> : null}
               {run.data ? <RunView run={run.data} conditions={conditions.data} /> : null}
               <MethodCard method={filtered.method} />
@@ -454,7 +454,7 @@ export function ForecastPage() {
         <section aria-labelledby="conditions" className="flex flex-col gap-4">
           <h2 id="conditions" className="text-xl font-semibold">{t('forecasts.conditionsHeading')}</h2>
           {conditions.isPending ? <StatePanel kind="loading" skeleton="lines" /> : null}
-          {conditions.isError ? <StatePanel kind="error" detail={conditions.error.message} /> : null}
+          {conditions.isError ? <StatePanel kind="error" error={conditions.error} /> : null}
           {conditions.data ? <ConditionsPanel data={conditions.data} domains={domains} /> : null}
         </section>
 

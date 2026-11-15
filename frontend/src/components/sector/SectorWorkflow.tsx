@@ -187,7 +187,7 @@ export function SectorWorkflow({ section, title }: { section: SectionCode; title
   }
   if (availability.isError) {
     return (
-      <StatePanel kind="error" detail={availability.error.message} onRetry={() => void availability.refetch()}>
+      <StatePanel kind="error" error={availability.error} onRetry={() => void availability.refetch()}>
         <p className="text-base">{t('sectorFlow.availabilityFailed')}</p>
       </StatePanel>
     );

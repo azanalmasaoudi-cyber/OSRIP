@@ -99,7 +99,7 @@ export function DecisionBrief({ section }: { section: SectionCode }) {
   if (query.isError) {
     return (
       <section aria-labelledby={`${uid}-h`} className="flex flex-col gap-4">
-        {heading}<StatePanel kind="error" detail={query.error.message} onRetry={() => void query.refetch()} />
+        {heading}<StatePanel kind="error" error={query.error} onRetry={() => void query.refetch()} />
       </section>
     );
   }

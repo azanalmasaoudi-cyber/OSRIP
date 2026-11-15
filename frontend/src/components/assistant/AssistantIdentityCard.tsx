@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import { useAssistantStatus } from '@/api/assistant';
+import { problemOf } from '@/api/problems';
 import { Badge } from '@/components/ui/badge';
 
 /** The answer service in a few words: working, failing (data-based reports meanwhile),
@@ -8,6 +9,10 @@ import { Badge } from '@/components/ui/badge';
 export function ServiceChip() {
   const { t } = useTranslation();
   const status = useAssistantStatus();
+  if (status.isError) {
+    const kind = problemOf(status.error).kind;
+    return <Badge variant="sand" data-testid="assistant-service" data-state="unreachable" data-problem={kind}>{t(`problems.${kind}.short`)}</Badge>;
+  }
   if (!status.data) return null;
   const state = !status.data.configured ? 'not_configured' : (status.data.health?.state ?? 'untested');
   const variant = state === 'ok' ? 'verified' : state === 'failing' || state === 'not_configured' ? 'sand' : 'muted';

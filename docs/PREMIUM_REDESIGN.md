@@ -62,7 +62,7 @@ item's name in a tooltip on hover and keyboard focus, also remembered.
     on purpose, because a rise is not always good;
   - a sparkline of the same kind of period;
   - "Published in OSRIP" with a date.
-  - With no published value, a card says "Data unavailable".
+  - With no published value, a card says "No published figure yet"; when the figures could not be loaded, it names the reason (since 2026-11-13).
 - **Analysis by axis:** an axis switcher, then:
   - a large area chart of the headline series over full years (from zero, with a readout and a
     data table);

@@ -7,6 +7,7 @@ import { useMonitoring } from '@/api/monitoring';
 import { PerformancePanel, SyncPanel, UsagePanel } from '@/components/admin/HealthDetails';
 import { PageHeader } from '@/components/common/PageHeader';
 import { ProviderReadiness } from '@/components/common/ProviderReadiness';
+import { accessPanel } from '@/components/common/accessPanel';
 import { StatePanel } from '@/components/common/StatePanel';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -24,8 +25,8 @@ export function HealthPage() {
   return (
     <>
       <PageHeader title={t('health.title')} intro={t('health.intro')} />
-      {!allowed ? <StatePanel kind="restricted" /> : data.isPending ? <StatePanel kind="loading" skeleton="lines" /> : data.isError ? (
-        <StatePanel kind="error" detail={data.error.message} onRetry={() => void data.refetch()} />
+      {!allowed ? (accessPanel(me) ?? <StatePanel kind="restricted" />) : data.isPending ? <StatePanel kind="loading" skeleton="lines" /> : data.isError ? (
+        <StatePanel kind="error" error={data.error} onRetry={() => void data.refetch()} />
       ) : (
         <div className="flex flex-col gap-6" data-testid="health-page">
           <Card className="flex flex-wrap items-center gap-3 p-4">

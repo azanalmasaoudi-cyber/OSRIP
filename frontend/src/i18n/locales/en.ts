@@ -114,6 +114,48 @@ export const en = {
       'Frontend prototype. Data comes from a local mock adapter. No backend, database or sign-in is connected.',
     httpAdapter: 'Connected to the OSRIP API at {{baseUrl}}.',
   },
+  problems: {
+    not_connected: {
+      title: 'Not connected to the OSRIP server',
+      body: 'No OSRIP API answers at this website’s address, so figures, maps, reports and Al Mulhim cannot load. Nothing is shown in place of the missing data.',
+      short: 'Server not connected',
+    },
+    server_unavailable: {
+      title: 'The OSRIP server is not responding',
+      body: 'The server did not answer. It may be restarting or stopped. Try again in a moment.',
+      short: 'Server not responding',
+    },
+    database_unavailable: {
+      title: 'The OSRIP database is unavailable',
+      body: 'The server is running but cannot reach its database, so published figures cannot be read right now.',
+      short: 'Database unavailable',
+    },
+    database_not_ready: {
+      title: 'The OSRIP database is not ready',
+      body: 'The database is reachable, but its structure is not up to date (an update is pending). An administrator needs to finish the update.',
+      short: 'Database not ready',
+    },
+    sign_in_required: {
+      title: 'Sign in to continue',
+      body: 'This page needs a signed-in account. Sign in with your username and password.',
+      short: 'Sign-in needed',
+    },
+    forbidden: {
+      title: 'No permission for this page',
+      body: 'Your account does not have the permission this page needs. An administrator can grant it.',
+      short: 'No permission',
+    },
+    invalid_response: {
+      title: 'Unexpected answer from the server',
+      body: 'The server answered in a form this version of the interface does not understand. The interface and the server may be different versions.',
+      short: 'Unexpected answer',
+    },
+    request_failed: {
+      title: 'The request could not be completed',
+      body: 'The server refused or could not complete this request. The technical detail says why.',
+      short: 'Request failed',
+    },
+  },
   states: {
     loading: 'Loading…',
     pageFailed: 'This page could not be displayed. The error has been recorded without personal data. Try again, or open another page.',
@@ -121,14 +163,15 @@ export const en = {
     error: 'The data could not be loaded.',
     technicalDetail: 'Technical detail',
     retry: 'Try again',
-    noVerifiedDataTitle: 'Data unavailable',
+    noVerifiedDataTitle: 'No published data yet',
     noVerifiedData:
       'No verified-source data has been published for this section yet. Synthetic values are not substituted.',
     emptyTitle: 'Nothing matches these filters',
     empty: 'No series match the current selection.',
     clearFilters: 'Reset filters',
     missingValue: 'Missing',
-    dataUnavailable: 'Data unavailable',
+    dataUnavailable: 'Not published',
+    noPublishedValue: 'No published figure yet',
     notImplementedTitle: 'Not available yet',
     notImplemented: 'This view is not available from the API yet.',
     restrictedTitle: 'Authorized access only',

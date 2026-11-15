@@ -129,7 +129,7 @@ export function AnalysisReportPage() {
   } else if (report.isPending) {
     body = <StatePanel kind="loading" skeleton="lines" />;
   } else if (report.isError) {
-    body = <StatePanel kind="error" detail={report.error.message} onRetry={() => void report.refetch()} />;
+    body = <StatePanel kind="error" error={report.error} onRetry={() => void report.refetch()} />;
   } else {
     const r = report.data;
     const onDelete = () => {

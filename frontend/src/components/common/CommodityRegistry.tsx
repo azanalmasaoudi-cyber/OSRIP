@@ -27,7 +27,7 @@ export function CommodityRegistry() {
         {query.isError ? (
           <StatePanel
             kind={query.error instanceof DataAdapterError && query.error.code === 'not_implemented' ? 'not_implemented' : 'error'}
-            detail={query.error.message}
+            error={query.error}
           />
         ) : null}
         {query.isSuccess ? (
