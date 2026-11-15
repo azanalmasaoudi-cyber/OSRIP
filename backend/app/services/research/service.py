@@ -10,6 +10,7 @@ findings go to ``research_candidate`` for a data manager.
 
 from __future__ import annotations
 
+import logging
 import re
 import uuid
 from datetime import UTC, date, datetime
@@ -18,6 +19,7 @@ from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core import ratelimit
@@ -34,6 +36,8 @@ from app.services.research.search import (
     get_fallback_search_provider,
     get_search_provider,
 )
+
+logger = logging.getLogger("osrip.research")
 
 DOMAINS = ("electricity", "water", "food_security", "trade", "general")
 MAX_RESULTS_KEPT = 6
@@ -640,10 +644,24 @@ def queue_candidates(
             "message_id": message_id,
             "proposed_by": proposed_by,
         }
-        result = session.execute(
-            insert(ResearchCandidate).values(**values).on_conflict_do_nothing()
-        )
-        stored += result.rowcount or 0
+        # Each figure in its own savepoint: one the database refuses is skipped and logged, and
+        # the answer it came with is still saved (it used to be lost with an error).
+        try:
+            with session.begin_nested():
+                # RETURNING counts what was stored (nothing when the same figure is already queued).
+                inserted = session.execute(
+                    insert(ResearchCandidate)
+                    .values(**values)
+                    .on_conflict_do_nothing()
+                    .returning(ResearchCandidate.id)
+                ).all()
+                stored += len(inserted)
+        except IntegrityError as exc:
+            diag = getattr(exc.orig, "diag", None)
+            logger.warning(
+                "research figure not queued: %s", getattr(diag, "constraint_name", None) or "?"
+            )
+            continue
     return stored
 
 

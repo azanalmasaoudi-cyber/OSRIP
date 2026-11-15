@@ -10,7 +10,13 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import (
+    DisconnectionError,
+    InterfaceError,
+    OperationalError,
+    SQLAlchemyError,
+)
+from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 
 from app.api.deps import CSRF_HEADER
 from app.api.routes import (
@@ -98,6 +104,14 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     schedules.stop_scheduler()
 
 
+# Errors meaning the database cannot be reached (answered as 503 database_unavailable); any other
+# database error is a refusal of the data, answered as 500 and recorded.
+DATABASE_UNREACHABLE = (OperationalError, InterfaceError, DisconnectionError, PoolTimeoutError)
+
+# On every response of this API, with the release (see request_id_and_errors below).
+API_MARKER_HEADER = "X-OSRIP-API"
+
+
 def create_app() -> FastAPI:
     _check_production_settings()
     settings = get_settings()
@@ -116,6 +130,7 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE"],
         allow_headers=["Content-Type", CSRF_HEADER, "X-Guest-CSRF"],
+        expose_headers=["X-Request-ID", API_MARKER_HEADER],
     )
 
     @app.middleware("http")
@@ -143,6 +158,9 @@ def create_app() -> FastAPI:
                 },
             )
         response.headers["X-Request-ID"] = request_id
+        # Marks the answer as this API's own (the interface tells it apart from a static host or a
+        # proxy answering in its place, for example Vercel's JSON "page not found").
+        response.headers[API_MARKER_HEADER] = monitoring.RELEASE
         # The route pattern (``/admin/groups/{group_id}``), never the concrete path.
         route = getattr(request.scope.get("route"), "path", None) or "unmatched"
         monitoring.record_request(
@@ -190,18 +208,37 @@ def create_app() -> FastAPI:
         )
 
     @app.exception_handler(SQLAlchemyError)
-    async def database_error_handler(_: Request, exc: SQLAlchemyError) -> JSONResponse:
+    async def database_error_handler(request: Request, exc: SQLAlchemyError) -> JSONResponse:
         # Log details server-side; never expose internals or credentials (booklet 3.12).
-        logger.error("database error: %s", type(exc).__name__)
+        if isinstance(exc, DATABASE_UNREACHABLE):
+            logger.error("database error: %s", type(exc).__name__)
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "error": {
+                        "code": "database_unavailable",
+                        "message": (
+                            "The data store is not available. "
+                            "Published snapshots cannot be read right now."
+                        ),
+                    }
+                },
+            )
+        # The database is up but refused the data (a constraint or a type): a fault in OSRIP to
+        # fix, not an outage, so it is not reported as "database unavailable". Only the
+        # constraint's name is recorded, never the row (it can hold what a person typed).
+        diag = getattr(getattr(exc, "orig", None), "diag", None)
+        constraint = getattr(diag, "constraint_name", None) or "unknown"
+        logger.error("database refused the data: %s %s", type(exc).__name__, constraint)
+        monitoring.record_error(
+            "server", type(exc).__name__, f"constraint {constraint}", request.url.path, None
+        )
         return JSONResponse(
-            status_code=503,
+            status_code=500,
             content={
                 "error": {
-                    "code": "database_unavailable",
-                    "message": (
-                        "The data store is not available. "
-                        "Published snapshots cannot be read right now."
-                    ),
+                    "code": "internal_error",
+                    "message": "Something went wrong on the server. The error was recorded.",
                 }
             },
         )
