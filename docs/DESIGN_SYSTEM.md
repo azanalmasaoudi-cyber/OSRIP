@@ -121,6 +121,8 @@ placed behind charts.
 | Photo, sector image | `components/common/Photo.tsx`, `components/brand/SectorImage.tsx` | Credited figures of real places (Wikimedia Commons). `Photo` is used on the landing page; `SectorImage` only on the Overview sector cards, where electricity is a photograph of pylons in Oman (CC BY-SA 4.0). The dashboard cards, the welcome and the sector page headers show the sector artworks (`SectorArtwork`), electricity included. |
 | Quality badges | `components/common/QualityBadges.tsx` | Verified / Synthetic, Pending review, Missing data, Last updated, Source, from the rows on screen; `QualityLegend` explains them. |
 | Chart on request | `components/ui/chart-on-request.tsx` | Show chart / Hide chart; the chart is not rendered until asked for. |
+| Sector views | `pages/SectionPages.tsx`, `workspace/Tabs.tsx`, `components/sector/{SectorIndicators,SectorAnalysis,AreaComparison,AskMulhim}.tsx` | Three tabs on every sector page: Data and indicators, Analysis, Tables and charts (ARIA tab pattern; arrows mirrored in Arabic; Home and End). Only the chosen panel is rendered, so the page never holds a second scrolling box. One selection per sector is shared by the three views. The same components serve all four sectors. |
+| Results in a reply | `components/assistant/ReplyResults.tsx` | A study (the stored study's own view), a forecast (chart and table of the engine's estimate, or its reasons when withheld, never an empty chart) and a scenario (base, assumptions, formula, table and chart, labelled hypothetical) drawn inside Al Mulhim's reply from the tool results. |
 
 ## Accessibility and motion
 

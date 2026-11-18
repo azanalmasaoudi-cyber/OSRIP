@@ -39,13 +39,18 @@ item's name in a tooltip on hover and keyboard focus, also remembered.
 | Module | Items |
 |---|---|
 | Dashboard | Dashboard, Overview |
-| Axes | Electricity, Water, Food Security, Trade |
-| Research and Analytics | AI Research Assistant, Analysis Workspace, Datasets, Forecasts and Scenarios, Studies, Research library, Sources |
+| Sectors | Electricity, Water, Food Security, Trade (each with Data and indicators, Analysis, Tables and charts) |
+| Al Mulhim | Al Mulhim (studies, forecasts and scenarios are asked for here) |
 | Geographic Intelligence | Interactive Oman Map |
+| Data and sources | Datasets, Research library, Sources |
 | Reports | Reports Dashboard |
 | Account | My Profile, Settings |
 | Administration (only with the permission) | Data Management, Users and Roles, Groups and Permissions, Service Health, Audit Logs |
 
+- **Analysis in the sectors (18 November 2026):** the Analysis Workspace, Studies and Forecasts
+  and Scenarios left the sidebar. Their work is in each sector's Analysis view and in Al Mulhim
+  (`docs/WORKSPACE.md`); `/workspace` redirects to a sector's Analysis, and `/studies`,
+  `/studies/:id` and `/forecasts` still open from saved links.
 - **One entry per page (10 November 2026):** sections of a listed page (Scenarios, Geographic
   Comparisons, Saved Reports, Export Center, Appearance, Language) left the sidebar; search still
   finds them by name and opens the page at the section (`SECTION_ITEMS`).

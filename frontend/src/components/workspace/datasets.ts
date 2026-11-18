@@ -17,43 +17,6 @@ export function periodLabel(kind: string | undefined, start: string, end: string
 
 const statusOf = (mode: DataMode) => (mode === 'verified_source' ? 'approved_official' : 'synthetic_demonstration');
 
-/** One series over time, optionally limited to the chosen years (both chart and table). */
-export function seriesDataset(series: Series, fromYear: string | null, toYear: string | null): Dataset | null {
-  const observations = [...series.observations]
-    .filter((o) => (!fromYear || o.periodEnd.slice(0, 4) >= fromYear) && (!toYear || o.periodStart.slice(0, 4) <= toYear))
-    .sort((a, b) => a.periodStart.localeCompare(b.periodStart));
-  if (!observations.length) return null;
-  const unit = { code: series.unit.code, label_en: series.unit.label.en, label_ar: series.unit.label.ar };
-  const rows = observations.map((o) => ({
-    period: periodLabel(series.frequency, o.periodStart, o.periodEnd),
-    value: o.value,
-    status: o.value === null ? 'missing_in_source' : 'published',
-  }));
-  const candidate = {
-    dataset_id: 'D1',
-    origin: 'workspace',
-    provisional: false,
-    data_status: statusOf(series.dataMode),
-    title: series.name,
-    subtitle: series.area ? series.area.name : null,
-    table: {
-      columns: [
-        { key: 'period', label: { en: 'Period', ar: 'الفترة' }, kind: 'period' },
-        { key: 'value', label: series.name, kind: 'number', unit },
-        { key: 'status', label: { en: 'Status', ar: 'الحالة' }, kind: 'status' },
-      ],
-      rows,
-    },
-    charts: rows.filter((r) => r.value !== null).length >= 2
-      ? [{ type: 'line', title: series.name, x: 'period', series: [{ column: 'value', label: series.name, nature: 'observed' }], unit }]
-      : [],
-    rows_meta: rows.map((_, i) => ({ row_id: `r${i + 1}`, evidence_id: null })),
-    evidence_ids: [],
-  };
-  const parsed = datasetSchema.safeParse(candidate);
-  return parsed.success ? parsed.data : null;
-}
-
 interface ComparisonRow { area: string; name: { en: string; ar: string }; value: string | null; status: string }
 interface Comparison {
   status: string;

@@ -22,14 +22,20 @@ booklet (design-stage edition).
 >   tables), an AI summary whose every number is checked, and reports from datasets or verified
 >   answers exported as PDF, Excel and CSV in Arabic and English
 >   ([`docs/AI_RESEARCH_PLATFORM.md`](docs/AI_RESEARCH_PLATFORM.md));
-> - **period-first sector pages**: on Electricity, Water, Food Security and Trade the reader
+> - **period-first tables and charts**: on Electricity, Water, Food Security and Trade (their
+>   *Tables and charts* view) the reader
 >   chooses an indicator, its geography and frequency and a start and end period from those
 >   actually published, then presses *Show results*; the summary and table follow, and the
 >   chart only after *Show chart*;
 > - an **Overview** that introduces the project (an academic decision-support project, not an
 >   official government service) and links to the four sectors;
-> - the **analytical workspace** (`/workspace`), whose live study keeps the table, the chart
->   and the spoken explanation on one validated dataset.
+> - **analysis inside each sector**: every sector page has three views, *Data and indicators*,
+>   *Analysis* (validated findings for the current indicator, area and period view) and *Tables
+>   and charts*; the old `/workspace` address opens a sector's Analysis;
+> - **Al Mulhim runs studies, forecasts and scenarios from a sentence** and shows their results
+>   in the conversation: the study itself, the forecasting engine's estimate or the reasons
+>   there is none, and a hypothetical scenario's table and chart
+>   ([`docs/WORKSPACE.md`](docs/WORKSPACE.md)).
 >
 > What was demonstrated and tested, and what was not:
 > [`docs/VERIFICATION_REPORT.md`](docs/VERIFICATION_REPORT.md).
@@ -186,7 +192,8 @@ replies («السلام عليكم» → «وعليكم السلام ورحمة 
 server-owned profile that chat and web pages cannot change; greetings are never charged.
 It explains stored results with
 citations and labels each figure observed, calculated, forecast or hypothetical; it never
-produces forecasts. It can also **search the web** (official Omani sources first), and
+writes a forecast itself: asked for one, it calls OSRIP's forecasting engine, which estimates
+only when the history meets the backtesting policy and otherwise says why not. It can also **search the web** (official Omani sources first), and
 labels every web finding as official data or secondary reporting with its link,
 publication date and retrieval date. Web figures never enter the dataset: they go to a
 review queue for data managers. Questions can be spoken and answers read aloud (server
@@ -219,12 +226,16 @@ counted); each answer says how it was prepared.
 
 Navigation:
 
-- Home, Overview (the project introduction);
+- Dashboard, Overview (the project introduction);
 - Sectors: Electricity, Water, Food Security, Trade (one row of sector links on each, with
-  its own remembered selection);
-- Analyse: Map, Studies, Scenarios, Sources;
-- Assistant and outputs: Al Mulhim (one conversation, with its history; the old `/talk` address
-  opens it), the Analysis workspace, Reports, Research library;
+  its own remembered selection) and three views: Data and indicators, Analysis, Tables and
+  charts;
+- Al Mulhim (one conversation, with its history; the old `/talk` address opens it). Studies,
+  forecasts and scenarios are asked for here in a sentence; they have no menu entry of their
+  own, and their pages (`/studies`, `/studies/:id`, `/forecasts`) still open from saved links;
+- Interactive Oman Map;
+- Data and sources: Datasets, Research library, Sources;
+- Reports;
 - Account;
 - Data Management, Users and roles, and Service health (authorized users only).
 
@@ -272,7 +283,7 @@ government branding.
 | [docs/TEST_RESULTS.md](docs/TEST_RESULTS.md) | Actual results of the audit run, performance and backup exercise |
 | [docs/API.md](docs/API.md), [docs/api/openapi.json](docs/api/openapi.json) | API reference |
 | [docs/WINDOWS_STARTUP.md](docs/WINDOWS_STARTUP.md) | One-time Windows setup; Visual Studio (F5), VS Code and one-click startup; what was verified |
-| [docs/WORKSPACE.md](docs/WORKSPACE.md) | The analytical workspace (`/workspace`): filters, cards with stale flags, one validated dataset per chart and table, governorate view only with valid coverage, study panel; live study events (protocol, consistency rules), narration and highlighting, phone tabs |
+| [docs/WORKSPACE.md](docs/WORKSPACE.md) | Analysis inside the sector pages (the former workspace; `/workspace` redirects), Al Mulhim's study, forecast and scenario results, and, from the former analytical workspace (`/workspace`): filters, cards with stale flags, one validated dataset per chart and table, governorate view only with valid coverage, study panel; live study events (protocol, consistency rules), narration and highlighting, phone tabs |
 | [docs/RESEARCH_AND_SAVING.md](docs/RESEARCH_AND_SAVING.md) | Research that reads original sources and saves verified figures: tools, validation rules, saving through the import workflow, reviewer approval, scheduled data updates, sources |
 | [docs/AI_RESEARCH_PLATFORM.md](docs/AI_RESEARCH_PLATFORM.md) | OpenAI through the official SDK (settings, setup, cost), uploaded datasets and their analysis, chart types and tables, research reports and their PDF, Excel and CSV exports, security, what was tested live |
 | [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md) | Governed AI and research providers (Anthropic, OpenAI, Gemini with Google Search grounding, Brave): official APIs only, routing policy, data status labels, citations and attribution, limits and spending, provider readiness, setup and verification status |
@@ -418,8 +429,9 @@ where each one is unavailable.
   and SMS codes are not sent: read them at <http://localhost:5173/dev/mail>.
 - Choose the assistant (**Al Mulhim** or **Ilham**) with the picker in the assistant panel.
 - **Overview** introduces the project. On a sector page, choose an indicator and a period,
-  press **Show results**, and **Show chart** if you want the chart. The analytical workspace
-  is **Analysis workspace** (`/workspace`).
+  press **Show results** (under *Tables and charts*), and **Show chart** if you want the chart.
+  A sector's **Analysis** view analyses the current selection; ask **Al Mulhim** for a study, a
+  forecast or a scenario.
 
 **E. Stop it**
 
@@ -564,7 +576,7 @@ what is set up, the latest outcome of the answer service, and what to fix, witho
   show "استمع إلى الترحيب / Play introduction" with Stop and volume; until a clip is added the button is not shown. A
   clip is always labelled as a recording; answers are still read by the speech service.
 
-"Create study" (Studies page, signed in) runs a study in the background: discover sources,
+"Create study" (the Studies page at `/studies`, signed in; no longer in the menu) runs a study in the background: discover sources,
 retrieve documents, extract evidence, validate data, calculate, build tables and charts, write
 conclusions, recommend next steps. The page follows its progress; it can be stopped and retried.
 

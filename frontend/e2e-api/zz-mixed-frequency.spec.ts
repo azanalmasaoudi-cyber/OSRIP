@@ -66,7 +66,7 @@ test('a mixed-frequency indicator offers each frequency apart and shows only the
 
   // Each frequency is offered with its own published periods; nothing is derived from two
   // months of a quarter or a year, and annual values are never split into months.
-  await page.goto('/energy/water?mode=synthetic');
+  await page.goto('/energy/water?mode=synthetic&tab=charts');
   await page.getByTestId('sector-indicator').selectOption('WATER_PRODUCTION');
   const frequency = page.getByTestId('sector-frequency');
   await frequency.locator('[data-value="monthly"]').click();
@@ -86,18 +86,19 @@ test('a mixed-frequency indicator offers each frequency apart and shows only the
   await showResults(page, { view: 'annual', from: '2009-01-01', to: '2009-01-01' });
   await expect(page.getByTestId('series-row').locator('td:first-of-type')).toHaveText(['412.5']);
 
-  // The workspace lists the kinds apart too; analysing a monthly card chooses that frequency.
-  await page.goto('/workspace?mode=synthetic&domain=energy_essential_services&section=water');
-  const workspace = page.getByTestId('workspace');
+  // The sector's Data and indicators list the kinds apart too; analysing a monthly card makes
+  // it the sector's selection, at that frequency, and opens the Analysis.
+  await page.goto('/energy/water?mode=synthetic&tab=data');
+  const data = page.getByTestId('sector-indicators');
   const production = '[data-testid="indicator-card"][data-indicator="WATER_PRODUCTION"]';
-  const monthlyCard = workspace.locator('[data-testid="period-kind-group"][data-period-kind="monthly"]').locator(production);
+  const monthlyCard = data.locator('[data-testid="period-kind-group"][data-period-kind="monthly"]').locator(production);
   await expect(monthlyCard).toHaveCount(1);
-  await expect(workspace.locator('[data-testid="period-kind-group"][data-period-kind="annual"]').locator(production)).toHaveCount(1);
+  await expect(data.locator('[data-testid="period-kind-group"][data-period-kind="annual"]').locator(production)).toHaveCount(1);
   await monthlyCard.getByTestId('indicator-analyse').click();
-  await expect(page).toHaveURL(/\/workspace\?.*frequency=monthly/);
-  await expect(workspace.getByTestId('filter-frequency')).toHaveValue('monthly');
-  await expect(workspace.getByTestId('period-kind-group')).toHaveCount(1);
-  await expect(workspace.locator(production)).toHaveAttribute('data-selected', 'true');
+  await expect(page.getByTestId('sector-tabs').locator('[data-tab="analysis"]')).toHaveAttribute('aria-selected', 'true');
+  const analysis = page.getByTestId('sector-analysis');
+  await expect(analysis).toHaveAttribute('data-indicator', 'WATER_PRODUCTION');
+  await expect(analysis).toHaveAttribute('data-view', 'monthly');
 
   expect(seen.refused).toEqual([]);
   expect(seen.duplicateKeys).toEqual([]);
@@ -120,7 +121,7 @@ test('trade with full years and year-to-date totals per partner: year-to-date ye
 
   // The years with only year-to-date totals can be chosen; they are listed apart from the
   // full year and compared only with the same months a year earlier.
-  await page.goto('/trade?mode=synthetic');
+  await page.goto('/trade?mode=synthetic&tab=charts');
   await page.getByTestId('sector-indicator').selectOption('TRADE_MERCH_IMPORTS');
   await expect(page.getByTestId('sector-breakdown').locator('option')).toHaveCount(3); // total and two partners
   await page.getByTestId('sector-breakdown').selectOption('||import');
@@ -137,8 +138,8 @@ test('trade with full years and year-to-date totals per partner: year-to-date ye
   await expect(page.getByTestId('series-row').locator('td:first-of-type')).toHaveText(['300']);
   await expect(page.getByTestId('series-ytd-row')).toHaveCount(2);
 
-  await page.goto('/workspace?mode=synthetic&domain=trade&section=trade');
-  const workspace = page.getByTestId('workspace');
+  await page.goto('/trade?mode=synthetic&tab=data');
+  const workspace = page.getByTestId('sector-indicators');
   await expect(workspace.locator('[data-testid="period-kind-group"][data-period-kind="year_to_date"]')
     .locator('[data-testid="indicator-card"][data-indicator="TRADE_MERCH_IMPORTS"]')).toHaveCount(1);
   await expect(workspace.locator('[data-state="mixed_frequency"]')).toHaveCount(0);

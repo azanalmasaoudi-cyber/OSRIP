@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate, useLocation } from 'react-router';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { AppShell } from '@/components/layout/AppShell';
 import { talkRedirectSearch } from '@/lib/talkRedirect';
+import { workspaceRedirect } from '@/lib/workspaceRedirect';
 import { DesignReferencePage } from '@/pages/DesignReferencePage';
 import { EnergyIndexRedirect, EnergyLayout } from '@/pages/EnergyLayout';
 import { HomePage } from '@/pages/HomePage';
@@ -17,7 +18,6 @@ import { GeographyPage } from '@/pages/GeographyPage';
 import { LibraryPage } from '@/pages/LibraryPage';
 import { NotFoundPage, SourcesPage } from '@/pages/InfoPages';
 import { OverviewPage } from '@/pages/OverviewPage';
-import { WorkspacePage } from '@/pages/WorkspacePage';
 import { ReportPage, ReportsPage } from '@/pages/ReportsPages';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { StudiesPage } from '@/pages/StudiesPage';
@@ -28,6 +28,13 @@ import { AccountPage, AdminUsersPage, ForgotPasswordPage, RegisterPage, SignInPa
 function ForecastRedirect() {
   const { search } = useLocation();
   return <Navigate to={{ pathname: '/forecasts', search }} replace />;
+}
+
+/** The Analysis Workspace is now each sector's Analysis tab: an old /workspace link opens the
+ * sector it was about, keeping only the data mode, indicator, area and view (lib/workspaceRedirect). */
+function WorkspaceRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={workspaceRedirect(search)} replace />;
 }
 
 /** Old /methodology links land on Sources and Methodology, keeping the query string. */
@@ -68,7 +75,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <HomePage /> },
       { path: 'overview', element: <OverviewPage /> },
-      { path: 'workspace', element: <WorkspacePage /> },
+      { path: 'workspace', element: <WorkspaceRedirect /> },
       {
         path: 'energy',
         element: <EnergyLayout />,

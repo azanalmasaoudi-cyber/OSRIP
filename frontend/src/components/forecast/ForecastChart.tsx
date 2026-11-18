@@ -69,7 +69,7 @@ export function ForecastChart({ history, estimates = [], scenario = [], unit, ti
   const every = Math.ceil(labels.length / 8);
 
   return (
-    <figure className="m-0" data-testid="forecast-chart" aria-label={t('forecasts.chartLabel', { title, unit })}>
+    <figure className="m-0" data-testid="forecast-chart" aria-label={t(scenario.length && !estimates.length ? 'forecasts.chartLabelScenario' : 'forecasts.chartLabel', { title, unit })}>
       <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" aria-hidden="true" style={{ direction: 'ltr' }}>
         {yt.map((v) => (
           <g key={v}>

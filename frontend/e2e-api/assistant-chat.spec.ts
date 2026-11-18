@@ -22,10 +22,10 @@ test('/talk opens the conversation, keeping only the data mode and a question to
   await expect(page.getByTestId('assistant-input')).toHaveValue('Water production in 2025');
   await expect(page.getByTestId('assistant-message')).toHaveCount(0);
   await expect(page.getByTestId('guest-allowance')).toHaveAttribute('data-remaining', '5');
-  // No navigation item or link leads to the old screen, here or in the workspace's next steps.
+  // No navigation item or link leads to the old screen, here or in a sector's Analysis.
   await expect(page.locator('a[href*="/talk"]')).toHaveCount(0);
-  await page.goto('/workspace?mode=synthetic');
-  await expect(page.getByTestId('launchpad-assistant')).toHaveAttribute('href', /^\/assistant\?mode=synthetic$/);
+  await page.goto('/energy/electricity?mode=synthetic');
+  await expect(page.getByTestId('sector-ask-study')).toHaveAttribute('href', /^\/assistant\?/);
   await expect(page.locator('a[href*="/talk"]')).toHaveCount(0);
 });
 

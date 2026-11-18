@@ -4,6 +4,7 @@ import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
 import { useAnalysis, useReviewCards, type SectionFilters } from '@/api/analysis';
+import { useAskMulhim } from '@/components/sector/AskMulhim';
 import type { DataMode, SectionCode, Series } from '@/domain/types';
 import { FREQUENCY_KEY } from '@/i18n/keys';
 import { formatDecimal, formatPeriod } from '@/lib/format';
@@ -42,6 +43,13 @@ function Question({ icon, title, children, testid }: { icon: ReactNode; title: s
  * the section calculations, the sources and dataset versions, and the open review
  * cards. Nothing is generated.
  */
+const SECTION_TITLE = {
+  electricity: 'nav.electricity',
+  water: 'nav.water',
+  food_security: 'nav.foodSecurity',
+  trade: 'nav.trade',
+} as const satisfies Record<SectionCode, string>;
+
 export function SectionInsights({ section, mode, filters, series, columns = 2 }: {
   section: SectionCode; mode: DataMode; filters: SectionFilters; series: readonly Series[];
   /** One column in a narrow side panel; two side by side from the laptop width otherwise. */
@@ -49,6 +57,7 @@ export function SectionInsights({ section, mode, filters, series, columns = 2 }:
 }) {
   const { t } = useTranslation();
   const language = useAppLanguage();
+  const ask = useAskMulhim();
   const to = usePreservedSearch();
   const analysis = useAnalysis(section, mode, filters);
   const cards = useReviewCards(mode, section);
@@ -132,7 +141,8 @@ export function SectionInsights({ section, mode, filters, series, columns = 2 }:
             {followUps.map((c) => <li key={c.id}>{c.next_steps[language]}</li>)}
             {missing > 0 ? <li>{t('insights.nextMissing', { n: missing })}</li> : null}
             {followUps.length === 0 && missing === 0 ? <li className="text-muted-foreground">{t('insights.nextNone')}</li> : null}
-            <li><Link to={to('/forecasts')} className="text-primary underline underline-offset-4">{t('insights.nextForecasts')}</Link></li>
+            <li><Link to={ask(t('sector.ask.forecastQuestion', { sector: t(SECTION_TITLE[section]) }))} className="text-primary underline underline-offset-4"
+              data-testid="insight-ask-forecast">{t('insights.nextForecasts')}</Link></li>
           </ul>
         </Question>
       </div>

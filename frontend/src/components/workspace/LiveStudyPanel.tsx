@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useCancelRequest, useVoiceStatus } from '@/api/assistant';
-import { useAssistantUi } from '@/components/assistant/AssistantContext';
+import { useAssistantUi, type StudyRef } from '@/components/assistant/AssistantContext';
 import { usePersona } from '@/components/assistant/persona';
 import { StatePanel } from '@/components/common/StatePanel';
 import { Badge } from '@/components/ui/badge';
@@ -33,11 +33,15 @@ function datasetState(study: LiveStudyState, id: string): DatasetState {
  * stop the research, stop or step through the narration, inspect any source and return to an
  * earlier study of this session.
  */
-export function LiveStudyPanel({ onAskFollowUp }: { onAskFollowUp?: () => void }) {
+export function LiveStudyPanel({ onAskFollowUp, study: chosen }: {
+  onAskFollowUp?: () => void;
+  /** This reply's study (under the reply on the Al Mulhim page); otherwise the active one. */
+  study?: StudyRef;
+}) {
   const { t } = useTranslation();
   const language = useAppLanguage();
   const ui = useAssistantUi();
-  const active = ui.activeStudy;
+  const active = chosen ? (ui.studies.find((s) => s.id === chosen.id) ?? chosen) : ui.activeStudy;
   const study = useLiveStudy(active?.id ?? null, active?.guest ?? false, active?.epoch ?? 0);
   const cancel = useCancelRequest();
   const voiceStatus = useVoiceStatus();
@@ -100,7 +104,8 @@ export function LiveStudyPanel({ onAskFollowUp }: { onAskFollowUp?: () => void }
             </Button>
           ) : null}
           {onAskFollowUp ? <Button type="button" variant="ghost" size="sm" onClick={onAskFollowUp} data-testid="study-follow-up">{t('workspace.study.followUp')}</Button> : null}
-          {ui.studies.length > 1 ? (
+          {/* Under a reply the panel is that reply's study; the session's list is for the shared panel. */}
+          {!chosen && ui.studies.length > 1 ? (
             <SelectField className="w-full sm:w-72" label={t('workspace.study.history')} value={active.id}
               onValueChange={(id) => { const s = ui.studies.find((x) => x.id === id); if (s) ui.openStudy(s.id, s.guest, s.question); }}
               options={ui.studies.map((s) => ({ value: s.id, label: s.question || s.id.slice(0, 8) }))} data-testid="study-history" />

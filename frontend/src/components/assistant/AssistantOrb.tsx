@@ -26,7 +26,7 @@ export function AssistantOrb() {
   const ui = useAssistantUi();
   const { pathname } = useLocation();
   const to = usePreservedSearch();
-  if (adapterKind !== 'http' || pathname === '/assistant' || pathname === '/workspace') return null;
+  if (adapterKind !== 'http' || pathname === '/assistant') return null;
   const busy = ui.state !== 'idle';
   return (
     <div className="pointer-events-none fixed end-4 bottom-4 z-40 sm:end-6 sm:bottom-6 print:hidden">

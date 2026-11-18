@@ -15,8 +15,15 @@ export interface SectorChoice {
   to: string;
 }
 
-export async function chooseSelection(page: Page, choice: SectorChoice): Promise<void> {
+/** A sector page opens on its Analysis; the period-first form is under "Tables and charts". */
+export async function openCharts(page: Page): Promise<void> {
+  const tab = page.getByTestId('sector-tabs').locator('[data-tab="charts"]');
+  if ((await tab.getAttribute('aria-selected')) !== 'true') await tab.click();
   await expect(page.getByTestId('sector-form')).toBeVisible();
+}
+
+export async function chooseSelection(page: Page, choice: SectorChoice): Promise<void> {
+  await openCharts(page);
   if (choice.indicator) await page.getByTestId('sector-indicator').selectOption(choice.indicator);
   if (choice.area) await page.getByTestId('sector-area').selectOption(choice.area);
   if (choice.breakdown !== undefined) await page.getByTestId('sector-breakdown').selectOption(choice.breakdown);

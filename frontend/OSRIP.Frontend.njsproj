@@ -101,6 +101,7 @@
     <TypeScriptCompile Include="e2e-api\interface.spec.ts" />
     <TypeScriptCompile Include="e2e-api\intro-clips.spec.ts" />
     <TypeScriptCompile Include="e2e-api\journey.spec.ts" />
+    <TypeScriptCompile Include="e2e-api\mulhim-results.spec.ts" />
     <TypeScriptCompile Include="e2e-api\mulhim.spec.ts" />
     <TypeScriptCompile Include="e2e-api\oman-map-maptiler.spec.ts" />
     <TypeScriptCompile Include="e2e-api\oman-map.spec.ts" />
@@ -110,6 +111,8 @@
     <TypeScriptCompile Include="e2e-api\research-modes.spec.ts" />
     <TypeScriptCompile Include="e2e-api\research-workflow.spec.ts" />
     <TypeScriptCompile Include="e2e-api\research.spec.ts" />
+    <TypeScriptCompile Include="e2e-api\sector-analysis.spec.ts" />
+    <TypeScriptCompile Include="e2e-api\sector-phone.spec.ts" />
     <TypeScriptCompile Include="e2e-api\sector-voice.spec.ts" />
     <TypeScriptCompile Include="e2e-api\sector.ts" />
     <TypeScriptCompile Include="e2e-api\source-feeds.spec.ts" />
@@ -118,8 +121,6 @@
     <TypeScriptCompile Include="e2e-api\voice-gender.spec.ts" />
     <TypeScriptCompile Include="e2e-api\welcome-sign-in.spec.ts" />
     <TypeScriptCompile Include="e2e-api\workflow.spec.ts" />
-    <TypeScriptCompile Include="e2e-api\workspace-phone.spec.ts" />
-    <TypeScriptCompile Include="e2e-api\workspace.spec.ts" />
     <TypeScriptCompile Include="e2e-api\zz-mixed-frequency.spec.ts" />
     <TypeScriptCompile Include="e2e-api\zzz-forecast-run.spec.ts" />
     <TypeScriptCompile Include="e2e-demo\integrated.demo.spec.ts" />
@@ -181,6 +182,7 @@
     <TypeScriptCompile Include="src\components\assistant\MulhimPanels.tsx" />
     <TypeScriptCompile Include="src\components\assistant\persona.tsx" />
     <TypeScriptCompile Include="src\components\assistant\PersonaImage.tsx" />
+    <TypeScriptCompile Include="src\components\assistant\ReplyResults.tsx" />
     <TypeScriptCompile Include="src\components\assistant\ResearchBriefBuilder.tsx" />
     <TypeScriptCompile Include="src\components\assistant\ResearchProgress.tsx" />
     <TypeScriptCompile Include="src\components\assistant\ResearchVisuals.tsx" />
@@ -239,7 +241,11 @@
     <TypeScriptCompile Include="src\components\research\ResearchQueue.tsx" />
     <TypeScriptCompile Include="src\components\results\model.ts" />
     <TypeScriptCompile Include="src\components\results\ResultsPanel.tsx" />
+    <TypeScriptCompile Include="src\components\sector\AreaComparison.tsx" />
+    <TypeScriptCompile Include="src\components\sector\AskMulhim.tsx" />
     <TypeScriptCompile Include="src\components\sector\DecisionBrief.tsx" />
+    <TypeScriptCompile Include="src\components\sector\SectorAnalysis.tsx" />
+    <TypeScriptCompile Include="src\components\sector\SectorIndicators.tsx" />
     <TypeScriptCompile Include="src\components\sector\SectorNav.tsx" />
     <TypeScriptCompile Include="src\components\sector\SectorWorkflow.tsx" />
     <TypeScriptCompile Include="src\components\sector\SpokenSummary.tsx" />
@@ -260,17 +266,14 @@
     <TypeScriptCompile Include="src\components\ui\segmented.tsx" />
     <TypeScriptCompile Include="src\components\ui\select.tsx" />
     <TypeScriptCompile Include="src\components\ui\skeleton.tsx" />
-    <TypeScriptCompile Include="src\components\workspace\AssistantColumn.tsx" />
     <TypeScriptCompile Include="src\components\workspace\DashboardPanels.tsx" />
     <TypeScriptCompile Include="src\components\workspace\datasets.ts" />
     <TypeScriptCompile Include="src\components\workspace\DatasetView.tsx" />
     <TypeScriptCompile Include="src\components\workspace\LiveStudyPanel.tsx" />
-    <TypeScriptCompile Include="src\components\workspace\ResourceKpis.tsx" />
     <TypeScriptCompile Include="src\components\workspace\SelectionStudy.tsx" />
     <TypeScriptCompile Include="src\components\workspace\StudyParts.tsx" />
     <TypeScriptCompile Include="src\components\workspace\Tabs.tsx" />
     <TypeScriptCompile Include="src\components\workspace\useNarration.ts" />
-    <TypeScriptCompile Include="src\components\workspace\WorkspaceLaunchpad.tsx" />
     <TypeScriptCompile Include="src\content\editorial.generated.ts" />
     <TypeScriptCompile Include="src\content\photos.ts" />
     <TypeScriptCompile Include="src\domain\filters.ts" />
@@ -301,6 +304,7 @@
     <TypeScriptCompile Include="src\lib\useVoiceVolume.ts" />
     <TypeScriptCompile Include="src\lib\utils.ts" />
     <TypeScriptCompile Include="src\lib\voicePlayer.ts" />
+    <TypeScriptCompile Include="src\lib\workspaceRedirect.ts" />
     <TypeScriptCompile Include="src\main.tsx" />
     <TypeScriptCompile Include="src\pages\AnalysisReportPage.tsx" />
     <TypeScriptCompile Include="src\pages\AssistantPage.tsx" />
@@ -321,7 +325,6 @@
     <TypeScriptCompile Include="src\pages\SettingsPage.tsx" />
     <TypeScriptCompile Include="src\pages\SignInPage.tsx" />
     <TypeScriptCompile Include="src\pages\StudiesPage.tsx" />
-    <TypeScriptCompile Include="src\pages\WorkspacePage.tsx" />
     <TypeScriptCompile Include="src\state\answerStream.ts" />
     <TypeScriptCompile Include="src\state\liveStudy.ts" />
     <TypeScriptCompile Include="src\state\sectorSelections.ts" />
@@ -437,6 +440,7 @@
     <Content Include="tests\research-brief.test.mjs" />
     <Content Include="tests\talk-redirect.test.mjs" />
     <Content Include="tests\username.test.mjs" />
+    <Content Include="tests\workspace-redirect.test.mjs" />
     <Content Include="tsconfig.app.json" />
     <Content Include="tsconfig.json" />
     <Content Include="tsconfig.node.json" />

@@ -19,6 +19,7 @@ import { GeneratedImages, ResearchCharts, ResearchDiagrams, ResearchPlan, Resear
 import { asksForChart, chartPoints, InlineChart } from './InlineChart';
 import { IntroPlayer } from './IntroPlayer';
 import { Markdown } from './Markdown';
+import { ReplyResults } from './ReplyResults';
 import { AboutMulhim, MemoryPanel } from './MulhimPanels';
 import { usePersona } from './persona';
 import { PersonaImage } from './PersonaImage';
@@ -43,6 +44,7 @@ import { formatDate, formatDecimal, formatPeriod } from '@/lib/format';
 import { useAppLanguage } from '@/lib/useAppLanguage';
 import { cn } from '@/lib/utils';
 import { usePreservedSearch } from '@/state/usePreservedSearch';
+import { LiveStudyPanel } from '@/components/workspace/LiveStudyPanel';
 
 /** Everything the conversation needs from the chat's state (AssistantChat owns it). */
 export interface ChatModel {
@@ -86,6 +88,8 @@ export interface ChatModel {
   brief: ReactNode;
   openStudy: (id: string) => void;
   activeStudyId: string | null;
+  /** A reply's study to show open on arrival (`/assistant?study=<id>`). */
+  initialStudyId?: string | null;
   suggestions: string[];
   /** Page-specific tools (shortage and surplus analysis, a full study), in the Tools menu. */
   tools?: ReactNode;
@@ -399,6 +403,9 @@ function ChatMessage({ message, question, chat, onAsk }: {
   // A chart is offered under an answer that has chartable figures, and drawn only when the
   // person asks: in words ("show a chart of …") or with the Show chart button.
   const [chartOpen, setChartOpen] = useState(() => asksForChart(question) && message.status !== 'clarification');
+  // The reply's live study (steps, sources, validated tables, narration), under the reply.
+  const studyId = message.structured.study_id ?? null;
+  const [studyShown, setStudyShown] = useState(() => Boolean(studyId) && studyId === chat.initialStudyId);
   if (message.role === 'user') return <UserBubble text={message.content} />;
   const author = byCode(message.persona);
   const badge = message.status ? STATUS_BADGE[message.status] : null;
@@ -453,6 +460,10 @@ function ChatMessage({ message, question, chat, onAsk }: {
         {badge ? <Badge variant="sand">{t(badge)}</Badge> : null}
         {/* Which kind of answer was given (chosen automatically unless picked in Tools). */}
         {message.mode && message.mode !== 'ask' ? <Badge variant="outline" data-testid="reply-mode">{t(message.mode === 'research' ? 'assistant.mode.researchLong' : `assistant.mode.${message.mode}`)}</Badge> : null}
+        {/* What the question asked OSRIP to run, when that differs from the mode's name. */}
+        {message.structured.intent && message.structured.intent !== message.mode ? (
+          <Badge variant="outline" data-testid="reply-intent" data-intent={message.structured.intent}>{t(`assistant.intent.${message.structured.intent}`)}</Badge>
+        ) : null}
         {syntheticLabel ? <DataModeBadge mode="synthetic" compact /> : null}
       </p>
       <div className="flex flex-col gap-3" data-testid="assistant-text">
@@ -462,6 +473,8 @@ function ChatMessage({ message, question, chat, onAsk }: {
       {message.structured.omitted_claims ? (
         <p className="text-sm text-muted-foreground" data-testid="omitted-claims">{t('assistant.omittedClaims', { count: message.structured.omitted_claims })}</p>
       ) : null}
+      {/* What the reply ran: the study, the forecast or the scenario, in full. */}
+      <ReplyResults structured={message.structured} />
       {message.structured.data_tables?.length ? <ChatDataTables blocks={message.structured.data_tables} messageId={message.id} /> : null}
       {/* Deep research: tables, charts and diagrams from verified web figures; illustrations. */}
       {message.structured.research_tables?.length ? <ResearchTables tables={message.structured.research_tables} messageId={message.id} /> : null}
@@ -558,13 +571,18 @@ function ChatMessage({ message, question, chat, onAsk }: {
         ) : null}
         {chat.signedIn && message.status && SAVEABLE.has(message.status) ? <SaveResearchButton messageId={message.id} /> : null}
         {chat.signedIn && message.status === 'answered' ? <AnswerReportButton messageId={message.id} /> : null}
-        {message.structured.study_id ? (
-          <Button type="button" variant="ghost" size="sm" onClick={() => chat.openStudy(message.structured.study_id ?? '')} data-testid="open-study"
-            aria-pressed={chat.activeStudyId === message.structured.study_id}>
-            {chat.activeStudyId === message.structured.study_id ? t('workspace.study.shown') : t('workspace.study.open')}
+        {studyId ? (
+          <Button type="button" variant="ghost" size="sm" data-testid="open-study" aria-expanded={studyShown}
+            onClick={() => { if (!studyShown) chat.openStudy(studyId); setStudyShown(!studyShown); }}>
+            {studyShown ? t('workspace.study.hide') : t('workspace.study.open')}
           </Button>
         ) : null}
       </div>
+      {studyId && studyShown ? (
+        <div className="rounded-2xl border border-border bg-card/70 p-3 sm:p-4" data-testid="reply-live-study">
+          <LiveStudyPanel study={{ id: studyId, guest: chat.guest, question: question ?? '', epoch: 0 }} />
+        </div>
+      ) : null}
       {message.suggestions.length > 0 ? (
         <div className="flex flex-wrap gap-1.5">
           {message.suggestions.map((s) => (

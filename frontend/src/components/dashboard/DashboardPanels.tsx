@@ -1,4 +1,4 @@
-import { ArrowRight, Bot, Droplets, FileText, Lightbulb, MapPinned, ShieldAlert, SlidersHorizontal, ThumbsDown, ThumbsUp, Wheat, Ship, Zap } from 'lucide-react';
+import { ArrowRight, Bot, Droplets, FileText, Lightbulb, MapPinned, ShieldAlert, ThumbsDown, ThumbsUp, Wheat, Ship, Zap } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
@@ -204,7 +204,7 @@ export function AxisAnalysis() {
           </div>
           <nav aria-label={t('dashboard.quick')} className="surface-card flex flex-col gap-1 p-3" data-testid="dashboard-quick">
             {[
-              { path: '/forecasts', hash: '#scenarios', label: t('nav.scenarios'), icon: SlidersHorizontal },
+              { path: '/geography', hash: '', label: t('nav.map'), icon: MapPinned },
               { path: '/reports', hash: '', label: t('nav.reports'), icon: FileText },
               { path: '/assistant', hash: '', label: t('nav.aiAssistant'), icon: Bot },
             ].map((q) => (

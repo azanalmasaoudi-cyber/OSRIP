@@ -108,7 +108,7 @@ test('when the answer service fails, the reply is a data-based report, labelled,
 });
 
 test('a sector page: period first, then the table, the chart only on request, in time order, with a CSV', async ({ page }) => {
-  await page.goto('/energy/electricity?mode=synthetic');
+  await page.goto('/energy/electricity?mode=synthetic&tab=charts');
   // Before a period is chosen: the explanation and the selectors, no figures and no chart.
   await expect(page.getByTestId('sector-form')).toBeVisible();
   await expect(page.getByTestId('sector-results')).toHaveCount(0);
@@ -170,14 +170,16 @@ test('navigation and Settings: the main destinations in order, services and sche
   await page.goto('/overview?mode=synthetic');
   const nav = page.getByRole('navigation', { name: 'Main navigation' });
   const names = await nav.getByRole('link').allInnerTexts();
-  // The modules in order: Dashboard; the Axes; Research and Analytics; Geographic Intelligence;
-  // Reports; the account; then administration (an administrator sees all of it). One entry per
-  // page: sections of a page (saved reports, appearance, ...) are found through search.
+  // The modules in order: Dashboard; the sectors; Al Mulhim; the map; data and sources; Reports;
+  // the account; then administration (an administrator sees all of it). One entry per page:
+  // sections of a page (saved reports, appearance, ...) are found through search. Analysis,
+  // studies, forecasts and scenarios have no entry: they are in each sector and in Al Mulhim.
   expect(names.map((n) => n.trim())).toEqual([
     'Dashboard', 'Overview',
     'Electricity', 'Water', 'Food Security', 'Trade',
-    'AI Research Assistant', 'Analysis Workspace', 'Datasets', 'Forecasts and Scenarios', 'Studies', 'Research library', 'Sources',
+    'Al Mulhim',
     'Interactive Oman Map',
+    'Datasets', 'Research library', 'Sources',
     'Reports Dashboard',
     'My Profile', 'Settings',
     'Data Management', 'Users and Roles', 'Groups and Permissions', 'Service Health', 'Audit Logs',

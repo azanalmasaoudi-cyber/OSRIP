@@ -1,57 +1,81 @@
-# Analytical workspace and live studies
+# Analysis in the sector pages, Al Mulhim's results and live studies
 
-The Analysis workspace (`/workspace`) is OSRIP's analytical workspace. It was on the Overview
-page until the Overview became the project introduction; its reference charts are now drawn
-only when the reader presses "Show chart". It covers the three domains:
+Until November 2026 OSRIP had a separate **Analysis workspace** (`/workspace`) and separate
+**Studies** and **Forecasts and Scenarios** entries in the navigation. They have been folded
+into the places where people already work:
 
-- Energy and Essential Services (Electricity and Water);
-- Food Security;
-- Trade.
+- each of the four sectors (Electricity, Water, Food Security, Trade) has three views of the
+  same sector: **Data and indicators**, **Analysis** and **Tables and charts**;
+- **Al Mulhim** is the one assistant: a study, a forecast or a scenario is asked for in a
+  sentence, and its results are shown inside the conversation.
 
-You can filter and compare the published data. You can also ask the assistant a question and watch its study take shape as it researches. This arrived with migration `0019_study_events`.
+Nothing analytical was removed. The backend endpoints, permission checks, stored studies,
+forecasts, scenarios and saved results are unchanged; the pages `/studies`, `/studies/:id` and
+`/forecasts` still open from saved links, they are only not in the menu.
 
-## Layout
+## The old address
 
-| Screen | What is shown |
+`/workspace` redirects to a sector's Analysis (`frontend/src/lib/workspaceRedirect.ts`, unit
+tested in `frontend/tests/workspace-redirect.test.mjs`):
+
+- `section` (or the first section of `domain`) chooses the sector; Electricity otherwise;
+- only safe values are carried over: the data mode, an indicator code
+  (`^[A-Z][A-Z0-9_]{1,63}$`), an area code (`^OM(-[A-Z0-9]{1,8}){0,2}$`) and the frequency (as
+  the period view). Anything else (dates, free text, unknown values) is dropped.
+
+The sector page reads `indicator`, `area` and `view` once into the sector's selection and then
+removes them from the address.
+
+## Sector views
+
+One view is shown at a time, so there is no box that scrolls inside the page. The tabs follow
+the ARIA tab pattern: the arrow keys (mirrored in Arabic), Home and End. The chosen view is kept
+in the address (`?tab=data|analysis|charts`); the Analysis is the default.
+
+The three views share **one selection per sector** (indicator, area, period view), kept per data
+mode for the browser session (`frontend/src/state/sectorSelections.ts`). Choosing an indicator in
+one view chooses it in the others.
+
+| View | What is shown |
 |---|---|
-| Wide (1024 px and more) | Filters across the top. Then two areas side by side: the analysis on the left, with **Data** and **Study** tabs; and the assistant column on the right, with the persona's portrait, its real state, and the chat. |
-| Phone | The same filters, with three tabs: **Data**, **Study**, **Assistant**. Asking a question brings the Study tab forward. "Ask a follow-up" returns to the Assistant tab, and the conversation is kept. |
+| Data and indicators | Every indicator published for the sector in the chosen data mode, as cards (latest value, unit, period, previous period, data mode, area, source details), filtered by area and frequency; period kinds are listed apart. A card is flagged **"May be out of date"** when its latest period ended longer ago than the usual publication interval (24 months for annual data, 9 for quarterly, 6 for monthly or year-to-date), and a banner counts them: old data is flagged, never hidden. Beside them: the sources behind the cards and, for Food Security and Trade, the commodity register. **Analyse** on a card makes it the selection and opens the Analysis. |
+| Analysis | The current selection (indicator, area, period view), changeable here. For it: the server's validated findings (`POST /studies/preview`, the deterministic trend study, not stored) with method, assumptions, limitations, references and the section's rule-based recommendations, which need a person's review; the governorates compared (only when the server finds at least two governorates' own values comparable, otherwise the page says why; no licensed boundary geometry, so no choropleth); **Ask Al Mulhim** (Study, Forecast, Scenario: each opens the conversation with the request written for this selection, in the reader's language, sent only when the person presses Send); this session's studies (each opens again under its reply); and the axis's decision brief. Nothing in this view is written by AI. |
+| Tables and charts | The period-first workflow: indicator, area or breakdown, frequency, then a start and end period from those published, **Show results**; then the table, calculations, insights and downloads, and the chart only after **Show chart**. |
 
-- The floating assistant button is hidden on this page, because the assistant is already on screen.
-- The chat mounts only when the person presses "Ask …". Opening the workspace alone creates no guest session.
-- Tabs follow the ARIA tab pattern:
-  - Tab reaches the selected tab;
-  - the arrow keys move between tabs, mirrored in Arabic;
-  - Home and End jump to the first and last tab.
+States are explicit in every view: loading, error with retry, empty, no verified data, mixed
+frequency (with a choice) and stale data.
 
-## Data tab
+All four sectors use the same components (`frontend/src/components/sector/SectorIndicators.tsx`,
+`SectorAnalysis.tsx`, `AreaComparison.tsx`, `AskMulhim.tsx`, `SectorWorkflow.tsx`); nothing is
+copied per sector.
 
-- **Filters:** domain, section, indicator, governorate (or national), from year, to year, and data mode. They are stored in the address as codes, so they survive a reload or a language switch.
-- **Indicator cards:** latest value, unit, period, previous period, data mode, area and source details.
-  - A card is flagged **"May be out of date"** when its latest period ended longer ago than the usual publication interval: 24 months for annual data, 9 for quarterly, 6 for monthly or year-to-date.
-  - A banner counts the flagged series. Old data is flagged, never hidden.
-- **History of the chosen indicator:** one dataset is built from the published series and checked with the same schema as the assistant's tables (below). It is drawn as a line chart and as a sortable, filterable table, both from exactly the same rows.
-  - The period filter limits both.
-  - Missing values stay missing.
-  - Every chart has its table.
-- **Governorates:** each governorate's own published value, drawn as a ranked bar chart and a table.
-  - This view appears only when the server finds the values comparable (same unit and period length) and at least two governorates publish their own value.
-  - Otherwise the page says why no geographic view is shown.
-  - No licensed boundary geometry exists in OSRIP, so no choropleth map is drawn.
-- **States:** loading, error with retry, empty, no verified data, mixed frequency (with a choice) and stale data. Each is explicit.
+## Al Mulhim: studies, forecasts and scenarios from a sentence
 
-## Study tab
+`backend/app/services/assistant/routing.py` recognises, in Arabic and English, what a sentence
+asks OSRIP to run (`intent`: `study`, `forecast` or `scenario`). A stated change ("increases by
+15%", «زادت 20%») makes a scenario even when the word forecast is used. In Automatic mode a
+study or a forecast is answered in Analyze mode and a scenario in Scenario mode; a mode the
+person chose is kept. The service adds the intent's rules to the model's instructions
+(`INTENT_RULES` in `service.py`), and the reply records the intent (shown as a badge).
 
-**Study of the current selection.** The deterministic trend study of the chosen indicator and area, computed by the server (`POST /studies/preview`) and not stored. It shows:
+| Request | What runs | What the reply shows |
+|---|---|---|
+| "Create a detailed study of electricity consumption in Oman." / «أنشئ دراسة عن الأمن الغذائي» | `run_study`: the allowlisted study engine; the study is stored | The whole study inside the reply: title, question, method, findings, table, interpretation, recommendations, limitations and references, with a link to its own page (`/studies/<id>`). |
+| "Forecast electricity demand in Oman." / «تنبأ باستهلاك المياه» | `get_forecast`: a stored forecast run if there is one; otherwise `forecasting.preview`, the same engine and policy, computed and not stored | The estimate with its 80% interval, method, training cut-off and backtest metrics, labelled as a model estimate, not an official statistic. When the history is too short (annual: 8 training and 4 test periods; monthly: 24 and 12) there is **no number**, and the engine's reasons are shown. |
+| "What happens if water demand increases by 15% over five years?" / «ماذا لو زادت الواردات 20%؟» | `scenario_projection` from the latest published value (a total change over several years becomes its compound yearly rate) | The base, assumptions, formula, a table and a chart, labelled **hypothetical scenario, not a forecast**. Without a stated change, Al Mulhim asks for it and assumes nothing. |
 
-- findings;
-- method;
-- assumptions;
-- limitations;
-- references (dataset version, period and source link);
-- the section's rule-based recommendations, which need a person's review before anyone acts on them.
+The numbers come from the tools, never from the model: the server checks every number the model
+writes against the evidence it cites, and the tables and charts are drawn from the tool results
+(`structured.studies`, `structured.forecasts`, `structured.scenarios`). One forecast card is
+shown per series, the most informative one (an estimate before a withheld result before "no such
+series").
 
-**Assistant study.** The question's live study. While it runs, everything is labelled **provisional**. The panel shows:
+## Live studies under a reply
+
+A reply prepared as a study has **Open the study**. The live study opens under that reply and
+closes with the same button. A study chosen from a sector's list opens under its reply on Al
+Mulhim's page (`/assistant?study=<id>`). While it runs, everything is labelled **provisional**.
+The panel shows:
 
 - **Progress:** the steps actually reached, in order. For example: question received, checking OSRIP's published data, calculating, validating tables (units, periods, values), searching the web, reading sources, checking numbers and citations.
 - **Sources:** each source appears as it is retrieved, with its data status (approved official observation, synthetic demonstration data, unreviewed external evidence, calculated, forecast, scenario).
@@ -70,11 +94,7 @@ You can filter and compare the published data. You can also ask the assistant a 
   - assumptions;
   - method;
   - references (the cited sources).
-- **Controls:**
-  - Stop research, which cancels the request (it is never charged);
-  - Ask a follow-up;
-  - "Studies in this session", to return to an earlier study. It is rebuilt from its stored events and looks as it did.
-- **Opening a study from a reply:** each reply prepared as a study has an "Open the study" button. It opens the study in the workspace from any page.
+- **Controls:** Stop research, which cancels the request (it is never charged). A study opened again is rebuilt from its stored events and looks as it did.
 
 ## Narration and highlighting
 
@@ -157,16 +177,9 @@ Every event carries `study_id`, `seq` and `result_version`.
   - segment speech;
   - deletion with the conversation;
   - preview without storage.
-- **Browser:** `e2e-api/workspace.spec.ts` (desktop) and `e2e-api/workspace-phone.spec.ts` (Pixel 7) cover:
-  - filters, cards and stale flags;
-  - chart and table consistency;
-  - sorting;
-  - the geographic and verified-data states;
-  - a live study with the row highlighted while its sentence is read;
-  - interruption;
-  - a partial failure;
-  - keyboard access to sources and tabs;
-  - returning to an earlier study;
-  - the Arabic interface with unchanged values;
-  - crafted streams with late, superseded and invalid events;
-  - phone tabs.
+- **Backend, requests in a sentence:** `tests/test_assistant_intents.py` (the recognised requests in Arabic and English, the intent rules, one forecast card per series) and `tests/test_assistant_intents_integration.py` (the real study, forecast and scenario tools through the API against the database, with synthetic series: an estimate, a withheld forecast, an Arabic forecast, a scenario, a scenario without a stated change, a stored study).
+- **Browser, full stack:**
+  - `e2e-api/sector-analysis.spec.ts`: the three views in all four sectors and their keyboard tabs; cards, stale flags and sources; Analyse; the selection shared with Tables and charts; the comparison state; Al Mulhim's prefilled requests; the `/workspace` redirect with unsafe values dropped; Arabic right to left in dark mode without sideways scrolling;
+  - `e2e-api/mulhim-results.spec.ts`: a study, a forecast (English and Arabic) and a scenario asked in a sentence, with their results in the reply; a scenario without a stated change asked for; the saved study page; the live study under its reply with the row highlighted while its sentence is read, and interruption; a partial failure; keyboard access to sources; a study reopened from a sector with unchanged values in Arabic; crafted streams with late, superseded and invalid events;
+  - `e2e-api/sector-phone.spec.ts` (Pixel 7): the sector views and a live study on a phone, without sideways scrolling.
+- **Browser, offline prototype:** `e2e/shell.spec.ts` (the Data and indicators view, language switching with the filters kept, the `/workspace` redirect, the menu without the removed entries).

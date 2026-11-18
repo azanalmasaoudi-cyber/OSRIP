@@ -25,11 +25,9 @@ test('navigation lists the required sections and every link opens its page', asy
     ['Food Security', /\/food-security/, 'Food Security'],
     ['Trade', /\/trade/, 'Trade'],
     ['Interactive Oman Map', /\/geography/, 'Geography'],
-    ['Studies', /\/studies/, 'Studies'],
-    ['Forecasts and Scenarios', /\/forecasts/, 'Forecasts and Scenarios'],
     ['Sources', /\/sources/, 'Sources and Methodology'],
-    ['AI Research Assistant', /\/assistant/, 'Al Mulhim'], // the page is titled with the chosen persona
-    ['Analysis Workspace', /\/workspace/, 'Analysis workspace'],
+    ['Al Mulhim', /\/assistant/, 'Al Mulhim'], // studies, forecasts and scenarios are asked here
+    ['Datasets', /\/datasets/, ''],
     ['Reports Dashboard', /\/reports/, 'Reports'],
     ['My Profile', /\/(account|sign-in)/, ''],
   ];
@@ -38,6 +36,11 @@ test('navigation lists the required sections and every link opens its page', asy
     await expect(page).toHaveURL(url);
     await expect(page).toHaveURL(/mode=synthetic/); // the data mode is kept
     if (heading) await expect(page.getByRole('heading', { level: 1 })).toContainText(heading);
+  }
+  // No separate entries for analysis, studies, forecasts or scenarios (their pages still open
+  // from saved links; the work itself is in each sector's Analysis and in Al Mulhim).
+  for (const gone of ['Analysis Workspace', 'Studies', 'Forecasts and Scenarios', 'Scenarios', 'Forecasts']) {
+    await expect(nav.getByRole('link', { name: gone, exact: true })).toHaveCount(0);
   }
 });
 
@@ -65,7 +68,8 @@ test('an analytical page answers its questions (measure, period, change, evidenc
   await expect(evidence).toContainText('fixtures-v1');
   const next = insights.getByTestId('insight-next');
   await next.locator('summary').click();
-  await expect(next.getByRole('link', { name: /forecast/i })).toHaveAttribute('href', /\/forecasts\?mode=synthetic/);
+  // Whether a forecast is possible is asked of Al Mulhim, with the request written out.
+  await expect(next.getByTestId('insight-ask-forecast')).toHaveAttribute('href', /^\/assistant\?(?=.*mode=synthetic)(?=.*q=Forecast)/);
 
 
   // Arabic: same structure, translated questions.
@@ -113,7 +117,7 @@ test('no decorative motion: the landing hero is a still, credited photograph tha
   await expect(page.getByTestId('home-page').getByTestId('photo-credit').first()).toContainText('Wikimedia Commons');
   // No tilt, parallax or depth layers anywhere, charts and forms included.
   await expect(page.locator('.tilt, .scene, .depth')).toHaveCount(0);
-  await page.goto('/energy/electricity?mode=synthetic');
+  await page.goto('/energy/electricity?mode=synthetic&tab=charts');
   await expect(page.getByTestId('sector-form')).toBeVisible();
   await expect(page.locator('.tilt, .scene, .depth')).toHaveCount(0);
 });
@@ -173,10 +177,10 @@ test('responsive matrix: no sideways scrolling at six widths, in English and Ara
     const menu = page.getByRole('button', { name: 'Open menu' });
     if (width < 1024) {
       await menu.click();
-      await expect(page.getByRole('dialog').getByRole('link', { name: 'Forecasts and Scenarios', exact: true })).toBeVisible();
+      await expect(page.getByRole('dialog').getByRole('link', { name: 'Al Mulhim', exact: true })).toBeVisible();
       await page.keyboard.press('Escape');
     } else {
-      await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Forecasts and Scenarios', exact: true })).toBeVisible();
+      await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Al Mulhim', exact: true })).toBeVisible();
     }
   }
 });

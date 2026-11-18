@@ -452,7 +452,7 @@ function ImportDetail({ id, me, onBack }: { id: string; me: Me; onBack: () => vo
         {status === 'published' ? (
           <p role="status" className="text-sm font-medium text-verified-foreground" data-testid="published-note">
             {t('dm.published', { n: (imp.valid_row_count ?? 0) + (imp.warning_row_count ?? 0) })}{' '}
-            <Link to={{ ...to('/workspace'), search: `?mode=${imp.data_mode}` }} className="underline">
+            <Link to={{ ...to('/'), search: `?mode=${imp.data_mode}` }} className="underline">
               {t('dm.viewData')}
             </Link>
           </p>

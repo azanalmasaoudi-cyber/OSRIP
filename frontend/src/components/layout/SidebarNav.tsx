@@ -3,12 +3,11 @@ import {
   BookOpen,
   Bot,
   ChevronDown,
-  ClipboardList,
+  Database,
   DatabaseZap,
   Download,
   Droplets,
   FileText,
-  FlaskConical,
   FolderOpen,
   Gauge,
   Info,
@@ -16,7 +15,6 @@ import {
   Layers,
   LayoutDashboard,
   LibraryBig,
-  LineChart,
   Map,
   MapPinned,
   Palette,
@@ -25,7 +23,6 @@ import {
   Sheet,
   ShieldCheck,
   Ship,
-  SlidersHorizontal,
   UserRound,
   Users,
   UsersRound,
@@ -48,12 +45,8 @@ export type NavKey =
   | 'nav.water'
   | 'nav.foodSecurity'
   | 'nav.trade'
-  | 'nav.workspace'
   | 'nav.datasets'
-  | 'nav.scenarios'
-  | 'nav.forecast'
   | 'nav.aiAssistant'
-  | 'nav.studies'
   | 'nav.library'
   | 'nav.sourcesShort'
   | 'nav.map'
@@ -74,8 +67,9 @@ export type NavKey =
 type ModuleKey =
   | 'nav.moduleDashboard'
   | 'nav.moduleAxes'
-  | 'nav.moduleResearch'
+  | 'nav.moduleAssistant'
   | 'nav.moduleGeo'
+  | 'nav.moduleData'
   | 'nav.moduleReports'
   | 'nav.groupAccount'
   | 'nav.groupAdmin';
@@ -101,9 +95,16 @@ interface NavModule {
   section?: 'admin' | 'you';
 }
 
-/** The modules: Dashboard; the Axes; Research and Analytics; Geographic Intelligence; Reports;
- * then the account and, only for those who may use it, administration. Every module opens and
- * closes (remembered in this browser) and starts open. */
+/** The modules: the Dashboard; the four Sectors (each with its own data, analysis, tables and
+ * charts); Al Mulhim (studies, forecasts and scenarios are asked for there, in words); the Oman
+ * map; Data and sources; Reports; then the account and, only for those who may use it,
+ * administration. A module of several destinations opens and closes (remembered in this
+ * browser) and starts open; a module of one destination is a plain link.
+ *
+ * The Analysis Workspace, Studies, Forecasts and Scenarios are not listed: their analysis is in
+ * each sector page and Al Mulhim runs studies, forecasts and scenarios from a sentence. Their
+ * pages still answer (/workspace leads to a sector's analysis; /studies/:id, /forecasts and
+ * saved links keep working). */
 export const NAV_MODULES: readonly NavModule[] = [
   {
     id: 'dashboard', label: 'nav.moduleDashboard', icon: Gauge, items: [
@@ -120,19 +121,20 @@ export const NAV_MODULES: readonly NavModule[] = [
     ],
   },
   {
-    id: 'research', label: 'nav.moduleResearch', icon: FlaskConical, items: [
+    id: 'assistant', label: 'nav.moduleAssistant', icon: Bot, items: [
       { path: '/assistant', key: 'nav.aiAssistant', icon: Bot },
-      { path: '/workspace', key: 'nav.workspace', icon: LayoutDashboard },
-      { path: '/datasets', key: 'nav.datasets', icon: Sheet },
-      { path: '/forecasts', key: 'nav.forecast', icon: LineChart },
-      { path: '/studies', key: 'nav.studies', icon: ClipboardList },
-      { path: '/library', key: 'nav.library', icon: LibraryBig },
-      { path: '/sources', key: 'nav.sourcesShort', icon: BookOpen },
     ],
   },
   {
     id: 'geo', label: 'nav.moduleGeo', icon: Map, items: [
       { path: '/geography', key: 'nav.map', icon: MapPinned },
+    ],
+  },
+  {
+    id: 'data', label: 'nav.moduleData', icon: Database, items: [
+      { path: '/datasets', key: 'nav.datasets', icon: Sheet },
+      { path: '/library', key: 'nav.library', icon: LibraryBig },
+      { path: '/sources', key: 'nav.sourcesShort', icon: BookOpen },
     ],
   },
   {
@@ -163,7 +165,6 @@ export const NAV_ITEMS: readonly NavItem[] = NAV_MODULES.flatMap((m) => m.items)
 /** Sections of pages the sidebar already lists (one sidebar entry per page). They are not in the
  * sidebar, but search still finds them by name and opens the page at the section. */
 export const SECTION_ITEMS: readonly NavItem[] = [
-  { path: '/forecasts', hash: '#scenarios', key: 'nav.scenarios', icon: SlidersHorizontal },
   { path: '/geography', hash: '#compare-heading', key: 'nav.geoCompare', icon: Layers },
   { path: '/reports', hash: '#saved-reports', key: 'nav.savedReports', icon: FolderOpen },
   { path: '/reports', hash: '#export-center', key: 'nav.exportCenter', icon: Download },
@@ -287,6 +288,13 @@ export function SidebarNav({ onNavigate, collapsed = false }: { onNavigate?: () 
               className={cn('flex flex-col gap-0.5', border ? 'mt-3 border-t border-sidebar-border pt-3' : 'border-t border-sidebar-border/60 pt-1 first:border-0 first:pt-0')}>
               {items.map((item) => <li key={key(item)}>{link(item, false)}</li>)}
             </ul>
+          );
+        }
+        if (items.length === 1 && !module.section) {
+          return (
+            <div key={module.id} className={cn('flex flex-col gap-0.5', border && 'mt-3 border-t border-sidebar-border pt-3')} data-module={module.id}>
+              {link(items[0]!, false)}
+            </div>
           );
         }
         const holdsCurrent = items.some((item) => isCurrentItem(item, pathname, hash, search));

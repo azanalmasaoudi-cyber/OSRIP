@@ -546,6 +546,131 @@ def _future(session: Session, run: AnalysisRun, m: dict[str, fc.Metrics]) -> dic
     }
 
 
+# ------------------------------------------------------------------ a forecast computed on request
+
+# Regular period kinds in the order a forecast is tried: the longest comparable view first.
+_PREFERRED = ("annual", "quarterly", "monthly")
+
+
+def preview(
+    session: Session,
+    data_mode: DataMode,
+    indicator: str,
+    area: str = "OM",
+    flow: str | None = None,
+) -> dict[str, Any]:
+    """What the forecasting engine concludes for one published series now, without storing a run.
+
+    The same rules as ``run_experiment``: the series' eligibility (enough comparable, accepted,
+    complete periods; year-to-date totals and statements never count), the rolling-origin
+    backtest of the baseline and the candidates on held-out periods, the model chosen only if it
+    beats the baseline, and its prediction intervals. Used by Al Mulhim, whose step is read only,
+    when no stored run exists. Returns ``status`` ``ok`` with the estimates, ``withheld`` with
+    the reasons, or ``no_series`` when nothing matching is published. Nothing is invented: a
+    withheld series has no values.
+    """
+    candidates = [
+        (s, e)
+        for s, e in _evaluated(session, data_mode)
+        if s.meta["indicator"]["code"] == indicator
+        and s.meta["area"]["code"] == area
+        and s.meta["commodity"] is None
+        and s.meta["partner"] is None
+        and (flow is None or s.meta["flow"] == flow)
+    ]
+    if not candidates:
+        return {
+            "status": "no_series",
+            "indicator": indicator,
+            "area": area,
+            "reasons": [
+                {
+                    "code": "no_published_series",
+                    "en": "No regular (annual, quarterly or monthly) published series matches this indicator and area.",
+                    "ar": "لا تطابق أي سلسلة منشورة منتظمة (سنوية أو ربعية أو شهرية) هذا المؤشر وهذه المنطقة.",
+                }
+            ],
+        }
+
+    def rank(pair: tuple[SeriesOut, fc.Eligibility]) -> tuple[int, int, int]:
+        s, e = pair
+        kind = s.meta.get("period_kind") or s.meta["frequency"]
+        order = _PREFERRED.index(kind) if kind in _PREFERRED else len(_PREFERRED)
+        return (0 if e.eligible else 1, order, -len(e.points))
+
+    s, e = sorted(candidates, key=rank)[0]
+    frequency = Frequency(s.meta["frequency"])
+    policy = fc.POLICIES[frequency]
+    history = [
+        {
+            "period_start": p.period_start.isoformat(),
+            "period_end": p.period_end.isoformat(),
+            "value": _decimal(p.value),
+        }
+        for p in e.points
+    ]
+    base: dict[str, Any] = {
+        "series": _describe(s),
+        "indicator": indicator,
+        "area": area,
+        "frequency": frequency.value,
+        "unit": s.meta["unit"],
+        "history": history,
+        "policy": {
+            "min_training": policy.min_training,
+            "test_size": policy.test_size,
+            "minimum_length": policy.minimum_length,
+        },
+        "usable_observations": len(e.points),
+        "reasons": [r.as_dict() for r in e.reasons],
+        "notes": [n.as_dict() for n in e.notes],
+        "method": {"code": fc.METHOD_CODE, "version": fc.METHOD_VERSION},
+        "model_names": MODEL_NAMES,
+        "assumptions": ASSUMPTIONS,
+        "demonstration_label": DEMONSTRATION_LABEL if e.demonstration_only else None,
+        "label": mode_label(data_mode),
+        "stored": False,
+    }
+    if not e.eligible:
+        return {**base, "status": "withheld"}
+    season = fc.SEASON_LENGTH.get(frequency)
+    predictions = fc.evaluate(e.points, policy, season)
+    if not predictions:
+        return {**base, "status": "withheld"}
+    m = fc.metrics(predictions)
+    chosen = fc.select_model(m)
+    horizon = fc.horizon_for(frequency, len(e.points), policy)
+    estimates = fc.forecast_future(e.points, frequency, chosen, horizon)
+    return {
+        **base,
+        "status": "ok",
+        "selected_model": chosen,
+        "training_cutoff": e.points[-1].period_end.isoformat(),
+        "held_out_periods": [p.period_start.isoformat() for p in e.points[-policy.test_size :]],
+        "metrics": {
+            k: {"n": v.n, "mae": _decimal(v.mae), "rmse": _decimal(v.rmse)} for k, v in m.items()
+        },
+        "interval_method": fc.INTERVAL_METHODS.get(chosen),
+        "outputs": [
+            {
+                "step": est.step,
+                "period_start": est.period_start.isoformat(),
+                "period_end": est.period_end.isoformat(),
+                "estimate": _decimal(est.estimate),
+                "lower80": _decimal(est.lower80),
+                "upper80": _decimal(est.upper80),
+                "lower95": _decimal(est.lower95),
+                "upper95": _decimal(est.upper95),
+            }
+            for est in estimates
+        ],
+        "estimate_label": {
+            "en": "Model estimate — not an official observation.",
+            "ar": "تقدير نموذج — ليس مشاهدة رسمية.",
+        },
+    }
+
+
 # ------------------------------------------------------------------ overview by indicator
 
 INSUFFICIENT_LABEL = {
