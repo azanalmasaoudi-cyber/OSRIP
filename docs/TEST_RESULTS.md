@@ -1,5 +1,44 @@
 # Test results
 
+## 2026-11-18: navigation simplified, analysis inside the sectors, studies, forecasts and scenarios in Al Mulhim (branch `feature/simplified-navigation-sector-analysis`)
+
+**What changed** (details in `docs/WORKSPACE.md`):
+
+- **Navigation.** The sidebar no longer lists Analysis Workspace, Studies, or Forecasts and Scenarios. The backend, the permissions and the stored data are unchanged. `/studies`, `/studies/:id` and `/forecasts` still open.
+- **Sector pages.** Every sector has three views: Data and indicators, Analysis, and Tables and charts. `/workspace` redirects to a sector's Analysis and keeps only safe filters.
+- **Al Mulhim.** It recognises study, forecast and scenario requests in Arabic and English, runs the real tools, and draws their results in the reply. A forecast is withheld, with the engine's reasons, when the history is too short.
+
+**Automated checks** (run in the worktree against the local PostgreSQL cluster):
+
+| Check | Result |
+|---|---|
+| Backend `pytest`, database tests included | **1009 passed** (30 new: requests recognised in Arabic and English, and the real study, forecast and scenario tools through the API with synthetic series) |
+| Backend `ruff check`, `ruff format --check` | pass |
+| Frontend typecheck, lint, production build | pass |
+| Frontend unit tests | 31 passed (3 new: the `/workspace` redirect keeps only safe values) |
+| Contrast check | 0 failing pairs |
+| Offline browser tests (mock adapter) | 49 passed, 3 skipped (phone-only or desktop-only tests in the other project) |
+| Full-stack browser tests (real API, database, scripted model) | **190 passed**, 3 skipped. New: `sector-analysis.spec.ts` (5), `mulhim-results.spec.ts` (8), `sector-phone.spec.ts` (2) |
+
+**Found and fixed while testing:**
+
+1. An Arabic question was routed as a scenario. «لماذا تضاعف…» ("why did … double") contains «اذا تضاعف» ("if … doubled") inside the word «لماذا». The Arabic scenario words now match whole words only.
+2. At 1024 px the Analysis view was 46 px wider than the screen: the period-view switch was squeezed beside the sidebar. It now has a row of its own; 360, 768 and 1024 px were checked in English and Arabic.
+3. A scenario chart's accessible name said "model estimates and their intervals". It now says "hypothetical scenario (not a forecast)".
+
+**With the live model** (DeepSeek, as a visitor, in the browser, before the last fixes):
+
+- *Create a detailed study of water production in Oman*: answered. The study is shown in the reply. The national trend study was refused because several published series match, and the reply says so.
+- *What happens if water demand increases by 15% over five years?*: answered with a table and chart labelled hypothetical. The total change was applied as an equivalent yearly rate of about 2.83%.
+- An Arabic forecast request for water consumption: correctly gave no forecast (4 annual points; 12 needed).
+
+**Not done:**
+
+- no evaluation with users;
+- no measured task times;
+- not deployed;
+- not merged into `main`.
+
 ## 2026-11-13 to 15: backend connectivity, error states and Al Mulhim's saving (branch `fix/backend-connectivity-and-error-states`)
 
 **Root causes found.**
