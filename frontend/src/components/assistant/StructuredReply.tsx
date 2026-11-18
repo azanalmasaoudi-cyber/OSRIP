@@ -140,11 +140,13 @@ export function StructuredParts({ structured, messageId, known }: { structured: 
   const language = useAppLanguage();
   const to = usePreservedSearch();
   const sourcesShown = useContext(SourcesShown);
-  const { recommendations, drivers, evidence_points: points, hypotheses, assumptions, conflicts, withheld, studies } = structured;
+  const { recommendations, drivers, evidence_points: points, hypotheses, assumptions, conflicts, withheld } = structured;
+  // Studies are shown in full with the reply (ReplyResults); a supply balance opens its own view.
+  const studies = (structured.studies ?? []).filter((s) => s.kind === 'supply_balance');
   const withheldCount = withheld ? Object.values(withheld).reduce((a, b) => a + b, 0) : 0;
   return (
     <div className="flex flex-col gap-2">
-      {studies?.length ? (
+      {studies.length ? (
         <Section title={t('studies.fromAssistant')} icon={<FlaskConical aria-hidden="true" className="size-3.5" />} testId="reply-studies">
           <ul className="flex flex-col gap-1">
             {studies.map((s) => (

@@ -86,7 +86,7 @@ export default defineConfig({
     // Phone-sized checks (layout, Arabic labels, keyboard, errors) on the same stack.
     // Listed first so they run before the zz* specs, which add monthly synthetic data
     // that makes some sections mixed-frequency.
-    { name: 'mobile', testMatch: /(quality|assistant|phone|workspace-phone|research-brief)\.spec\.ts/, use: { ...devices['Pixel 7'], channel } },
+    { name: 'mobile', testMatch: /(quality|assistant|phone|research-brief)\.spec\.ts/, use: { ...devices['Pixel 7'], channel } },
     { name: 'chromium', testIgnore: /oman-map-maptiler\.spec\.ts/, use: { ...devices['Desktop Chrome'], channel } },
     {
       name: 'maptiler',

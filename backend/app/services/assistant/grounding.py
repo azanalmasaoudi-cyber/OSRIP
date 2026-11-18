@@ -116,6 +116,16 @@ def _evidence_numbers(item: dict[str, Any], ledger: dict[str, dict[str, Any]]) -
     if item.get("kind") == "forecast":
         add(80)  # interval levels named in the reply
         add(95)
+        # Why a forecast is or is not produced: the usable history against the policy's
+        # minimum, and the published history itself (its values and years).
+        add(item.get("usable_observations"))
+        for key in ("min_training", "test_size", "minimum_length"):
+            add((item.get("policy") or {}).get(key))
+        for point in item.get("history", []) or []:
+            add(point.get("value"))
+            if isinstance(point.get("period_start"), str):
+                for part in point["period_start"].split("-"):
+                    add(part)
     if isinstance(item.get("training_cutoff"), str):
         for part in item["training_cutoff"].split("-"):
             add(part)

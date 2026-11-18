@@ -1,16 +1,18 @@
 import { expect, test } from '@playwright/test';
 
-test('direct links bypass the entrance; workspace navigation remains bilingual @mobile', async ({ page }) => {
+test('direct links bypass the entrance; a sector\'s views remain bilingual @mobile', async ({ page }) => {
   await page.addInitScript(() => localStorage.removeItem('osrip.intro.autoplay')); // the introduction switched on
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
-  await page.goto('/workspace?mode=synthetic');
-  await expect(page.getByRole('heading', { name: 'Choose your next step' })).toBeVisible();
+  await page.goto('/energy/water?mode=synthetic&tab=data');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Water');
+  await expect(page.getByRole('tab', { name: 'Data and indicators' })).toHaveAttribute('aria-selected', 'true');
   await page.getByRole('button', { name: 'العربية', exact: true }).filter({ visible: true }).click();
-  await expect(page.getByRole('heading', { name: 'اختر خطوتك التالية' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('المياه');
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-  await page.getByRole('link', { name: /تحقّق من المصادر/ }).click();
-  await expect(page).toHaveURL(/sources\?mode=synthetic/);
+  await page.getByRole('tab', { name: 'التحليل' }).click();
+  await expect(page.getByRole('tab', { name: 'التحليل' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page).toHaveURL(/\/energy\/water\?mode=synthetic/);
   expect(errors).toEqual([]);
 });
 

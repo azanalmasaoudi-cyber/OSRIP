@@ -9,7 +9,6 @@ import {
   ClipboardList,
   FileSearch,
   FileText,
-  FlaskConical,
   GraduationCap,
   Landmark,
   Languages,
@@ -296,13 +295,13 @@ export function OverviewPage() {
         <Link to={to('/sources')} className={buttonVariants({ variant: 'outline' })}>
           <BookOpen aria-hidden="true" />{t('overviewIntro.sourcesLink')}
         </Link>
-        <Link to={to('/studies')} className={buttonVariants({ variant: 'outline' })}>
-          <FlaskConical aria-hidden="true" />{t('nav.studies')}
+        <Link to={to('/assistant')} className={buttonVariants({ variant: 'outline' })}>
+          <Bot aria-hidden="true" />{t('nav.aiAssistant')}
         </Link>
         <Link to={to('/reports')} className={buttonVariants({ variant: 'outline' })}>
           <FileText aria-hidden="true" />{t('nav.reports')}
         </Link>
-        <Link to={to('/workspace')} className={buttonVariants({ variant: 'outline' })}>
+        <Link to={to('/energy/electricity?tab=analysis')} className={buttonVariants({ variant: 'outline' })}>
           <LayoutDashboard aria-hidden="true" />{t('overviewIntro.workspaceLink')}
         </Link>
       </div>

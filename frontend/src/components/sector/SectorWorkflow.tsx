@@ -22,6 +22,7 @@ import { AnalysisPanel, ExportLinks } from '@/components/analysis/AnalysisPanel'
 import { ReviewCards } from '@/components/analysis/ReviewCards';
 import { SaveReportButton } from '@/components/analysis/SaveReportButton';
 import { SectionInsights } from '@/components/analysis/SectionInsights';
+import { useAskMulhim } from '@/components/sector/AskMulhim';
 import { SpokenSummary } from '@/components/sector/SpokenSummary';
 import { DataQualityNotes } from '@/components/common/DataQualityNotes';
 import { QualityBadges, qualityOf } from '@/components/common/QualityBadges';
@@ -71,7 +72,7 @@ function sortSeries(series: readonly AvailabilitySeries[]): AvailabilitySeries[]
     || Number(Boolean(a.partner)) - Number(Boolean(b.partner)) || breakdownKey(a).localeCompare(breakdownKey(b)));
 }
 
-function sortIndicators(section: SectionCode, indicators: readonly AvailableIndicator[], language: AppLanguage): AvailableIndicator[] {
+export function sortIndicators(section: SectionCode, indicators: readonly AvailableIndicator[], language: AppLanguage): AvailableIndicator[] {
   const headline = HEADLINES[section];
   const rank = (code: string) => (headline.includes(code) ? headline.indexOf(code) : headline.length);
   return [...indicators].sort((a, b) => rank(a.code) - rank(b.code) || a.name[language].localeCompare(b.name[language], language));
@@ -84,7 +85,7 @@ interface Period {
   ytdOnly: boolean;
 }
 
-interface Resolved {
+export interface Resolved {
   selection: SectorSelection;
   indicator: AvailableIndicator;
   entry: AvailabilitySeries;
@@ -109,7 +110,7 @@ function periodsOf(entry: AvailabilitySeries, view: SeriesView): Period[] {
 /** The selection as it can actually be made: unknown or unavailable choices fall back to
  * the first available one (national before areas; total before partners); a period that is
  * not published in the chosen view is cleared, never guessed. */
-function resolve(input: Partial<SectorSelection> | null, indicators: readonly AvailableIndicator[]): Resolved | null {
+export function resolve(input: Partial<SectorSelection> | null, indicators: readonly AvailableIndicator[]): Resolved | null {
   const indicator = indicators.find((i) => i.code === input?.indicator) ?? indicators[0];
   if (!indicator) return null;
   const series = sortSeries(indicator.series);
@@ -324,6 +325,7 @@ function Results({ section, title, resolved, chart, onChart }: {
   const language = useAppLanguage();
   const [mode] = useDataMode();
   const link = usePreservedSearch();
+  const askMulhim = useAskMulhim();
   const chartId = useId();
   const [stock, setStock] = useState<StockAssumption>('assumed_zero');
   const { selection, indicator, entry, periods } = resolved;
@@ -449,7 +451,8 @@ function Results({ section, title, resolved, chart, onChart }: {
           ) : null}
           <div className="flex flex-wrap gap-2 border-t border-border pt-3">
             <SaveReportButton section={section} mode={mode} filters={filters} defaultTitle={`${title} · ${range}`} />
-            <Link to={link(`/studies?create=${section}`)} className={buttonVariants({ size: 'sm', variant: 'outline' })} data-testid="sector-create-study">
+            <Link to={askMulhim(t('sector.ask.study', { indicator: indicator.name[language], area: entry.area.name[language] }))}
+              className={buttonVariants({ size: 'sm', variant: 'outline' })} data-testid="sector-create-study">
               <FlaskConical aria-hidden="true" />{t('jobs.create')}
             </Link>
             <Link to={link('/assistant')} className={buttonVariants({ size: 'sm', variant: 'outline' })} data-testid="sector-balance-link">

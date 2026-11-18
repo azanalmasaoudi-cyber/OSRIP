@@ -54,7 +54,7 @@ test('guests get five answers across languages, then a sign-in prompt that survi
   await expect(page.getByTestId('assistant-sign-in')).toBeVisible();
   await expect(page.getByTestId('assistant-message')).toHaveCount(5);
   // Public statistics stay open.
-  await page.goto('/energy/electricity?mode=synthetic');
+  await page.goto('/energy/electricity?mode=synthetic&tab=charts');
   await expect(page.getByTestId('sector-form')).toBeVisible();
 });
 

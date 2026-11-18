@@ -103,7 +103,7 @@ test('a data manager uploads, maps, validates, reviews, approves and publishes a
   await expect(detail.getByTestId('published-note')).toContainText('1 observations are now public');
 
   // The new value appears on the public sector page; the rejected row (2010) does not.
-  await page.goto('/energy/water?mode=synthetic');
+  await page.goto('/energy/water?mode=synthetic&tab=charts');
   await page.getByTestId('sector-indicator').selectOption('WATER_PRODUCTION');
   await page.getByTestId('sector-frequency').locator('[data-value="annual"]').click();
   await expect(page.getByTestId('sector-from').locator('option[value="2010-01-01"]')).toHaveCount(0);

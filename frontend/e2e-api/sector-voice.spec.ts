@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { showResults } from './sector';
+import { openCharts, showResults } from './sector';
 
 // The short spoken explanation of a sector result, through the real API with the scripted speech
 // provider (a test tone, not a voice; refused in production): nothing plays before Listen; the
@@ -31,6 +31,7 @@ test('a sector result is explained in a few spoken sentences only when asked', a
   // In Arabic: Al Mulhim's Omani voice.
   await page.getByRole('button', { name: 'العربية' }).first().click();
   await page.goto('/energy/electricity?mode=synthetic');
+  await openCharts(page); // the remembered results are under Tables and charts
   const arabic = page.waitForResponse((r) => r.url().includes('/assistant/voice/series') && r.request().method() === 'POST');
   await page.getByTestId('sector-listen').click();
   expect((await arabic).headers()['x-voice']).toBe('ar-OM-AbdullahNeural');

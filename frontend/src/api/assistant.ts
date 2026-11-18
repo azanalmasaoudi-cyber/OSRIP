@@ -248,6 +248,51 @@ export type DiagramBlock = z.infer<typeof diagram>;
 const generatedImage = z.object({ id: z.string(), purpose: z.string(), model: z.string(), prompt: z.string() });
 export type GeneratedImageBlock = z.infer<typeof generatedImage>;
 
+const reasonText = z.object({ code: z.string().optional(), en: z.string(), ar: z.string() });
+const forecastBlock = z.object({
+  evidence_id: z.string(),
+  indicator: z.string(),
+  indicator_name: bilingual.nullish(),
+  area: z.string(),
+  area_name: bilingual.nullish(),
+  unit: z.string().nullish(),
+  unit_label: bilingual.nullish(),
+  frequency: z.string().nullish(),
+  status: z.enum(['ok', 'withheld', 'no_series']),
+  stored: z.boolean(),
+  history: z.array(z.object({ period_start: z.string(), period_end: z.string().optional(), value: z.string().nullable() })).nullish(),
+  outputs: z.array(z.object({
+    step: z.number(), period_start: z.string(), period_end: z.string(), estimate: z.string(),
+    lower80: z.string().nullable(), upper80: z.string().nullable(), lower95: z.string().nullable(), upper95: z.string().nullable(),
+  })).nullish(),
+  selected_model: z.string().nullish(),
+  training_cutoff: z.string().nullish(),
+  metrics: z.record(z.string(), z.object({ n: z.number(), mae: z.string().nullable(), rmse: z.string().nullable() })).nullish(),
+  reasons: z.array(reasonText).nullish(),
+  usable_observations: z.number().nullish(),
+  policy: z.object({ min_training: z.number(), test_size: z.number(), minimum_length: z.number() }).nullish(),
+  demonstration_label: bilingual.nullish(),
+  label: bilingual.nullish(),
+  model_names: z.record(z.string(), bilingual).nullish(),
+});
+export type ForecastBlock = z.infer<typeof forecastBlock>;
+const scenarioBlock = z.object({
+  evidence_id: z.string(),
+  indicator: z.string().nullish(),
+  area: z.string().nullish(),
+  unit: z.string().nullish(),
+  assumptions: z.object({ growth_pct: z.union([z.string(), z.number()]).nullish(), years: z.number().nullish(),
+    one_off_pct: z.union([z.string(), z.number()]).nullish() }).passthrough().nullish(),
+  formula: bilingual.nullish(),
+  points: z.array(z.object({ step: z.number().optional(), year: z.number().optional(), value: z.string().nullable() }).passthrough()),
+  label: bilingual.nullish(),
+  base: z.object({
+    evidence_id: z.string(), value: z.string().nullable(), period_start: z.string().nullish(), period_end: z.string().nullish(),
+    indicator_name: bilingual.nullish(), unit_label: bilingual.nullish(),
+  }).nullish(),
+});
+export type ScenarioBlock = z.infer<typeof scenarioBlock>;
+
 const structuredSchema = z.object({
   data_tables: z.array(dataTable).optional(),
   research_tables: z.array(researchTable).optional(),
@@ -285,8 +330,15 @@ const structuredSchema = z.object({
   withheld: z.record(z.string(), z.number()).optional(),
   // Sentences of the answer left out because their figures did not match the evidence.
   omitted_claims: z.number().optional(),
-  // Deterministic studies cited by the reply; each is stored and opens at /studies/:id.
+  // Deterministic studies cited by the reply; each is stored (/studies/:id) and shown in the reply.
   studies: z.array(z.object({ id: z.string(), kind: z.string(), title: bilingual, status: z.string() })).optional(),
+  // What the question asked OSRIP to run (a study, a forecast or a scenario), when it did.
+  intent: z.enum(['study', 'forecast', 'scenario']).optional(),
+  // The forecasting engine's result: estimates with intervals and the history they continue,
+  // or the reasons it was withheld (then no values).
+  forecasts: z.array(forecastBlock).optional(),
+  // A hypothetical scenario on stated assumptions (never a forecast).
+  scenarios: z.array(scenarioBlock).optional(),
   // Google Search grounded results (via Gemini): shown verbatim with Google's search
   // suggestions, apart from the answer; never used as evidence for it.
   grounded_context: z.array(z.object({

@@ -29,8 +29,8 @@ test('verified mode is the default and a sector shows nothing before a period is
   await expect(page.getByTestId('sector-nav').getByRole('link')).toHaveCount(4);
 });
 
-test('synthetic mode labels every indicator card in the analysis workspace', async ({ page }) => {
-  await page.goto('/workspace?mode=synthetic');
+test('synthetic mode labels every indicator card in a sector\'s Data and indicators', async ({ page }) => {
+  await page.goto('/energy/water?mode=synthetic&tab=data');
   const card = page.getByTestId('indicator-card').first();
   // .first(): the closed source-details dialog also holds a badge.
   await expect(card.getByTestId('data-mode-badge').first()).toHaveText('Synthetic demonstration data');
@@ -46,7 +46,7 @@ test('synthetic mode labels every indicator card in the analysis workspace', asy
 });
 
 test('T08: switching to Arabic keeps mode, route and numbers; sets RTL', async ({ page }) => {
-  await page.goto('/workspace?mode=synthetic&section=water');
+  await page.goto('/energy/water?mode=synthetic&tab=data');
   const card = page.getByTestId('indicator-card').filter({ hasText: 'Water consumption' });
   await expect(card.getByTestId('indicator-value')).toHaveText('343');
 
@@ -54,15 +54,15 @@ test('T08: switching to Arabic keeps mode, route and numbers; sets RTL', async (
 
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
   await expect(page.locator('html')).toHaveAttribute('lang', 'ar');
-  await expect(page).toHaveURL(/\/workspace\?mode=synthetic&section=water$/);
+  await expect(page).toHaveURL(/\/energy\/water\?mode=synthetic&tab=data$/);
   await expect(page.getByTestId('indicator-card').filter({ hasText: 'استهلاك المياه' }).getByTestId('indicator-value')).toHaveText('343');
   await expect(page.getByTestId('data-mode-banner')).toHaveAttribute('data-mode', 'synthetic');
 });
 
 test('T08: switching language preserves page filters and the filtered values', async ({ page }) => {
-  await page.goto('/workspace?mode=synthetic');
-  await page.getByTestId('filter-domain').selectOption('trade');
-  await expect(page).toHaveURL(/domain=trade/);
+  await page.goto('/trade?mode=synthetic&tab=data');
+  await page.getByTestId('filter-frequency').selectOption('annual');
+  await expect(page).toHaveURL(/frequency=annual/);
   const first = page.getByTestId('indicator-card').first();
   await expect(first).toHaveAttribute('data-indicator', /^TRADE_/);
   const indicator = await first.getAttribute('data-indicator');
@@ -70,8 +70,8 @@ test('T08: switching language preserves page filters and the filtered values', a
   await page.getByRole('button', { name: 'العربية' }).click();
 
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-  await expect(page).toHaveURL(/\/workspace\?mode=synthetic&domain=trade$/);
-  await expect(page.getByTestId('filter-domain')).toHaveValue('trade');
+  await expect(page).toHaveURL(/\/trade\?mode=synthetic&tab=data&frequency=annual$/);
+  await expect(page.getByTestId('filter-frequency')).toHaveValue('annual');
   await expect(page.getByTestId('indicator-card').first()).toHaveAttribute('data-indicator', indicator ?? '');
 });
 
@@ -98,6 +98,8 @@ test('navigation preserves the data mode but not page filters', async ({ page })
   await expect(page).toHaveURL(/\/overview\?mode=synthetic$/);
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Trade' }).click();
   await expect(page).toHaveURL(/\/trade\?mode=synthetic$/);
+  // The commodity register is with the sector's Data and indicators.
+  await page.getByTestId('sector-tabs').locator('[data-tab="data"]').click();
   await expect(page.getByTestId('commodity-registry')).toContainText('Synthetic demonstration commodity');
 });
 
@@ -106,17 +108,22 @@ test('opening the energy domain keeps the data mode through the redirect', async
   await expect(page).toHaveURL(/\/energy\/electricity\?mode=synthetic$/);
 });
 
-test('the analysis workspace shows the four resources and indicator cards with provenance in synthetic mode', async ({ page }) => {
-  await page.goto('/workspace?mode=synthetic');
-  const resources = page.getByTestId('resource-kpi');
-  await expect(resources).toHaveCount(4);
-  await expect(resources.nth(0)).toHaveAttribute('data-section', 'electricity');
-  await expect(resources.nth(3)).toHaveAttribute('data-section', 'trade');
-  await expect(page.getByTestId('indicator-card').first()).toBeVisible();
-  await page.getByTestId('filter-domain').selectOption('trade');
-  await expect(page).toHaveURL(/domain=trade/);
-  await expect(page.getByTestId('indicator-card').first()).toHaveAttribute('data-indicator', /^TRADE_/);
-  await expect(resources.nth(3).getByRole('button', { name: /Analyse/ })).toHaveAttribute('aria-pressed', 'true');
+test('the old /workspace address opens the sector\'s Analysis; its Data and indicators list cards with provenance', async ({ page }) => {
+  await page.goto('/workspace?mode=synthetic&domain=trade');
+  await expect(page).toHaveURL(/\/trade\?(?=.*mode=synthetic)/);
+  const tabs = page.getByTestId('sector-tabs');
+  await expect(tabs.getByRole('tab')).toHaveText(['Data and indicators', 'Analysis', 'Tables and charts']);
+  await expect(tabs.locator('[data-tab="analysis"]')).toHaveAttribute('aria-selected', 'true');
+  // Without the API the Analysis says so; the published cards are under Data and indicators.
+  await expect(page.locator('[data-state="not_implemented"]').first()).toContainText('needs the OSRIP API');
+  await tabs.locator('[data-tab="data"]').click();
+  const card = page.getByTestId('indicator-card').first();
+  await expect(card).toHaveAttribute('data-indicator', /^TRADE_/);
+  await expect(card.getByTestId('source-details-button')).toBeVisible();
+  // The navigation has no separate workspace, studies or forecasts entry.
+  for (const gone of ['Analysis Workspace', 'Studies', 'Forecasts and Scenarios']) {
+    await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: gone, exact: true })).toHaveCount(0);
+  }
 });
 
 test('theme: Light by default, Dark and System from the top bar, remembered after a reload', async ({ page, isMobile }) => {
@@ -186,7 +193,7 @@ test('@mobile the phone menu holds the theme and data mode; search opens in a di
 });
 
 test('source details dialog opens, traps focus and closes with Escape', async ({ page }) => {
-  await page.goto('/workspace?mode=synthetic&section=water');
+  await page.goto('/energy/water?mode=synthetic&tab=data');
   const trigger = page.getByTestId('indicator-card').filter({ hasText: 'Water consumption' }).getByTestId('source-details-button');
   await trigger.click();
   const dialog = page.getByRole('dialog', { name: 'Water consumption' });
@@ -235,12 +242,12 @@ test('@mobile menu opens as a drawer and navigates', async ({ page, isMobile }) 
 
 test('@mobile filters collapse behind a toggle and nothing scrolls sideways', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'mobile only');
-  await page.goto('/workspace?mode=synthetic&domain=trade');
+  await page.goto('/trade?mode=synthetic&tab=data&frequency=annual');
   const toggle = page.getByTestId('filters-toggle');
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect(toggle).toContainText('1');
   await toggle.click();
-  await expect(page.getByTestId('filter-domain')).toBeVisible();
+  await expect(page.getByTestId('filter-frequency')).toBeVisible();
   const overflow = await page.evaluate<number>('document.documentElement.scrollWidth - window.innerWidth');
   expect(overflow).toBeLessThanOrEqual(0);
 });

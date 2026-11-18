@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 
-import { openCalculations, showResults } from './sector';
+import { openCalculations, openCharts, showResults } from './sector';
 
 // One complete journey through the real stack (browser -> Vite proxy -> FastAPI ->
 // PostgreSQL): a data manager uploads and publishes a file, an analyst freezes a
@@ -65,7 +65,7 @@ test('upload -> validate -> approve -> publish -> report -> revision; the report
 
   // 2. An analyst sees the published values and the calculation, then freezes a report.
   const analyst = await signedIn(browser, 'e2eanalyst');
-  await analyst.goto('/energy/electricity?mode=synthetic');
+  await analyst.goto('/energy/electricity?mode=synthetic&tab=charts');
   // The 2013 row in another unit was rejected, so only 2011 and 2012 can be chosen.
   await analyst.getByTestId('sector-indicator').selectOption('ELEC_CONSUMPTION');
   await expect(analyst.getByTestId('sector-to').locator('option[value="2013-01-01"]')).toHaveCount(0);
@@ -101,6 +101,7 @@ test('upload -> validate -> approve -> publish -> report -> revision; the report
   ], 0);
   // Returning to the sector shows the remembered selection again, now from v2.
   await analyst.goto('/energy/electricity?mode=synthetic');
+  await openCharts(analyst); // the sector opens on its Analysis; the results are in Tables and charts
   await expect(analyst.getByTestId('applied-range')).toHaveText('2011 – 2012');
   await expect(analyst.getByTestId('series-chart')).toHaveCount(0); // never drawn on return
   await openCalculations(analyst);

@@ -302,7 +302,9 @@ class Tools:
 
     # -------------------------------------------------------------- validated forecasts
     def get_forecast(self, indicator: str, area: str = "OM") -> dict[str, Any]:
-        """The latest successful forecast run for the indicator and area (model estimates)."""
+        """A validated forecast for the indicator and area: the latest stored run, otherwise one
+        computed now by the same engine (not stored; this step is read only). Withheld, with the
+        reasons and no values, when the published history is not eligible."""
         from app.models import AnalysisRun
         from app.services import forecasting
 
@@ -338,20 +340,83 @@ class Tools:
                         "metrics": detail["metrics"],
                         "data_mode": run.data_mode.value,
                         "label": detail["estimate_label"],
+                        "status": "ok",
+                        "stored": True,
+                        "history": detail.get("history") or [],
                     }
                 )
                 return {
                     "status": "ok",
                     "evidence_id": item["id"],
-                    "note": "These are model estimates, not official statistics. Say so, give the interval, and do not add causes or events.",
+                    "note": "These are model estimates from a stored, validated forecast run, not "
+                    "official statistics. Say so, give the interval, and do not add causes or events.",
                     **{
                         k: item[k]
                         for k in ("selected_model", "training_cutoff", "outputs", "metrics", "unit")
                     },
                 }
+        # No stored run: the engine evaluates the published history now (nothing is stored).
+        result = forecasting.preview(self.session, self.ledger.data_mode, indicator, area)
+        series = result.get("series") or {}
+        named, unit = series.get("indicator") or {}, result.get("unit") or {}
+        # Names as every evidence item gives them ({en, ar}); left out when unknown.
+        place = series.get("area") or {}
+        names = {
+            "indicator_name": {"en": named["name_en"], "ar": named["name_ar"]} if named else None,
+            "area_name": {"en": place["name_en"], "ar": place["name_ar"]} if place else None,
+            "unit_label": {"en": unit["label_en"], "ar": unit["label_ar"]} if unit else None,
+            "dataset_version": (series.get("dataset_version") or {}).get("label"),
+        }
+        item = self.ledger.add(
+            {
+                "kind": "forecast",
+                "indicator": indicator,
+                "area": area,
+                "status": result["status"],
+                "stored": False,
+                "unit": unit.get("code"),
+                "frequency": result.get("frequency"),
+                **{k: v for k, v in names.items() if v is not None},
+                "history": result.get("history", []),
+                "usable_observations": result.get("usable_observations"),
+                "policy": result.get("policy"),
+                "reasons": result.get("reasons", []),
+                "selected_model": result.get("selected_model"),
+                "training_cutoff": result.get("training_cutoff"),
+                "outputs": result.get("outputs", []),
+                "metrics": result.get("metrics", {}),
+                "data_mode": self.ledger.data_mode.value,
+                "label": result.get("estimate_label"),
+                "demonstration_label": result.get("demonstration_label"),
+            }
+        )
+        if result["status"] != "ok":
+            return {
+                "status": result["status"],
+                "evidence_id": item["id"],
+                "usable_observations": result.get("usable_observations"),
+                "required_observations": (result.get("policy") or {}).get("minimum_length"),
+                "frequency": result.get("frequency"),
+                "reasons": [r["en"] for r in result.get("reasons", [])],
+                "note": "No forecast is produced for this series. Explain the reasons above (cite "
+                "the evidence id for the counts) and give no future value: never estimate one "
+                "yourself, and do not present a scenario as a forecast.",
+            }
         return {
-            "status": "no_forecast",
-            "message": "No validated forecast exists for this indicator and area (insufficient data or not run).",
+            "status": "ok",
+            "evidence_id": item["id"],
+            "stored": False,
+            "frequency": result["frequency"],
+            "usable_observations": result["usable_observations"],
+            "held_out_periods": result["held_out_periods"],
+            "note": "Model estimates computed now by OSRIP's forecasting engine (rolling-origin "
+            "backtest on held-out periods; the chosen model beat or equalled the last-value "
+            "baseline), not official statistics. Say so, give the 80% interval, name the model "
+            "and its error (MAE), and do not add causes or events.",
+            **{
+                k: item[k]
+                for k in ("selected_model", "training_cutoff", "outputs", "metrics", "unit")
+            },
         }
 
     # -------------------------------------------------------------- observations
@@ -1395,7 +1460,12 @@ TOOL_SPECS: list[dict[str, Any]] = [
     },
     {
         "name": "get_forecast",
-        "description": "The latest validated forecast (model estimates with prediction intervals and backtest errors) for an indicator and area, if one exists.",
+        "description": "A validated forecast for an indicator and area: the latest stored run, otherwise one "
+        "computed now by OSRIP's forecasting engine (eligibility of the published history, rolling-origin "
+        "backtest on held-out periods against a last-value baseline, prediction intervals). Status "
+        "'withheld' or 'no_series' with the reasons and no values when the history does not support a "
+        "forecast. Use it for any request to forecast or predict an indicator; never estimate future "
+        "values yourself.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -2056,6 +2126,7 @@ def tool_specs(
     chart: bool = False,
     project_data: bool = False,
     images: bool = False,
+    scenario: bool = False,
 ) -> list[dict[str, Any]]:
     """Tools per mode.
 
@@ -2064,8 +2135,9 @@ def tool_specs(
       Deep research only), and never OSRIP's datasets, unless the question asks for the
       platform's own data (``project_data``).
     * The data modes work from OSRIP's published data. The scenario tool exists only in
-      Scenario mode, which keeps hypothetical scenarios apart from forecasts and observations;
-      the chart tool only when the question asks for a chart.
+      Scenario mode or when the question states a scenario (``scenario``, routing.intent), which
+      keeps hypothetical scenarios apart from forecasts and observations; the chart tool only
+      when the question asks for a chart.
     * Submitting figures needs web research and a person allowed to submit; an illustration
       needs the image service and a request for one (``images``)."""
     from app.services.assistant.routing import INTERNET_MODES
@@ -2087,7 +2159,7 @@ def tool_specs(
         analysis = WEB_ANALYSIS_TOOL_SPECS if mode == "research" else web_analysis
         own = internal(False) if project_data else []
         return [*WEB_TOOL_SPECS, *research, *analysis, *own, *image, _final_answer_spec(mode)]
-    data = [*internal(mode == "scenario"), *diagram, *image, _final_answer_spec(mode)]
+    data = [*internal(mode == "scenario" or scenario), *diagram, *image, _final_answer_spec(mode)]
     if web:
         extra = [t for t in web_analysis if t["name"] != "diagram"]
         return [*WEB_TOOL_SPECS, *research, *extra, *data]

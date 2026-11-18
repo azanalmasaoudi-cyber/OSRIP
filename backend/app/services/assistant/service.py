@@ -246,6 +246,40 @@ MODE_RULES = {
     "(insufficient comparable history).\n" + DRIVER_RULE,
 }
 
+# What the person asked OSRIP to run (routing.intent), in a data mode: added to the mode's rules
+# so a plain sentence ("Create a study of …", "Forecast …", "What if … rises 15%") runs the real
+# study, forecast or scenario tool. The results are shown with the reply (tables and charts built
+# by the backend); the model writes around them and never supplies numbers of its own.
+INTENT_RULES = {
+    "study": "- The person asked for a STUDY. Run it with run_study before writing: choose the kind "
+    "that answers the request (trend of the named indicator, national unless an area is named, for "
+    "'a study of X'; compare_regions for governorates; growth for two named years; data_quality for "
+    "coverage; import_dependence or partner_concentration for a commodity), using list_indicators to "
+    "find the indicator code. For a whole sector's supply, demand, shortages or surpluses, also run "
+    "balance_analysis. The study's table and chart are shown with your answer; do not redraw them. "
+    "Then write it in the person's language under these headings: the study's title; Methodology; "
+    "Validated findings; Interpretation; Recommendations (for a person to review, as questions to "
+    "verify, never as proven); Limitations. Every number comes from the study, cited with its "
+    "evidence id. If the study is unavailable, say why and what data would be needed.\n",
+    "forecast": "- The person asked for a FORECAST. Identify the indicator (list_indicators if "
+    "unsure; national unless an area is named) and call get_forecast. It returns OSRIP's validated "
+    "estimates only when the published history is eligible and the backtest supports them; "
+    "otherwise status 'withheld' or 'no_series' with the reasons. When there are estimates: give "
+    "them with their 80% interval, the model and its error (MAE) on held-out periods, and say they "
+    "are model estimates, not official statistics. When withheld: explain why (how many usable "
+    "periods exist and how many are needed) and give no future value at all. Never estimate a "
+    "future value yourself, and never present a hypothetical scenario as a forecast. The forecast "
+    "table and chart are shown with your answer.\n",
+    "scenario": "- The person described a hypothetical SCENARIO. Find the indicator, then call "
+    "scenario_projection with the stated change: a yearly rate as growth_pct with years; a total "
+    "change over several years (for example +15% over five years) as the equivalent yearly rate, "
+    "(1 + total)^(1/years) − 1, with those years; a single step change as one_off_pct. Say which "
+    "reading you used. If the change or the indicator is missing, ask one short question for it "
+    "(status 'clarification') instead of guessing. Label the result 'hypothetical scenario, not a "
+    "forecast', list the assumptions, explain possible impacts and the uncertainties. The scenario "
+    "table and chart are shown with your answer.\n",
+}
+
 SUGGESTIONS = {
     "en": [
         "What is the latest published electricity generation figure, and for which period?",
@@ -820,11 +854,14 @@ def _run_model(
         web_first=route.web_first,
         cross_check=cross_check and mode == "research",
     )
+    # A study, forecast or scenario asked for in words runs the real tool (data modes only).
+    wanted = routing.intent(question) if mode in routing.DATA_MODES else None
     ledger.meta = {
         "answer_provider": provider.vendor,
         "answer_model": provider.name,
         "fallback": switched,
         "route": route.as_dict(),
+        "intent": wanted,
     }
     ledger.question = question
     if routing.asks_for_latest(question):
@@ -866,6 +903,7 @@ def _run_model(
         chart=routing.asks_for_chart(question),
         project_data=routing.asks_for_project_data(question),
         images=wants_image,
+        scenario=wanted == "scenario",
     )
     # The mode's tools only: run_tool refuses any other the model asks for.
     allowed = allowed_tools(specs)
@@ -897,7 +935,7 @@ def _run_model(
         web_rules=(INTERNET_WEB_RULES if mode in routing.INTERNET_MODES else WEB_RULES)
         if web
         else NO_WEB_RULES,
-        mode_rules=MODE_RULES.get(mode, MODE_RULES["ask"]),
+        mode_rules=MODE_RULES.get(mode, MODE_RULES["ask"]) + INTENT_RULES.get(wanted or "", ""),
         selection_rule=selection_rule(selection) + tables_rule(ledger.previous_tables, question),
     )
     seconds = get_settings().assistant_timeout_seconds * 2
@@ -1406,6 +1444,22 @@ def generate_reply(
         structured["images"] = ledger.images
     if ledger.meta.get("plan"):
         structured["plan"] = ledger.meta["plan"]
+    if ledger.meta.get("intent"):
+        structured["intent"] = ledger.meta["intent"]
+    if status_ != "unverified":
+        # The forecasting engine's and the scenario tool's own results, as tables and charts:
+        # cited forecasts and scenarios, and a withheld forecast's reasons (it has no values).
+        forecasts = shown_forecasts(
+            [
+                i for i in ledger.items
+                if i.get("kind") == "forecast" and (i["id"] in cited or i.get("status") != "ok")
+            ]
+        )  # fmt: skip
+        if forecasts:
+            structured["forecasts"] = [forecast_view(i) for i in forecasts[:3]]
+        scenarios = [i for i in evidence if i.get("kind") == "scenario"]
+        if scenarios:
+            structured["scenarios"] = [scenario_view(i, by_id) for i in scenarios[:3]]
     summary = research_summary(ledger)
     if summary is not None:
         structured["research"] = summary
@@ -1434,6 +1488,69 @@ def generate_reply(
         persona=persona,
         research_ids=[r["candidate_id"] for r in ledger.submissions if r.get("candidate_id")],
     )
+
+
+FORECAST_FIELDS = (
+    "indicator", "indicator_name", "area", "unit", "unit_label", "frequency", "status", "stored",
+    "history", "outputs", "selected_model", "training_cutoff", "metrics", "reasons",
+    "usable_observations", "policy", "label", "demonstration_label", "dataset_version", "area_name",
+)  # fmt: skip
+
+
+_FORECAST_RANK = {"ok": 0, "withheld": 1, "no_series": 2}
+
+
+def shown_forecasts(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """One forecast per indicator and area, the most informative (estimates, then a withheld
+    series with its reasons); a lookup that matched no series (say a mistyped code the model then
+    corrected) only when nothing else was found."""
+    best: dict[tuple[str, str], dict[str, Any]] = {}
+    for item in items:
+        key = (str(item.get("indicator", "")).upper(), str(item.get("area", "")))
+        rank = _FORECAST_RANK.get(str(item.get("status")), 3)
+        if key not in best or rank < _FORECAST_RANK.get(str(best[key].get("status")), 3):
+            best[key] = item
+    kept = list(best.values())
+    found = [i for i in kept if i.get("status") != "no_series"]
+    return found or kept[:1]
+
+
+def forecast_view(item: dict[str, Any]) -> dict[str, Any]:
+    """A forecast as the reply shows it: the engine's estimates and intervals with the history
+    they continue, or the reasons it was withheld (then no values)."""
+    from app.services.forecasting import MODEL_NAMES
+
+    view = {"evidence_id": item["id"], **{k: item.get(k) for k in FORECAST_FIELDS}}
+    view["status"] = view["status"] or ("ok" if item.get("outputs") else "withheld")
+    view["stored"] = bool(view["stored"])
+    view["model_names"] = MODEL_NAMES
+    return view
+
+
+def scenario_view(item: dict[str, Any], by_id: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """A hypothetical scenario as the reply shows it: the published base value it starts from,
+    the stated assumptions, the formula and the resulting points (never a forecast)."""
+    base = next((by_id[i] for i in item.get("inputs", []) if i in by_id), None)
+    return {
+        "evidence_id": item["id"],
+        "indicator": item.get("indicator"),
+        "area": item.get("area"),
+        "unit": item.get("unit"),
+        "assumptions": item.get("assumptions"),
+        "formula": item.get("formula"),
+        "points": item.get("points", []),
+        "label": item.get("label"),
+        "base": None
+        if base is None
+        else {
+            "evidence_id": base["id"],
+            "value": base.get("value"),
+            "period_start": base.get("period_start"),
+            "period_end": base.get("period_end"),
+            "indicator_name": base.get("indicator_name"),
+            "unit_label": base.get("unit_label"),
+        },
+    }
 
 
 def research_summary(ledger: Ledger) -> dict[str, Any] | None:

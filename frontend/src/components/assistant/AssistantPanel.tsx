@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
 import { useAssistantUi } from './AssistantContext';
@@ -545,14 +545,10 @@ export function AssistantChat({ initialDraft = '', active = true, askRef, select
     if (!draft && asked) setDraftState(asked.text);
   }
 
-  // A reply's study: beside the chat in the workspace; from the assistant page, it opens there.
-  const navigate = useNavigate();
-  const { pathname } = useLocation();
-  const preserved = usePreservedSearch();
-  const openStudyHere = (id: string) => {
-    ui.openStudy(id, !signedIn);
-    if (pathname !== '/workspace') void navigate(preserved('/workspace'));
-  };
+  // A reply's study opens under the reply itself (ChatView); `?study=<id>` opens one on arrival.
+  const [searchParams] = useSearchParams();
+  const initialStudyId = searchParams.get('study');
+  const openStudyHere = (id: string) => ui.openStudy(id, !signedIn);
 
   const suggestions = status.data?.suggestions[chatLanguage] ?? [];
   const canAsk = signedIn ? allowed : true;
@@ -587,7 +583,6 @@ export function AssistantChat({ initialDraft = '', active = true, askRef, select
 
   const asking = asked && !error && (pending || messages.length <= asked.base)
     ? { text: asked.text, requestId: asked.requestId, echo: asked.echo } : null;
-  const embedded = layout === 'embedded';
   return (
     <ChatView layout={layout} chat={{
       language: chatLanguage,
@@ -611,10 +606,11 @@ export function AssistantChat({ initialDraft = '', active = true, askRef, select
       memory: { guestExpires: guestData?.expires_at ?? null, guestConversationId: signedIn ? null : guestId,
         onGuestDeleted: () => setGuestId(null), onAllDeleted: () => setActiveId(null) },
       selection: { value: scope, label: selectionLabel, clear: () => setScope(null) },
-      // In the workspace a reply's study shows beside the chat; elsewhere it opens there.
+      // A reply's study shows under the reply (or beside the chat where the panel is embedded).
       brief, suggestions, tools,
-      openStudy: embedded ? (id) => ui.openStudy(id, !signedIn) : openStudyHere,
-      activeStudyId: embedded ? ui.activeStudy?.id ?? null : null,
+      openStudy: openStudyHere,
+      activeStudyId: ui.activeStudy?.id ?? null,
+      initialStudyId,
     }} />
   );
 }

@@ -125,7 +125,7 @@ test('negative values and units keep their sign and unit in English and Arabic',
 test('empty states are explained, never blank', async ({ page }) => {
   await page.goto('/trade');
   await expect(page.locator('[data-state="no_verified_data"]').first()).toBeVisible();
-  await page.goto('/trade?mode=synthetic');
+  await page.goto('/trade?mode=synthetic&tab=charts');
   await page.getByTestId('sector-show-results').click(); // no period chosen yet
   await expect(page.getByTestId('sector-error')).toContainText('Choose both a start period and an end period.');
   await chooseSelection(page, { indicator: 'TRADE_VALUE', breakdown: 'SYNTH_COMMODITY||import', view: 'annual', from: '2002-01-01', to: '2002-01-01' });

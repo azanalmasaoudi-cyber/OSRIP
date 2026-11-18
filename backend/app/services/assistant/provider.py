@@ -42,6 +42,7 @@ from app.core.config import get_settings
 from app.services import monitoring, openai_api
 from app.services import providers as registry
 from app.services.assistant.progress import Cancelled
+from app.services.assistant.routing import intent
 from app.services.assistant.streaming import answer_sink
 
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
@@ -982,7 +983,13 @@ class FakeProvider:
         if "Mode: Quick answer" in system and "web_search" in names:
             return self._web(question, tool_results, arabic)
         if ("study" in question or "دراسة" in question) and "run_study" in names:
-            return self._study(tool_results, arabic)
+            return self._study(question, tool_results, arabic)
+        # A forecast or a scenario asked for in words (routing.intent, as the service uses it).
+        wanted = intent(question)
+        if wanted == "scenario" and "scenario_projection" in names:
+            return self._scenario(question, tool_results, arabic)
+        if wanted == "forecast" and "get_forecast" in names:
+            return self._forecast(question, tool_results, arabic)
         chosen = self.SELECTION.search(system)
         if chosen and question.startswith(("analyse", "حلّل", "حلل")):
             return self._selection(chosen, tool_results, arabic)
@@ -1272,12 +1279,16 @@ class FakeProvider:
             [],
         )
 
-    def _study(self, tool_results: list[dict[str, Any]], arabic: bool) -> dict[str, Any]:
-        """Run the trend study of electricity generation and report its first finding."""
+    def _study(
+        self, question: str, tool_results: list[dict[str, Any]], arabic: bool
+    ) -> dict[str, Any]:
+        """Run the trend study of the named indicator (electricity generation by default) in
+        the named area (national by default) and report its first findings."""
         if not tool_results:
+            indicator = self._indicator_in(question, "ELEC_GENERATION")
+            area = self._area_in(question)
             return self._call(
-                "run_study",
-                {"kind": "trend", "params": {"indicator": "ELEC_GENERATION", "area": "OM"}},
+                "run_study", {"kind": "trend", "params": {"indicator": indicator, "area": area}}
             )
         result = self._last(tool_results)
         if result.get("status") != "ok" or not result.get("findings"):
@@ -1288,6 +1299,95 @@ class FakeProvider:
         if len(findings) > 1:
             text += f" {findings[1]} [{eid}]"
         return self._final("answered", text, [eid])
+
+    # Areas the scripted forecasts and scenarios recognise by name (national otherwise).
+    AREAS = {"batinah south": "OM-BJ", "جنوب الباطنة": "OM-BJ", "muscat": "OM-MU", "مسقط": "OM-MU"}
+
+    def _indicator_in(self, question: str, default: str) -> str:
+        return next((code for k, code in self.KEYWORDS.items() if k in question), default)
+
+    def _area_in(self, question: str) -> str:
+        return next((code for k, code in self.AREAS.items() if k in question), "OM")
+
+    def _forecast(
+        self, question: str, tool_results: list[dict[str, Any]], arabic: bool
+    ) -> dict[str, Any]:
+        """Ask the forecasting engine, then report its estimate with the interval, or why it
+        was withheld (and no value)."""
+        if not tool_results:
+            indicator = self._indicator_in(question, "ELEC_GENERATION")
+            return self._call(
+                "get_forecast", {"indicator": indicator, "area": self._area_in(question)}
+            )
+        result = self._last(tool_results)
+        eid = result.get("evidence_id")
+        if eid is None:
+            return self._no_data(arabic)
+        if result.get("status") != "ok":
+            usable, needed = result.get("usable_observations"), result.get("required_observations")
+            text = (
+                f"لا يُنتَج تنبؤ: للسلسلة {usable} فترات صالحة ويلزم {needed} [{eid}]."
+                if arabic
+                else f"No forecast is produced: the series has {usable} usable periods and {needed} are needed [{eid}]."
+            )
+            return self._final("answered", text, [eid])
+        first = result["outputs"][0]
+        interval = (
+            f" (80%: {first['lower80']} – {first['upper80']})" if first.get("lower80") else ""
+        )
+        text = (
+            f"تقدير النموذج للفترة التي تبدأ في {first['period_start']} هو {first['estimate']}{interval} [{eid}]. هذا تقدير نموذج وليس إحصاءً رسمياً."
+            if arabic
+            else f"The model estimate for the period starting {first['period_start']} is {first['estimate']}{interval} [{eid}]. This is a model estimate, not an official statistic."
+        )
+        return self._final("answered", text, [eid])
+
+    WORD_YEARS = {"two": 2, "three": 3, "four": 4, "five": 5, "ten": 10, "سنتين": 2, "ثلاث": 3,
+                  "أربع": 4, "خمس": 5, "عشر": 10}  # fmt: skip
+
+    def _scenario(
+        self, question: str, tool_results: list[dict[str, Any]], arabic: bool
+    ) -> dict[str, Any]:
+        """Apply the stated change with scenario_projection (a total over several years as its
+        yearly rate); ask for the change when none is stated."""
+        if not tool_results:
+            pct = re.search(r"(\d+(?:\.\d+)?)\s*(?:%|٪|percent|في المئة)", question)
+            if pct is None:
+                return self._final(
+                    "clarification",
+                    "بأي نسبة تتغير القيمة في هذا السيناريو؟" if arabic
+                    else "By what percentage should the value change in this scenario?",
+                    [],
+                )  # fmt: skip
+            number = re.search(r"(\d+)\s*(?:years?|سنوات|سنة)", question)
+            word = next(
+                (n for w, n in self.WORD_YEARS.items() if re.search(rf"\b{w}\b", question)), None
+            )
+            years = int(number.group(1)) if number else word or 1
+            total = float(pct.group(1))
+            over = years > 1 and ("over" in question or "خلال" in question)
+            growth = round(((1 + total / 100) ** (1 / years) - 1) * 100, 2) if over else total
+            indicator = self._indicator_in(question, "ELEC_GENERATION")
+            return self._call(
+                "scenario_projection",
+                {
+                    "indicator": indicator,
+                    "growth_pct": growth,
+                    "years": years,
+                    "area": self._area_in(question),
+                },
+            )
+        result = self._last(tool_results)
+        if result.get("status") != "ok":
+            return self._no_data(arabic)
+        eid, base = result["evidence_id"], result["base"]
+        last = result["points"][-1]
+        text = (
+            f"سيناريو افتراضي وليس تنبؤاً: بتطبيق التغيير المفترض على القيمة المنشورة [{base}] تبلغ القيمة {last['value']} [{eid}]."
+            if arabic
+            else f"Hypothetical scenario, not a forecast: applying the stated change to the published value [{base}] gives {last['value']} [{eid}]."
+        )
+        return self._final("answered", text, [eid, base])
 
     def _growth(self, tool_results: list[dict[str, Any]], arabic: bool) -> dict[str, Any]:
         if not tool_results:

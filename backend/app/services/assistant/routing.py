@@ -62,13 +62,21 @@ def classify(question: str) -> Route:
 # The answer mode for "auto" (the conversation page sends it): inferred from the words of the
 # question, so nobody has to choose Ask, Analyze, Research, Compare or Scenario first. Checked
 # in this order; anything else is a plain question ("ask").
+# A stated assumption: "what if", "suppose", "if demand grows", "increases by 15%" (the last
+# without a closing word boundary, since "%" is not a word character).
+_SCENARIO = (
+    r"\b(what if|what happens if|what would happen if|scenarios?|suppose|assum(e|ing))\b"
+    r"|\bif (the )?(demand|supply|consumption|production|generation|imports?|exports?|population|"
+    r"prices?) (grows?|grew|rises?|rose|falls?|fell|increases?|increased|decreases?|decreased|"
+    r"doubles?|doubled|drops?|dropped)\b"
+    r"|\b(increases?|increased|rises?|rose|grows?|grew|decreases?|decreased|falls?|fell|drops?|"
+    r"dropped) by \d+(\.\d+)? ?(%|percent\b|per ?cent\b)"
+    # Whole words: «لماذا تضاعف» (why did it double) holds «اذا تضاعف» (if it doubled).
+    r"|\bماذا لو\b|\bماذا يحدث (لو|إذا|اذا)\b|سيناريو|\bافترض|\bبافتراض"
+    r"|\b(لو|إذا|اذا) (زاد|زادت|ارتفع|ارتفعت|انخفض|انخفضت|تضاعف|تضاعفت|نما|نمت|تراجع|تراجعت)\b"
+)
 _MODE_PATTERNS = (
-    (
-        "scenario",
-        r"\b(what if|scenario|suppose|assum(e|ing)|if (demand|supply|consumption|production|"
-        r"imports?|exports?) (grows?|rises?|falls?|increases?|decreases?|doubles?))\b"
-        r"|ماذا لو|سيناريو|افترض|بافتراض|لو (زاد|زادت|ارتفع|ارتفعت|انخفض|انخفضت|تضاعف)",
-    ),
+    ("scenario", _SCENARIO),
     (
         "compare",
         r"\b(compare|comparison|versus|vs|difference between|previous year|year before|"
@@ -121,10 +129,45 @@ def asks_for_chart(question: str) -> bool:
 
 def answer_mode(question: str, requested: str) -> str:
     """The mode to answer in: the one the person chose, or for "auto" the one the question's
-    words call for (stored with the request, so the reply shows which was used)."""
+    words call for (stored with the request, so the reply shows which was used). A request for
+    a study or a forecast is answered as Data analysis, where run_study and get_forecast are."""
     if requested != "auto":
         return requested
-    return next((mode for mode, pattern in _MODES if pattern.search(question)), "ask")
+    mode = next((mode for mode, pattern in _MODES if pattern.search(question)), None)
+    if mode is not None:
+        return mode
+    return "analyze" if intent(question) in ("study", "forecast") else "ask"
+
+
+# ------------------------------------------------------------------ what to run
+#
+# What a question asks OSRIP to run, in Arabic or English, so nobody has to open a Studies,
+# Forecasts or Scenarios page: a study (run_study, and balance_analysis for a whole sector), a
+# forecast (get_forecast: the forecasting engine, eligibility first) or a hypothetical scenario
+# (scenario_projection on a stated assumption). Checked in this order: a stated assumption makes
+# a scenario even when the words "forecast" or "study" also appear.
+_INTENT_PATTERNS = (
+    ("scenario", _SCENARIO),
+    (
+        "forecast",
+        r"\b(forecast(s|ed|ing)?|predict(s|ed|ing|ion|ions)?|projections? (of|for)|"
+        r"outlook (of|for)|future (demand|consumption|production|generation|imports?|exports?))\b"
+        r"|تنبأ|تنبّأ|تنبؤ|تنبّؤ|التنبؤ|التنبّؤ|توقّع|توقع|التوقعات|توقعات|المتوقع|استشراف",
+    ),
+    (
+        "study",
+        r"\b(stud(y|ies)|in-depth analysis|detailed (analysis|assessment|report) (of|on|about))\b"
+        r"|دراسة|الدراسة|دراسات|تحليل معمّق|تحليل معمق|تقييم مفصّل|تقييم مفصل",
+    ),
+)
+_INTENTS = tuple((name, re.compile(pattern, re.IGNORECASE)) for name, pattern in _INTENT_PATTERNS)
+
+
+def intent(question: str) -> str | None:
+    """'study', 'forecast' or 'scenario' when the question asks OSRIP to run one; else None."""
+    if not question:
+        return None
+    return next((name for name, pattern in _INTENTS if pattern.search(question)), None)
 
 
 # ------------------------------------------------------------------ the three user-facing modes
