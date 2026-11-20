@@ -27,7 +27,9 @@
 
 - no request to the live model (DeepSeek) for a report;
 - no evaluation with users;
-- not merged into `main` and not deployed.
+- not deployed.
+
+Merged into `main` on 20 November 2026 with the owner's approval (pull request #25).
 
 ## 2026-11-18: navigation simplified, analysis inside the sectors, studies, forecasts and scenarios in Al Mulhim (branch `feature/simplified-navigation-sector-analysis`)
 
@@ -65,8 +67,9 @@
 
 - no evaluation with users;
 - no measured task times;
-- not deployed;
-- not merged into `main`.
+- not deployed.
+
+Merged into `main` on 18 November 2026 with the owner's approval (pull request #24).
 
 ## 2026-11-13 to 15: backend connectivity, error states and Al Mulhim's saving (branch `fix/backend-connectivity-and-error-states`)
 
