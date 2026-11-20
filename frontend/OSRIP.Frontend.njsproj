@@ -101,6 +101,7 @@
     <TypeScriptCompile Include="e2e-api\interface.spec.ts" />
     <TypeScriptCompile Include="e2e-api\intro-clips.spec.ts" />
     <TypeScriptCompile Include="e2e-api\journey.spec.ts" />
+    <TypeScriptCompile Include="e2e-api\mulhim-reports.spec.ts" />
     <TypeScriptCompile Include="e2e-api\mulhim-results.spec.ts" />
     <TypeScriptCompile Include="e2e-api\mulhim.spec.ts" />
     <TypeScriptCompile Include="e2e-api\oman-map-maptiler.spec.ts" />
@@ -182,6 +183,7 @@
     <TypeScriptCompile Include="src\components\assistant\MulhimPanels.tsx" />
     <TypeScriptCompile Include="src\components\assistant\persona.tsx" />
     <TypeScriptCompile Include="src\components\assistant\PersonaImage.tsx" />
+    <TypeScriptCompile Include="src\components\assistant\ReplyReport.tsx" />
     <TypeScriptCompile Include="src\components\assistant\ReplyResults.tsx" />
     <TypeScriptCompile Include="src\components\assistant\ResearchBriefBuilder.tsx" />
     <TypeScriptCompile Include="src\components\assistant\ResearchProgress.tsx" />
@@ -247,6 +249,7 @@
     <TypeScriptCompile Include="src\components\sector\SectorAnalysis.tsx" />
     <TypeScriptCompile Include="src\components\sector\SectorIndicators.tsx" />
     <TypeScriptCompile Include="src\components\sector\SectorNav.tsx" />
+    <TypeScriptCompile Include="src\components\sector\SectorReports.tsx" />
     <TypeScriptCompile Include="src\components\sector\SectorWorkflow.tsx" />
     <TypeScriptCompile Include="src\components\sector\SpokenSummary.tsx" />
     <TypeScriptCompile Include="src\components\series\SectorSeries.tsx" />

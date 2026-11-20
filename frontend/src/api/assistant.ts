@@ -293,6 +293,58 @@ const scenarioBlock = z.object({
 });
 export type ScenarioBlock = z.infer<typeof scenarioBlock>;
 
+// A report Al Mulhim built with build_report from published data (as a saved report is built),
+// with the section and filters that save it as a platform report (POST /reports).
+const reportText = z.union([z.string(), z.number()]).nullable().optional().transform((v) => (v == null ? null : String(v)));
+const reportBlock = z.object({
+  evidence_id: z.string(),
+  report_type: z.enum(['sector', 'study', 'forecast', 'scenario']),
+  section: z.enum(['electricity', 'water', 'food_security', 'trade']),
+  title: bilingual,
+  data_mode: z.string().nullable().optional(),
+  generated_at: z.string().nullable().optional(),
+  filters: z.record(z.string(), z.string()),
+  series: z.array(z.object({
+    indicator: z.string(),
+    indicator_name: bilingual,
+    area: z.string(),
+    area_name: bilingual,
+    unit: z.string(),
+    unit_label: bilingual,
+    frequency: z.string().nullable().optional(),
+    flow: z.string().nullable().optional(),
+    commodity_name: bilingual.nullable().optional(),
+    partner_name: bilingual.nullable().optional(),
+    dataset_version: z.string().nullable().optional(),
+    rows: z.array(z.object({
+      period_start: z.string(),
+      period_end: z.string(),
+      value: reportText,
+      quality_status: z.string().nullable().optional(),
+    })),
+  })),
+  series_total: z.number(),
+  calculations: z.array(z.object({
+    title: bilingual.nullable().optional(),
+    status: z.string().nullable().optional(),
+    value: reportText,
+    unit: z.string().nullable().optional(),
+    unit_label: bilingual.nullable().optional(),
+  })),
+  review: z.array(z.object({
+    rule_code: z.string().nullable().optional(),
+    status: z.string().nullable().optional(),
+    observation: bilingual.nullable().optional(),
+    next_steps: bilingual.nullable().optional(),
+  })),
+  sources: z.array(z.object({
+    title: z.string(),
+    version: z.string().nullable().optional(),
+    publisher: z.string().nullable().optional(),
+  })),
+});
+export type ReportBlock = z.infer<typeof reportBlock>;
+
 const structuredSchema = z.object({
   data_tables: z.array(dataTable).optional(),
   research_tables: z.array(researchTable).optional(),
@@ -333,7 +385,11 @@ const structuredSchema = z.object({
   // Deterministic studies cited by the reply; each is stored (/studies/:id) and shown in the reply.
   studies: z.array(z.object({ id: z.string(), kind: z.string(), title: bilingual, status: z.string() })).optional(),
   // What the question asked OSRIP to run (a study, a forecast or a scenario), when it did.
-  intent: z.enum(['study', 'forecast', 'scenario']).optional(),
+  intent: z.enum(['study', 'forecast', 'scenario', 'report']).optional(),
+  // For a report: what it covers (the sector's data, or a study, forecast or scenario).
+  report_type: z.enum(['sector', 'study', 'forecast', 'scenario']).optional(),
+  // The report itself (tables, calculations, review cards and sources from the database).
+  report: reportBlock.optional(),
   // The forecasting engine's result: estimates with intervals and the history they continue,
   // or the reasons it was withheld (then no values).
   forecasts: z.array(forecastBlock).optional(),

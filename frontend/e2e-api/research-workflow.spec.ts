@@ -180,7 +180,6 @@ test('navigation and Settings: the main destinations in order, services and sche
     'Al Mulhim',
     'Interactive Oman Map',
     'Datasets', 'Research library', 'Sources',
-    'Reports Dashboard',
     'My Profile', 'Settings',
     'Data Management', 'Users and Roles', 'Groups and Permissions', 'Service Health', 'Audit Logs',
   ]);

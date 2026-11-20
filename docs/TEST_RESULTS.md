@@ -1,5 +1,34 @@
 # Test results
 
+## 2026-11-20: Reports leave the navigation; reports through Al Mulhim and the sectors (branch `feature/reports-in-al-mulhim`)
+
+**What changed** (details in `docs/WORKSPACE.md`, "Reports in Al Mulhim and the sectors"):
+
+- **Navigation.** The sidebar no longer has a Reports entry. Report services, saved reports, exports, database records and permission checks are unchanged, and `/reports`, `/reports/:id` and `/reports/analysis/:id` still open.
+- **Al Mulhim.** It recognises report requests in Arabic and English and identifies their sector, area, period and type. It builds the report with `reports.build_content`, the function that freezes saved reports, without storing it. The reply shows headings, tables, charts, calculations, findings to review and collapsed sources, with a CSV download.
+- **Saving.** People with `report.create` save the report through the existing `POST /reports` and get its PDF, Excel and CSV links. Reports made from an answer now include the report's tables.
+- **Sectors.** Each sector's Analysis has a Report request and lists its saved reports.
+
+**Automated checks** (run in the worktree against the local PostgreSQL cluster):
+
+| Check | Result |
+|---|---|
+| Backend `pytest`, database tests included | **1030 passed** (21 new: report requests and their type in both languages, the report title, the answer report's tables, and through the API: building, Arabic, a forecast report, no data, saving and exports with the permission checks, an answer report) |
+| Backend `ruff check`, `ruff format --check` | pass |
+| Frontend typecheck, lint, production build | pass |
+| Frontend unit tests | 31 passed |
+| Contrast check | 0 failing pairs |
+| Offline browser tests (mock adapter) | 49 passed, 3 skipped (projects' phone-only or desktop-only tests) |
+| Full-stack browser tests (real API, database, scripted model) | **196 passed**, 3 skipped. New: `mulhim-reports.spec.ts` (6): no Reports entry and saved addresses; a visitor's report with CSV; an analyst saving it with working PDF, Excel and CSV exports, listed on its sector, private to its owner; a viewer refused saving but able to make an answer report; Arabic, dark, 390 px wide; the sector's Report request |
+
+**Checked in the browser** (this branch's API with the scripted model, synthetic data): the report card in English, and the sector's Report button and saved-reports card in Arabic, with no sideways scrolling.
+
+**Not done:**
+
+- no request to the live model (DeepSeek) for a report;
+- no evaluation with users;
+- not merged into `main` and not deployed.
+
 ## 2026-11-18: navigation simplified, analysis inside the sectors, studies, forecasts and scenarios in Al Mulhim (branch `feature/simplified-navigation-sector-analysis`)
 
 **What changed** (details in `docs/WORKSPACE.md`):

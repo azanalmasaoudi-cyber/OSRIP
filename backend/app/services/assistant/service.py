@@ -270,6 +270,17 @@ INTENT_RULES = {
     "periods exist and how many are needed) and give no future value at all. Never estimate a "
     "future value yourself, and never present a hypothetical scenario as a forecast. The forecast "
     "table and chart are shown with your answer.\n",
+    "report": "- The person asked for a REPORT. Identify the sector (electricity, water, "
+    "food_security or trade), the indicator if one is named (list_indicators for its code), the "
+    "area (national 'OM' unless a governorate is named), the period (the years named) and the "
+    "report's type, then call build_report with them. For a study report also run run_study, for a "
+    "forecast report get_forecast, for a scenario report scenario_projection with the stated change "
+    "(ask for it if missing). The report's tables, charts, calculations and review cards are shown "
+    "under your answer; do not repeat them. Write it in the person's language under these headings: "
+    "the report's title; Summary; Key findings (numbers only from the tools' results, each with its "
+    "evidence id); Interpretation; Recommendations (for a person to review, never as proven); "
+    "Limitations. If build_report finds no published data for the request, say so plainly and what "
+    "is missing; never fill gaps with estimates.\n",
     "scenario": "- The person described a hypothetical SCENARIO. Find the indicator, then call "
     "scenario_projection with the stated change: a yearly rate as growth_pct with years; a total "
     "change over several years (for example +15% over five years) as the equivalent yearly rate, "
@@ -856,7 +867,9 @@ def _run_model(
     )
     # A study, forecast or scenario asked for in words runs the real tool (data modes only).
     wanted = routing.intent(question) if mode in routing.DATA_MODES else None
+    report_kind = routing.report_type(question) if wanted == "report" else None
     ledger.meta = {
+        "report_type": report_kind,
         "answer_provider": provider.vendor,
         "answer_model": provider.name,
         "fallback": switched,
@@ -903,7 +916,7 @@ def _run_model(
         chart=routing.asks_for_chart(question),
         project_data=routing.asks_for_project_data(question),
         images=wants_image,
-        scenario=wanted == "scenario",
+        scenario=wanted == "scenario" or (wanted == "report" and report_kind == "scenario"),
     )
     # The mode's tools only: run_tool refuses any other the model asks for.
     allowed = allowed_tools(specs)
@@ -1446,6 +1459,8 @@ def generate_reply(
         structured["plan"] = ledger.meta["plan"]
     if ledger.meta.get("intent"):
         structured["intent"] = ledger.meta["intent"]
+    if ledger.meta.get("report_type"):
+        structured["report_type"] = ledger.meta["report_type"]
     if status_ != "unverified":
         # The forecasting engine's and the scenario tool's own results, as tables and charts:
         # cited forecasts and scenarios, and a withheld forecast's reasons (it has no values).
@@ -1460,6 +1475,11 @@ def generate_reply(
         scenarios = [i for i in evidence if i.get("kind") == "scenario"]
         if scenarios:
             structured["scenarios"] = [scenario_view(i, by_id) for i in scenarios[:3]]
+        # The report the tool built from published data (the last one, with data), whatever
+        # the text cites: its tables come from the database, not from the model.
+        built = [i for i in ledger.items if i.get("kind") == "report" and i.get("status") == "ok"]
+        if built:
+            structured["report"] = report_view(built[-1])
     summary = research_summary(ledger)
     if summary is not None:
         structured["research"] = summary
@@ -1475,7 +1495,7 @@ def generate_reply(
         content=reply_text,
         status=status_,
         outcome=status_,
-        evidence=[i for i in evidence if i.get("kind") not in ("calculation", "method")],
+        evidence=reply_evidence(evidence),
         calculations=[i for i in evidence if i.get("kind") in ("calculation", "method")],
         citations=citations,
         suggestions=suggestions,
@@ -1488,6 +1508,95 @@ def generate_reply(
         persona=persona,
         research_ids=[r["candidate_id"] for r in ledger.submissions if r.get("candidate_id")],
     )
+
+
+def reply_evidence(evidence: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The evidence kept with a reply: calculations and methods are stored apart, and a report's
+    full content is in the reply's structured part, not repeated in its evidence."""
+    return [
+        {k: v for k, v in i.items() if k != "content"} if i.get("kind") == "report" else i
+        for i in evidence
+        if i.get("kind") not in ("calculation", "method")
+    ]
+
+
+REPORT_MAX_ROWS = 60
+
+
+def report_view(item: dict[str, Any]) -> dict[str, Any]:
+    """A report as the reply shows it, from the content build_report read: each series' table
+    (bilingual names), the section's calculations, the review cards (findings and the next
+    steps to check, rule-based) and the sources, with the request that saves it as a platform
+    report (POST /reports) with the same section and filters."""
+    content = item.get("content") or {}
+
+    def names(meta: dict[str, Any], en: str, ar: str) -> dict[str, str]:
+        return {
+            "en": str(meta.get(en) or meta.get("code") or ""),
+            "ar": str(meta.get(ar) or meta.get(en) or meta.get("code") or ""),
+        }
+
+    series = []
+    for s in content.get("series", [])[:12]:
+        commodity = s.get("commodity") or {}
+        partner = s.get("partner") or {}
+        series.append({
+            "indicator": s["indicator"]["code"],
+            "indicator_name": names(s["indicator"], "name_en", "name_ar"),
+            "area": s["area"]["code"],
+            "area_name": names(s["area"], "name_en", "name_ar"),
+            "unit": s["unit"]["code"],
+            "unit_label": names(s["unit"], "label_en", "label_ar"),
+            "frequency": s.get("frequency"),
+            "flow": s.get("flow"),
+            "commodity_name": names(commodity, "name_en", "name_ar") if commodity else None,
+            "partner_name": names(partner, "name_en", "name_ar") if partner else None,
+            "dataset_version": (s.get("dataset_version") or {}).get("label"),
+            "rows": [
+                {k: o.get(k) for k in ("period_start", "period_end", "value", "quality_status")}
+                for o in s.get("observations", [])[-REPORT_MAX_ROWS:]
+            ],
+        })  # fmt: skip
+    calculations = []
+    for c in content.get("calculations", [])[:16]:
+        result = c.get("result") or {}
+        unit = result.get("unit") or {}
+        calculations.append({
+            "title": c.get("title"),
+            "status": result.get("status"),
+            "value": result.get("value"),
+            "unit": unit.get("code"),
+            "unit_label": names(unit, "label_en", "label_ar") if unit else None,
+        })  # fmt: skip
+    return {
+        "evidence_id": item["id"],
+        "report_type": item.get("report_type", "sector"),
+        "section": item.get("section"),
+        "title": item.get("title"),
+        "data_mode": content.get("data_mode"),
+        "generated_at": content.get("generated_at"),
+        "filters": item.get("filters") or {},
+        "series": series,
+        "series_total": item.get("series_total", len(series)),
+        "calculations": calculations,
+        "review": [
+            {
+                "rule_code": card.get("rule_code"),
+                "status": card.get("status"),
+                "observation": card.get("observation"),
+                "next_steps": card.get("next_steps"),
+            }
+            for card in content.get("review_cards", [])[:8]
+        ],
+        "sources": [
+            {
+                "title": str((v.get("source") or {}).get("dataset_title") or v.get("label") or ""),
+                "version": v.get("label"),
+                "publisher": (v.get("source") or {}).get("publisher"),
+            }
+            for v in content.get("sources", [])[:12]
+        ],
+    }
 
 
 FORECAST_FIELDS = (
@@ -1669,7 +1778,7 @@ def degraded_reply(
         content=report["content"],
         status="data_report",
         outcome="data_report",
-        evidence=[i for i in evidence if i.get("kind") not in ("calculation", "method")],
+        evidence=reply_evidence(evidence),
         calculations=[i for i in evidence if i.get("kind") in ("calculation", "method")],
         citations=report["citations"],
         mode=mode,

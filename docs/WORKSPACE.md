@@ -70,6 +70,54 @@ writes against the evidence it cites, and the tables and charts are drawn from t
 shown per series, the most informative one (an estimate before a withheld result before "no such
 series").
 
+## Reports in Al Mulhim and the sectors (20 November 2026)
+
+The Reports Dashboard is no longer in the navigation. Report generation, saving, viewing and
+exporting all stay, and are reached from Al Mulhim and from each sector:
+
+- **Asking for a report.** `routing.intent` recognises a report request in Arabic or English
+  ("Create a report on water in Muscat for 2024", «أنشئ تقريرًا عن الكهرباء»). It is checked
+  before the other intents, and `routing.report_type` names what the report covers: a study,
+  forecast or scenario report when those words appear, otherwise the sector's data. The model
+  identifies the sector, indicator, area (national unless named) and period, and calls
+  **`build_report`**.
+- **Building it.** `build_report` uses `reports.build_content`, the same function a saved
+  platform report is frozen with: the published observations, the section's calculations, its
+  rule-based review cards and the dataset versions. It runs inside the assistant's read-only
+  transaction, so nothing is stored. For a study, forecast or scenario report the model also runs
+  `run_study`, `get_forecast` or `scenario_projection`, and their results appear beside the report.
+  The grounding check accepts only the report's own figures in the text.
+- **Showing it.** The reply carries `structured.report`, built from the tool's result, never
+  from the model. It shows:
+  - the title;
+  - the scope: sector, area, period, and when it was prepared;
+  - each series as a table, with a chart (the first one open);
+  - the calculations;
+  - "findings to review and next steps" from the review cards (rule-based, for a person to check).
+
+  Its sources are kept in one collapsed list rather than spread through the conversation. At most
+  12 series and 60 rows each are shown; a saved report holds all of them.
+- **Downloading and saving.**
+  - Anyone can download the report's tables as CSV. The file is built in the browser, with the
+    same formula-safe rules as the server's exports.
+  - With the **report.create** permission (analysts), *Save report* sends the reply's section
+    and filters to the existing `POST /reports`. That stores a frozen platform report at
+    `/reports/:id`, with its CSV, PDF and Excel exports
+    (`/reports/{id}/export.csv|pdf|xlsx`).
+  - Without that permission, the save is refused by the API (403), as before. Any signed-in
+    person can still use *Create a report* under the answer for a PDF, Excel or CSV of the
+    answer; it now includes the report's tables, calculations, review cards and sources.
+  - Visitors are asked to sign in to save.
+- **In the sectors.** A sector's Analysis has a **Report** button among Ask Al Mulhim's requests
+  ("Create a report on {indicator} in {area}", written for the current selection and sent only
+  when the person presses Send). It also has **Saved reports for this sector**: the platform
+  reports this person may open (published ones, and their own private ones), each at its saved
+  address, with a link to all saved reports.
+- **Unchanged.**
+  - `/reports`, `/reports/:id` and `/reports/analysis/:id` still open: saved links work.
+  - Private reports are "not found" to anyone but their owner.
+  - Every report endpoint and permission check is as it was. No database change.
+
 ## Live studies under a reply
 
 A reply prepared as a study has **Open the study**. The live study opens under that reply and

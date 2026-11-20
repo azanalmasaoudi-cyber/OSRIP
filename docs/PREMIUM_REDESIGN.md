@@ -40,13 +40,16 @@ item's name in a tooltip on hover and keyboard focus, also remembered.
 |---|---|
 | Dashboard | Dashboard, Overview |
 | Sectors | Electricity, Water, Food Security, Trade (each with Data and indicators, Analysis, Tables and charts) |
-| Al Mulhim | Al Mulhim (studies, forecasts and scenarios are asked for here) |
+| Al Mulhim | Al Mulhim (studies, forecasts, scenarios and reports are asked for here) |
 | Geographic Intelligence | Interactive Oman Map |
 | Data and sources | Datasets, Research library, Sources |
-| Reports | Reports Dashboard |
 | Account | My Profile, Settings |
 | Administration (only with the permission) | Data Management, Users and Roles, Groups and Permissions, Service Health, Audit Logs |
 
+- **Reports in Al Mulhim (20 November 2026):** the Reports Dashboard left the sidebar. Reports
+  are asked of Al Mulhim (built from published data, shown in the reply, saved as frozen reports
+  with PDF, Excel and CSV exports by those allowed to), and each sector's Analysis lists its saved
+  reports. `/reports` and saved report addresses still open (`docs/WORKSPACE.md`).
 - **Analysis in the sectors (18 November 2026):** the Analysis Workspace, Studies and Forecasts
   and Scenarios left the sidebar. Their work is in each sector's Analysis view and in Al Mulhim
   (`docs/WORKSPACE.md`); `/workspace` redirects to a sector's Analysis, and `/studies`,
@@ -73,7 +76,7 @@ item's name in a tooltip on hover and keyboard focus, also remembered.
     data table);
   - the regional distribution with shares of the national total;
   - rule-based insights and data-quality notices from the decision brief;
-  - quick links to Scenarios, Reports and the assistant.
+  - quick links to the map and the assistant (Scenarios and Reports left on 18 and 20 November 2026).
 - The photograph hero, the sector cards and the data rules stay.
 
 ## Sign-in

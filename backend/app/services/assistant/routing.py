@@ -136,7 +136,7 @@ def answer_mode(question: str, requested: str) -> str:
     mode = next((mode for mode, pattern in _MODES if pattern.search(question)), None)
     if mode is not None:
         return mode
-    return "analyze" if intent(question) in ("study", "forecast") else "ask"
+    return "analyze" if intent(question) in ("study", "forecast", "report") else "ask"
 
 
 # ------------------------------------------------------------------ what to run
@@ -162,12 +162,36 @@ _INTENT_PATTERNS = (
 )
 _INTENTS = tuple((name, re.compile(pattern, re.IGNORECASE)) for name, pattern in _INTENT_PATTERNS)
 
+# A REPORT ("Create a report on …", «أنشئ تقريرًا عن …»): Al Mulhim builds it with build_report
+# from the platform's published data (the same content a saved report freezes), of the type the
+# other words name (a study, forecast or scenario report) or else of the sector's data. Checked
+# before the others: "a report on the electricity forecast" is a forecast report. Deep internet
+# research writes its own web reports; that mode never sees these tools.
+_REPORT = re.compile(
+    r"\b(create|generate|prepare|produce|make|write|build|draft|compile|give me|i want|i need|"
+    r"send me|show me)\b[^.?!]{0,60}\breports?\b"
+    r"|\breports? (on|about|for|of|covering)\b"
+    r"|\b(أنشئ|انشئ|أعد|أعدّ|اعد|اكتب|جهز|جهّز|حضر|حضّر|اصنع|قدم|قدّم|أريد|اريد|أعطني|اعطني|أرني|ارني)"
+    r"\s+(لي\s+)?(ال)?تقرير"
+    r"|\bتقرير(ا|اً|ًا)?\s+(عن|حول|بشأن|ل)",
+    re.IGNORECASE,
+)
+
 
 def intent(question: str) -> str | None:
-    """'study', 'forecast' or 'scenario' when the question asks OSRIP to run one; else None."""
+    """'report', 'study', 'forecast' or 'scenario' when the question asks OSRIP to run one;
+    else None."""
     if not question:
         return None
+    if _REPORT.search(question):
+        return "report"
     return next((name for name, pattern in _INTENTS if pattern.search(question)), None)
+
+
+def report_type(question: str) -> str:
+    """What a requested report covers: 'scenario', 'forecast' or 'study' when its words say so
+    (in that order, as for intent), otherwise 'sector' (the sector's published data)."""
+    return next((name for name, pattern in _INTENTS if pattern.search(question or "")), "sector")
 
 
 # ------------------------------------------------------------------ the three user-facing modes

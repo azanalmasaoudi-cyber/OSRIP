@@ -195,6 +195,30 @@ def _evidence_numbers(item: dict[str, Any], ledger: dict[str, dict[str, Any]]) -
         for key in ("from", "to"):
             for number, _ in numbers_in(str((doc.get("periods") or {}).get(key) or "")):
                 add(number)
+    if item.get("kind") == "report" and isinstance(item.get("content"), dict):
+        # A report built from published data: its observations and their periods, the
+        # section's calculated values, the review cards' text and the years it covers.
+        content = item["content"]
+        for s in content.get("series", []):
+            for o in s.get("observations", []):
+                add(o.get("value"))
+                for key in ("period_start", "period_end"):
+                    if isinstance(o.get(key), str):
+                        for part in o[key].split("-"):
+                            add(part)
+        for c in content.get("calculations", []):
+            add((c.get("result") or {}).get("value"))
+        for card in content.get("review_cards", []):
+            for lang in ("en", "ar"):
+                for key in ("observation", "next_steps"):
+                    for number, _ in numbers_in(str((card.get(key) or {}).get(lang, ""))):
+                        add(number)
+        add(item.get("series_total"))
+        for key in ("period_from", "period_to"):
+            value = (item.get("filters") or {}).get(key)
+            if isinstance(value, str):
+                for part in value.split("-"):
+                    add(part)
     if item.get("kind") in ("calculation", "scenario"):
         for input_id in item.get("inputs", []):
             if input_id in ledger:

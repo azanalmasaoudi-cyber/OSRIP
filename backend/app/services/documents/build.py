@@ -358,6 +358,31 @@ def research_document(
             )
     if tables:
         sections.append({"heading": t["tables"], "blocks": tables})
+    # A report Al Mulhim built (build_report): its published series, the section's
+    # calculations and review cards, as the reply showed them.
+    report = structured.get("report")
+    if isinstance(report, dict) and report.get("series"):
+        blocks = [
+            _table(
+                f"{s['indicator_name'][language]} · {s['area_name'][language]} · {s['unit_label'][language]}",
+                [(t["period"], False), (t["value"], True), (t["status"], False)],
+                [[f"{r['period_start']} – {r['period_end']}", r.get("value"), r.get("quality_status")] for r in s["rows"]],
+            )
+            for s in report["series"]
+        ]  # fmt: skip
+        calcs = [c for c in report.get("calculations") or [] if c.get("title")]
+        if calcs:
+            blocks.append(_table(t["calculations"], [
+                (t["finding"], False), (t["status"], False), (t["value"], True), (t["unit"], False),
+            ], [[c["title"][language], c.get("status"), c.get("value"), c.get("unit")] for c in calcs]))  # fmt: skip
+        cards = report.get("review") or []
+        if cards:
+            blocks.append({"type": "bullets", "items": [
+                " — ".join(x for x in ((c.get("observation") or {}).get(language), (c.get("next_steps") or {}).get(language)) if x)
+                for c in cards
+            ]})  # fmt: skip
+        heading = (report.get("title") or {}).get(language) or t["platform_kind"]
+        sections.append({"heading": heading, "blocks": blocks})
     charts = [
         {"type": "chart", "title": c["title"][language], "table": c["table"], "chart": c["chart"]}
         for c in structured.get("data_charts") or []
@@ -422,6 +447,12 @@ def research_document(
                 "published": None, "retrieved": None,
                 "note": f"{e.get('indicator')} · {e.get('area')} · {e.get('period_start')}–{e.get('period_end')}",
             })  # fmt: skip
+    for src in (report.get("sources") or []) if isinstance(report, dict) else []:
+        references.append({
+            "title": src.get("title") or src.get("version") or "", "url": None,
+            "publisher": src.get("publisher"), "published": None, "retrieved": None,
+            "note": src.get("version"),
+        })  # fmt: skip
     return validate({
         "kind": "research", "language": language, "title": title, "subtitle": t["research_kind"],
         "created_at": created,

@@ -42,7 +42,7 @@ from app.core.config import get_settings
 from app.services import monitoring, openai_api
 from app.services import providers as registry
 from app.services.assistant.progress import Cancelled
-from app.services.assistant.routing import intent
+from app.services.assistant.routing import intent, report_type
 from app.services.assistant.streaming import answer_sink
 
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
@@ -982,6 +982,8 @@ class FakeProvider:
             return self._deep_report(tool_results, arabic, "generate_image" in names)
         if "Mode: Quick answer" in system and "web_search" in names:
             return self._web(question, tool_results, arabic)
+        if intent(question) == "report" and "build_report" in names:
+            return self._report(question, tool_results, arabic)
         if ("study" in question or "دراسة" in question) and "run_study" in names:
             return self._study(question, tool_results, arabic)
         # A forecast or a scenario asked for in words (routing.intent, as the service uses it).
@@ -1341,6 +1343,83 @@ class FakeProvider:
             else f"The model estimate for the period starting {first['period_start']} is {first['estimate']}{interval} [{eid}]. This is a model estimate, not an official statistic."
         )
         return self._final("answered", text, [eid])
+
+    # Sectors the scripted reports recognise by name (electricity otherwise).
+    REPORT_SECTIONS = {"electricity": "electricity", "كهرباء": "electricity", "water": "water",
+                       "مياه": "water", "food": "food_security", "غذا": "food_security",
+                       "trade": "trade", "تجار": "trade"}  # fmt: skip
+    REPORT_PREFIX = {
+        "electricity": "ELEC_",
+        "water": "WATER_",
+        "food_security": "FOOD_",
+        "trade": "TRADE_",
+    }
+
+    def _report(
+        self, question: str, tool_results: list[dict[str, Any]], arabic: bool
+    ) -> dict[str, Any]:
+        """Build the report for the named sector, indicator, area and years (build_report),
+        then, for a forecast, study or scenario report, run that tool too; write only figures
+        the tools returned."""
+        kind = report_type(question)
+        section = next((v for k, v in self.REPORT_SECTIONS.items() if k in question), "electricity")
+        indicator = self._indicator_in(question, "")
+        if not tool_results:
+            args: dict[str, Any] = {
+                "section": section,
+                "area": self._area_in(question),
+                "report_type": kind,
+            }
+            if indicator.startswith(self.REPORT_PREFIX[section]):
+                args["indicator"] = indicator
+            years = re.findall(r"\b((?:19|20)\d{2})\b", question)
+            if years:
+                args["period_from"], args["period_to"] = min(years), max(years)
+            return self._call("build_report", args)
+        report = json.loads(tool_results[0]["content"])
+        if report.get("status") != "ok":
+            return self._final(
+                "answered" if report.get("evidence_id") else "no_evidence",
+                "لا توجد بيانات منشورة لهذا التقرير." if arabic else "No published data matches this report.",
+                [report["evidence_id"]] if report.get("evidence_id") else [],
+            )  # fmt: skip
+        code = (
+            indicator
+            if indicator.startswith(self.REPORT_PREFIX[section])
+            else report["series"][0]["indicator"]
+        )
+        if len(tool_results) == 1 and kind == "forecast":
+            return self._call("get_forecast", {"indicator": code, "area": self._area_in(question)})
+        if len(tool_results) == 1 and kind == "study":
+            return self._call(
+                "run_study",
+                {"kind": "trend", "params": {"indicator": code, "area": self._area_in(question)}},
+            )
+        eid = report["evidence_id"]
+        series = report["series"][0]
+        latest = series["rows"][-1]
+        title = report["title_ar"] if arabic else report["title"]
+        text = (
+            f"{title} [{eid}]: يضم التقرير {report['series_total']} سلسلة منشورة؛ آخر قيمة منشورة هي {latest['value']} للفترة التي تبدأ في {latest['period_start']} [{eid}]."
+            if arabic
+            else f"{title} [{eid}]: the report covers {report['series_total']} published series; the latest published value is {latest['value']} for the period starting {latest['period_start']} [{eid}]."
+        )
+        cited = [eid]
+        if len(tool_results) > 1:
+            other = self._last(tool_results)
+            if other.get("evidence_id"):
+                cited.append(other["evidence_id"])
+                if other.get("status") == "withheld" or (
+                    kind == "forecast" and other.get("status") != "ok"
+                ):
+                    text += (
+                        f" لا يُنتَج تنبؤ: للسلسلة {other.get('usable_observations')} فترات صالحة [{other['evidence_id']}]."
+                        if arabic
+                        else f" No forecast is produced: the series has {other.get('usable_observations')} usable periods [{other['evidence_id']}]."
+                    )
+                elif kind == "study" and other.get("findings"):
+                    text += f" {(other['findings_ar'] if arabic else other['findings'])[0]} [{other['evidence_id']}]"
+        return self._final("answered", text, cited)
 
     WORD_YEARS = {"two": 2, "three": 3, "four": 4, "five": 5, "ten": 10, "سنتين": 2, "ثلاث": 3,
                   "أربع": 4, "خمس": 5, "عشر": 10}  # fmt: skip
