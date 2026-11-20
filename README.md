@@ -235,7 +235,10 @@ Navigation:
   own, and their pages (`/studies`, `/studies/:id`, `/forecasts`) still open from saved links;
 - Interactive Oman Map;
 - Data and sources: Datasets, Research library, Sources;
-- Reports;
+- (no Reports entry: a report is asked of Al Mulhim, which builds it from published data and
+  shows it in the reply with a CSV download; an analyst saves it as a frozen report with PDF,
+  Excel and CSV exports; a sector's Analysis lists its saved reports. `/reports` and every
+  saved report address still open);
 - Account;
 - Data Management, Users and roles, and Service health (authorized users only).
 
