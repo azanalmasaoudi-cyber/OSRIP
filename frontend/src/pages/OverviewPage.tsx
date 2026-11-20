@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   ClipboardList,
   FileSearch,
-  FileText,
   GraduationCap,
   Landmark,
   Languages,
@@ -297,9 +296,6 @@ export function OverviewPage() {
         </Link>
         <Link to={to('/assistant')} className={buttonVariants({ variant: 'outline' })}>
           <Bot aria-hidden="true" />{t('nav.aiAssistant')}
-        </Link>
-        <Link to={to('/reports')} className={buttonVariants({ variant: 'outline' })}>
-          <FileText aria-hidden="true" />{t('nav.reports')}
         </Link>
         <Link to={to('/energy/electricity?tab=analysis')} className={buttonVariants({ variant: 'outline' })}>
           <LayoutDashboard aria-hidden="true" />{t('overviewIntro.workspaceLink')}

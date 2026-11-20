@@ -7,7 +7,6 @@ import {
   DatabaseZap,
   Download,
   Droplets,
-  FileText,
   FolderOpen,
   Gauge,
   Info,
@@ -70,7 +69,6 @@ type ModuleKey =
   | 'nav.moduleAssistant'
   | 'nav.moduleGeo'
   | 'nav.moduleData'
-  | 'nav.moduleReports'
   | 'nav.groupAccount'
   | 'nav.groupAdmin';
 
@@ -135,11 +133,6 @@ export const NAV_MODULES: readonly NavModule[] = [
       { path: '/datasets', key: 'nav.datasets', icon: Sheet },
       { path: '/library', key: 'nav.library', icon: LibraryBig },
       { path: '/sources', key: 'nav.sourcesShort', icon: BookOpen },
-    ],
-  },
-  {
-    id: 'reports', label: 'nav.moduleReports', icon: FileText, items: [
-      { path: '/reports', key: 'nav.reports', icon: FileText },
     ],
   },
   {

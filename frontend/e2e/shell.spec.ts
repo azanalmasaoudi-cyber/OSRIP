@@ -121,7 +121,7 @@ test('the old /workspace address opens the sector\'s Analysis; its Data and indi
   await expect(card).toHaveAttribute('data-indicator', /^TRADE_/);
   await expect(card.getByTestId('source-details-button')).toBeVisible();
   // The navigation has no separate workspace, studies or forecasts entry.
-  for (const gone of ['Analysis Workspace', 'Studies', 'Forecasts and Scenarios']) {
+  for (const gone of ['Analysis Workspace', 'Studies', 'Forecasts and Scenarios', 'Reports Dashboard', 'Saved reports']) {
     await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: gone, exact: true })).toHaveCount(0);
   }
 });

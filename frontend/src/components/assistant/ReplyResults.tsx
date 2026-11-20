@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { ForecastBlock, ScenarioBlock, StructuredReply } from '@/api/assistant';
 import { useStudy } from '@/api/studies';
+import { ReplyReport } from '@/components/assistant/ReplyReport';
 import { ForecastChart, ForecastTable } from '@/components/forecast/ForecastChart';
 import { StatePanel } from '@/components/common/StatePanel';
 import { StudyView } from '@/components/studies/StudyView';
@@ -169,9 +170,11 @@ export function ReplyResults({ structured }: { structured: StructuredReply }) {
   const studies = (structured.studies ?? []).filter((s) => s.kind !== 'supply_balance');
   const forecasts = structured.forecasts ?? [];
   const scenarios = structured.scenarios ?? [];
-  if (!studies.length && !forecasts.length && !scenarios.length) return null;
+  const report = structured.report;
+  if (!report && !studies.length && !forecasts.length && !scenarios.length) return null;
   return (
     <div className="flex flex-col gap-3" data-testid="reply-results">
+      {report ? <ReplyReport report={report} /> : null}
       {studies.map((s) => <ReplyStudy key={s.id} id={s.id} title={s.title} />)}
       {forecasts.map((f) => <ReplyForecast key={f.evidence_id} forecast={f} />)}
       {scenarios.map((s) => <ReplyScenario key={s.evidence_id} scenario={s} />)}

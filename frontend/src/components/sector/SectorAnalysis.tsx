@@ -8,6 +8,7 @@ import { StatePanel } from '@/components/common/StatePanel';
 import { AreaComparison } from '@/components/sector/AreaComparison';
 import { AskMulhim } from '@/components/sector/AskMulhim';
 import { DecisionBrief } from '@/components/sector/DecisionBrief';
+import { SectorReports } from '@/components/sector/SectorReports';
 import { resolve, sortIndicators, type Resolved } from '@/components/sector/SectorWorkflow';
 import { Button } from '@/components/ui/button';
 import { Segmented } from '@/components/ui/segmented';
@@ -122,6 +123,8 @@ export function SectorAnalysis({ section, onOpenCharts }: { section: SectionCode
           <AreaComparison indicator={selection.indicator} frequency={selection.view} />
           {/* This session's studies open under their reply on the Al Mulhim page. */}
           <RecentStudies onOpen={(id) => void navigate(to(`/assistant?${new URLSearchParams({ study: id }).toString()}`))} />
+          {/* Saved reports live with their sector (there is no Reports entry in the navigation). */}
+          <SectorReports section={section} />
         </div>
       </div>
 

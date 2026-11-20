@@ -52,6 +52,86 @@ def _date(value: str | None) -> date | None:
     return date.fromisoformat(value) if value else None
 
 
+def build_content(
+    session: Session,
+    *,
+    title: str,
+    data_mode: DataMode,
+    section: Section,
+    filters: dict[str, Any],
+    stock_assumption: StockAssumption = StockAssumption.ASSUMED_ZERO,
+) -> tuple[dict[str, Any], dict[str, str], dict[str, dict[str, Any]]]:
+    """A report's content for these filters, read inside the caller's transaction: the exact
+    observations, the section's calculations and review cards, and the dataset versions they came
+    from. Returns the content, the cleaned filters and the versions. ``create_report`` stores it
+    (frozen); Al Mulhim's ``build_report`` tool shows it in a reply without storing it, so the
+    same figures appear whether or not the person saves the report."""
+    clean = _clean_filters(filters)
+    # The interface's "frequency" choice is a period kind (a complete year is not a
+    # year-to-date total); both keys are accepted.
+    kind = clean.get("period_kind") or clean.get("frequency")
+    if kind is not None and kind not in PERIOD_KINDS:
+        raise unprocessable("unknown_filter", f"Unknown period kind: {kind}.")
+    frequency: Frequency | None = None
+    version_id = uuid.UUID(clean["dataset_version_id"]) if "dataset_version_id" in clean else None
+    query = ObservationQuery(
+        data_mode=data_mode,
+        section=section,
+        indicator=clean.get("indicator"),
+        area=clean.get("area"),
+        commodity=clean.get("commodity"),
+        partner=clean.get("partner"),
+        flow=clean.get("flow"),
+        frequency=frequency,
+        period_from=_date(clean.get("period_from")),
+        period_to=_date(clean.get("period_to")),
+        dataset_version_id=version_id,
+        period_kind=kind,
+    )
+    series = query_observations(session, query)
+    calcs = analyse(
+        session,
+        section,
+        AnalysisFilter(
+            data_mode=data_mode,
+            commodity=clean.get("commodity"),
+            area=clean.get("area"),
+            frequency=frequency,
+            period_from=query.period_from,
+            period_to=query.period_to,
+            stock_assumption=stock_assumption,
+            dataset_version_id=version_id,
+            period_kind=kind,
+        ),
+    )
+    cards = latest_cards(session, data_mode, section)
+    versions: dict[str, dict[str, Any]] = {}
+    for s in series:
+        v = s.meta["dataset_version"]
+        versions[v["id"]] = {**v, "source": s.meta["source"]}
+    for c in calcs:
+        for i in c["inputs"]:
+            versions.setdefault(
+                i["dataset_version"]["id"],
+                {**i["dataset_version"], "source": {"dataset_title": i["source_title"]}},
+            )
+    content = {
+        "title": title,
+        "data_mode": data_mode.value,
+        "label": mode_label(data_mode),
+        "section": section.value,
+        "filters": clean,
+        "assumptions": {"stock_assumption": stock_assumption.value},
+        "generated_at": datetime.now(UTC).isoformat(),
+        "series": [{**s.meta, "observations": s.observations} for s in series],
+        "calculations": calcs,
+        "review_cards": cards["cards"],
+        "review_run": cards["run"],
+        "sources": list(versions.values()),
+    }
+    return content, clean, versions
+
+
 def create_report(
     session: Session,
     actor: Principal,
@@ -63,71 +143,15 @@ def create_report(
     stock_assumption: StockAssumption,
     visibility: str,
 ) -> Report:
-    clean = _clean_filters(filters)
-    # The interface's "frequency" choice is a period kind (a complete year is not a
-    # year-to-date total); both keys are accepted.
-    kind = clean.get("period_kind") or clean.get("frequency")
-    if kind is not None and kind not in PERIOD_KINDS:
-        raise unprocessable("unknown_filter", f"Unknown period kind: {kind}.")
-    frequency: Frequency | None = None
-    version_id = uuid.UUID(clean["dataset_version_id"]) if "dataset_version_id" in clean else None
     with session.begin():
-        query = ObservationQuery(
+        content, clean, versions = build_content(
+            session,
+            title=title,
             data_mode=data_mode,
             section=section,
-            indicator=clean.get("indicator"),
-            area=clean.get("area"),
-            commodity=clean.get("commodity"),
-            partner=clean.get("partner"),
-            flow=clean.get("flow"),
-            frequency=frequency,
-            period_from=_date(clean.get("period_from")),
-            period_to=_date(clean.get("period_to")),
-            dataset_version_id=version_id,
-            period_kind=kind,
+            filters=filters,
+            stock_assumption=stock_assumption,
         )
-        series = query_observations(session, query)
-        calcs = analyse(
-            session,
-            section,
-            AnalysisFilter(
-                data_mode=data_mode,
-                commodity=clean.get("commodity"),
-                area=clean.get("area"),
-                frequency=frequency,
-                period_from=query.period_from,
-                period_to=query.period_to,
-                stock_assumption=stock_assumption,
-                dataset_version_id=version_id,
-                period_kind=kind,
-            ),
-        )
-        cards = latest_cards(session, data_mode, section)
-        versions: dict[str, dict[str, Any]] = {}
-        for s in series:
-            v = s.meta["dataset_version"]
-            versions[v["id"]] = {**v, "source": s.meta["source"]}
-        for c in calcs:
-            for i in c["inputs"]:
-                versions.setdefault(
-                    i["dataset_version"]["id"],
-                    {**i["dataset_version"], "source": {"dataset_title": i["source_title"]}},
-                )
-        now = datetime.now(UTC)
-        content = {
-            "title": title,
-            "data_mode": data_mode.value,
-            "label": mode_label(data_mode),
-            "section": section.value,
-            "filters": clean,
-            "assumptions": {"stock_assumption": stock_assumption.value},
-            "generated_at": now.isoformat(),
-            "series": [{**s.meta, "observations": s.observations} for s in series],
-            "calculations": calcs,
-            "review_cards": cards["cards"],
-            "review_run": cards["run"],
-            "sources": list(versions.values()),
-        }
         report = Report(
             owner_id=actor.user_id,
             data_mode=data_mode,
@@ -137,7 +161,7 @@ def create_report(
             section=section,
             assumptions={"stock_assumption": stock_assumption.value},
             content=content,
-            generated_at=now,
+            generated_at=datetime.fromisoformat(content["generated_at"]),
         )
         session.add(report)
         session.flush()

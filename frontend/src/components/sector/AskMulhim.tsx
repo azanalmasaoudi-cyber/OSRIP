@@ -1,4 +1,4 @@
-import { FlaskConical, FolderOpen, LineChart, SlidersHorizontal, type LucideIcon } from 'lucide-react';
+import { FileText, FlaskConical, FolderOpen, LineChart, SlidersHorizontal, type LucideIcon } from 'lucide-react';
 import { Link } from 'react-router';
 import { useTranslation } from 'react-i18next';
 
@@ -12,10 +12,11 @@ export function useAskMulhim() {
   return (question: string) => to(`/assistant?${new URLSearchParams({ q: question }).toString()}`);
 }
 
-const ASKS: { key: 'study' | 'forecast' | 'scenario'; icon: LucideIcon }[] = [
+const ASKS: { key: 'study' | 'forecast' | 'scenario' | 'report'; icon: LucideIcon }[] = [
   { key: 'study', icon: FlaskConical },
   { key: 'forecast', icon: LineChart },
   { key: 'scenario', icon: SlidersHorizontal },
+  { key: 'report', icon: FileText },
 ];
 
 /**

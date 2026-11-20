@@ -10,6 +10,7 @@ only periods from January 2021 onward are used (the complete-year baseline 2021-
 
 from __future__ import annotations
 
+import re
 import uuid
 from collections import Counter
 from collections.abc import Callable
@@ -97,6 +98,7 @@ EVIDENCE_CLASS = {
     "search": "reference",
     "note": "reference",  # documented conflicts and limitations of the reference pack
     "study": "calculated",  # a deterministic study (table, chart, export) from approved data
+    "report": "observed",  # a report's published observations, calculations and review cards
 }
 PERIOD_KINDS = ("annual", "year_to_date", "quarterly", "monthly", "statement")
 
@@ -114,7 +116,7 @@ DATA_STATUS = (
 
 def data_status(item: dict[str, Any], data_mode: DataMode) -> str:
     kind = item.get("kind", "")
-    if kind == "observation":
+    if kind in ("observation", "report"):
         return (
             "approved_official"
             if data_mode is DataMode.VERIFIED_SOURCE
@@ -962,6 +964,137 @@ class Tools:
             "others, say what information is missing.",
         }
 
+    # -------------------------------------------------------------- reports
+    def build_report(
+        self,
+        section: str,
+        indicator: str | None = None,
+        area: str | None = None,
+        period_from: str | int | None = None,
+        period_to: str | int | None = None,
+        frequency: str = "annual",
+        report_type: str = "sector",
+    ) -> dict[str, Any]:
+        """A report built exactly as a saved platform report is (reports.build_content: the
+        published observations, the section's calculations and review cards, and their sources)
+        but not stored: this transaction is read only. The reply shows it, and a person allowed
+        to create reports saves it with the same section and filters (POST /reports)."""
+        from app.core.errors import ApiError
+        from app.domain.enums import Section
+        from app.services import reports
+
+        if section not in REPORT_SECTIONS:
+            return {
+                "error": "unknown_section",
+                "message": "Use electricity, water, food_security or trade.",
+            }
+        report_type = report_type if report_type in REPORT_TYPES else "sector"
+
+        def day(value: str | int | None, end: bool) -> str | None:
+            text = str(value).strip() if value not in (None, "") else ""
+            if not text:
+                return None
+            if re.fullmatch(r"\d{4}", text):
+                return f"{text}-12-31" if end else f"{text}-01-01"
+            if re.fullmatch(r"\d{4}-\d{2}-\d{2}", text):
+                return text
+            raise ValueError(text)
+
+        try:
+            first, last = day(period_from, False), day(period_to, True)
+        except ValueError:
+            return {
+                "error": "invalid_period",
+                "message": "Give periods as years (YYYY) or dates (YYYY-MM-DD).",
+            }
+        filters = {
+            "indicator": indicator.strip().upper() if indicator else None,
+            "area": (area or "OM").strip().upper(),
+            "period_kind": frequency
+            if frequency in ("annual", "year_to_date", "quarterly", "monthly")
+            else "annual",
+            "period_from": first,
+            "period_to": last,
+        }
+        try:
+            content, clean, _ = reports.build_content(
+                self.session, title="", data_mode=self.ledger.data_mode, section=Section(section),
+                filters=filters,
+            )  # fmt: skip
+        except ApiError as exc:
+            return {"status": "unavailable", "error": exc.code, "message": exc.message}
+        series = content["series"]
+        title = report_title(section, report_type, series, clean)
+        content["title"] = title["en"]
+        status = "ok" if series else "no_data"
+        item = self.ledger.add(
+            {
+                "kind": "report",
+                "report_type": report_type,
+                "section": section,
+                "filters": clean,
+                "title": title,
+                "status": status,
+                "series_total": len(series),
+                "content": {**content, "series": series[:REPORT_MAX_SERIES]},
+            }
+        )
+        calcs = content["calculations"]
+        return {
+            "status": status,
+            "evidence_id": item["id"],
+            "title": title["en"],
+            "title_ar": title["ar"],
+            "report_type": report_type,
+            "section": section,
+            "filters": clean,
+            "series_total": len(series),
+            "series": [
+                {
+                    "indicator": s["indicator"]["code"],
+                    "indicator_name": s["indicator"]["name_en"],
+                    "area": s["area"]["code"],
+                    "unit": s["unit"]["code"],
+                    "frequency": s["frequency"],
+                    "flow": s.get("flow"),
+                    "commodity": (s.get("commodity") or {}).get("code"),
+                    "observations": len(s["observations"]),
+                    "rows": [
+                        {
+                            "period_start": o["period_start"],
+                            "period_end": o["period_end"],
+                            "value": o["value"],
+                        }
+                        for o in s["observations"][-12:]
+                    ],
+                }
+                for s in series[:10]
+            ],
+            "calculations": [
+                {
+                    "title": c["title"]["en"],
+                    "status": c["result"]["status"],
+                    "value": c["result"]["value"],
+                    "unit": (c["result"]["unit"] or {}).get("code"),
+                }
+                for c in calcs[:12]
+            ],
+            "review_cards": [
+                {
+                    "rule": card["rule_code"],
+                    "status": card["status"],
+                    "observation": card["observation"]["en"],
+                    "next_steps": card["next_steps"]["en"],
+                }
+                for card in content["review_cards"][:6]
+            ],
+            "sources": [str(v.get("label") or "") for v in content["sources"]][:10],
+            "note": "The user sees this report under your answer (its tables, charts, calculations "
+            "and review cards) and can save or download it: do not repeat the tables. Cite this "
+            "evidence id for every number you take from it and do not recompute them. With "
+            "status 'no_data', say that nothing is published for this request and what is missing.",
+        }
+
     # -------------------------------------------------------------- web research (untrusted)
     def web_search(
         self, query: str, domain: str = "general", query_other_language: str | None = None
@@ -1713,7 +1846,98 @@ CHART_TOOL_SPEC: dict[str, Any] = {
 }  # fmt: skip
 
 
+REPORT_SECTIONS = {
+    "electricity": ("Electricity", "الكهرباء"),
+    "water": ("Water", "المياه"),
+    "food_security": ("Food security", "الأمن الغذائي"),
+    "trade": ("Trade", "التجارة"),
+}
+REPORT_TYPES = {
+    "sector": ("report", "تقرير"),
+    "study": ("study report", "تقرير دراسة"),
+    "forecast": ("forecast report", "تقرير تنبؤ"),
+    "scenario": ("scenario report", "تقرير سيناريو"),
+}
+REPORT_MAX_SERIES = 24  # kept with the reply; a saved report holds every series
+
+
+def report_title(
+    section: str, report_type: str, series: list[dict[str, Any]], filters: dict[str, str]
+) -> dict[str, str]:
+    """ "Electricity report: Electricity generation, Oman (national), 2022–2025" and its Arabic,
+    from the request and the series found (codes when nothing matched)."""
+    sector_en, sector_ar = REPORT_SECTIONS[section]
+    kind_en, kind_ar = REPORT_TYPES[report_type]
+    first = series[0] if series else None
+    parts_en: list[str] = []
+    parts_ar: list[str] = []
+    if filters.get("indicator"):
+        parts_en.append(first["indicator"]["name_en"] if first else filters["indicator"])
+        parts_ar.append(first["indicator"]["name_ar"] if first else filters["indicator"])
+    if first is not None and filters.get("area"):
+        parts_en.append(first["area"]["name_en"])
+        parts_ar.append(first["area"]["name_ar"])
+    elif filters.get("area"):
+        parts_en.append(filters["area"])
+        parts_ar.append(filters["area"])
+    years = sorted(
+        {o["period_start"][:4] for s in series for o in s["observations"]}
+        | ({filters["period_from"][:4]} if filters.get("period_from") and not series else set())
+    )
+    if years:
+        span = years[0] if len(years) == 1 else f"{years[0]}–{years[-1]}"
+        parts_en.append(span)
+        parts_ar.append(span)
+    tail_en = f": {', '.join(parts_en)}" if parts_en else ""
+    tail_ar = f": {'، '.join(parts_ar)}" if parts_ar else ""
+    return {
+        "en": f"{sector_en} {kind_en}{tail_en}"[:200],
+        "ar": f"{kind_ar} {sector_ar}{tail_ar}"[:200],
+    }
+
+
 ANALYSIS_TOOL_SPECS: list[dict[str, Any]] = [
+    {
+        "name": "build_report",
+        "description": "Build an OSRIP report from published observations, exactly as a saved "
+        "platform report is built: one sector, optionally one indicator (code from "
+        "list_indicators), an area (national 'OM' unless one is named, e.g. OM-MU), a period "
+        "(years or ISO dates) and a period kind. It returns the observations, the section's "
+        "calculations and its rule-based review cards with their sources. The person sees the "
+        "report (headings, tables, charts, findings, recommendations to review) under your answer "
+        "and can save or download it. Use it whenever a report is asked for; for a study, "
+        "forecast or scenario report also run that tool.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "section": {
+                    "type": "string",
+                    "enum": ["electricity", "water", "food_security", "trade"],
+                },
+                "indicator": {"type": "string"},
+                "area": {"type": "string", "default": "OM"},
+                "period_from": {
+                    "type": "string",
+                    "description": "First year (YYYY) or date (YYYY-MM-DD)",
+                },
+                "period_to": {
+                    "type": "string",
+                    "description": "Last year (YYYY) or date (YYYY-MM-DD)",
+                },
+                "frequency": {
+                    "type": "string",
+                    "enum": ["annual", "year_to_date", "quarterly", "monthly"],
+                    "default": "annual",
+                },
+                "report_type": {
+                    "type": "string",
+                    "enum": ["sector", "study", "forecast", "scenario"],
+                    "default": "sector",
+                },
+            },
+            "required": ["section"],
+        },
+    },
     {
         "name": "balance_analysis",
         "description": "Shortage and surplus analysis of one sector from approved observations: each "
@@ -2198,6 +2422,7 @@ def run_tool(
         "compare_areas": tools.compare_areas,
         "data_quality_notes": tools.data_quality_notes,
         "run_study": tools.run_study,
+        "build_report": tools.build_report,
         "balance_analysis": tools.balance_analysis,
         "submit_observations": tools.submit_observations,
         "research_status": tools.research_status,

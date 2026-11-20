@@ -28,7 +28,6 @@ test('navigation lists the required sections and every link opens its page', asy
     ['Sources', /\/sources/, 'Sources and Methodology'],
     ['Al Mulhim', /\/assistant/, 'Al Mulhim'], // studies, forecasts and scenarios are asked here
     ['Datasets', /\/datasets/, ''],
-    ['Reports Dashboard', /\/reports/, 'Reports'],
     ['My Profile', /\/(account|sign-in)/, ''],
   ];
   for (const [name, url, heading] of expected) {
@@ -39,7 +38,7 @@ test('navigation lists the required sections and every link opens its page', asy
   }
   // No separate entries for analysis, studies, forecasts or scenarios (their pages still open
   // from saved links; the work itself is in each sector's Analysis and in Al Mulhim).
-  for (const gone of ['Analysis Workspace', 'Studies', 'Forecasts and Scenarios', 'Scenarios', 'Forecasts']) {
+  for (const gone of ['Analysis Workspace', 'Studies', 'Forecasts and Scenarios', 'Scenarios', 'Forecasts', 'Reports Dashboard', 'Reports', 'Saved reports']) {
     await expect(nav.getByRole('link', { name: gone, exact: true })).toHaveCount(0);
   }
 });
