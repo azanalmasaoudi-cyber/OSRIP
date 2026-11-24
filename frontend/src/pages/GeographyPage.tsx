@@ -1,4 +1,4 @@
-import { CheckCircle2, CircleDashed, ExternalLink, MapPin } from 'lucide-react';
+import { CheckCircle2, CircleDashed, ExternalLink, MapPin, Undo2 } from 'lucide-react';
 import { useCallback, useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -31,6 +31,7 @@ import { FLOW_KEY, REVISION_STATUS_KEY } from '@/i18n/keys';
 import { formatDecimal, formatPeriod, type AppLanguage } from '@/lib/format';
 import { useAppLanguage } from '@/lib/useAppLanguage';
 import { useDataMode } from '@/state/useDataMode';
+import { useUpdateSearch } from '@/state/useUpdateSearch';
 import { useResetFilters, useUrlFilter } from '@/state/useUrlFilter';
 
 const LEVELS = ['all', 'national', 'governorate', 'wilayat'] as const;
@@ -154,7 +155,9 @@ function AreaObservations({ mode, area }: { mode: DataMode; area: RegistryArea }
     return (
       <div role="status" className="rounded-md border border-dashed border-border-strong/50 p-4 text-sm" data-testid="area-no-data">
         <p className="font-semibold"><NoData /></p>
-        <p className="mt-1 text-muted-foreground">{t('pages.geography.noDataExplain', { area: areaName(area, language) })}</p>
+        <p className="mt-1 text-muted-foreground">
+          {t(area.level === 'wilayat' ? 'pages.geography.noWilayatDataExplain' : 'pages.geography.noDataExplain', { area: areaName(area, language) })}
+        </p>
       </div>
     );
   }
@@ -336,11 +339,24 @@ export function GeographyPage() {
   const governorates = areas.filter((a) => a.level === 'governorate');
 
   const [level, setLevel] = useUrlFilter('level', LEVELS, 'all');
-  const [gov, setGov] = useUrlFilter('governorate', ['all', ...governorates.map((g) => g.code)], 'all');
+  // One governorate for the map and the table: none (all of Oman) or one of the eleven.
+  const [gov] = useUrlFilter('governorate', ['all', ...governorates.map((g) => g.code)], 'all');
   const [cov, setCov] = useUrlFilter('coverage', COVERAGE_FILTER, 'all');
-  const [selected, setSelected] = useUrlFilter('area', [NONE, ...areas.map((a) => a.code)], NONE);
-  const { reset, active, count } = useResetFilters(['level', 'governorate', 'coverage']);
-  const [mapLevel, setMapLevel] = useState<MapLevel>('governorate');
+  const [chosen] = useUrlFilter('area', [NONE, ...areas.map((a) => a.code)], NONE);
+  const { reset, active, count } = useResetFilters(['level', 'governorate', 'coverage', 'area']);
+  const update = useUpdateSearch();
+  const focusGov = gov === 'all' ? null : gov;
+  // The chosen governorate's own wilayats (canonical parent in the registry), by name.
+  const govWilayats = useMemo(
+    () => (focusGov ? areas.filter((a) => a.level === 'wilayat' && a.parent_code === focusGov) : [])
+      .sort((a, b) => areaName(a, language).localeCompare(areaName(b, language), language)),
+    [areas, focusGov, language],
+  );
+  // Governorates first; a chosen governorate's wilayats (and only those) after.
+  const mapLevel: MapLevel = focusGov ? 'wilayat' : 'governorate';
+  const shown = useMemo(() => (focusGov ? govWilayats.map((w) => w.code) : null), [focusGov, govWilayats]);
+  // A selection outside the chosen governorate (an old link) is not shown.
+  const selected = chosen !== NONE && focusGov && chosen !== focusGov && !govWilayats.some((w) => w.code === chosen) ? NONE : chosen;
   const [shadeBy, setShadeBy] = useState<'coverage' | 'indicator'>('coverage');
   const [compared, setCompared] = useState<AreaComparison | undefined>(undefined);
   const onCompared = useCallback((result: AreaComparison | undefined) => setCompared(result), []);
@@ -360,7 +376,8 @@ export function GeographyPage() {
       for (const row of compared.rows) {
         const exact = row.status === 'published' && row.value !== null && !row.value_operator;
         const v = exact ? Number(row.value) : null;
-        const share = v !== null && nat ? ` · ${formatDecimal(String((v * 100) / nat), language, 1)}% ${t('omanMap.ofNational')}` : '';
+        const share = v !== null && nat && mapLevel === 'governorate'
+          ? ` · ${formatDecimal(String((v * 100) / nat), language, 1)}% ${t('omanMap.ofNational')}` : '';
         const revision = row.revision_status && row.revision_status in REVISION_STATUS_KEY
           ? t(REVISION_STATUS_KEY[row.revision_status as keyof typeof REVISION_STATUS_KEY]) : null;
         out[row.area] = {
@@ -380,12 +397,12 @@ export function GeographyPage() {
     }
     for (const a of areas) {
       const c = coverage.data?.areas[a.code];
-      if (a.level === mapLevel && c) {
+      if (a.level === mapLevel && c && (!shown || shown.includes(a.code))) {
         out[a.code] = { value: c.values, detail: t('omanMap.coverageDetail', { values: c.values, indicators: c.indicators.length }) };
       }
     }
     return { shades: out, legendTitle: t('omanMap.coverageLegend') };
-  }, [byIndicator, compared, coverage.data, areas, mapLevel, language, t]);
+  }, [byIndicator, compared, coverage.data, areas, mapLevel, shown, language, t]);
   const mapNames = useMemo(() => Object.fromEntries(areas.map((a) => [a.code, areaName(a, language)])), [areas, language]);
 
   if (adapterKind !== 'http') {
@@ -400,7 +417,7 @@ export function GeographyPage() {
   const needle = search.trim().toLowerCase();
   const visible = areas.filter((a) => {
     if (level !== 'all' && a.level !== level) return false;
-    if (gov !== 'all' && a.code !== gov && a.parent_code !== gov) return false;
+    if (focusGov && a.code !== focusGov && a.parent_code !== focusGov) return false;
     // Until coverage has loaded it is unknown, so the coverage filter does not apply yet.
     if (coverage.data) {
       const has = Boolean(coverage.data.areas[a.code]);
@@ -411,16 +428,45 @@ export function GeographyPage() {
     return true;
   });
   const selectedArea = selected === NONE ? undefined : byCode.get(selected);
-  // Indicators that at least one area of the map's level publishes on its own (from coverage).
+  // Indicators that at least one area drawn on the map publishes on its own (from coverage).
   const levelIndicators = [...new Map(
-    areas.filter((a) => a.level === mapLevel).flatMap((a) => coverage.data?.areas[a.code]?.indicators ?? []).map((i) => [i.code, i]),
+    areas.filter((a) => a.level === mapLevel && (!shown || shown.includes(a.code)))
+      .flatMap((a) => coverage.data?.areas[a.code]?.indicators ?? []).map((i) => [i.code, i]),
   ).values()].sort((a, b) => a.code.localeCompare(b.code));
 
+  /** Choosing a governorate (or all of Oman) resets the wilayat and what depended on it. */
+  const chooseGovernorate = (code: string) => {
+    update((p) => {
+      if (code === 'all') {
+        p.delete('governorate');
+        p.delete('area');
+      } else {
+        p.set('governorate', code);
+        p.set('area', code);
+      }
+    }, { replace: true });
+    setCompared(undefined);
+  };
+  /** A wilayat of the chosen governorate, or '' for the whole governorate. */
+  const chooseWilayat = (code: string) => {
+    if (!focusGov) return;
+    update((p) => { p.set('area', code || focusGov); }, { replace: true });
+  };
+  /** An area chosen on the map or in the table: its governorate becomes the map's focus. */
   const select = (code: string) => {
-    setSelected(code);
+    const area = byCode.get(code);
+    const parent = area?.level === 'wilayat' ? area.parent_code : area?.level === 'governorate' ? code : null;
+    update((p) => {
+      if (parent) p.set('governorate', parent);
+      else p.delete('governorate');
+      p.set('area', code);
+    }, { replace: true });
+    if (parent !== focusGov) setCompared(undefined);
     // Move focus to the details so keyboard and screen-reader users land on the result.
     window.requestAnimationFrame(() => detailRef.current?.focus());
   };
+  const focusArea = focusGov ? byCode.get(focusGov) : undefined;
+  const sortedGovernorates = [...governorates].sort((a, b) => areaName(a, language).localeCompare(areaName(b, language), language));
 
   return (
     <>
@@ -437,6 +483,28 @@ export function GeographyPage() {
 
           <section aria-labelledby="map-heading" className="flex flex-col gap-3">
             <h2 id="map-heading" className="text-xl font-semibold">{t('pages.geography.mapHeading')}</h2>
+            <div className="flex flex-wrap items-end gap-3" data-testid="map-area-filter">
+              <SelectField className="w-full sm:w-64" label={t('pages.geography.governorate')} value={gov} onValueChange={chooseGovernorate}
+                options={[{ value: 'all', label: t('pages.geography.allGovernorates') },
+                  ...sortedGovernorates.map((g) => ({ value: g.code, label: areaName(g, language) }))]}
+                data-testid="map-governorate" />
+              <SelectField className="w-full sm:w-64" label={t('pages.geography.wilayat')} value={focusGov && selected !== focusGov && selected !== NONE ? selected : ''}
+                onValueChange={chooseWilayat} disabled={!focusGov}
+                options={focusGov
+                  ? [{ value: '', label: t('pages.geography.wholeGovernorate') }, ...govWilayats.map((w) => ({ value: w.code, label: areaName(w, language) }))]
+                  : [{ value: '', label: t('pages.geography.chooseGovernorateFirst') }]}
+                data-testid="map-wilayat" />
+              {focusGov ? (
+                <Button variant="outline" onClick={() => chooseGovernorate('all')} data-testid="map-all-governorates">
+                  <Undo2 aria-hidden="true" />{t('pages.geography.allGovernorates')}
+                </Button>
+              ) : null}
+            </div>
+            <p className="text-sm text-muted-foreground" role="status" data-testid="map-focus-status">
+              {focusArea
+                ? t('pages.geography.focusStatus', { governorate: areaName(focusArea, language), count: govWilayats.length })
+                : t('pages.geography.nationalStatus', { count: governorates.length })}
+            </p>
             <div className="flex flex-wrap items-end gap-3">
               <Segmented label={t('dataMode.label')} value={mode} onChange={setMode} testId="map-data-mode" className="w-full max-w-sm"
                 options={[{ value: 'verified_source', label: t('dataMode.verified_source') }, { value: 'synthetic', label: t('dataMode.synthetic') }]} />
@@ -446,9 +514,9 @@ export function GeographyPage() {
                   options={[{ value: 'coverage', label: t('omanMap.shadeCoverage') }, { value: 'indicator', label: t('omanMap.shadeIndicator') }]} />
               ) : null}
             </div>
-            <OmanMap label={t('pages.geography.mapLabel')} level={mapLevel} names={mapNames} shades={shades} legendTitle={legendTitle}
-              onLevelChange={setMapLevel}
-              selected={selected === NONE ? null : selected} onSelect={select} />
+            <OmanMap label={t('pages.geography.mapLabel')} level={mapLevel} levels={[mapLevel]} names={mapNames} shades={shades} legendTitle={legendTitle}
+              show={shown} focus={focusGov}
+              selected={selected === NONE || selected === focusGov ? null : selected} onSelect={select} />
             <ul className="flex max-w-4xl list-disc flex-col gap-1 ps-5 text-xs text-muted-foreground" data-testid="map-notes">
               <li>{language === 'ar' ? registry.data.geometry.ar : registry.data.geometry.en}</li>
               <li>{t('pages.geography.mapBoundariesNote')}</li>
@@ -458,8 +526,10 @@ export function GeographyPage() {
           </section>
 
           <section aria-labelledby="compare-heading" className="flex flex-col gap-3">
-            <h2 id="compare-heading" className="text-xl font-semibold">{mapLevel === 'wilayat' ? t('omanMap.compareWilayats') : t('compare.title')}</h2>
-            <GovernorateComparison mode={mode} level={mapLevel} indicators={levelIndicators} onResult={onCompared} />
+            <h2 id="compare-heading" className="text-xl font-semibold">
+              {focusArea ? t('omanMap.compareWilayatsOf', { governorate: areaName(focusArea, language) }) : t('compare.title')}
+            </h2>
+            <GovernorateComparison key={focusGov ?? 'all'} mode={mode} level={mapLevel} within={shown} indicators={levelIndicators} onResult={onCompared} />
           </section>
 
           <section aria-labelledby="areas-heading" className="flex flex-col gap-4">
@@ -468,8 +538,8 @@ export function GeographyPage() {
               <SelectField label={t('pages.geography.level')} value={level} onValueChange={(v) => setLevel(v as (typeof LEVELS)[number])}
                 options={LEVELS.map((l) => ({ value: l, label: l === 'all' ? t('filters.all') : t(`pages.geography.levels.${l}`) }))}
                 data-testid="filter-level" />
-              <SelectField label={t('pages.geography.governorate')} value={gov} onValueChange={setGov}
-                options={[{ value: 'all', label: t('filters.all') }, ...governorates.map((g) => ({ value: g.code, label: areaName(g, language) }))]}
+              <SelectField label={t('pages.geography.governorate')} value={gov} onValueChange={chooseGovernorate}
+                options={[{ value: 'all', label: t('filters.all') }, ...sortedGovernorates.map((g) => ({ value: g.code, label: areaName(g, language) }))]}
                 data-testid="filter-governorate" />
               <SelectField label={t('pages.geography.statisticalColumn')} value={cov} onValueChange={(v) => setCov(v as (typeof COVERAGE_FILTER)[number])}
                 options={COVERAGE_FILTER.map((c) => ({ value: c, label: t(`pages.geography.coverageFilter.${c}`) }))}
@@ -484,7 +554,8 @@ export function GeographyPage() {
             <div ref={detailRef} tabIndex={-1} className="outline-none" aria-live="polite">
               {selectedArea ? (
                 <SelectedArea area={selectedArea} parent={selectedArea.parent_code ? byCode.get(selectedArea.parent_code) : undefined}
-                  registry={registry.data} mode={mode} onClear={() => setSelected(NONE)} />
+                  registry={registry.data} mode={mode}
+                  onClear={() => update((p) => { p.delete('area'); p.delete('governorate'); }, { replace: true })} />
               ) : (
                 <p className="text-sm text-muted-foreground">{t('pages.geography.selectHint')}</p>
               )}

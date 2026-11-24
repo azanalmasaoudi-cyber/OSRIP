@@ -388,6 +388,12 @@ const structuredSchema = z.object({
   intent: z.enum(['study', 'forecast', 'scenario', 'report']).optional(),
   // For a report: what it covers (the sector's data, or a study, forecast or scenario).
   report_type: z.enum(['sector', 'study', 'forecast', 'scenario']).optional(),
+  // Objectives before recommendations: asked for (none was named) or known (named in the request).
+  objectives: z.object({
+    status: z.enum(['ask', 'known']),
+    known: z.array(z.object({ code: z.string(), name: bilingual })),
+    options: z.array(z.object({ code: z.string(), name: bilingual })),
+  }).optional(),
   // The report itself (tables, calculations, review cards and sources from the database).
   report: reportBlock.optional(),
   // The forecasting engine's result: estimates with intervals and the history they continue,

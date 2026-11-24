@@ -167,7 +167,7 @@ test('a sector lists this session\'s studies; one opens again under its reply, a
   // Each reply keeps its own study: there is no study picker under a reply.
   await expect(page.getByTestId('study-history')).toHaveCount(0);
 
-  // The sector's Analysis lists both; the older one opens under its reply on Al Mulhim's page.
+  // The sector's guided analysis lists both on its first step; the older one opens under its reply.
   await page.goto('/energy/electricity?mode=synthetic');
   const recent = page.getByTestId('recent-studies').getByTestId('recent-study-open');
   await expect(recent).toHaveCount(2);

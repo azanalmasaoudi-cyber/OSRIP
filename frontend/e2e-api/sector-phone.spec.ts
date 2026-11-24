@@ -14,12 +14,12 @@ const sideways = (page: import('@playwright/test').Page) =>
 test('phone: the sector tabs fit, each view shows on its own, and nothing scrolls sideways', async ({ page }) => {
   await page.goto('/energy/electricity?mode=synthetic');
   const tabs = page.getByTestId('sector-tabs');
-  await expect(tabs.getByRole('tab')).toHaveText(['Data and indicators', 'Analysis', 'Tables and charts']);
-  await expect(page.getByTestId('sector-analysis')).toBeVisible();
+  await expect(tabs.getByRole('tab')).toHaveText(['Data and indicators', 'Guided analysis', 'Tables and charts']);
+  await expect(page.getByTestId('sector-guide')).toBeVisible();
   expect(await sideways(page)).toBeLessThanOrEqual(0);
   await tabs.locator('[data-tab="data"]').click();
   await expect(page.getByTestId('indicator-card').first()).toBeVisible();
-  await expect(page.getByTestId('sector-analysis')).toHaveCount(0);
+  await expect(page.getByTestId('sector-guide')).toHaveCount(0);
   expect(await sideways(page)).toBeLessThanOrEqual(0);
   await tabs.locator('[data-tab="charts"]').click();
   await expect(page.getByTestId('sector-form')).toBeVisible();

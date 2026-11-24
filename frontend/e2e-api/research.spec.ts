@@ -30,7 +30,7 @@ test('Analyze mode shows checked recommendation cards, inline citations, and sav
   await expect(page.getByTestId('assistant-mode-hint')).toContainText('recommendation cards');
   await closeDrawer(page);
   await expect(page.getByTestId('chat-mode-chip')).toContainText('Data analysis');
-  await page.getByTestId('assistant-input').fill('What do you recommend for electricity generation?');
+  await page.getByTestId('assistant-input').fill('What do you recommend for electricity generation to reduce shortages?');
   await page.getByTestId('assistant-send').click();
 
   const reply = page.getByTestId('assistant-message').last();
@@ -52,7 +52,7 @@ test('Analyze mode shows checked recommendation cards, inline citations, and sav
   await reply.getByTestId('research-saved').getByRole('link').click();
   await expect(page).toHaveURL(/\/library\?.*tab=saved/);
   const item = page.getByTestId('saved-item').first();
-  await expect(item).toContainText('What do you recommend for electricity generation?');
+  await expect(item).toContainText('What do you recommend for electricity generation to reduce shortages?');
   const [download] = await Promise.all([page.waitForEvent('download'), item.getByTestId('brief-html').click()]);
   expect(download.suggestedFilename()).toMatch(/^osrip-brief-.+\.html$/);
 });

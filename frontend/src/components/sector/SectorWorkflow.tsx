@@ -56,10 +56,10 @@ import { usePreservedSearch } from '@/state/usePreservedSearch';
  * results; from 1792 px (e.g. 4K) a third column holds the AI insights and the sources.
  */
 
-const NO_CHOICE = '';
+export const NO_CHOICE = '';
 /** Food security's apparent availability needs a stock-change assumption (calculations only). */
-const STOCK_OPTIONS = ['assumed_zero', 'unknown', 'known'] as const;
-type StockAssumption = (typeof STOCK_OPTIONS)[number];
+export const STOCK_OPTIONS = ['assumed_zero', 'unknown', 'known'] as const;
+export type StockAssumption = (typeof STOCK_OPTIONS)[number];
 
 export function breakdownKey(s: AvailabilitySeries): string {
   return [s.commodity?.code ?? '', s.partner?.code ?? '', s.flow ?? ''].join('|');
@@ -131,7 +131,7 @@ export function resolve(input: Partial<SectorSelection> | null, indicators: read
   };
 }
 
-function breakdownName(s: AvailabilitySeries, language: AppLanguage, t: TFunction): string {
+export function breakdownName(s: AvailabilitySeries, language: AppLanguage, t: TFunction): string {
   const parts = [
     s.partner ? s.partner.name[language] : s.flow && !s.commodity ? t('sectorFlow.breakdownTotal') : null,
     s.commodity ? s.commodity.name[language] : null,
@@ -154,7 +154,7 @@ function Step({ n, title, children, testId }: { n: number; title: string; childr
 }
 
 /** A card in the results or the insights column. */
-function Panel({ id, title, icon, children, className, testId, action }: {
+export function Panel({ id, title, icon, children, className, testId, action }: {
   id: string; title: string; icon?: ReactNode; children: ReactNode; className?: string; testId?: string; action?: ReactNode;
 }) {
   return (
@@ -507,7 +507,7 @@ function Figure({ label, number, unit, extra, text, note, testId }: {
   );
 }
 
-function Summary({ timeline, from }: { timeline: Timeline; from: string }) {
+export function Summary({ timeline, from }: { timeline: Timeline; from: string }) {
   const { t } = useTranslation();
   const language = useAppLanguage();
   const s: TimelineSummary | undefined = timeline.summary;

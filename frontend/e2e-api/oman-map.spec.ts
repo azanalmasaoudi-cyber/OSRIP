@@ -24,6 +24,14 @@ async function offline(page: Page): Promise<string[]> {
   return external;
 }
 
+/** The codes of the areas the map draws now (from MapLibre's rendered features). */
+async function drawn(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const m = (document.querySelector('[data-testid="oman-map-canvas"]') as HTMLElement & { osripMap: import('maplibre-gl').Map }).osripMap;
+    return [...new Set(m.queryRenderedFeatures({ layers: ['osrip-fill'] }).map((f) => String(f.properties.code)))];
+  });
+}
+
 /** Opens the Geography page at the map; false when this browser cannot draw WebGL maps. */
 async function openMap(page: Page, query = ''): Promise<boolean> {
   await page.goto(`/geography${query}`);
@@ -86,7 +94,7 @@ test('an unreachable basemap falls back to the boundaries on a plain background'
   expect(external.filter((u) => !u.startsWith('https://tiles.openfreemap.org/fonts/'))).toEqual([]);
 });
 
-test('with a basemap: views, relief and 3D, hover, selection and the wilayat level', async ({ page }) => {
+test('with a basemap: views, relief and 3D, hover, and a governorate with only its own wilayats', async ({ page }) => {
   const external = await offline(page);
   const warnings: string[] = [];
   page.on('console', (m) => { if (m.type() === 'warning') warnings.push(m.text()); });
@@ -124,17 +132,60 @@ test('with a basemap: views, relief and 3D, hover, selection and the wilayat lev
     await expect(page.getByTestId('map-tooltip')).toBeVisible({ timeout: 1000 });
   }).toPass();
   await expect(page.getByTestId('map-tooltip')).toContainText(/No data|published/);
+  // At first the eleven governorates only: no wilayat is drawn, labelled or clickable.
+  await expect(map).toHaveAttribute('data-level', 'governorate');
+  expect(await drawn(page)).toHaveLength(11);
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await expect(page).toHaveURL(/area=OM-/);
   await expect(page.getByTestId('selected-area')).toBeVisible();
-
-  // Wilayats: the comparison follows the level, and nothing is estimated from a parent's total.
-  await page.getByTestId('oman-map-canvas').scrollIntoViewIfNeeded();
-  await page.getByTestId('map-level').getByText('Wilayat').click();
+  // A governorate clicked on the map becomes the focus: its own wilayats, and only those.
   await expect(map).toHaveAttribute('data-level', 'wilayat');
+  const clicked = (await map.getAttribute('data-focus'))!;
+  expect(clicked).toMatch(/^OM-[A-Z]{2}$/);
+  for (const code of await drawn(page)) expect(code.startsWith(`${clicked}-`)).toBe(true);
+
+  // Dhofar: its ten wilayats on the map (fill, outlines, labels, click targets) and in the list.
+  await page.getByTestId('map-governorate').selectOption('OM-ZU');
+  await expect(map).toHaveAttribute('data-focus', 'OM-ZU');
+  await expect(map).toHaveAttribute('data-shown', '10');
+  await expect(page).toHaveURL(/governorate=OM-ZU/);
+  const filters = await page.evaluate(() => {
+    const m = (document.querySelector('[data-testid="oman-map-canvas"]') as HTMLElement & { osripMap: import('maplibre-gl').Map }).osripMap;
+    return { fill: m.getFilter('osrip-fill'), labels: m.getFilter('osrip-labels'), focus: m.getFilter('osrip-focus') };
+  });
+  const listed = (filters.fill as [string, unknown, [string, string[]]])[2][1];
+  expect(listed).toHaveLength(10);
+  expect(listed.every((c) => c.startsWith('OM-ZU-'))).toBe(true);
+  expect(JSON.stringify(filters.labels)).toContain('"OM-ZU-01"');
+  expect(JSON.stringify(filters.labels)).not.toContain('"OM-MA-');
+  expect(filters.focus).toEqual(['==', ['get', 'code'], 'OM-ZU']);
+  await expect.poll(async () => (await drawn(page)).every((c) => c.startsWith('OM-ZU-'))).toBe(true);
+  const wilayats = page.getByTestId('map-wilayat').locator('option');
+  await expect(wilayats).toHaveCount(11); // the whole governorate and its ten wilayats
+  await expect(page.getByTestId('map-focus-status')).toHaveText('Showing Dhofar and its 10 wilayats only.');
+  await expect(page.locator('#compare-heading')).toHaveText('Compare the wilayats of Dhofar');
   await expect(page.getByTestId('governorate-comparison')).toHaveAttribute('data-level', 'wilayat');
-  await expect(page.locator('#compare-heading')).toHaveText('Compare wilayats');
-  await expect(page.getByTestId('governorate-comparison')).toContainText('never estimated from governorate or national totals');
+  // Only Dhofar's wilayats in the table below the map.
+  const rows = page.getByTestId('area-table').locator('tbody tr');
+  await expect(rows).toHaveCount(11);
+  for (const code of await rows.evaluateAll((r) => r.map((x) => (x as HTMLElement).dataset.code ?? ''))) expect(code.startsWith('OM-ZU')).toBe(true);
+
+  // A wilayat: highlighted alone, with its own data or "No published wilayat data".
+  await page.getByTestId('map-wilayat').selectOption('OM-ZU-01');
+  await expect(page).toHaveURL(/area=OM-ZU-01/);
+  await expect(page.getByTestId('selected-area')).toHaveAttribute('data-area', 'OM-ZU-01');
+  await expect(page.getByTestId('area-no-data').or(page.getByTestId('area-observations'))).toBeVisible();
+
+  // Another governorate resets the wilayat and what depended on it.
+  await page.getByTestId('map-governorate').selectOption('OM-MA');
+  await expect(page.getByTestId('map-wilayat')).toHaveValue('');
+  await expect(page).not.toHaveURL(/area=OM-ZU/);
+  await expect(map).toHaveAttribute('data-shown', '6');
+  await expect(page.getByTestId('selected-area')).toHaveAttribute('data-area', 'OM-MA');
+  // Back to all governorates.
+  await page.getByTestId('map-all-governorates').click();
+  await expect(map).toHaveAttribute('data-level', 'governorate');
+  await expect(map).not.toHaveAttribute('data-focus', /.+/);
 
   // The data mode can be switched on the map itself.
   await page.getByTestId('map-data-mode').getByText('Synthetic').click();

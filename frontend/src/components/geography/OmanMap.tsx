@@ -1,5 +1,6 @@
 import type {
-  ControlPosition, DataDrivenPropertyValueSpecification, GeoJSONSource, IControl, Map as MapLibreMap, MapLayerMouseEvent, StyleSpecification,
+  ControlPosition, DataDrivenPropertyValueSpecification, FilterSpecification, GeoJSONSource, IControl, Map as MapLibreMap, MapLayerMouseEvent,
+  StyleSpecification,
 } from 'maplibre-gl';
 import { Box, Layers, LocateFixed, MapPinOff, Mountain, Satellite } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -27,6 +28,10 @@ import { cn } from '@/lib/utils';
  * * Values: areas without a published value are "No data", never coloured as zero.
  * * Cost: the map is created only when it scrolls into view, tiles are never re-requested when
  *   they expire, 3D is off until asked for, and a failing provider hands over to the next.
+ * * Focus: with `show`, only those areas of the level are drawn: their fill, outlines, hover and
+ *   selection, labels and click targets (one filter for every layer), so a chosen governorate
+ *   shows its own wilayats and nothing else. `focus` outlines that governorate and fits the map
+ *   to it.
  * The table on the page remains the accessible, complete view.
  */
 
@@ -112,16 +117,27 @@ function bboxes(collection: { features: { id?: string; properties?: { code?: str
   return out;
 }
 
-export function OmanMap({ label, level, onLevelChange, shades, names, legendTitle, selected, onSelect, levels = ['governorate', 'wilayat'] }: {
+/** The MapLibre filter that keeps only `show`'s areas (every area when there is no list). */
+function shownFilter(show: readonly string[] | null | undefined): FilterSpecification {
+  return (show ? ['in', ['get', 'code'], ['literal', [...show]]] : true) as FilterSpecification;
+}
+
+export function OmanMap({
+  label, level, onLevelChange, shades, names, legendTitle, selected, onSelect, levels = ['governorate', 'wilayat'], show = null, focus = null,
+}: {
   label: string;
   level: MapLevel;
-  onLevelChange: (level: MapLevel) => void;
+  onLevelChange?: (level: MapLevel) => void;
   shades: Readonly<Record<string, Shade>>;
   names: Readonly<Record<string, string>>;
   legendTitle: string;
   selected: string | null;
   onSelect: (code: string) => void;
   levels?: readonly MapLevel[];
+  /** Codes of the level to draw (the rest are not drawn, labelled or clickable); all when null. */
+  show?: readonly string[] | null;
+  /** A governorate to outline and fit the map to. */
+  focus?: string | null;
 }) {
   const { t } = useTranslation();
   const language = useAppLanguage();
@@ -159,17 +175,22 @@ export function OmanMap({ label, level, onLevelChange, shades, names, legendTitl
     providerRef.current = provider;
   }, [provider]);
 
-  const values = useMemo(() => Object.values(shades).map((s) => s.value).filter((v): v is number => v !== null), [shades]);
+  const showKey = show ? show.join(',') : null;
+  const showList = useMemo(() => (showKey === null ? null : showKey.split(',').filter(Boolean)), [showKey]);
+  // Only the areas drawn take part in the shading and the legend.
+  const values = useMemo(() => Object.entries(shades)
+    .filter(([code]) => !showList || showList.includes(code))
+    .map(([, s]) => s.value).filter((v): v is number => v !== null), [shades, showList]);
   const cuts = useMemo(() => breaks(values), [values]);
   const colour = useMemo((): DataDrivenPropertyValueSpecification<string> => {
     const pairs: string[] = [];
     for (const [code, s] of Object.entries(shades)) {
-      if (s.value !== null) pairs.push(code, RAMP[classOf(s.value, cuts)] ?? NO_DATA);
+      if (s.value !== null && (!showList || showList.includes(code))) pairs.push(code, RAMP[classOf(s.value, cuts)] ?? NO_DATA);
     }
     return pairs.length
       ? (['match', ['get', 'code'], ...pairs, NO_DATA] as unknown as DataDrivenPropertyValueSpecification<string>)
       : NO_DATA;
-  }, [shades, cuts]);
+  }, [shades, cuts, showList]);
 
   // Lazy: nothing is requested until the map is on screen.
   useEffect(() => {
@@ -226,6 +247,8 @@ export function OmanMap({ label, level, onLevelChange, shades, names, legendTitl
           pitchWithRotate: false,
         });
         mapRef.current = map;
+        // The browser tests read the drawn filters from the map itself (development builds only).
+        if (import.meta.env.DEV) Object.assign(container.current, { osripMap: map });
         nav.current = { control: new maplibregl.NavigationControl({ showCompass: false }), corner: null };
         map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right');
         let styled = false;
@@ -325,6 +348,9 @@ export function OmanMap({ label, level, onLevelChange, shades, names, legendTitl
         map.addLayer({ id: 'osrip-line', type: 'line', source: SOURCE, paint: { 'line-color': dark ? '#d9cfc4' : '#5d4636', 'line-width': 0.8, 'line-opacity': 0.8 } });
         map.addLayer({ id: 'osrip-hover', type: 'line', source: SOURCE, filter: ['==', ['get', 'code'], ''], paint: { 'line-color': dark ? '#f5f2ed' : '#292825', 'line-width': 2 } });
         map.addLayer({ id: 'osrip-selected', type: 'line', source: SOURCE, filter: ['==', ['get', 'code'], ''], paint: { 'line-color': dark ? '#f2a875' : '#8a4523', 'line-width': 3 } });
+        // The chosen governorate's own outline around its wilayats.
+        map.addSource('osrip-focus', { type: 'geojson', data: FILES.governorate, promoteId: 'code' });
+        map.addLayer({ id: 'osrip-focus', type: 'line', source: 'osrip-focus', filter: ['==', ['get', 'code'], ''], paint: { 'line-color': dark ? '#f2a875' : '#8a4523', 'line-width': 2.2 } });
         map.addSource('osrip-labels', { type: 'geojson', data: LABELS_FILE });
         map.addLayer({
           id: 'osrip-labels', type: 'symbol', source: 'osrip-labels',
@@ -350,9 +376,15 @@ export function OmanMap({ label, level, onLevelChange, shades, names, legendTitl
         });
       }
       map.setPaintProperty('osrip-fill', 'fill-color', colour);
-      map.setFilter('osrip-labels', ['==', ['get', 'level'], level]);
+      // One filter for everything drawn from the areas: the fill (and so the click and hover
+      // targets), the outlines, the labels and the selection.
+      const only = shownFilter(showList);
+      map.setFilter('osrip-fill', only);
+      map.setFilter('osrip-line', only);
+      map.setFilter('osrip-labels', ['all', ['==', ['get', 'level'], level], only] as FilterSpecification);
       map.setLayoutProperty('osrip-labels', 'text-field', ['get', language === 'ar' ? 'name_ar' : 'name_en']);
-      map.setFilter('osrip-selected', ['==', ['get', 'code'], selected ?? '']);
+      map.setFilter('osrip-selected', ['all', only, ['==', ['get', 'code'], selected ?? '']] as FilterSpecification);
+      map.setFilter('osrip-focus', ['==', ['get', 'code'], focus ?? '']);
       // 3D only on request: the terrain source adds tile requests and GPU work.
       if (threeD && dem) {
         if (!map.getSource(TERRAIN)) map.addSource(TERRAIN, dem);
@@ -370,14 +402,20 @@ export function OmanMap({ label, level, onLevelChange, shades, names, legendTitl
     return () => {
       drawRef.current = null;
     };
-  }, [state, level, colour, selected, language, threeD, provider, view, theme]);
+  }, [state, level, colour, selected, language, threeD, provider, view, theme, showList, focus]);
 
   // The hovered area's outline (cheap: a filter change only).
   useEffect(() => {
     const map = mapRef.current;
     if (!map || state !== 'ready' || !map.getLayer('osrip-hover')) return;
-    map.setFilter('osrip-hover', ['==', ['get', 'code'], hover?.code ?? '']);
-  }, [hover, state]);
+    map.setFilter('osrip-hover', ['all', shownFilter(showList), ['==', ['get', 'code'], hover?.code ?? '']] as FilterSpecification);
+  }, [hover, state, showList]);
+  // A hovered area that is no longer drawn loses its tooltip.
+  const [shownBefore, setShownBefore] = useState(showKey);
+  if (shownBefore !== showKey) {
+    setShownBefore(showKey);
+    if (hover && showList && !showList.includes(hover.code)) setHover(null);
+  }
 
   // Tilt in and out with 3D; fly to a selected area.
   useEffect(() => {
@@ -385,12 +423,16 @@ export function OmanMap({ label, level, onLevelChange, shades, names, legendTitl
     if (!map || state !== 'ready') return;
     map.easeTo({ pitch: threeD ? 55 : 0, bearing: threeD ? map.getBearing() : 0, duration: reducedMotion() ? 0 : 700 });
   }, [threeD, state]);
+  // Fit to the focused governorate (all of Oman when the focus is cleared), or to a selected area
+  // when nothing is focused.
   useEffect(() => {
     const map = mapRef.current;
-    const box = selected ? boxes[selected] : undefined;
-    if (!map || state !== 'ready' || !box) return;
-    map.fitBounds([[box[0], box[1]], [box[2], box[3]]], { padding: 48, maxZoom: 9, duration: reducedMotion() ? 0 : 800 });
-  }, [selected, boxes, state]);
+    const target = focus ?? selected;
+    const box = target ? boxes[target] : undefined;
+    if (!map || state !== 'ready') return;
+    if (box) map.fitBounds([[box[0], box[1]], [box[2], box[3]]], { padding: 40, maxZoom: 10, duration: reducedMotion() ? 0 : 800 });
+    else if (!target) map.fitBounds(OMAN_BOUNDS, { padding: 16, duration: reducedMotion() ? 0 : 700 });
+  }, [focus, selected, boxes, state]);
 
   const chooseView = (next: MapView) => {
     setChosenView(next);
@@ -400,7 +442,11 @@ export function OmanMap({ label, level, onLevelChange, shades, names, legendTitl
       // Storage blocked: the choice lasts for this page only.
     }
   };
-  const resetView = () => mapRef.current?.fitBounds(OMAN_BOUNDS, { padding: 16, pitch: threeD ? 55 : 0, bearing: 0, duration: reducedMotion() ? 0 : 700 });
+  const resetView = () => {
+    const box = focus ? boxes[focus] : undefined;
+    mapRef.current?.fitBounds(box ? [[box[0], box[1]], [box[2], box[3]]] : OMAN_BOUNDS,
+      { padding: box ? 40 : 16, pitch: threeD ? 55 : 0, bearing: 0, duration: reducedMotion() ? 0 : 700 });
+  };
 
   if (state === 'unavailable') {
     return (
@@ -428,9 +474,10 @@ export function OmanMap({ label, level, onLevelChange, shades, names, legendTitl
   const hasDem = provider.dem() !== null;
 
   return (
-    <div className="flex flex-col gap-3" data-testid="oman-map" data-level={level} data-provider={provider.id} data-view={view} data-3d={threeD || undefined}>
+    <div className="flex flex-col gap-3" data-testid="oman-map" data-level={level} data-provider={provider.id} data-view={view} data-3d={threeD || undefined}
+      data-focus={focus ?? undefined} data-shown={showList ? showList.length : undefined}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {levels.length > 1 ? (
+        {levels.length > 1 && onLevelChange ? (
           <Segmented label={t('omanMap.level')} value={level} onChange={onLevelChange} testId="map-level" className="w-80 max-w-full"
             options={levels.map((l) => ({ value: l, label: t(`omanMap.levels.${l}`) }))} />
         ) : <span />}

@@ -6,7 +6,7 @@ import { useAvailability, VIEWS } from '@/api/series';
 import type { Sector } from '@/components/brand/SectorIllustration';
 import { SectorArtwork } from '@/components/brand/SectorArtwork';
 import { CommodityRegistry } from '@/components/common/CommodityRegistry';
-import { SectorAnalysis } from '@/components/sector/SectorAnalysis';
+import { SectorGuide } from '@/components/sector/SectorGuide';
 import { SectorIndicators } from '@/components/sector/SectorIndicators';
 import { SectorNav } from '@/components/sector/SectorNav';
 import { resolve, sortIndicators, SectorWorkflow } from '@/components/sector/SectorWorkflow';
@@ -28,8 +28,8 @@ type Tab = (typeof TABS)[number];
  * sharing one selection (indicator, area and period view, kept per sector):
  *
  * - Data and indicators: every published indicator with its latest value and sources.
- * - Analysis (the default): the server's validated findings for the selection, the governorates
- *   compared, Al Mulhim for a study, forecast or scenario, and the axis's decision brief.
+ * - Analysis (the default): the guided analysis (components/sector/SectorGuide), one step at a
+ *   time: selection, results, analysis, objectives, recommendations.
  * - Tables and charts: the period-first workflow (components/sector/SectorWorkflow). Results
  *   appear only after "Show results"; a chart only after "Show chart".
  *
@@ -102,7 +102,7 @@ function SectorPage({ section, page, image, registry = false }: {
       ) : null}
       {tab === 'analysis' ? (
         <div {...tabPanelProps('sector', 'analysis', true)} className="outline-none">
-          <SectorAnalysis section={section} onOpenCharts={() => setTab('charts')} />
+          <SectorGuide section={section} title={title} />
         </div>
       ) : null}
       {tab === 'charts' ? (
