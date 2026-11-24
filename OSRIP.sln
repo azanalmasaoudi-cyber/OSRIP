@@ -115,6 +115,16 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2026-11", "2026-11", "{FBF6
 		docs\data-imports\2026-11\README.md = docs\data-imports\2026-11\README.md
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2026-11-governorates", "2026-11-governorates", "{19A0C095-CB48-5BAF-AE71-393C62D5AC89}"
+	ProjectSection(SolutionItems) = preProject
+		docs\data-imports\2026-11-governorates\moc-active-commercial-records-2025.csv = docs\data-imports\2026-11-governorates\moc-active-commercial-records-2025.csv
+		docs\data-imports\2026-11-governorates\moc-active-commercial-records-2025.xlsx = docs\data-imports\2026-11-governorates\moc-active-commercial-records-2025.xlsx
+		docs\data-imports\2026-11-governorates\ncsi-msb-2026-11-ytd.csv = docs\data-imports\2026-11-governorates\ncsi-msb-2026-11-ytd.csv
+		docs\data-imports\2026-11-governorates\ncsi-yearbook-2026-governorates-2025.csv = docs\data-imports\2026-11-governorates\ncsi-yearbook-2026-governorates-2025.csv
+		docs\data-imports\2026-11-governorates\OSRIP_Oman_11_Governorates_63_Wilayats_Official_Data_2026.xlsx = docs\data-imports\2026-11-governorates\OSRIP_Oman_11_Governorates_63_Wilayats_Official_Data_2026.xlsx
+		docs\data-imports\2026-11-governorates\README.md = docs\data-imports\2026-11-governorates\README.md
+	EndProjectSection
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2026-11-wilayat", "2026-11-wilayat", "{5D083E2C-63FA-5F04-9DDF-963CC607AE12}"
 	ProjectSection(SolutionItems) = preProject
 		docs\data-imports\2026-11-wilayat\moc-crs-wusta-2026q2.csv = docs\data-imports\2026-11-wilayat\moc-crs-wusta-2026q2.csv
@@ -376,6 +386,7 @@ Global
 		{EEDDB7A6-C2B2-5952-86EC-8463417DCABF} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
 		{E66CA9A1-491C-5AD2-B652-B3961587EB5D} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
 		{FBF666F4-2ACB-5270-AD5A-68B43F76FF01} = {E66CA9A1-491C-5AD2-B652-B3961587EB5D}
+		{19A0C095-CB48-5BAF-AE71-393C62D5AC89} = {E66CA9A1-491C-5AD2-B652-B3961587EB5D}
 		{5D083E2C-63FA-5F04-9DDF-963CC607AE12} = {E66CA9A1-491C-5AD2-B652-B3961587EB5D}
 		{5F4E4F17-9349-5ECE-AD7A-EB60F6948C39} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}
 		{30029E82-3C33-5B85-8CA1-CA87511FA6C7} = {951A985D-DAE0-5C48-A88E-B424B9B76D23}

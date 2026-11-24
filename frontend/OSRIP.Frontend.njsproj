@@ -101,6 +101,7 @@
     <TypeScriptCompile Include="e2e-api\interface.spec.ts" />
     <TypeScriptCompile Include="e2e-api\intro-clips.spec.ts" />
     <TypeScriptCompile Include="e2e-api\journey.spec.ts" />
+    <TypeScriptCompile Include="e2e-api\mulhim-objectives.spec.ts" />
     <TypeScriptCompile Include="e2e-api\mulhim-reports.spec.ts" />
     <TypeScriptCompile Include="e2e-api\mulhim-results.spec.ts" />
     <TypeScriptCompile Include="e2e-api\mulhim.spec.ts" />
@@ -122,6 +123,7 @@
     <TypeScriptCompile Include="e2e-api\voice-gender.spec.ts" />
     <TypeScriptCompile Include="e2e-api\welcome-sign-in.spec.ts" />
     <TypeScriptCompile Include="e2e-api\workflow.spec.ts" />
+    <TypeScriptCompile Include="e2e-api\zz-guide-places.spec.ts" />
     <TypeScriptCompile Include="e2e-api\zz-mixed-frequency.spec.ts" />
     <TypeScriptCompile Include="e2e-api\zzz-forecast-run.spec.ts" />
     <TypeScriptCompile Include="e2e-demo\integrated.demo.spec.ts" />
@@ -144,6 +146,7 @@
     <TypeScriptCompile Include="src\api\decision.ts" />
     <TypeScriptCompile Include="src\api\forecasting.ts" />
     <TypeScriptCompile Include="src\api\geography.ts" />
+    <TypeScriptCompile Include="src\api\guidance.ts" />
     <TypeScriptCompile Include="src\api\httpAdapter.ts" />
     <TypeScriptCompile Include="src\api\imports.ts" />
     <TypeScriptCompile Include="src\api\index.ts" />
@@ -183,6 +186,7 @@
     <TypeScriptCompile Include="src\components\assistant\MulhimPanels.tsx" />
     <TypeScriptCompile Include="src\components\assistant\persona.tsx" />
     <TypeScriptCompile Include="src\components\assistant\PersonaImage.tsx" />
+    <TypeScriptCompile Include="src\components\assistant\ReplyObjectives.tsx" />
     <TypeScriptCompile Include="src\components\assistant\ReplyReport.tsx" />
     <TypeScriptCompile Include="src\components\assistant\ReplyResults.tsx" />
     <TypeScriptCompile Include="src\components\assistant\ResearchBriefBuilder.tsx" />
@@ -246,7 +250,7 @@
     <TypeScriptCompile Include="src\components\sector\AreaComparison.tsx" />
     <TypeScriptCompile Include="src\components\sector\AskMulhim.tsx" />
     <TypeScriptCompile Include="src\components\sector\DecisionBrief.tsx" />
-    <TypeScriptCompile Include="src\components\sector\SectorAnalysis.tsx" />
+    <TypeScriptCompile Include="src\components\sector\SectorGuide.tsx" />
     <TypeScriptCompile Include="src\components\sector\SectorIndicators.tsx" />
     <TypeScriptCompile Include="src\components\sector\SectorNav.tsx" />
     <TypeScriptCompile Include="src\components\sector\SectorReports.tsx" />
@@ -292,10 +296,12 @@
     <TypeScriptCompile Include="src\lib\answerStreamState.ts" />
     <TypeScriptCompile Include="src\lib\exportResults.ts" />
     <TypeScriptCompile Include="src\lib\format.ts" />
+    <TypeScriptCompile Include="src\lib\guideSteps.ts" />
     <TypeScriptCompile Include="src\lib\introClips.ts" />
     <TypeScriptCompile Include="src\lib\provenance.ts" />
     <TypeScriptCompile Include="src\lib\recorder.ts" />
     <TypeScriptCompile Include="src\lib\researchBrief.ts" />
+    <TypeScriptCompile Include="src\lib\siteUrl.ts" />
     <TypeScriptCompile Include="src\lib\speech.ts" />
     <TypeScriptCompile Include="src\lib\talkRedirect.ts" />
     <TypeScriptCompile Include="src\lib\theme.ts" />
@@ -440,7 +446,9 @@
     <Content Include="tests\api-problems.test.mjs" />
     <Content Include="tests\arabic-plurals.test.mjs" />
     <Content Include="tests\export-results.test.mjs" />
+    <Content Include="tests\guide-steps.test.mjs" />
     <Content Include="tests\research-brief.test.mjs" />
+    <Content Include="tests\site-url.test.mjs" />
     <Content Include="tests\talk-redirect.test.mjs" />
     <Content Include="tests\username.test.mjs" />
     <Content Include="tests\workspace-redirect.test.mjs" />

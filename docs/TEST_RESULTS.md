@@ -1,5 +1,39 @@
 # Test results
 
+## 2026-11-24: Guided analysis, governorate map focus, evidence pack, public metadata (branch `feature/guided-analysis-map-deploy`)
+
+**What changed** (details in `docs/WORKSPACE.md`, `docs/MAP.md`, `docs/DEPLOYMENT.md` and `docs/data-imports/2026-11-governorates/README.md`):
+
+- **Guided analysis** in every sector: selection, results, analysis, objectives, recommendations, one step at a time, kept in the address. Recommendations are rule-based (`POST /analysis/{section}/guidance`). Al Mulhim asks for objectives only when recommendations are wanted without one.
+- **Map:** the 11 governorates first; a chosen governorate shows only its own wilayats.
+- **Statistics:** the evidence pack and the ministry's active commercial records, checked against their sources, mapped and ready for review. Nothing is staged or published. Migration 0035 adds the honey indicator.
+- **Public metadata:** title, description, Open Graph, `robots.txt`, a sitemap for a real address, security headers on Vercel.
+
+**Automated checks** (run in the worktree against the local PostgreSQL cluster):
+
+| Check | Result |
+|---|---|
+| Backend `pytest`, database tests included | Full run: **1,058 passed, 1 failed** (a new test counted the ministry's records with the yearbook rows; fixed: its two files then 9 passed). New tests: recommendations through the API with figures checked against the published series; objectives in Al Mulhim in both languages and through the API; the evidence pack's mapping, sums and wilayats; the three import files validated, published and superseded in the test database) |
+| Backend `ruff check`, `ruff format --check` | pass |
+| Frontend typecheck, lint, production build | pass |
+| Frontend unit tests | 40 passed (new: the guided analysis's steps and address; the public address, robots.txt, sitemap and security headers) |
+| Contrast check | 0 failing pairs |
+| Offline browser tests (mock adapter) | Full run under load (the backend suite running beside it): 43 passed, 6 navigation timeouts, 3 skipped. The three files again: 41 passed, 2 timed out; those 2 passed when run alone. |
+| Full-stack browser tests (real API, database, scripted model) | Full run: **197 passed, 3 failed**, 3 skipped. The failures: a page timeout; this session's studies missing from the guide (restored on its first step); a test reading another test's data (moved to its own indicator). The six affected files then: 27 passed. New or rewritten: `sector-analysis.spec.ts` (the five steps, Back/Forward, reload, objectives, CSV, Arabic and dark), `oman-map.spec.ts` (only the chosen governorate's wilayats, read from the map's own filters), `zz-guide-places.spec.ts` (governorate and wilayat choice; no governorate figure on wilayats), `mulhim-objectives.spec.ts` |
+
+**Measured on the public site** (`predeploy_check.py --url https://osrip.vercel.app`, 2026-11-24, `main` as deployed):
+- The page names itself OSRIP; HSTS is present.
+- Every `/api/v1/...` path answers Vercel's 404: no API or database is deployed.
+- There is no CSP, framing ban or robots.txt yet: they are added on this branch.
+
+**Not done:**
+
+- no deployment of the API and database (no host, account or DNS was available; nothing was created or paid for);
+- the pack is not staged in the development database (migration 0035 first, after merge);
+- no check from an external device;
+- no evaluation with users;
+- not merged into `main`.
+
 ## 2026-11-20: Reports leave the navigation; reports through Al Mulhim and the sectors (branch `feature/reports-in-al-mulhim`)
 
 **What changed** (details in `docs/WORKSPACE.md`, "Reports in Al Mulhim and the sectors"):

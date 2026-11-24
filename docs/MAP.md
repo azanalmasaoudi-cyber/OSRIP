@@ -14,14 +14,22 @@ comes from); boundary data: `frontend/public/geo/` (see its README).
 | 3D | Off until the 3D button is pressed; then terrain elevation (exaggerated 1.4×), tilt and rotation. |
 | Themes | Light and dark basemaps and overlays follow the app's theme. |
 | Oman only | The camera is held to the region around Oman; everything outside the national outline is dimmed; the outline is drawn. |
-| Areas | Governorates or wilayats; hover outlines and names an area, a click selects it (the page shows its details and the map zooms to it); "Show all of Oman" resets. |
+| Areas | First the 11 governorates only. Choosing a governorate (on the map or in the list) draws only its own wilayats: fill, outlines, labels, hover and click targets share one filter, the governorate is outlined and the map fits it. The wilayat list holds only that governorate's wilayats (sorted, in the reader's language); changing the governorate clears the wilayat and its details. A wilayat is highlighted alone and shows only its own published data, or "No published wilayat data". "All governorates" goes back. |
 | Statistics | Shading by published values per area or by a compared indicator; axis, indicator, period and data mode (verified or synthetic) are chosen on the page. |
 | Languages | Labels in Arabic or English with the interface; toolbar at the start edge, zoom buttons opposite (right-to-left in Arabic). |
 
 **Values.** An area is shaded only from observations published for exactly that area. An area
 without one is "No data" (neutral grey), never zero. Wilayat values are never estimated by sharing
-out a governorate's or the nation's total; today no indicator is published per wilayat, so the
-wilayat level reads "No data" and says why.
+out a governorate's or the nation's total, a governorate's figure is never painted on its wilayats,
+and no share of a national total is computed for a wilayat. The legend counts only the areas drawn.
+
+**Official boundaries evaluated (23 November 2026).** NCSI's GeoStat FeatureServer
+(`NCSIData/WilayatB`, layer 3) serves 63 wilayat polygons with Arabic and English names and a
+governorate number. Its copyright note names the Ministry of Interior as data owner under the ONSDI
+data ownership policy and states no reuse licence, so its geometry is not copied into OSRIP; the
+OpenStreetMap boundaries (ODbL) stay. Its grouping was used as a check only: it has the same 63
+wilayats in the same 11 governorates as the registry and as the owner's evidence pack (6, 10, 4, 3,
+9, 6, 6, 5, 7, 3 and 4). Using its geometry needs the owner's written permission.
 
 ## Providers and fallback
 

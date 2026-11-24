@@ -235,6 +235,9 @@ Navigation:
   own, and their pages (`/studies`, `/studies/:id`, `/forecasts`) still open from saved links;
 - Interactive Oman Map;
 - Data and sources: Datasets, Research library, Sources;
+- (each sector opens on its **guided analysis**: selection, results, analysis, objectives, then
+  rule-based recommendations, one step at a time; the map shows a chosen governorate's own wilayats
+  only);
 - (no Reports entry: a report is asked of Al Mulhim, which builds it from published data and
   shows it in the reply with a CSV download; an analyst saves it as a frozen report with PDF,
   Excel and CSV exports; a sector's Analysis lists its saved reports. `/reports` and every

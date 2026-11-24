@@ -186,9 +186,11 @@
     <Compile Include="app\services\forecasting.py" />
     <Compile Include="app\services\geography.py" />
     <Compile Include="app\services\groups.py" />
+    <Compile Include="app\services\guidance.py" />
     <Compile Include="app\services\images.py" />
     <Compile Include="app\services\imports\__init__.py" />
     <Compile Include="app\services\imports\csv_file.py" />
+    <Compile Include="app\services\imports\governorate_pack.py" />
     <Compile Include="app\services\imports\owner_workbooks.py" />
     <Compile Include="app\services\imports\validation.py" />
     <Compile Include="app\services\imports\wilayat_evidence.py" />
@@ -197,6 +199,7 @@
     <Compile Include="app\services\mail.py" />
     <Compile Include="app\services\monitoring.py" />
     <Compile Include="app\services\ncsi.py" />
+    <Compile Include="app\services\objectives.py" />
     <Compile Include="app\services\observations.py" />
     <Compile Include="app\services\openai_api.py" />
     <Compile Include="app\services\phone_numbers.py" />
@@ -255,6 +258,7 @@
     <Compile Include="tests\test_assistant_integration.py" />
     <Compile Include="tests\test_assistant_intents.py" />
     <Compile Include="tests\test_assistant_intents_integration.py" />
+    <Compile Include="tests\test_assistant_objectives.py" />
     <Compile Include="tests\test_assistant_profile.py" />
     <Compile Include="tests\test_assistant_reports_integration.py" />
     <Compile Include="tests\test_assistant_selection_integration.py" />
@@ -277,10 +281,13 @@
     <Compile Include="tests\test_forecasting.py" />
     <Compile Include="tests\test_forecasting_v2.py" />
     <Compile Include="tests\test_geography_forecast_integration.py" />
+    <Compile Include="tests\test_governorate_pack.py" />
+    <Compile Include="tests\test_governorate_pack_integration.py" />
     <Compile Include="tests\test_grounding.py" />
     <Compile Include="tests\test_groups_roles_integration.py" />
     <Compile Include="tests\test_guest_allowance_integration.py" />
     <Compile Include="tests\test_guest_channels_integration.py" />
+    <Compile Include="tests\test_guidance_integration.py" />
     <Compile Include="tests\test_import_validation.py" />
     <Compile Include="tests\test_import_workflow_integration.py" />
     <Compile Include="tests\test_live_study.py" />
@@ -338,6 +345,7 @@
     <Compile Include="scripts\serve_e2e.py" />
     <Compile Include="scripts\serve_public.py" />
     <Compile Include="scripts\set_provider_keys.py" />
+    <Compile Include="scripts\stage_governorate_pack.py" />
     <Compile Include="scripts\stage_owner_workbooks.py" />
     <Compile Include="scripts\stage_wilayat_evidence.py" />
     <Compile Include="scripts\sync_worker_dev.py" />
@@ -377,6 +385,7 @@
     <Compile Include="alembic\versions\0032_wilayat_context.py" />
     <Compile Include="alembic\versions\0033_username_policy.py" />
     <Compile Include="alembic\versions\0034_candidate_scope_2021.py" />
+    <Compile Include="alembic\versions\0035_honey_production.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="alembic\sql\0001_core_down.sql" />
@@ -446,6 +455,8 @@
     <Content Include="alembic\sql\0033_username_policy_up.sql" />
     <Content Include="alembic\sql\0034_candidate_scope_2021_down.sql" />
     <Content Include="alembic\sql\0034_candidate_scope_2021_up.sql" />
+    <Content Include="alembic\sql\0035_honey_production_down.sql" />
+    <Content Include="alembic\sql\0035_honey_production_up.sql" />
     <Content Include="app\knowledge\assistant_profile_v1.json" />
     <Content Include="app\knowledge\assistant_profile_v2.json" />
     <Content Include="app\knowledge\assistant_profile_v3.json" />

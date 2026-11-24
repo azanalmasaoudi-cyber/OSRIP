@@ -30,7 +30,7 @@ removes them from the address.
 
 One view is shown at a time, so there is no box that scrolls inside the page. The tabs follow
 the ARIA tab pattern: the arrow keys (mirrored in Arabic), Home and End. The chosen view is kept
-in the address (`?tab=data|analysis|charts`); the Analysis is the default.
+in the address (`?tab=data|analysis|charts`); the guided analysis is the default.
 
 The three views share **one selection per sector** (indicator, area, period view), kept per data
 mode for the browser session (`frontend/src/state/sectorSelections.ts`). Choosing an indicator in
@@ -39,15 +39,53 @@ one view chooses it in the others.
 | View | What is shown |
 |---|---|
 | Data and indicators | Every indicator published for the sector in the chosen data mode, as cards (latest value, unit, period, previous period, data mode, area, source details), filtered by area and frequency; period kinds are listed apart. A card is flagged **"May be out of date"** when its latest period ended longer ago than the usual publication interval (24 months for annual data, 9 for quarterly, 6 for monthly or year-to-date), and a banner counts them: old data is flagged, never hidden. Beside them: the sources behind the cards and, for Food Security and Trade, the commodity register. **Analyse** on a card makes it the selection and opens the Analysis. |
-| Analysis | The current selection (indicator, area, period view), changeable here. For it: the server's validated findings (`POST /studies/preview`, the deterministic trend study, not stored) with method, assumptions, limitations, references and the section's rule-based recommendations, which need a person's review; the governorates compared (only when the server finds at least two governorates' own values comparable, otherwise the page says why; no licensed boundary geometry, so no choropleth); **Ask Al Mulhim** (Study, Forecast, Scenario: each opens the conversation with the request written for this selection, in the reader's language, sent only when the person presses Send); this session's studies (each opens again under its reply); and the axis's decision brief. Nothing in this view is written by AI. |
+| Guided analysis | Five steps, one at a time: selection, results, analysis, objectives, recommendations (see "Guided analysis" below). Nothing in this view is written by AI. |
 | Tables and charts | The period-first workflow: indicator, area or breakdown, frequency, then a start and end period from those published, **Show results**; then the table, calculations, insights and downloads, and the chart only after **Show chart**. |
 
 States are explicit in every view: loading, error with retry, empty, no verified data, mixed
 frequency (with a choice) and stale data.
 
 All four sectors use the same components (`frontend/src/components/sector/SectorIndicators.tsx`,
-`SectorAnalysis.tsx`, `AreaComparison.tsx`, `AskMulhim.tsx`, `SectorWorkflow.tsx`); nothing is
+`SectorGuide.tsx`, `AreaComparison.tsx`, `AskMulhim.tsx`, `SectorWorkflow.tsx`); nothing is
 copied per sector.
+
+The **data freshness** panel beside the cards lists, for the series shown (most recent first), the
+end of the latest period, the unit, where it applies (the area, a published group of governorates,
+and the source's stated coverage), the publication and retrieval dates, the review status and the
+source's address.
+
+## Guided analysis (23 November 2026)
+
+A sector's **Guided analysis** tab (the default) is one task at a time, as a state machine kept in
+the address (`frontend/src/lib/guideSteps.ts`, `frontend/src/components/sector/SectorGuide.tsx`):
+
+| Step | What is shown | Moves on with |
+|---|---|---|
+| 1. Selection | Indicator, governorate, the wilayats of that governorate that publish the indicator (or "No published wilayat data"), breakdown, frequency, start and end period, data mode. Nothing analytical. The sector's saved reports. | **Show results** |
+| 2. Results | The published observations of exactly that selection: coverage, summary, unit, period, quality badges, the table; sources collapsed. | **Analyze results** |
+| 3. Analysis | The server's findings for the selection, its calculations, the chart (only after **Show chart**), rule-based review cards (factors the data point to), the comparison of governorates where valid, limitations, Al Mulhim's study, forecast, scenario and report requests, and the axis's decision brief (loaded only when opened). | **Set my objectives** |
+| 4. Objectives | Reduce shortages, improve efficiency, use the surplus, strengthen production and trade, diversify; or the person's own words (matched by fixed rules, `backend/app/services/objectives.py`, never sent to an AI). | **Show recommendations** (refused, and said so, without an objective) |
+| 5. Recommendations | `POST /analysis/{section}/guidance` (`backend/app/services/guidance.py`): the facts used (latest value, change, coverage, year-to-date apart), then ranked actions, each with its rationale, prerequisites, risks and missing evidence; a CSV download, *Save report* (analysts) and a full report with these objectives from Al Mulhim. | **Change objectives**, **Start again** |
+
+- **Address.** `step`, the applied selection (`ind`, `at`, `bd`, `freq`, `from`, `to`) and the
+  objectives (`goals`, `goal`) are in the address: Back and Forward move between steps, and a reload
+  or a shared link returns to the same step. An address asking for a step whose inputs are missing
+  shows the furthest one it can (no results before a selection, no recommendations before an
+  objective).
+- **Network.** Each step loads only what it shows; the results' timeline is reused by the analysis
+  and the recommendations are fetched once per selection and objectives.
+- **Recommendations.** Rule-based and reproducible (rules version in the reply): one template per
+  sector and objective, chosen by what the published series does (rising, falling or flat; one value
+  gives no direction). The text quotes only figures from the selection's timeline; better-evidenced
+  actions come first; indicators OSRIP does not publish for the area are listed as missing evidence.
+  They are prompts for review, not decisions or forecasts of outcomes.
+- **Al Mulhim.** Asked for recommendations without an objective, it gives the results, then the
+  analysis, and asks which objectives to serve; the reply lets the person tick them and send them as
+  the next message. When the request names objectives, or asks for a full report, it goes straight
+  through without asking again (`GOAL_RULES` in `backend/app/services/assistant/service.py`).
+
+The **Tables and charts** tab keeps the full period-first workbench on the same selection.
+
 
 ## Al Mulhim: studies, forecasts and scenarios from a sentence
 
