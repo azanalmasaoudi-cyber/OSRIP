@@ -188,6 +188,22 @@ def intent(question: str) -> str | None:
     return next((name for name, pattern in _INTENTS if pattern.search(question)), None)
 
 
+# The question asks for recommendations or advice ("what should be done").
+_RECOMMEND = re.compile(
+    r"\brecommend(s|ed|ing|ations?)?\b|\badvi(c|s)e\b|\bwhat should (we|i|oman|the government|"
+    r"the ministry|policy ?makers?|planners?) do\b|\bsuggest (actions?|measures?|policies|steps|"
+    r"solutions?)\b|\baction plan\b|\bpolicy options?\b|\bwhat (should|can|could) be done\b"
+    r"|توصي(ة|ات)|توصيات|أوصِ|اوصي|أوصي|نصيحة|نصائح|ماذا (يجب|ينبغي)|ما الذي (يجب|ينبغي)"
+    r"|اقترح (حلول|حلولا|إجراءات|اجراءات|سياسات)|خطة عمل|مقترحات",
+    re.IGNORECASE,
+)
+
+
+def asks_for_recommendations(question: str) -> bool:
+    """True when the question asks what should be done (recommendations, advice, actions)."""
+    return bool(question) and bool(_RECOMMEND.search(question))
+
+
 def report_type(question: str) -> str:
     """What a requested report covers: 'scenario', 'forecast' or 'study' when its words say so
     (in that order, as for intent), otherwise 'sector' (the sector's published data)."""

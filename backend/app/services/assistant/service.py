@@ -44,6 +44,7 @@ from app.models import (
     ResearchCandidate,
 )
 from app.services import accounts
+from app.services import objectives as objective_list
 from app.services.assistant import (
     data_report,
     grounding,
@@ -289,6 +290,24 @@ INTENT_RULES = {
     "(status 'clarification') instead of guessing. Label the result 'hypothetical scenario, not a "
     "forecast', list the assumptions, explain possible impacts and the uncertainties. The scenario "
     "table and chart are shown with your answer.\n",
+}
+
+# Objectives before recommendations (the same five as a sector's guided analysis,
+# app/services/objectives.py). Results come first, then the analysis; recommendations are given
+# only once the person's objectives are known.
+GOAL_RULES = {
+    "ask": "- The person asked for recommendations but named no objective. Answer in this order: "
+    "first the results (the published figures that answer the question, with their periods and "
+    "evidence ids), then a short analysis of what they show. Do NOT give recommendations yet. End "
+    "with one short question asking which objective or objectives the person wants: reduce "
+    "shortages, improve efficiency, use the surplus, strengthen production and trade, or "
+    "diversify. Ask nothing else.\n",
+    "known": "- The person's objectives are: {objectives}. Answer in this order: the results (the "
+    "published figures, with their periods and evidence ids), then the analysis, then "
+    "Recommendations for exactly these objectives, most important first; for each give the "
+    "rationale (which figures support it), the prerequisites, the risks and the evidence that is "
+    "missing. Recommendations are for a person to review, never presented as proven or as "
+    "guaranteed outcomes. Do not ask about objectives again.\n",
 }
 
 SUGGESTIONS = {
@@ -868,7 +887,16 @@ def _run_model(
     # A study, forecast or scenario asked for in words runs the real tool (data modes only).
     wanted = routing.intent(question) if mode in routing.DATA_MODES else None
     report_kind = routing.report_type(question) if wanted == "report" else None
+    # Objectives: named in the question, or asked for when recommendations are wanted without
+    # one (a full report goes ahead without asking).
+    goals = objective_list.detect(question)
+    goal_rule = None
+    if goals:
+        goal_rule = "known"
+    elif routing.asks_for_recommendations(question) and wanted not in ("report", "scenario"):
+        goal_rule = "ask"
     ledger.meta = {
+        "objectives": {"status": goal_rule, "known": goals} if goal_rule else None,
         "report_type": report_kind,
         "answer_provider": provider.vendor,
         "answer_model": provider.name,
@@ -948,7 +976,15 @@ def _run_model(
         web_rules=(INTERNET_WEB_RULES if mode in routing.INTERNET_MODES else WEB_RULES)
         if web
         else NO_WEB_RULES,
-        mode_rules=MODE_RULES.get(mode, MODE_RULES["ask"]) + INTENT_RULES.get(wanted or "", ""),
+        mode_rules=MODE_RULES.get(mode, MODE_RULES["ask"])
+        + INTENT_RULES.get(wanted or "", "")
+        + (
+            GOAL_RULES[goal_rule].format(
+                objectives=", ".join(objective_list.NAMES[g]["en"] for g in goals)
+            )
+            if goal_rule
+            else ""
+        ),
         selection_rule=selection_rule(selection) + tables_rule(ledger.previous_tables, question),
     )
     seconds = get_settings().assistant_timeout_seconds * 2
@@ -1461,6 +1497,15 @@ def generate_reply(
         structured["intent"] = ledger.meta["intent"]
     if ledger.meta.get("report_type"):
         structured["report_type"] = ledger.meta["report_type"]
+    if ledger.meta.get("objectives"):
+        goal_meta = ledger.meta["objectives"]
+        structured["objectives"] = {
+            "status": goal_meta["status"],
+            "known": [{"code": g, "name": objective_list.NAMES[g]} for g in goal_meta["known"]],
+            "options": [
+                {"code": g, "name": objective_list.NAMES[g]} for g in objective_list.OBJECTIVES
+            ],
+        }
     if status_ != "unverified":
         # The forecasting engine's and the scenario tool's own results, as tables and charts:
         # cited forecasts and scenarios, and a withheld forecast's reasons (it has no values).

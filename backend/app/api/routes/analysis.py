@@ -13,7 +13,8 @@ from app.api.deps import CurrentPrincipal, DbSession, require
 from app.core.errors import ApiError
 from app.domain.calculations import StockAssumption
 from app.domain.enums import DataMode, Frequency, Permission, Section
-from app.services import decision
+from app.services import decision, guidance
+from app.services import objectives as objective_list
 from app.services.analysis import runs
 from app.services.analysis.rules import RuleParameters
 from app.services.analysis.sections import AnalysisFilter, analyse
@@ -93,6 +94,36 @@ def section_brief(
     estimates). Findings carry reference ids; sources are listed in ``provenance``."""
     with session.begin():
         return decision.brief(session, section, data_mode, dataset_version_id)
+
+
+class GuidanceIn(BaseModel):
+    """One applied selection of a sector's guided analysis and the objectives set for it."""
+
+    data_mode: DataMode
+    indicator: str = Field(min_length=1, max_length=64)
+    area: str = Field(default="OM", max_length=64)
+    view: Literal["annual", "quarterly", "monthly"] = "annual"
+    commodity: str | None = Field(default=None, max_length=64)
+    partner: str | None = Field(default=None, max_length=64)
+    flow: str | None = Field(default=None, max_length=32)
+    period_from: date | None = None
+    period_to: date | None = None
+    objectives: list[Literal[objective_list.OBJECTIVES]] = Field(default_factory=list, max_length=5)  # type: ignore[valid-type]
+    note: str = Field(default="", max_length=300)
+
+
+@router.post("/analysis/{section}/guidance")
+def section_guidance(section: Section, body: GuidanceIn, session: DbSession) -> dict[str, Any]:
+    """Public and read-only: rule-based recommendations for the selection once its objectives
+    are known (chosen, or recognised in the person's own words). Every figure quoted comes from
+    the selection's published timeline; nothing is stored and no AI is used."""
+    with session.begin():
+        return guidance.recommend(
+            session, section, body.data_mode, body.indicator, area=body.area, view=body.view,
+            commodity=body.commodity, partner=body.partner, flow=body.flow,
+            period_from=body.period_from, period_to=body.period_to,
+            objectives=list(body.objectives), note=body.note,
+        )  # fmt: skip
 
 
 @router.get("/analysis/{section}/export.csv")
