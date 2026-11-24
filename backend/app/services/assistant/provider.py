@@ -1005,6 +1005,12 @@ class FakeProvider:
             return self._areas(tool_results, arabic)
         if "double" in question or "تضاعف" in question:
             return self._premise(tool_results, arabic)
+        if "named no objective" in system:
+            # Recommendations asked for without an objective: results first, then the question.
+            return self._ask_objectives(question, tool_results, arabic)
+        if "The person's objectives are:" in system:
+            # The objectives are known: the recommendations follow (cards in Data analysis).
+            return self._recommend(tool_results, arabic)
         if ("recommend" in question or "توصي" in question) and "Mode: Analyze" in system:
             return self._recommend(tool_results, arabic)
         # Web questions ("fail" there makes the search, not the model, fail).
@@ -1530,6 +1536,31 @@ class FakeProvider:
             else f"The premise is not supported: electricity generation did not double. It changed by {value} percent between 2001 and 2002 [{pct['id']}]."
         )
         return self._final("answered", text, [pct["id"]])
+
+    def _ask_objectives(
+        self, question: str, tool_results: list[dict[str, Any]], arabic: bool
+    ) -> dict[str, Any]:
+        indicator = next(
+            (code for k, code in self.KEYWORDS.items() if k in question), "ELEC_GENERATION"
+        )
+        if not tool_results:
+            return self._call("latest_period", {"indicator": indicator})
+        result = self._last(tool_results)
+        if result.get("status") != "ok":
+            return self._no_data(arabic)
+        latest = result["latest_by_series"][0]
+        eid = latest["id"]
+        text = (
+            f"آخر قيمة منشورة هي {latest['value']} {latest['unit']} للفترة التي تبدأ في "
+            f"{latest['period_start']} [{eid}]. لأي هدف تريد التوصيات: تقليل العجز، أو رفع الكفاءة، "
+            "أو استثمار الفائض، أو تعزيز الإنتاج والتجارة، أو التنويع؟"
+            if arabic
+            else f"The latest published value is {latest['value']} {latest['unit']} for the period "
+            f"starting {latest['period_start']} [{eid}]. Which objective should the recommendations "
+            "serve: reduce shortages, improve efficiency, use the surplus, strengthen production "
+            "and trade, or diversify?"
+        )
+        return self._final("answered", text, [eid])
 
     def _recommend(self, tool_results: list[dict[str, Any]], arabic: bool) -> dict[str, Any]:
         if not tool_results:

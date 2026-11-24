@@ -1,6 +1,56 @@
 # Deployment guide
 
-**Status (2026-11-13): only the interface is public; the API and database are not deployed.**
+**Status (2026-11-24): still only the interface is public. The API and database are not deployed:
+no hosting account, server or DNS access was available, and nothing was created or paid for.**
+
+Measured on 2026-11-24 with `python deploy\predeploy_check.py --env deploy\.env.example --url https://osrip.vercel.app`
+(the `main` branch as deployed then):
+
+| Check | Result |
+|---|---|
+| The page names itself OSRIP | yes (`<title>OSRIP</title>`) |
+| `/api/v1/health/ready` | 404 from Vercel: no API behind the site |
+| Admin and import routes refuse anonymous access | 404 from Vercel (nothing there), not the API's 401/403 |
+| HSTS | present (Vercel) |
+| Content-Security-Policy, framing denied | missing: added to both `vercel.json` copies on this branch (the same policy as `deploy/Caddyfile`) |
+| `robots.txt` | missing: written by the build on this branch |
+
+**What this branch adds for a public release** (no hosting change):
+- The page is named "OSRIP – Oman Smart Resource Intelligence Platform", with a description,
+  Open Graph and Twitter tags.
+- The build writes `robots.txt` (sign-in, account, administration and `/api/` disallowed). When a
+  real public address is known it also writes a canonical link, absolute share-image links and
+  `sitemap.xml`. That address is `VITE_PUBLIC_SITE_URL`, or on Vercel's production build the
+  domain Vercel itself assigned (`VERCEL_PROJECT_PRODUCTION_URL`, today `osrip.vercel.app`). A local
+  or non-https address is refused (`frontend/src/lib/siteUrl.ts`). Search engines index on their
+  own schedule; nothing guarantees it.
+- The production bundle calls the API at the relative `/api/v1` only: it has no `127.0.0.1` and no
+  `localhost:<port>`. The only `http://localhost` strings are React Router's URL-parsing base,
+  never fetched. `predeploy_check.py` now fails a built `frontend/dist` that calls a local
+  address. Local development keeps its localhost proxy (`frontend/vite.config.ts`).
+
+**Exactly what is missing for the whole platform to be public under the OSRIP name.** These are
+decisions and accounts only the owner can provide:
+1. **A host for the API and PostgreSQL**, with the owner's approval of any cost. Either:
+   - an Ubuntu server for `deploy/` (Caddy, API, PostgreSQL, backups, migrations); or
+   - a container host plus a managed PostgreSQL service.
+   The owner creates the account; its password and verification codes stay with the owner.
+2. **The public address.**
+   - `https://osrip.vercel.app` already carries the project name. Proxying its `/api/` to the API
+     host keeps one origin: the rewrite in step 2 of the next section.
+   - A custom OSRIP domain needs DNS control by the owner.
+3. **Server-side settings on that host only:**
+   - `OSRIP_ENVIRONMENT=production`, `OSRIP_PUBLIC_BASE_URL`, `OSRIP_CORS_ORIGINS`;
+   - `OSRIP_DATABASE_URL`, `OSRIP_CLIENT_HASH_KEY`;
+   - the AI provider key.
+4. **Data and accounts:**
+   - Run the migrations, then load the reviewed data releases.
+   - Create the administrator with `ensure-admin` (the password is prompted, never stored).
+5. **Checks, before calling it public:**
+   - `predeploy_check.py --url <address>` passing;
+   - sign-in, the four sectors, Al Mulhim and the map, tested from a device outside this network.
+
+**Status before (2026-11-13): only the interface is public; the API and database are not deployed.**
 - **The published site:** https://osrip.vercel.app is the built interface, served by Vercel (see the next section).
 - **No server behind it:** no OSRIP API or database runs there, so it cannot show data, sign anyone in or run Al Mulhim. Since this release it says so on every page.
 - **`deploy/`:** the full configuration has not been built or run. Docker is not installed in the development environment, and no server, domain or DNS access was provided.

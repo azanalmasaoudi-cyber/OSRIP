@@ -295,6 +295,17 @@ def check_repository(r: Report, env_path: Path) -> None:
             break
     else:
         r.check(True, "no hard-coded localhost address in frontend source")
+    # A built interface (frontend/dist) must not call a local API: no 127.0.0.1 and no
+    # localhost with a port. (The router's own "http://localhost" URL-parsing base is not a call.)
+    dist = ROOT / "frontend" / "dist"
+    if dist.exists():
+        local = [
+            p.relative_to(ROOT)
+            for p in dist.rglob("*")
+            if p.suffix in {".js", ".html", ".css"}
+            and re.search(r"127\.0\.0\.1|localhost:\d+", p.read_text(encoding="utf-8", errors="ignore"))
+        ]
+        r.check(not local, f"the built interface calls no local address ({', '.join(map(str, local)) or 'none'})")
     compose = (ROOT / "deploy" / "docker-compose.yml").read_text(encoding="utf-8")
     r.check(
         "migrate:" in compose and "service_completed_successfully" in compose,
@@ -326,6 +337,18 @@ def check_live(base: str, r: Report) -> None:
     if not base.startswith("https://"):
         r.check(False, "the address is https://")
         return
+    try:
+        status, _, body = request(f"{base}/")
+    except (urllib.error.URLError, TimeoutError) as err:
+        r.check(False, f"site reachable ({type(err).__name__})")
+        return
+    title = re.search(rb"<title>([^<]*)</title>", body or b"")
+    r.check(
+        status == 200 and bool(title) and b"OSRIP" in title.group(1),
+        f"the page identifies itself as OSRIP ({title.group(1).decode('utf-8', 'replace') if title else 'no title'})",
+    )
+    status, _, body = request(f"{base}/robots.txt")
+    r.check(status == 200 and b"User-agent" in (body or b""), f"robots.txt served ({status})")
     try:
         status, headers, body = request(f"{base}/api/v1/health/ready")
     except (urllib.error.URLError, TimeoutError) as err:

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAreaComparison, type AreaComparison, type CompareRow } from '@/api/library';
@@ -22,13 +22,15 @@ const FLOWS = ['import', 'domestic_export', 're_export'] as const;
 const AXES = INDICATOR_SECTIONS;
 type Axis = IndicatorSection;
 
-export function GovernorateComparison({ mode, indicators: all, onResult, level = 'governorate' }: {
+export function GovernorateComparison({ mode, indicators: all, onResult, level = 'governorate', within = null }: {
   mode: DataMode;
   indicators: readonly { code: string; name_en: string; name_ar: string; frequency: string; section?: Axis }[];
   /** Governorates or wilayats: each area's own published values only, never shares of a total. */
   level?: 'governorate' | 'wilayat';
   /** The comparison shown, for the map's "compared indicator" shading. */
   onResult?: (result: AreaComparison | undefined) => void;
+  /** Only these areas (a chosen governorate's wilayats); every area of the level when null. */
+  within?: readonly string[] | null;
 }) {
   const { t } = useTranslation();
   const language = useAppLanguage();
@@ -40,9 +42,19 @@ export function GovernorateComparison({ mode, indicators: all, onResult, level =
   const chosen = indicators.find((i) => i.code === picked) ?? indicators[0];
   const indicator = chosen?.code ?? null;
   const comparison = useAreaComparison(mode, indicator, period || null, flow, chosen?.frequency, level);
+  // The server compares every area of the level; only the chosen governorate's are kept.
+  const withinKey = within ? within.join(',') : null;
+  const data = useMemo((): AreaComparison | undefined => {
+    const d = comparison.data;
+    if (!d || withinKey === null || !d.rows) return d;
+    const keep = new Set(withinKey.split(','));
+    const rows = d.rows.filter((r) => keep.has(r.area));
+    // The server lists areas with a value; the others of the governorate have none (never zero).
+    return { ...d, rows, areas_without_value: keep.size - rows.filter((r) => r.status === 'published').length };
+  }, [comparison.data, withinKey]);
   useEffect(() => {
-    onResult?.(comparison.data);
-  }, [comparison.data, onResult]);
+    onResult?.(data);
+  }, [data, onResult]);
   const axisSelect = (
     <SelectField className="w-full sm:w-56" label={t('omanMap.axis')} value={axis} data-testid="compare-axis"
       onValueChange={(v) => { setAxis(v as Axis | ''); setPicked(null); setPeriod(''); setFlow(null); }}
@@ -56,7 +68,6 @@ export function GovernorateComparison({ mode, indicators: all, onResult, level =
       </div>
     );
   }
-  const data = comparison.data;
   const unit = data?.unit ? (language === 'ar' ? data.unit.label_ar : data.unit.label_en) : '';
   const value = (row: { value: string | null; value_operator?: string | null }) =>
     row.value == null ? null : `${row.value_operator ?? ''}${formatDecimal(row.value, language, 4) ?? row.value}`;

@@ -19,6 +19,7 @@ import { GeneratedImages, ResearchCharts, ResearchDiagrams, ResearchPlan, Resear
 import { asksForChart, chartPoints, InlineChart } from './InlineChart';
 import { IntroPlayer } from './IntroPlayer';
 import { Markdown } from './Markdown';
+import { ReplyObjectives } from './ReplyObjectives';
 import { ReplyResults } from './ReplyResults';
 import { AboutMulhim, MemoryPanel } from './MulhimPanels';
 import { usePersona } from './persona';
@@ -475,6 +476,7 @@ function ChatMessage({ message, question, chat, onAsk }: {
       ) : null}
       {/* What the reply ran: the study, the forecast or the scenario, in full. */}
       <ReplyResults structured={message.structured} />
+      {message.structured.objectives ? <ReplyObjectives objectives={message.structured.objectives} onAsk={onAsk} /> : null}
       {message.structured.data_tables?.length ? <ChatDataTables blocks={message.structured.data_tables} messageId={message.id} /> : null}
       {/* Deep research: tables, charts and diagrams from verified web figures; illustrations. */}
       {message.structured.research_tables?.length ? <ResearchTables tables={message.structured.research_tables} messageId={message.id} /> : null}

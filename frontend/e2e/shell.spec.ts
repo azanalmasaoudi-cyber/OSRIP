@@ -112,7 +112,7 @@ test('the old /workspace address opens the sector\'s Analysis; its Data and indi
   await page.goto('/workspace?mode=synthetic&domain=trade');
   await expect(page).toHaveURL(/\/trade\?(?=.*mode=synthetic)/);
   const tabs = page.getByTestId('sector-tabs');
-  await expect(tabs.getByRole('tab')).toHaveText(['Data and indicators', 'Analysis', 'Tables and charts']);
+  await expect(tabs.getByRole('tab')).toHaveText(['Data and indicators', 'Guided analysis', 'Tables and charts']);
   await expect(tabs.locator('[data-tab="analysis"]')).toHaveAttribute('aria-selected', 'true');
   // Without the API the Analysis says so; the published cards are under Data and indicators.
   await expect(page.locator('[data-state="not_implemented"]').first()).toContainText('needs the OSRIP API');

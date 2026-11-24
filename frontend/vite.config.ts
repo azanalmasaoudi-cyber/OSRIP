@@ -2,14 +2,37 @@ import { fileURLToPath, URL } from 'node:url';
 
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
+
+import { publicSiteUrl, robotsTxt, sitemapXml } from './src/lib/siteUrl.ts';
 
 // /api is proxied to the FastAPI service so the browser talks to one origin and the
 // SameSite=Strict session cookie works without cross-origin credentials.
 const apiTarget = process.env.OSRIP_API_ORIGIN ?? 'http://127.0.0.1:8010';
 
+/** Canonical link and absolute share image in index.html; robots.txt and sitemap.xml at build. */
+function siteMeta(): Plugin {
+  const site = publicSiteUrl(process.env);
+  return {
+    name: 'osrip-site-meta',
+    transformIndexHtml() {
+      if (!site) return [];
+      return [
+        { tag: 'link', attrs: { rel: 'canonical', href: `${site}/` }, injectTo: 'head' },
+        { tag: 'meta', attrs: { property: 'og:url', content: `${site}/` }, injectTo: 'head' },
+        { tag: 'meta', attrs: { property: 'og:image', content: `${site}/images/editorial/electricity-1200.jpg` }, injectTo: 'head' },
+        { tag: 'meta', attrs: { name: 'twitter:image', content: `${site}/images/editorial/electricity-1200.jpg` }, injectTo: 'head' },
+      ];
+    },
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'robots.txt', source: robotsTxt(site) });
+      if (site) this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: sitemapXml(site) });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), siteMeta()],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },

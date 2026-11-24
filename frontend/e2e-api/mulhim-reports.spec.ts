@@ -131,8 +131,10 @@ test('Arabic, right to left, dark and narrow: the report reads in Arabic and not
 
 test('a sector asks Al Mulhim for a report on its current selection', async ({ page }) => {
   await page.goto('/energy/water?mode=synthetic');
-  await expect(page.getByTestId('sector-reports')).toBeVisible();
+  await expect(page.getByTestId('sector-reports')).toBeVisible(); // on the guided analysis's first step
   await expect(page.getByTestId('sector-reports-all')).toHaveAttribute('href', /^\/reports/);
+  // Al Mulhim's requests come with the analysis of a selection.
+  await page.goto('/energy/electricity?mode=synthetic&ind=ELEC_GENERATION&at=OM&bd=%7C%7C&freq=annual&from=2001-01-01&to=2002-01-01&step=analysis');
   await page.getByTestId('sector-ask-report').click();
   await expect(page).toHaveURL(/\/assistant\?/);
   await expect(page.getByTestId('assistant-input')).toHaveValue(/^Create a report on .+ in .+\.$/);

@@ -96,9 +96,9 @@ test('a mixed-frequency indicator offers each frequency apart and shows only the
   await expect(data.locator('[data-testid="period-kind-group"][data-period-kind="annual"]').locator(production)).toHaveCount(1);
   await monthlyCard.getByTestId('indicator-analyse').click();
   await expect(page.getByTestId('sector-tabs').locator('[data-tab="analysis"]')).toHaveAttribute('aria-selected', 'true');
-  const analysis = page.getByTestId('sector-analysis');
-  await expect(analysis).toHaveAttribute('data-indicator', 'WATER_PRODUCTION');
-  await expect(analysis).toHaveAttribute('data-view', 'monthly');
+  const guide = page.getByTestId('sector-guide');
+  await expect(guide).toHaveAttribute('data-indicator', 'WATER_PRODUCTION');
+  await expect(guide).toHaveAttribute('data-view', 'monthly');
 
   expect(seen.refused).toEqual([]);
   expect(seen.duplicateKeys).toEqual([]);

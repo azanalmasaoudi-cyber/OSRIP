@@ -238,7 +238,9 @@ def test_assistant_compare_mode_lists_only_published_governorates(
 
 
 def test_recommendation_cards_drop_invented_benefits(app) -> None:  # noqa: ANN001
-    msg = guest_ask(app, "What do you recommend for electricity generation?", mode="analyze")
+    msg = guest_ask(
+        app, "What do you recommend for electricity generation to reduce shortages?", mode="analyze"
+    )
     assert msg["status"] == "answered", msg["content"]
     s = msg["structured"]
     [card] = s["recommendations"]
@@ -258,7 +260,9 @@ def test_recommendation_cards_drop_invented_benefits(app) -> None:  # noqa: ANN0
     assert s["withheld"]["drivers"] == 1
     assert s["evidence_points"][0]["citations"] and s["hypotheses"] and s["assumptions"]
     # The same question in Ask mode gets no cards.
-    ask = guest_ask(app, "What do you recommend for electricity generation?", mode="ask")
+    ask = guest_ask(
+        app, "What do you recommend for electricity generation to reduce shortages?", mode="ask"
+    )
     assert "recommendations" not in ask["structured"]
 
 
@@ -313,7 +317,7 @@ def test_saved_research_brief_and_ownership(app, make_user, login) -> None:  # n
     r = owner.post(
         f"{API}/assistant/conversations/{conv}/messages",
         json={
-            "content": "What do you recommend for electricity generation?",
+            "content": "What do you recommend for electricity generation to reduce shortages?",
             "language": "en",
             "mode": "analyze",
         },
@@ -335,7 +339,10 @@ def test_saved_research_brief_and_ownership(app, make_user, login) -> None:  # n
     assert again.json()["id"] == sid, "saving twice keeps one item"
     listed = owner.get(f"{API}/library/saved").json()
     assert [i["id"] for i in listed] == [sid] and listed[0]["recommendation_count"] == 1
-    assert listed[0]["question"] == "What do you recommend for electricity generation?"
+    assert (
+        listed[0]["question"]
+        == "What do you recommend for electricity generation to reduce shortages?"
+    )
     full = owner.get(f"{API}/library/saved/{sid}").json()
     assert full["snapshot"]["content"] == message["content"]
 
