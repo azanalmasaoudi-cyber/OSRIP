@@ -41,6 +41,8 @@ voice-acceptance/
 # --- Dependencies and virtual environments (npm ci; pip install -r requirements.lock) ----
 node_modules/
 .venv/
+# A checkout's own launcher database and ports (tools/start_osrip.py)
+.osrip-local.json
 .venv-*/
 venv/
 
