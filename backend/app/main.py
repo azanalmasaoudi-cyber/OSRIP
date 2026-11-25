@@ -34,6 +34,7 @@ from app.api.routes import (
     indicators,
     library,
     observations,
+    outlook,
     reference,
     reports,
     research,
@@ -258,6 +259,7 @@ def create_app() -> FastAPI:
         reference.router,
         balance.router,  # before analysis: /analysis/balance is not a section
         analysis.router,
+        outlook.router,
         forecasting.router,
         assistant.router,
         reports.router,
