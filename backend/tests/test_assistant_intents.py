@@ -67,7 +67,7 @@ def test_a_stated_assumption_makes_a_scenario_even_with_the_word_forecast() -> N
 
 
 def test_every_intent_has_its_rules_and_the_scenario_tool_follows_the_request() -> None:
-    assert set(INTENT_RULES) == {"study", "forecast", "scenario", "report"}
+    assert set(INTENT_RULES) == {"study", "forecast", "scenario", "report", "outlook"}
     assert "build_report" in INTENT_RULES["report"] and "Limitations" in INTENT_RULES["report"]
     assert "run_study" in INTENT_RULES["study"] and "Limitations" in INTENT_RULES["study"]
     assert (

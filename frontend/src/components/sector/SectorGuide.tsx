@@ -21,6 +21,7 @@ import { StatePanel } from '@/components/common/StatePanel';
 import { AreaComparison } from '@/components/sector/AreaComparison';
 import { AskMulhim } from '@/components/sector/AskMulhim';
 import { DecisionBrief } from '@/components/sector/DecisionBrief';
+import { SectorOutlook } from '@/components/sector/SectorOutlook';
 import { SectorReports } from '@/components/sector/SectorReports';
 import {
   breakdownKey, breakdownName, NO_CHOICE, Panel, resolve, sortIndicators, STOCK_OPTIONS, Summary, type Resolved, type StockAssumption,
@@ -457,6 +458,7 @@ function AnalysisStep({ section, resolved, headingRef, onBack, onNext }: {
   const chartId = useId();
   const [chart, setChart] = useState(false);
   const [brief, setBrief] = useState(false);
+  const [outlook, setOutlook] = useState(false);
   const [stock, setStock] = useState<StockAssumption>('assumed_zero');
   const { selection, indicator, entry } = resolved;
   const { query, commodity, partner, flow, toEnd } = describe(resolved, mode, language, t);
@@ -525,6 +527,15 @@ function AnalysisStep({ section, resolved, headingRef, onBack, onNext }: {
         </div>
       </div>
       <AskMulhim indicator={indicator.name[language]} area={entry.area.name[language]} />
+      {section === 'electricity' || section === 'water' ? (
+        <div className="flex flex-col gap-3">
+          {/* The official outlook: forecasts, targets and plans, apart from the observed results. */}
+          <Button variant="outline" className="w-fit" aria-expanded={outlook} onClick={() => setOutlook((o) => !o)} data-testid="guide-outlook-toggle">
+            {outlook ? t('guide.outlookHide') : t('guide.outlookShow')}
+          </Button>
+          {outlook ? <SectorOutlook section={section} /> : null}
+        </div>
+      ) : null}
       <details className="rounded-lg border border-border bg-card p-4 shadow-card" data-testid="guide-brief"
         onToggle={(e) => setBrief(e.currentTarget.open)}>
         <summary className="cursor-pointer text-base font-semibold">{t('guide.brief')}</summary>

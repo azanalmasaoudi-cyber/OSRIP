@@ -282,6 +282,12 @@ INTENT_RULES = {
     "evidence id); Interpretation; Recommendations (for a person to review, never as proven); "
     "Limitations. If build_report finds no published data for the request, say so plainly and what "
     "is missing; never fill gaps with estimates.\n",
+    "outlook": "- The person asked about the official OUTLOOK. Call get_outlook for electricity or water "
+    "before writing. Give each item with its year, value and unit and say what kind of evidence it is: an "
+    "observed base year as stated, an estimate, a forecast, a policy target, a planned plant or project, or "
+    "an option under consideration. Never call a forecast, target or plan achieved or observed, and never "
+    "describe peak demand (MW) as annual energy (GWh). If observed annual figures are also asked for, get "
+    "them with the data tools and keep them in a separate part of the answer. Sources on request.\n",
     "scenario": "- The person described a hypothetical SCENARIO. Find the indicator, then call "
     "scenario_projection with the stated change: a yearly rate as growth_pct with years; a total "
     "change over several years (for example +15% over five years) as the equivalent yearly rate, "
@@ -1497,6 +1503,14 @@ def generate_reply(
         structured["intent"] = ledger.meta["intent"]
     if ledger.meta.get("report_type"):
         structured["report_type"] = ledger.meta["report_type"]
+    outlook_items = [
+        i for i in ledger.items if i.get("kind") == "outlook" and i.get("status") == "ok"
+    ]
+    if outlook_items and status_ != "unverified":
+        structured["outlook"] = {
+            "evidence_id": outlook_items[-1]["id"],
+            "items": outlook_items[-1]["items"][:24],
+        }
     if ledger.meta.get("objectives"):
         goal_meta = ledger.meta["objectives"]
         structured["objectives"] = {

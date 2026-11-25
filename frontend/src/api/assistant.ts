@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
+import { outlookItem } from './outlook';
 
 import { apiFetch, apiJson, jsonBody } from './client';
 import { adapterKind } from './config';
@@ -385,9 +386,11 @@ const structuredSchema = z.object({
   // Deterministic studies cited by the reply; each is stored (/studies/:id) and shown in the reply.
   studies: z.array(z.object({ id: z.string(), kind: z.string(), title: bilingual, status: z.string() })).optional(),
   // What the question asked OSRIP to run (a study, a forecast or a scenario), when it did.
-  intent: z.enum(['study', 'forecast', 'scenario', 'report']).optional(),
+  intent: z.enum(['study', 'forecast', 'scenario', 'report', 'outlook']).optional(),
   // For a report: what it covers (the sector's data, or a study, forecast or scenario).
   report_type: z.enum(['sector', 'study', 'forecast', 'scenario']).optional(),
+  // The official outlook items the reply used (forecasts, targets, plans), each with its class.
+  outlook: z.object({ evidence_id: z.string(), items: z.array(outlookItem) }).optional(),
   // Objectives before recommendations: asked for (none was named) or known (named in the request).
   objectives: z.object({
     status: z.enum(['ask', 'known']),

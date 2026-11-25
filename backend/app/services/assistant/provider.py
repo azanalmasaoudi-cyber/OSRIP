@@ -982,6 +982,8 @@ class FakeProvider:
             return self._deep_report(tool_results, arabic, "generate_image" in names)
         if "Mode: Quick answer" in system and "web_search" in names:
             return self._web(question, tool_results, arabic)
+        if intent(question) == "outlook" and "get_outlook" in names:
+            return self._outlook(question, tool_results, arabic)
         if intent(question) == "report" and "build_report" in names:
             return self._report(question, tool_results, arabic)
         if ("study" in question or "دراسة" in question) and "run_study" in names:
@@ -1536,6 +1538,43 @@ class FakeProvider:
             else f"The premise is not supported: electricity generation did not double. It changed by {value} percent between 2001 and 2002 [{pct['id']}]."
         )
         return self._final("answered", text, [pct["id"]])
+
+    def _outlook(
+        self, question: str, tool_results: list[dict[str, Any]], arabic: bool
+    ) -> dict[str, Any]:
+        water = any(w in question.lower() for w in ("water", "desalination", "مياه", "تحلية"))
+        projects = any(
+            w in question.lower()
+            for w in ("project", "plant", "desalination", "مشاريع", "محطات", "تحلية")
+        )
+        if not tool_results:
+            arguments = {"section": "water" if water else "electricity"}
+            if projects:
+                arguments["metric"] = "plant"  # the plants and projects, not the demand forecasts
+            return self._call("get_outlook", arguments)
+        result = self._last(tool_results)
+        eid = result.get("evidence_id")
+        if result.get("status") != "ok" or not eid:
+            text = (
+                "لم تُعتمد بعد بنود من التوقعات الرسمية لهذا القطاع."
+                if arabic
+                else "No official outlook item has been approved for this sector yet."
+            )
+            return self._final("answered", text, [])
+        labels = {"observed": ("observed base year", "سنة أساس مسجلة"), "estimate": ("estimate", "تقدير"),
+                  "forecast": ("forecast, not observed", "توقع غير مسجل"), "policy_target": ("policy target, not achieved", "هدف وطني لم يتحقق"),
+                  "planned": ("planned, not in operation", "مخطط وليس قيد التشغيل"),
+                  "under_consideration": ("under consideration", "قيد الدراسة")}  # fmt: skip
+        parts = []
+        for i in result["items"][:6]:
+            label = labels[i["evidence_class"]][1 if arabic else 0]
+            value = (
+                f"{i['value']} {i['unit']}"
+                if i["value"] is not None
+                else ("موعد" if arabic else "a date")
+            )
+            parts.append(f"{i['metric']} ({i['year']}): {value}, {label} [{eid}].")
+        return self._final("answered", " ".join(parts), [eid])
 
     def _ask_objectives(
         self, question: str, tool_results: list[dict[str, Any]], arabic: bool

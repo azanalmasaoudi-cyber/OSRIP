@@ -178,6 +178,19 @@ _REPORT = re.compile(
 )
 
 
+# The official OUTLOOK (forecasts, targets, plans in the PWP 7-year statements): what is planned or
+# targeted, not observed and not the forecasting engine's estimate of a published series.
+_OUTLOOK = re.compile(
+    r"\boutlook\b|\b7[- ]year statement\b|\bpeak (electricity |water )?demand\b"
+    r"|\brenewable (energy |electricity )?(target|share|projects?|generation|capacity)\b"
+    r"|\bplanned (renewable|solar|wind|projects?|plants?|capacity|generation)\b"
+    r"|\bdesalination (projects?|plants?|capacity)\b|\bbattery (energy )?storage\b|\bBESS\b|\bpumped[- ]hydro\b"
+    r"|البيان السباعي|الحمل الأقصى|الطلب الأقصى|الطاقة المتجددة|مشاريع التحلية|مشاريع تحلية|محطات التحلية|محطة تحلية"
+    r"|تخزين الطاقة|التخزين بالبطاريات|الضخ المائي|المشاريع المخطط",
+    re.IGNORECASE,
+)
+
+
 def intent(question: str) -> str | None:
     """'report', 'study', 'forecast' or 'scenario' when the question asks OSRIP to run one;
     else None."""
@@ -185,6 +198,8 @@ def intent(question: str) -> str | None:
         return None
     if _REPORT.search(question):
         return "report"
+    if _OUTLOOK.search(question) and not re.search(_SCENARIO, question, re.IGNORECASE):
+        return "outlook"
     return next((name for name, pattern in _INTENTS if pattern.search(question)), None)
 
 
