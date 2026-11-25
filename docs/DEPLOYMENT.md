@@ -15,6 +15,14 @@ Measured on 2026-11-24 with `python deploy\predeploy_check.py --env deploy\.env.
 | Content-Security-Policy, framing denied | missing: added to both `vercel.json` copies on this branch (the same policy as `deploy/Caddyfile`) |
 | `robots.txt` | missing: written by the build on this branch |
 
+Measured again that evening, with the electricity and water branch built locally: 29 passed, 3
+warnings, 16 failed. The site was unchanged (`main` as deployed). Every failure is one of these:
+- the API is missing (readiness, sign-in providers, the four protected routes answering Vercel's 404);
+- the headers and `robots.txt` wait for pull request #27;
+- one known test value in `backend/tests/test_data_report_integration.py`, which is not a
+  credential.
+The electricity and water work is therefore **not deployed**.
+
 **What this branch adds for a public release** (no hosting change):
 - The page is named "OSRIP – Oman Smart Resource Intelligence Platform", with a description,
   Open Graph and Twitter tags.

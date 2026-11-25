@@ -87,6 +87,55 @@ the address (`frontend/src/lib/guideSteps.ts`, `frontend/src/components/sector/S
 The **Tables and charts** tab keeps the full period-first workbench on the same selection.
 
 
+## Electricity and water: annual indicators and the official outlook (24 November 2026)
+
+**Annual indicators** (the Data and indicators view of Electricity and Water, `AnnualIndicators.tsx`,
+`GET /series/annual-table`):
+- One row per published series, never merged:
+  - electricity: the five customer categories, net actual consumption, electricity distributed and
+    electricity produced;
+  - water: national production and distribution; Muscat, Dhofar and the other regions together;
+    and, as a separate group, Nama Water Services' supply and delivery within its own operations
+    (all governorates except Dhofar).
+- Full years side by side (2022–2025 by default), or one year at a time. Each cell has its value,
+  the server's year-on-year change (`timeline.build`, never a model's figure) and a mark when the
+  source calls it provisional (2025). A missing year stays empty.
+- *Download CSV* (`GET /series/annual-table.csv?…&language=en|ar`) gives the same cells, one line
+  per indicator, area and year, with nature, revision status, the provisional flag, the
+  year-on-year change, source and page. The notes come first as comment lines.
+- The notes under the table say what the data do not support: 2022 consumption (36,427.1 GWh) and
+  distribution (36,178.6 GWh) are different published indicators; no shortage, surplus or leakage
+  is computed from production minus consumption or distribution; the utility's figures are not the
+  national ones.
+
+**The official outlook** (`SectorOutlook.tsx`, `GET /outlook`, table `outlook_item`, migration 0036):
+- Forecasts, targets, plans and options from the PWP 7-year statements 2026–2032 (Issue 20), held
+  apart from observations. Each item has a class: observed base year, estimate, forecast, policy
+  target, planned or under consideration.
+- Each item also has its scope, unit (MW, percent, m³ per day, or a date for an event), the
+  statement's own status note, the source page and the file's SHA-256.
+- Items are staged as pending (`POST /outlook/batches`, `import.create`). Only those approved by a
+  person with `import.approve` (`POST /outlook/{id}/review`, audited) are shown.
+- The database refuses an observed or estimated item dated in or after the statement's year, so a
+  2032 value cannot be an observation.
+- In the guided analysis's Analysis step the outlook opens only on request ("Show the official
+  outlook 2026–2032 (not observed)"). It is grouped by class, with a legend; a target or plan is never shown as achieved.
+
+**Al Mulhim** recognises outlook questions in Arabic and English (peak demand, renewable share and
+targets, storage, planned plants, capacity; not a scenario request). It calls `get_outlook` and
+answers with the approved items and their classes; the reply shows them as the sector does, under
+"Official outlook 2026–2032". With no approved item the tool reports `no_data` and gives no figure.
+
+**Importing the pack** (`backend/scripts/stage_electricity_water.py`, see
+`docs/data-imports/2026-11-electricity-water/README.md`):
+- The default run is a dry run. It maps the workbook, compares every figure with the value read
+  from its source PDF (a difference stops it) and with what is already published or waiting. It
+  then writes the import files, the outlook items and a report, and changes nothing.
+- `--stage --as USER` creates validated imports (waiting for approval in Data Management) and
+  pending outlook items. It is idempotent.
+- `--reject --as USER` withdraws what is not yet published or approved.
+- No wilayat figure is derived from a governorate total.
+
 ## Al Mulhim: studies, forecasts and scenarios from a sentence
 
 `backend/app/services/assistant/routing.py` recognises, in Arabic and English, what a sentence

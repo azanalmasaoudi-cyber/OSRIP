@@ -238,6 +238,10 @@ Navigation:
 - (each sector opens on its **guided analysis**: selection, results, analysis, objectives, then
   rule-based recommendations, one step at a time; the map shows a chosen governorate's own wilayats
   only);
+- (Electricity and Water show their annual indicators side by side as distinct series with
+  provisional marks and year-on-year changes, and the official outlook 2026–2032, apart from them
+  and only on request, each item with its evidence class; Al Mulhim answers outlook questions the
+  same way. See `docs/WORKSPACE.md`);
 - (no Reports entry: a report is asked of Al Mulhim, which builds it from published data and
   shows it in the reply with a CSV download; an analyst saves it as a frozen report with PDF,
   Excel and CSV exports; a sector's Analysis lists its saved reports. `/reports` and every
