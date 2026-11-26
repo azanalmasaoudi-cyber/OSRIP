@@ -1,7 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 
-import { apiJson } from './client';
+import { apiJson, jsonBody } from './client';
 import { adapterKind, apiBaseUrl } from './config';
 import type { DataMode } from '@/domain/types';
 
@@ -80,9 +80,13 @@ export const outlookItem = z.object({
     sha256: z.string().nullable(), retrieved_on: z.string(), issue_year: z.number(),
   }),
   batch: z.string(),
-  review_status: z.string(),
+  review_status: z.enum(['pending', 'approved', 'rejected']),
+  // Reviewers only (GET /outlook/review): when and why an item was decided; never public.
+  reviewed_at: z.string().nullable().optional(),
+  review_note: z.string().nullable().optional(),
 });
 export type OutlookItem = z.infer<typeof outlookItem>;
+export type OutlookReviewStatus = OutlookItem['review_status'];
 const outlookSchema = z.object({
   items: z.array(outlookItem),
   classes: z.array(z.object({ code: z.enum(OUTLOOK_CLASSES), label: text, achieved: z.boolean() })),
@@ -96,5 +100,25 @@ export function useOutlook(section: 'electricity' | 'water', enabled = true) {
     queryFn: () => apiJson(`/outlook?section=${section}`, outlookSchema),
     enabled: adapterKind === 'http' && enabled,
     staleTime: 10 * 60 * 1000,
+  });
+}
+
+/** Every staged item, pending ones included (people allowed to approve imports). */
+export function useOutlookReview(enabled = true) {
+  return useQuery({
+    queryKey: ['outlook', 'review'],
+    queryFn: () => apiJson('/outlook/review', outlookSchema),
+    enabled: adapterKind === 'http' && enabled,
+  });
+}
+
+/** Approve or reject one pending item (audited by the server; an item is decided once). */
+export function useReviewOutlookItem() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, decision, note }: { id: string; decision: 'approved' | 'rejected'; note: string }) =>
+      apiJson(`/outlook/${id}/review`, outlookItem, jsonBody('POST', { decision, note })),
+    // The sectors and Al Mulhim read the approved items: refresh every outlook view.
+    onSettled: () => void client.invalidateQueries({ queryKey: ['outlook'] }),
   });
 }

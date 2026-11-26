@@ -150,6 +150,7 @@ def test_staging_review_permissions_and_the_public_view(
         json={"decision": "approved", "note": "checked p. 4"},
     )
     assert approved.status_code == 200 and approved.json()["review_status"] == "approved"
+    assert approved.json()["review_note"] == "checked p. 4" and approved.json()["reviewed_at"]
     assert (
         manager.post(
             f"{API}/outlook/{ghubrah['id']}/review", json={"decision": "rejected"}
@@ -166,6 +167,9 @@ def test_staging_review_permissions_and_the_public_view(
     # The public: approved items only, each with its class; a plan is never "achieved".
     public = anonymous.get(f"{API}/outlook", params={"section": "water"}).json()
     shown = {i["metric"]["code"]: i for i in public["items"] if i["batch"] == BATCH}
+    assert not [i for i in public["items"] if "review_note" in i or "reviewed_at" in i], (
+        "reviewers' notes are never public"
+    )
     assert set(shown) == {"WATER_PLANT_GHUBRAH_III", "WATER_PLANT_SOHAR_ADDITIONAL"}
     assert (
         shown["WATER_PLANT_GHUBRAH_III"]["evidence_class"] == "planned"

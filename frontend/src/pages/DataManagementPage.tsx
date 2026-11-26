@@ -24,6 +24,7 @@ import {
 } from '@/api/imports';
 import { DataModeBadge } from '@/components/common/DataModeBadge';
 import { PageHeader } from '@/components/common/PageHeader';
+import { OutlookReview } from '@/components/outlook/OutlookReview';
 import { ResearchQueue } from '@/components/research/ResearchQueue';
 import { StatePanel } from '@/components/common/StatePanel';
 import { Badge } from '@/components/ui/badge';
@@ -588,7 +589,7 @@ export function DataManagementPage() {
       </StatePanel>
     );
   } else if (!hasPermission(me.data, 'import.read') && !hasPermission(me.data, 'research.review')
-    && !hasPermission(me.data, 'user.manage')) {
+    && !hasPermission(me.data, 'user.manage') && !hasPermission(me.data, 'import.approve')) {
     body = (
       <StatePanel kind="restricted">
         <p className="text-sm text-muted-foreground">{t('dm.noPermission')}</p>
@@ -601,6 +602,9 @@ export function DataManagementPage() {
           <div className="mb-8"><SourceFeedsAdmin canManage={hasPermission(me.data, 'user.manage')} /></div>
         ) : null}
         {hasPermission(me.data, 'import.read') ? <Workspace me={me.data} /> : null}
+        {hasPermission(me.data, 'import.approve') ? <OutlookReview /> : hasPermission(me.data, 'user.manage') ? (
+          <p className="mt-10 max-w-2xl text-sm text-muted-foreground" data-testid="outlook-review-needs-grant">{t('outlook.review.needsGrant')}</p>
+        ) : null}
         {hasPermission(me.data, 'research.review') ? <ResearchQueue /> : null}
       </>
     );

@@ -1,5 +1,24 @@
 # Test results
 
+## 2026-11-26: Outlook review in Data Management; a branch beside `main` (same branch, #28)
+
+**What changed:**
+- *Official outlook: review* in Data Management, for people with `import.approve`. It lists pending, approved and rejected items by sector, with class, value, scope, source page, retrieval date, file hash and batch. Approve needs no note; Reject needs one.
+- The review listing (`GET /outlook/review`) now also gives the decision's date and note. The public outlook never does.
+- The launcher reads an optional, git-ignored `.osrip-local.json` naming a checkout's own database and ports. It now passes the database it prepared to the API.
+
+**Checks:**
+
+| Check | Result |
+|---|---|
+| `test_outlook_integration.py` (now also checks that the note and date are reviewers only) | 5 passed |
+| `ruff check`, `ruff format --check` | pass |
+| Frontend typecheck, lint, build; unit tests; contrast | pass; 40 passed; 0 failing pairs |
+| Full-stack: new `zz-outlook-review.spec.ts`, with `zz-electricity-water`, `workflow` and `journey` | 9 passed |
+| Offline: `shell.spec.ts` | 18 passed, 3 skipped |
+
+**Run locally, not deployed.** The branch ran from the worktree on `osrip_preview` (a copy of `osrip_dev`, migrated to 0036) on ports 8020 and 5183, beside `main` on 8010 and 5173. There the pack was staged for review: two validated imports and 19 pending outlook items. Nothing was approved or published, and `osrip_dev` is unchanged (0034).
+
 ## 2026-11-24: Electricity and water evidence 2022–2025, official outlook 2026–2032 (branch `feature/electricity-water-evidence`, stacked on #27)
 
 **What changed** (details in `docs/WORKSPACE.md` and `docs/data-imports/2026-11-electricity-water/README.md`):

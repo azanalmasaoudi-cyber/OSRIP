@@ -116,6 +116,13 @@ The **Tables and charts** tab keeps the full period-first workbench on the same 
   statement's own status note, the source page and the file's SHA-256.
 - Items are staged as pending (`POST /outlook/batches`, `import.create`). Only those approved by a
   person with `import.approve` (`POST /outlook/{id}/review`, audited) are shown.
+- **Reviewed in Data Management** (*Official outlook: review*, `OutlookReview.tsx`; 26 Nov 2026):
+  - items waiting for review, approved or rejected, by sector;
+  - each with its kind of evidence, value or date, year, scope and the statement's status note;
+  - its source, page, retrieval date, file hash and batch.
+  *Approve* needs no note; *Reject* needs one. The decision's date and note are shown to
+  reviewers only, never in the public outlook. An administrator without `import.approve`
+  sees where to grant it.
 - The database refuses an observed or estimated item dated in or after the statement's year, so a
   2032 value cannot be an observation.
 - In the guided analysis's Analysis step the outlook opens only on request ("Show the official

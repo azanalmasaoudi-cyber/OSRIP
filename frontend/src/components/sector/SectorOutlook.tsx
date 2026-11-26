@@ -27,7 +27,8 @@ export function OutlookClassBadge({ item }: { item: Pick<OutlookItem, 'evidence_
   );
 }
 
-function value(item: OutlookItem, language: AppLanguage): string | null {
+/** An item's value with its unit (percent without a space), or null for a dated event. */
+export function outlookValue(item: OutlookItem, language: AppLanguage): string | null {
   if (item.value === null) return null;
   const n = formatDecimal(item.value, language, 2) ?? item.value;
   return item.unit.code === 'percent' ? `${n}${item.unit[language]}` : `${n} ${item.unit[language]}`;
@@ -49,7 +50,7 @@ export function OutlookList({ items, compact = false }: { items: readonly Outloo
           </div>
           <p className="text-base">
             <span className="font-medium">{language === 'ar' ? item.metric.ar : item.metric.en}</span>
-            {value(item, language) ? <>: <bdi dir="ltr" className="tabular-nums">{value(item, language)}</bdi></> : (
+            {outlookValue(item, language) ? <>: <bdi dir="ltr" className="tabular-nums">{outlookValue(item, language)}</bdi></> : (
               <span className="inline-flex items-center gap-1 text-sm text-muted-foreground"> <CalendarClock aria-hidden="true" className="size-3.5" />{t('outlook.dateOnly')}</span>
             )}
           </p>

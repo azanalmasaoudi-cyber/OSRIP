@@ -67,6 +67,7 @@
     <Folder Include="src\components\forecast\" />
     <Folder Include="src\components\geography\" />
     <Folder Include="src\components\layout\" />
+    <Folder Include="src\components\outlook\" />
     <Folder Include="src\components\research\" />
     <Folder Include="src\components\results\" />
     <Folder Include="src\components\sector\" />
@@ -126,6 +127,7 @@
     <TypeScriptCompile Include="e2e-api\zz-electricity-water.spec.ts" />
     <TypeScriptCompile Include="e2e-api\zz-guide-places.spec.ts" />
     <TypeScriptCompile Include="e2e-api\zz-mixed-frequency.spec.ts" />
+    <TypeScriptCompile Include="e2e-api\zz-outlook-review.spec.ts" />
     <TypeScriptCompile Include="e2e-api\zzz-forecast-run.spec.ts" />
     <TypeScriptCompile Include="e2e-demo\integrated.demo.spec.ts" />
     <TypeScriptCompile Include="e2e\entrance.spec.ts" />
@@ -247,6 +249,7 @@
     <TypeScriptCompile Include="src\components\layout\StatusBanners.tsx" />
     <TypeScriptCompile Include="src\components\layout\ThemeSelector.tsx" />
     <TypeScriptCompile Include="src\components\layout\WelcomeChrome.tsx" />
+    <TypeScriptCompile Include="src\components\outlook\OutlookReview.tsx" />
     <TypeScriptCompile Include="src\components\research\ResearchQueue.tsx" />
     <TypeScriptCompile Include="src\components\results\model.ts" />
     <TypeScriptCompile Include="src\components\results\ResultsPanel.tsx" />

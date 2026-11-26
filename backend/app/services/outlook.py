@@ -78,10 +78,11 @@ def check(item: dict[str, Any]) -> list[str]:
     return problems
 
 
-def _out(row: Any) -> dict[str, Any]:
+def _out(row: Any, *, review: bool = False) -> dict[str, Any]:
+    """One item. With ``review``, also the decision's date and note (reviewers only, never public)."""
     m = row._mapping
     cls = m["evidence_class"]
-    return {
+    item = {
         "id": str(m["id"]),
         "section": m["section"],
         "metric": {"code": m["metric_code"], "en": m["metric_en"], "ar": m["metric_ar"]},
@@ -101,6 +102,10 @@ def _out(row: Any) -> dict[str, Any]:
         "batch": m["batch_label"],
         "review_status": m["review_status"],
     }  # fmt: skip
+    if review:
+        item["reviewed_at"] = m["reviewed_at"].isoformat() if m["reviewed_at"] else None
+        item["review_note"] = m["review_note"]
+    return item
 
 
 def list_items(
@@ -111,7 +116,7 @@ def list_items(
         text(_SELECT),
         {"section": section.value if section else None, "approved_only": approved_only, "id": None},
     )
-    items = [_out(r) for r in rows]
+    items = [_out(r, review=not approved_only) for r in rows]
     return {
         "items": items,
         "classes": [
@@ -178,4 +183,4 @@ def review(
     updated = session.execute(
         text(_SELECT), {"section": None, "approved_only": False, "id": str(item_id)}
     ).first()
-    return _out(updated)
+    return _out(updated, review=True)
