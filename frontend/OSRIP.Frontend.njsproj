@@ -67,6 +67,7 @@
     <Folder Include="src\components\forecast\" />
     <Folder Include="src\components\geography\" />
     <Folder Include="src\components\layout\" />
+    <Folder Include="src\components\outlook\" />
     <Folder Include="src\components\research\" />
     <Folder Include="src\components\results\" />
     <Folder Include="src\components\sector\" />
@@ -123,8 +124,10 @@
     <TypeScriptCompile Include="e2e-api\voice-gender.spec.ts" />
     <TypeScriptCompile Include="e2e-api\welcome-sign-in.spec.ts" />
     <TypeScriptCompile Include="e2e-api\workflow.spec.ts" />
+    <TypeScriptCompile Include="e2e-api\zz-electricity-water.spec.ts" />
     <TypeScriptCompile Include="e2e-api\zz-guide-places.spec.ts" />
     <TypeScriptCompile Include="e2e-api\zz-mixed-frequency.spec.ts" />
+    <TypeScriptCompile Include="e2e-api\zz-outlook-review.spec.ts" />
     <TypeScriptCompile Include="e2e-api\zzz-forecast-run.spec.ts" />
     <TypeScriptCompile Include="e2e-demo\integrated.demo.spec.ts" />
     <TypeScriptCompile Include="e2e\entrance.spec.ts" />
@@ -153,6 +156,7 @@
     <TypeScriptCompile Include="src\api\library.ts" />
     <TypeScriptCompile Include="src\api\mockAdapter.ts" />
     <TypeScriptCompile Include="src\api\monitoring.ts" />
+    <TypeScriptCompile Include="src\api\outlook.ts" />
     <TypeScriptCompile Include="src\api\problems.ts" />
     <TypeScriptCompile Include="src\api\queries.ts" />
     <TypeScriptCompile Include="src\api\referencePack.ts" />
@@ -187,6 +191,7 @@
     <TypeScriptCompile Include="src\components\assistant\persona.tsx" />
     <TypeScriptCompile Include="src\components\assistant\PersonaImage.tsx" />
     <TypeScriptCompile Include="src\components\assistant\ReplyObjectives.tsx" />
+    <TypeScriptCompile Include="src\components\assistant\ReplyOutlook.tsx" />
     <TypeScriptCompile Include="src\components\assistant\ReplyReport.tsx" />
     <TypeScriptCompile Include="src\components\assistant\ReplyResults.tsx" />
     <TypeScriptCompile Include="src\components\assistant\ResearchBriefBuilder.tsx" />
@@ -244,15 +249,18 @@
     <TypeScriptCompile Include="src\components\layout\StatusBanners.tsx" />
     <TypeScriptCompile Include="src\components\layout\ThemeSelector.tsx" />
     <TypeScriptCompile Include="src\components\layout\WelcomeChrome.tsx" />
+    <TypeScriptCompile Include="src\components\outlook\OutlookReview.tsx" />
     <TypeScriptCompile Include="src\components\research\ResearchQueue.tsx" />
     <TypeScriptCompile Include="src\components\results\model.ts" />
     <TypeScriptCompile Include="src\components\results\ResultsPanel.tsx" />
+    <TypeScriptCompile Include="src\components\sector\AnnualIndicators.tsx" />
     <TypeScriptCompile Include="src\components\sector\AreaComparison.tsx" />
     <TypeScriptCompile Include="src\components\sector\AskMulhim.tsx" />
     <TypeScriptCompile Include="src\components\sector\DecisionBrief.tsx" />
     <TypeScriptCompile Include="src\components\sector\SectorGuide.tsx" />
     <TypeScriptCompile Include="src\components\sector\SectorIndicators.tsx" />
     <TypeScriptCompile Include="src\components\sector\SectorNav.tsx" />
+    <TypeScriptCompile Include="src\components\sector\SectorOutlook.tsx" />
     <TypeScriptCompile Include="src\components\sector\SectorReports.tsx" />
     <TypeScriptCompile Include="src\components\sector\SectorWorkflow.tsx" />
     <TypeScriptCompile Include="src\components\sector\SpokenSummary.tsx" />

@@ -9,7 +9,7 @@ from fastapi.responses import Response
 
 from app.api.deps import DbSession
 from app.domain.enums import DataMode, Section
-from app.services import timeline
+from app.services import annual_table, timeline
 
 router = APIRouter(prefix="/series", tags=["series"])
 
@@ -91,6 +91,41 @@ def series_timeline_csv(
     name = f"osrip-{indicator.lower()}-{area.lower()}-{view}-{data_mode.value}.csv"
     return Response(
         "﻿" + timeline.to_csv(doc, language),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{name}"'},
+    )
+
+
+@router.get("/annual-table")
+def series_annual_table(
+    session: DbSession,
+    data_mode: DataMode,
+    section: Section,
+    year_from: Annotated[int, Query(ge=1900, le=2100)] = 2022,
+    year_to: Annotated[int, Query(ge=1900, le=2100)] = 2025,
+) -> dict[str, Any]:
+    """Public: the section's annual indicators side by side for full years (electricity and
+    water): each a separate published series, with its unit, provisional marks and the
+    platform's year-on-year change. Missing years stay empty."""
+    with session.begin():
+        return annual_table.table(session, section, data_mode, year_from, year_to)
+
+
+@router.get("/annual-table.csv")
+def series_annual_table_csv(
+    session: DbSession,
+    data_mode: DataMode,
+    section: Section,
+    year_from: Annotated[int, Query(ge=1900, le=2100)] = 2022,
+    year_to: Annotated[int, Query(ge=1900, le=2100)] = 2025,
+    language: Annotated[str, Query(pattern="^(en|ar)$")] = "en",
+) -> Response:
+    """The same cells as the annual table, with provenance, as CSV."""
+    with session.begin():
+        doc = annual_table.table(session, section, data_mode, year_from, year_to)
+    name = f"osrip-{section.value}-annual-{year_from}-{year_to}-{data_mode.value}.csv"
+    return Response(
+        "\ufeff" + annual_table.to_csv(doc, language),
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{name}"'},
     )

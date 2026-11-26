@@ -90,6 +90,7 @@
     <Compile Include="app\api\routes\library.py" />
     <Compile Include="app\api\routes\monitoring.py" />
     <Compile Include="app\api\routes\observations.py" />
+    <Compile Include="app\api\routes\outlook.py" />
     <Compile Include="app\api\routes\reference.py" />
     <Compile Include="app\api\routes\reports.py" />
     <Compile Include="app\api\routes\research.py" />
@@ -148,6 +149,7 @@
     <Compile Include="app\services\analysis\runs.py" />
     <Compile Include="app\services\analysis\sections.py" />
     <Compile Include="app\services\analysis_reports.py" />
+    <Compile Include="app\services\annual_table.py" />
     <Compile Include="app\services\assistant\__init__.py" />
     <Compile Include="app\services\assistant\data_report.py" />
     <Compile Include="app\services\assistant\datatable.py" />
@@ -190,6 +192,7 @@
     <Compile Include="app\services\images.py" />
     <Compile Include="app\services\imports\__init__.py" />
     <Compile Include="app\services\imports\csv_file.py" />
+    <Compile Include="app\services\imports\electricity_water_pack.py" />
     <Compile Include="app\services\imports\governorate_pack.py" />
     <Compile Include="app\services\imports\owner_workbooks.py" />
     <Compile Include="app\services\imports\validation.py" />
@@ -202,6 +205,7 @@
     <Compile Include="app\services\objectives.py" />
     <Compile Include="app\services\observations.py" />
     <Compile Include="app\services\openai_api.py" />
+    <Compile Include="app\services\outlook.py" />
     <Compile Include="app\services\phone_numbers.py" />
     <Compile Include="app\services\principal.py" />
     <Compile Include="app\services\providers.py" />
@@ -277,6 +281,7 @@
     <Compile Include="tests\test_db_constraints.py" />
     <Compile Include="tests\test_decision_brief_integration.py" />
     <Compile Include="tests\test_documents.py" />
+    <Compile Include="tests\test_electricity_water_pack.py" />
     <Compile Include="tests\test_forecast_scenarios_integration.py" />
     <Compile Include="tests\test_forecasting.py" />
     <Compile Include="tests\test_forecasting_v2.py" />
@@ -295,6 +300,7 @@
     <Compile Include="tests\test_mulhim_identity.py" />
     <Compile Include="tests\test_ncsi.py" />
     <Compile Include="tests\test_openai_sdk.py" />
+    <Compile Include="tests\test_outlook_integration.py" />
     <Compile Include="tests\test_owner_workbooks.py" />
     <Compile Include="tests\test_partial_answers.py" />
     <Compile Include="tests\test_personas.py" />
@@ -345,6 +351,7 @@
     <Compile Include="scripts\serve_e2e.py" />
     <Compile Include="scripts\serve_public.py" />
     <Compile Include="scripts\set_provider_keys.py" />
+    <Compile Include="scripts\stage_electricity_water.py" />
     <Compile Include="scripts\stage_governorate_pack.py" />
     <Compile Include="scripts\stage_owner_workbooks.py" />
     <Compile Include="scripts\stage_wilayat_evidence.py" />
@@ -386,6 +393,7 @@
     <Compile Include="alembic\versions\0033_username_policy.py" />
     <Compile Include="alembic\versions\0034_candidate_scope_2021.py" />
     <Compile Include="alembic\versions\0035_honey_production.py" />
+    <Compile Include="alembic\versions\0036_utility_scope_outlook.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="alembic\sql\0001_core_down.sql" />
@@ -457,6 +465,8 @@
     <Content Include="alembic\sql\0034_candidate_scope_2021_up.sql" />
     <Content Include="alembic\sql\0035_honey_production_down.sql" />
     <Content Include="alembic\sql\0035_honey_production_up.sql" />
+    <Content Include="alembic\sql\0036_utility_scope_outlook_down.sql" />
+    <Content Include="alembic\sql\0036_utility_scope_outlook_up.sql" />
     <Content Include="app\knowledge\assistant_profile_v1.json" />
     <Content Include="app\knowledge\assistant_profile_v2.json" />
     <Content Include="app\knowledge\assistant_profile_v3.json" />

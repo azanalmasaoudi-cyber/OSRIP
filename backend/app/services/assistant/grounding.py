@@ -195,6 +195,11 @@ def _evidence_numbers(item: dict[str, Any], ledger: dict[str, dict[str, Any]]) -
         for key in ("from", "to"):
             for number, _ in numbers_in(str((doc.get("periods") or {}).get(key) or "")):
                 add(number)
+    if item.get("kind") == "outlook":
+        # Official outlook items: their values and years (each said with its evidence class).
+        for o in item.get("items", []):
+            add(o.get("value"))
+            add(str(o.get("year")))
     if item.get("kind") == "report" and isinstance(item.get("content"), dict):
         # A report built from published data: its observations and their periods, the
         # section's calculated values, the review cards' text and the years it covers.

@@ -1,5 +1,74 @@
 # Test results
 
+## 2026-11-26: Outlook review in Data Management; a branch beside `main` (same branch, #28)
+
+**What changed:**
+- *Official outlook: review* in Data Management, for people with `import.approve`. It lists pending, approved and rejected items by sector, with class, value, scope, source page, retrieval date, file hash and batch. Approve needs no note; Reject needs one.
+- The review listing (`GET /outlook/review`) now also gives the decision's date and note. The public outlook never does.
+- The launcher reads an optional, git-ignored `.osrip-local.json` naming a checkout's own database and ports. It now passes the database it prepared to the API.
+
+**Checks:**
+
+| Check | Result |
+|---|---|
+| `test_outlook_integration.py` (now also checks that the note and date are reviewers only) | 5 passed |
+| `ruff check`, `ruff format --check` | pass |
+| Frontend typecheck, lint, build; unit tests; contrast | pass; 40 passed; 0 failing pairs |
+| Full-stack: new `zz-outlook-review.spec.ts`, with `zz-electricity-water`, `workflow` and `journey` | 9 passed |
+| Offline: `shell.spec.ts` | 18 passed, 3 skipped |
+
+**Run locally, not deployed.** The branch ran from the worktree on `osrip_preview` (a copy of `osrip_dev`, migrated to 0036) on ports 8020 and 5183, beside `main` on 8010 and 5173. There the pack was staged for review: two validated imports and 19 pending outlook items. Nothing was approved or published, and `osrip_dev` is unchanged (0034).
+
+## 2026-11-24: Electricity and water evidence 2022–2025, official outlook 2026–2032 (branch `feature/electricity-water-evidence`, stacked on #27)
+
+**What changed** (details in `docs/WORKSPACE.md` and `docs/data-imports/2026-11-electricity-water/README.md`):
+
+- **Checked against the sources:** the owner's workbook, figure by figure, against the PDFs read on 24 November 2026 (hashes in the pack's source register):
+  - the Statistical Year Book 2026, PDF pp. 131, 134 and 137;
+  - Nama Water Services' Annual Report 2025, p. 23;
+  - the PWP Power and Water 7-year statements 2026–2032, Issue 20.
+  Every figure matched. Two corrections: Ghubrah III is *under construction* per the statement, and the water items are on PDF p. 4.
+- **Import:** `stage_electricity_water.py` runs a dry run by default. `--stage` is idempotent and creates imports that wait for approval; `--reject` withdraws. 34 rows are ready to stage; 69 were already published or waiting with the same value. No wilayat figure is derived.
+- **Migration 0036:** the utility's own scope (OM-GRP-NWS, Dhofar excluded) and indicators, and the `outlook_item` table: evidence classes, review status, and a database check that no observed or estimated item is dated in or after its statement's year.
+- **Interface and Al Mulhim:**
+  - annual indicators side by side in Electricity and Water, with the server's year-on-year changes, provisional marks and a CSV export;
+  - the outlook in the guided analysis, on request, grouped by class;
+  - Al Mulhim's `get_outlook`: outlook questions answered with each item's class.
+
+**Automated checks** (run in the worktree against the local PostgreSQL cluster):
+
+| Check | Result |
+|---|---|
+| Backend `pytest`, database tests included | Full run: **1,071 passed**. After the annual table's CSV export was added, its test file and the other changed ones: 51 passed. New: `test_electricity_water_pack.py` (7: the two 2022 indicators, 2025 provisional, governorates only with the national totals kept, the utility's own measures, no observed future, a changed figure stops the mapping) and `test_outlook_integration.py` (migration, database check, staging twice, review and permissions, audit, public reading, Al Mulhim's classes, the annual table and its CSV) |
+| Backend `ruff check`, `ruff format --check` | pass |
+| Frontend typecheck, lint, production build | pass |
+| Frontend unit tests | 40 passed |
+| Contrast check | 0 failing pairs |
+| Offline browser tests (mock adapter) | Full run: 47 passed, 2 timed out, 3 skipped. The two files again: the sector-card test passed; the entrance test timed out again at its 30-second limit (its first page load took 12.4 s on a cold dev server) and passed alone with a 90-second limit (9.9 s). This branch does not change either page |
+| Full-stack browser tests (real API, database, scripted model) | Full run on 24 November, with the computer about half as fast as on 20 November (49 minutes against 24): **197 passed, 5 failed** (all time limits), 3 skipped; the new `zz-electricity-water.spec.ts` (2 tests) passed. The five files again (25 November): 34 passed, 3 failed: sign-in timing out, and the two below. After the CSV was added, both electricity and water tests passed again. Those two, `connection-states` "no API behind the site" (a 30-second limit for twelve page loads of about 3 s each) and the six-width responsive matrix (a 5-minute limit), **fail the same way on #27's commit without this branch's changes**. Afterwards the matrix passed (4.3 min), and all five connection tests passed with a 90-second limit (the first in 36.3 s) |
+
+The regression tests, each against the code that enforces it:
+- 2022 consumption (36,427.1) and distribution (36,178.6) stay two indicators in the mapping, the API, the page and the CSV.
+- Every 2025 value is provisional.
+- A 2032 item cannot be observed: the service's check and the database constraint each refuse it, and every item in the pack dated 2026 or later is a forecast, target, plan or option.
+- A changed figure stops the mapping.
+- The rounded governorate sums (45,033.0; 344.7) sit beside the published national totals (45,033.1; 344.6).
+- The utility's figures are never under the national indicators.
+- Outlook items are hidden until approved, and approval needs `import.approve`; both are audited.
+- Al Mulhim keeps each outlook item's class.
+- Arabic on a 390-pixel screen with no sideways scrolling.
+
+**Measured on the public site** (`predeploy_check.py --url https://osrip.vercel.app`, evening of 2026-11-24, `main` as deployed): 29 passed, 3 warnings, 16 failed. Every failure comes from the missing API, or from the headers and robots.txt that wait for #27. This work is **not deployed**.
+
+**Not done:**
+
+- the pack is not staged in the development database (migrations 0035 and 0036 first, after the pull requests are merged);
+- the outlook items are not approved by a data manager;
+- no deployment of the API and database;
+- no check from an external device;
+- no evaluation with users;
+- not merged into `main`.
+
 ## 2026-11-24: Guided analysis, governorate map focus, evidence pack, public metadata (branch `feature/guided-analysis-map-deploy`)
 
 **What changed** (details in `docs/WORKSPACE.md`, `docs/MAP.md`, `docs/DEPLOYMENT.md` and `docs/data-imports/2026-11-governorates/README.md`):

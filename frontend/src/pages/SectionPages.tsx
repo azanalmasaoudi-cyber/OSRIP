@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useAvailability, VIEWS } from '@/api/series';
 import type { Sector } from '@/components/brand/SectorIllustration';
 import { SectorArtwork } from '@/components/brand/SectorArtwork';
+import { AnnualIndicators } from '@/components/sector/AnnualIndicators';
 import { CommodityRegistry } from '@/components/common/CommodityRegistry';
 import { SectorGuide } from '@/components/sector/SectorGuide';
 import { SectorIndicators } from '@/components/sector/SectorIndicators';
@@ -88,7 +89,8 @@ function SectorPage({ section, page, image, registry = false }: {
       <Tabs tabs={tabs} value={tab} onChange={setTab} idBase="sector" label={t('sector.tabs.label', { sector: title })} className="w-full sm:w-fit" />
 
       {tab === 'data' ? (
-        <div {...tabPanelProps('sector', 'data', true)} className="outline-none">
+        <div {...tabPanelProps('sector', 'data', true)} className="flex flex-col gap-6 outline-none">
+          {section === 'electricity' || section === 'water' ? <AnnualIndicators section={section} /> : null}
           <SectorIndicators section={section}
             onAnalyse={(code, kind) => { choose({ indicator: code, view: VIEWS.find((v) => v === kind) }); setTab('analysis'); }}>
             {registry ? (

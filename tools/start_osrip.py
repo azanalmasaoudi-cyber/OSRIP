@@ -22,6 +22,13 @@ watchdog does it after a hard stop); --keep-db leaves it running.
 Nothing is deleted or reset and nothing needs administrator rights. Standard library
 only, so it runs before the backend's dependencies are installed and can say what is
 missing. Any Python 3.11+ can run it; the backend itself runs in backend/.venv.
+
+A second checkout (for example a branch under review in a git worktree) can run beside the
+usual one: an optional ``.osrip-local.json`` at the checkout's root (never committed) names
+its own database and ports, e.g. ``{"database": "osrip_preview", "api_port": 8020,
+"web_port": 5183}``. Visual Studio, VS Code and start-osrip.cmd in that checkout all use it.
+The environment variables OSRIP_DEV_DB_NAME, OSRIP_API_PORT and OSRIP_WEB_PORT override it.
+Without the file nothing changes: ``osrip_dev`` on ports 8010 and 5173.
 """
 
 from __future__ import annotations
@@ -74,17 +81,35 @@ def _dev_home() -> Path:
 
 
 DEV_HOME = _dev_home()
+
+
+def _local_settings() -> dict:
+    """This checkout's own database and ports (.osrip-local.json), or nothing."""
+    path = ROOT / ".osrip-local.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError) as exc:
+        raise SystemExit(f"{path} is not valid JSON: {exc}") from exc
+    return data if isinstance(data, dict) else {}
+
+
+LOCAL = _local_settings()
 PG_BIN = Path(os.environ.get("OSRIP_PG_BIN", DEV_HOME / "pgsql" / "bin"))
 PG_DATA = DEV_HOME / "pgdata"
 PG_PORT = int(os.environ.get("OSRIP_DEV_PG_PORT", "55432"))
 PG_LOG = DEV_HOME / "postgres.log"
 PWFILE = DEV_HOME / "superuser-password.txt"
-STATE_FILE = DEV_HOME / "launcher.json"
 LOG_DIR = DEV_HOME / "logs"
-DB_NAME = "osrip_dev"
+DB_NAME = str(os.environ.get("OSRIP_DEV_DB_NAME") or LOCAL.get("database") or "osrip_dev")
+if not re.fullmatch(r"[a-z_][a-z0-9_]{0,62}", DB_NAME):
+    raise SystemExit(f"Database name {DB_NAME!r}: lower-case letters, digits and _ only.")
+# One launcher per database: the usual one keeps launcher.json; another database its own file.
+STATE_FILE = DEV_HOME / ("launcher.json" if DB_NAME == "osrip_dev" else f"launcher-{DB_NAME}.json")
 NODE_MIN = (22, 22)
-API_PORT = int(os.environ.get("OSRIP_API_PORT", "8010"))
-WEB_PORT = int(os.environ.get("OSRIP_WEB_PORT", "5173"))
+API_PORT = int(os.environ.get("OSRIP_API_PORT") or LOCAL.get("api_port") or 8010)
+WEB_PORT = int(os.environ.get("OSRIP_WEB_PORT") or LOCAL.get("web_port") or 5173)
 READY_TIMEOUT = 120
 
 # Windows process-creation flags and job-object constants.
@@ -757,6 +782,11 @@ def main(argv: list[str] | None = None) -> int:
     log_path = None if args.check else LOG_DIR / f"launcher-{time.strftime('%Y%m%d-%H%M%S')}.log"
     log = Log(log_path)
     log("run", f"OSRIP launcher - project {ROOT}")
+    if LOCAL:
+        log(
+            "run",
+            f"This checkout's settings (.osrip-local.json): database {DB_NAME}, ports {API_PORT} and {WEB_PORT}.",
+        )
     if log_path:
         log("run", f"Log file: {log_path}")
     external_db = os.environ.get("OSRIP_DATABASE_URL")
@@ -857,7 +887,9 @@ def main(argv: list[str] | None = None) -> int:
                 migrate_and_seed(log, admin_url(DB_NAME), first_run, args.setup)
 
             # Backend.
-            env = {**os.environ, "PORT": str(api_port), "PYTHONUNBUFFERED": "1"}
+            # The database this launcher prepared (serve_dev.py alone would use osrip_dev).
+            db_env = {} if external_db else {"OSRIP_DATABASE_URL": admin_url(DB_NAME)}
+            env = {**os.environ, **db_env, "PORT": str(api_port), "PYTHONUNBUFFERED": "1"}
             log("api", f"Starting the FastAPI backend on {api_base} ...")
             api = Service(
                 "api",
@@ -897,7 +929,7 @@ def main(argv: list[str] | None = None) -> int:
                         "sync",
                         [str(VENV_PY), str(BACKEND / "scripts" / "sync_worker_dev.py")],
                         BACKEND,
-                        {**os.environ, "PYTHONUNBUFFERED": "1"},
+                        {**os.environ, **db_env, "PYTHONUNBUFFERED": "1"},
                         log,
                         job,
                     )

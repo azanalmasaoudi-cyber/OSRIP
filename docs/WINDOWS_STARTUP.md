@@ -176,8 +176,38 @@ Options: `--setup` (reload demo data and the reference pack), `--no-browser`, `-
 
 Environment variables: `OSRIP_API_PORT` (default 8010), `OSRIP_WEB_PORT` (5173),
 `OSRIP_DEV_PG_PORT` (55432), `OSRIP_PG_BIN`, `OSRIP_NODE`, `OSRIP_DEV_HOME`,
-`OSRIP_NO_BROWSER=1`. If `OSRIP_DATABASE_URL` is set, that database is used as it is and the
+`OSRIP_NO_BROWSER=1`, `OSRIP_DEV_DB_NAME` (`osrip_dev`). If `OSRIP_DATABASE_URL` is set, that database is used as it is and the
 launcher neither starts nor migrates it.
+
+## A second checkout beside the usual one (a branch under review)
+
+A branch can run next to the usual `Desktop\OSRIP` on `main`, with neither touching the
+other's database or ports. In the second checkout (for example the git worktree
+`Desktop\OSRIP-premium`):
+
+1. **`.osrip-local.json`** at the checkout's root (git-ignored, never committed) names its
+   own database and ports, e.g. `{"database": "osrip_preview", "api_port": 8020, "web_port": 5183}`.
+   The launcher reads it, so **F5 in that checkout's `OSRIP.sln`, VS Code's *OSRIP: start
+   everything* and its `start-osrip.cmd` all use it**. It migrates *that* database and passes
+   it to the API. Each database has its own launcher state file, so a second Start opens the
+   running instance of the same checkout only. Environment variables `OSRIP_DEV_DB_NAME`,
+   `OSRIP_API_PORT` and `OSRIP_WEB_PORT` override the file.
+2. **Its own database**, as a copy of `osrip_dev` (same accounts and published data), made once
+   with the cluster's own tools. `osrip_dev` is only read:
+   `pg_dump -Fc --no-owner` of `osrip_dev`, `CREATE DATABASE osrip_preview`, then `pg_restore
+   --no-owner` into it. The first Start migrates the copy to the branch's head, so `osrip_dev`
+   keeps the migration that `main` expects.
+3. **The backend environment.** A worktree has no `backend\.venv`. Either create one there,
+   or link the usual one: `New-Item -ItemType Junction -Path backend\.venv -Target
+   C:\Users\<you>\Desktop\OSRIP\backend\.venv`. The scripts put the checkout's own `backend`
+   first on the path, so the branch's code runs. Before deleting such a worktree, remove the
+   junction itself first (`[System.IO.Directory]::Delete('<path>\backend\.venv', $false)`), so
+   nothing deletes through it.
+4. **`backend\.env`** is per checkout: copy the usual one if the branch should use the same AI
+   and research settings (it is git-ignored).
+
+VS Code's *debug the interface in Edge* opens `http://localhost:5173/`. For a checkout on
+other ports, open the address the launcher prints instead.
 
 ## Behaviour details
 

@@ -99,6 +99,7 @@ EVIDENCE_CLASS = {
     "note": "reference",  # documented conflicts and limitations of the reference pack
     "study": "calculated",  # a deterministic study (table, chart, export) from approved data
     "report": "observed",  # a report's published observations, calculations and review cards
+    "outlook": "outlook",  # official forecasts, targets and plans: never observations
 }
 PERIOD_KINDS = ("annual", "year_to_date", "quarterly", "monthly", "statement")
 
@@ -109,6 +110,7 @@ DATA_STATUS = (
     "unreviewed_external",  # found on the web; not part of OSRIP data until reviewed and imported
     "calculated",  # computed by OSRIP's own deterministic functions from the cited inputs
     "model_forecast",  # a validated model estimate, not an official statistic
+    "official_outlook",  # an official statement's forecast, target or plan, not an observation
     "assumption_scenario",  # hypothetical arithmetic from the person's stated assumption
     "reference",  # definitions, methods, documented notes and search records
 )
@@ -129,6 +131,7 @@ def data_status(item: dict[str, Any], data_mode: DataMode) -> str:
         "study": "calculated",
         "forecast": "model_forecast",
         "scenario": "assumption_scenario",
+        "outlook": "official_outlook",
     }.get(kind, "reference")
 
 
@@ -303,6 +306,41 @@ class Tools:
         return {"evidence_id": item["id"], "calculation": kind, "formula": formula}
 
     # -------------------------------------------------------------- validated forecasts
+    def get_outlook(
+        self, section: str = "electricity", metric: str | None = None
+    ) -> dict[str, Any]:
+        """The official outlook (approved items only): forecasts, targets, plans and options from
+        official statements, each with its evidence class. Never observations."""
+        from app.domain.enums import Section
+        from app.services import outlook
+
+        if section not in ("electricity", "water"):
+            return {"status": "unavailable", "reason": "The outlook covers electricity and water."}
+        items = outlook.list_items(self.session, Section(section))["items"]
+        if metric:
+            needle = metric.lower()
+            items = [
+                i
+                for i in items
+                if needle in i["metric"]["code"].lower() or needle in i["metric"]["en"].lower()
+            ]
+        item = self.ledger.add({
+            "kind": "outlook", "section": section, "status": "ok" if items else "no_data",
+            "items": items[:40], "item_total": len(items),
+        })  # fmt: skip
+        return {
+            "evidence_id": item["id"],
+            "status": item["status"],
+            "rule": "Each item keeps its evidence class. Forecasts, policy targets, planned and considered "
+            "items are not achievements or observations; peak demand is in MW, not annual energy.",
+            "items": [
+                {"metric": i["metric"]["en"], "year": i["year"], "value": i["value"], "unit": i["unit"]["code"],
+                 "scope": i["scope"]["en"], "evidence_class": i["evidence_class"],
+                 "status": (i["status_note"] or {}).get("en"), "source": f"{i['source']['title']}, {i['source']['locator']}"}
+                for i in items[:40]
+            ],
+        }  # fmt: skip
+
     def get_forecast(self, indicator: str, area: str = "OM") -> dict[str, Any]:
         """A validated forecast for the indicator and area: the latest stored run, otherwise one
         computed now by the same engine (not stored; this step is read only). Withheld, with the
@@ -1898,6 +1936,27 @@ def report_title(
 
 ANALYSIS_TOOL_SPECS: list[dict[str, Any]] = [
     {
+        "name": "get_outlook",
+        "description": "The official outlook for electricity or water (PWP 7-year statements 2026-2032): "
+        "peak demand forecasts (MW, or thousand m3/day for water), the renewable share and the 30% target "
+        "for 2030, planned plants and storage, desalination projects and options under consideration. "
+        "Each item has an evidence class (observed base year, estimate, forecast, policy_target, planned, "
+        "under_consideration) that must be stated with it; none is an achievement or an observed "
+        "statistic. Approved items only. Use it for questions about planned renewable generation, "
+        "desalination projects, future peak demand or targets; never mix its items with observed series.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "section": {"type": "string", "enum": ["electricity", "water"]},
+                "metric": {
+                    "type": "string",
+                    "description": "Optional words to narrow the items, e.g. 'peak', 'renewable', 'Ghubrah'",
+                },
+            },
+            "required": ["section"],
+        },
+    },
+    {
         "name": "build_report",
         "description": "Build an OSRIP report from published observations, exactly as a saved "
         "platform report is built: one sector, optionally one indicator (code from "
@@ -2416,6 +2475,7 @@ def run_tool(
         "compare_periods": tools.compare_periods,
         "explain_calculation": tools.explain_calculation,
         "get_forecast": tools.get_forecast,
+        "get_outlook": tools.get_outlook,
         "scenario_projection": tools.scenario_projection,
         "growth_rate": tools.growth_rate,
         "share_of_total": tools.share_of_total,
