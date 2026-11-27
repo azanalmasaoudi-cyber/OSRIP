@@ -1,6 +1,9 @@
 #!/bin/sh
-# Runs on the server (from deploy_to_server.ps1): build and start the stack, wait for
-# the API health check, then load the labelled synthetic demonstration data.
+# Runs on the server (from deploy_to_server.ps1): build and start the stack and wait for the
+# API health check. No data is loaded: the production database holds only what the team
+# restores or publishes through the reviewed import workflow (docs/CENTRAL_HOSTING_EN.md).
+# The labelled synthetic demonstration data is loaded only when explicitly asked for, on a
+# demonstration server: OSRIP_LOAD_SYNTHETIC_DEMO_DATA=1 sh deploy/remote_up.sh
 set -eu
 cd /opt/osrip/src
 chmod 600 deploy/.env
@@ -17,5 +20,10 @@ done
 echo "api health: ${status:-unknown}"
 [ "$status" = "healthy" ] || { compose logs --tail 80 api migrate; exit 1; }
 
-compose run --rm api python -m app.cli seed-synthetic
+if [ "${OSRIP_LOAD_SYNTHETIC_DEMO_DATA:-0}" = "1" ]; then
+  echo "Loading the labelled SYNTHETIC demonstration data (explicitly requested)."
+  compose run --rm api python -m app.cli seed-synthetic
+else
+  echo "No demonstration data loaded (default). Restore or publish approved data separately."
+fi
 compose ps

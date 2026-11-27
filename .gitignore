@@ -43,6 +43,13 @@ node_modules/
 .venv/
 # A checkout's own launcher database and ports (tools/start_osrip.py)
 .osrip-local.json
+# Database backups hold accounts, password hashes and every record: never commit them
+# (tools/Backup-OSRIP-Local.ps1 writes them outside the repository).
+*.backup
+*.backup.json
+*.dump
+*.pgdump
+OSRIP-Backups/
 .venv-*/
 venv/
 

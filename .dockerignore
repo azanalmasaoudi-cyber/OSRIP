@@ -15,3 +15,11 @@
 .vscode
 docs
 OSRIP
+# Database backups (accounts, password hashes, every record) and a checkout's own launcher
+# settings never enter an image.
+**/*.backup
+**/*.backup.json
+**/*.dump
+**/*.pgdump
+**/OSRIP-Backups
+.osrip-local.json
