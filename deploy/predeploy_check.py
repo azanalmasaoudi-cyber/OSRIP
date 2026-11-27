@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 import sys
 import urllib.error
 import urllib.request
@@ -139,17 +140,7 @@ def check_env(env: dict[str, str], r: Report) -> None:
     if email == "smtp":
         for key in ("OSRIP_SMTP_HOST", "OSRIP_SMTP_USERNAME", "OSRIP_SMTP_PASSWORD", "OSRIP_SMTP_FROM"):
             r.check(not PLACEHOLDER.search(env.get(key, "")), f"{key} is set")
-    provider = env.get("OSRIP_ASSISTANT_PROVIDER", "anthropic")
-    r.check(
-        provider in {"anthropic", "disabled"},
-        "OSRIP_ASSISTANT_PROVIDER is anthropic or disabled (the test double is refused)",
-    )
-    if provider == "anthropic":
-        r.check(
-            bool(env.get("OSRIP_ANTHROPIC_API_KEY")),
-            "OSRIP_ANTHROPIC_API_KEY is set (otherwise the assistant shows 'not configured')",
-            warn=True,
-        )
+    check_assistant(env, r)
     sms_provider = env.get("OSRIP_SMS_PROVIDER", "")
     r.check(sms_provider != "test", "OSRIP_SMS_PROVIDER is not the scripted test provider")
     if env.get("OSRIP_SMS_ENABLED", "false").lower() in {"1", "true", "yes"}:
@@ -235,6 +226,50 @@ def check_env(env: dict[str, str], r: Report) -> None:
         )
 
 
+# What each answering provider needs before the backend builds it (assistant/provider.py,
+# build_provider); with anything missing Al Mulhim says "not configured".
+ASSISTANT_PROVIDERS = {
+    "anthropic": ("OSRIP_ANTHROPIC_API_KEY",),
+    "openai": ("OSRIP_OPENAI_API_KEY", "OSRIP_OPENAI_MODEL"),
+    "gemini": ("OSRIP_GEMINI_API_KEY", "OSRIP_GEMINI_MODEL"),
+    "deepseek": (
+        "OSRIP_DEEPSEEK_API_KEY",
+        "OSRIP_DEEPSEEK_MODEL",
+        "OSRIP_DEEPSEEK_BILLING_ACKNOWLEDGED",
+    ),
+}
+ASSISTANT_KEYS = (
+    ("OSRIP_ASSISTANT_PROVIDER", "anthropic"),
+    ("OSRIP_ASSISTANT_FALLBACK_PROVIDER", ""),
+)
+
+
+def check_assistant(env: dict[str, str], r: Report) -> None:
+    """The answering provider and its fallback: a supported provider or disabled, never the
+    scripted test double; each one's key and model present (a warning: the site still works)."""
+    allowed = [*sorted(ASSISTANT_PROVIDERS), "disabled"]
+    for key, default in ASSISTANT_KEYS:
+        provider = env.get(key, default).strip().lower()
+        if key.endswith("FALLBACK_PROVIDER") and provider == "":
+            continue
+        wrong = f"; it is '{provider}'" if provider and provider not in allowed else ""
+        r.check(
+            provider in allowed or provider == "",
+            f"{key} is {', '.join(allowed)} (the test double is refused){wrong}",
+        )
+        for needed in ASSISTANT_PROVIDERS.get(provider, ()):
+            value = env.get(needed, "")
+            billing = needed.endswith("ACKNOWLEDGED")
+            ok = value.lower() in {"1", "true", "yes"} if billing else bool(value)
+            note = " - billed per use: acknowledge only with the owner's approval"
+            note = note if billing else ""
+            r.check(
+                ok,
+                f"{needed} is set for {provider} (else the assistant shows 'not configured'){note}",
+                warn=True,
+            )
+
+
 def iter_files(root: Path):
     for path in root.rglob("*"):
         if any(part in SKIP_DIRS for part in path.relative_to(root).parts):
@@ -264,6 +299,31 @@ def check_repository(r: Report, env_path: Path) -> None:
     for finding in findings[:20]:
         print(f"        {finding}")
     r.check(not findings, f"no credentials in the source tree ({len(findings)} findings)")
+
+    # A database backup holds accounts, password hashes and every record: never in git.
+    try:
+        tracked = subprocess.run(
+            ["git", "ls-files"],  # noqa: S607 - git from PATH, a fixed read-only command
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.splitlines()
+    except (OSError, subprocess.CalledProcessError):
+        tracked = None
+    if tracked is None:
+        r.check(False, "git is not available: tracked database backups not checked", warn=True)
+    else:
+        backup = re.compile(r"\.(backup|dump|pgdump)(\.json)?$|(^|/)OSRIP-Backups/", re.I)
+        dumps = [p for p in tracked if backup.search(p)]
+        listed = f" ({', '.join(dumps[:5])})" if dumps else ""
+        r.check(not dumps, f"no database backup is tracked by git{listed}")
+    ignore_file = ROOT / ".gitignore"
+    gitignore_text = ignore_file.read_text(encoding="utf-8") if ignore_file.exists() else ""
+    r.check(
+        all(p in gitignore_text for p in ("*.backup", "*.dump")),
+        ".gitignore excludes database backups (*.backup, *.dump)",
+    )
 
     env_files = [
         p
@@ -316,6 +376,35 @@ def check_repository(r: Report, env_path: Path) -> None:
         "healthcheck" in compose.split("api:")[1] if "api:" in compose else False,
         "the API container has a health check",
     )
+    db, api = compose_service(compose, "db"), compose_service(compose, "api")
+    r.check(
+        bool(db) and "ports:" not in db and bool(api) and "ports:" not in api,
+        "PostgreSQL and the API publish no port: only the web server (80, 443) is reachable",
+    )
+    r.check(
+        "pgdata:/var/lib/postgresql/data" in db,
+        "the database lives on the persistent pgdata volume",
+    )
+    ignore_text = ignore.read_text(encoding="utf-8") if ignore.exists() else ""
+    r.check(
+        all(p in ignore_text for p in ("**/*.backup", "**/*.dump")),
+        ".dockerignore keeps database backups out of the image build context",
+    )
+
+
+def compose_service(compose: str, name: str) -> str:
+    """The text of one service in docker-compose.yml (its two-space-indented block), or ''."""
+    lines = compose.splitlines()
+    try:
+        start = lines.index(f"  {name}:")
+    except ValueError:
+        return ""
+    block = []
+    for line in lines[start + 1 :]:
+        if line.strip() and not line.startswith("    "):
+            break  # the next service, or the next top-level key
+        block.append(line)
+    return "\n".join(block)
 
 
 def request(url: str, method: str = "GET") -> tuple[int, dict[str, str], bytes]:

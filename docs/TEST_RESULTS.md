@@ -1,5 +1,50 @@
 # Test results
 
+## 2026-11-27: Central hosting preparation (branch `feature/central-hosting-prep`, stacked on #28)
+
+**What changed:** the owner's hosting package, reviewed and integrated (details in `docs/CENTRAL_HOSTING_EN.md`).
+- Backup and restore scripts with manifests and row-count verification.
+- A public readiness check, and a server-side count comparison.
+- No demonstration data on a real server unless asked.
+- Pre-deploy checks for the real AI providers, tracked backups, private database ports and the persistent volume.
+- `.gitignore` and `.dockerignore` exclude backups.
+
+**This computer (27 Nov 2026):**
+
+| Check | Result |
+|---|---|
+| Python | 3.13.5 (backend environment); `pip check`: no broken requirements; all 49 packages in `requirements.lock` installed at the locked versions |
+| Node.js / npm | 24.21.0 / 11.19.0; `npm ls`: nothing missing |
+| PostgreSQL (portable development cluster) | 17.11, the same major version as the server image `postgres:17` |
+| Docker | **not installed**: the images were not built or run here (the compose file was checked statically) |
+| OSRIP start-up | `main` (`Desktop\OSRIP`, `osrip_dev`, 0034) and this branch (`osrip_preview`, 0036) both started with the launcher and answered ready. Each served its page and 28 electricity series (57 published values) through the interface's proxy |
+
+**Backup and restore drill (real data, nothing overwritten):**
+
+| Step | Result |
+|---|---|
+| `Backup-OSRIP-Local.ps1` on `osrip_dev` | Verified archive of 1.5 MB in `Documents\OSRIP-Backups` (outside the repository): 70 tables, 7,546 rows, migration 0034; manifest with SHA-256 |
+| Refusals | A destination inside the repository: refused, nothing created. A restore onto the existing `osrip_dev`: refused, untouched |
+| `Restore-OSRIP-Backup.ps1 -Database osrip_restore_drill -Migrate` | SHA-256 matched; same 70 tables and 7,546 rows as the backup; migrated 0034 → 0035 → 0036 without error; the drill database was then dropped |
+| `compare_restore_counts.py` (the server-side check) on `osrip_dev` | "Match: 70 tables, 7546 rows"; a copy with one count changed was caught |
+| `osrip_dev` afterwards | Migration 0034, every table's count identical to the backup |
+
+**Automated checks:**
+
+| Check | Result |
+|---|---|
+| Backend `pytest`, database tests included | **1,093 passed** (new `test_hosting_tools.py`: 22) |
+| `ruff check`, `ruff format --check` (backend; the new tools) | pass |
+| `check_public_osrip.py https://osrip.vercel.app` | Page and HSTS pass. **FAIL:** `/api/v1/health/ready` answered Vercel's 404 without OSRIP's API header, so the platform is not deployed |
+| `predeploy_check.py --env deploy/.env.example --url https://osrip.vercel.app` | 34 passed, 2 warnings, 12 failed. Failures: the example's placeholder secrets (as intended), a known fake test key, and the public site's missing API, headers and robots.txt. New checks all pass: private database and API ports, persistent volume, backups excluded from git and images, AI provider accepted |
+
+**Not done:**
+- No deployment: no server, DNS name or approval; `osrip.vercel.app` is still the interface only.
+- Docker images not built.
+- No off-site encrypted backup: no destination given.
+- No data moved to any other computer or server.
+- Not merged.
+
 ## 2026-11-26: Outlook review in Data Management; a branch beside `main` (same branch, #28)
 
 **What changed:**

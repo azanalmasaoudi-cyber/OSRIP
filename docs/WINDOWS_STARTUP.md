@@ -206,6 +206,15 @@ other's database or ports. In the second checkout (for example the git worktree
 4. **`backend\.env`** is per checkout: copy the usual one if the branch should use the same AI
    and research settings (it is git-ignored).
 
+**Moving the data to another computer:**
+1. Back up with `tools\Backup-OSRIP-Local.ps1`: a verified archive and a manifest, written
+   outside the repository.
+2. Restore there with `tools\Restore-OSRIP-Backup.ps1 -Backup <file> -Database <new name>
+   -Migrate`, into a new database only, with every table's row count compared.
+3. Name the new database in `.osrip-local.json`.
+
+See `docs/CENTRAL_HOSTING_EN.md`.
+
 VS Code's *debug the interface in Edge* opens `http://localhost:5173/`. For a checkout on
 other ports, open the address the launcher prints instead.
 
