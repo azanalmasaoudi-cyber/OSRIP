@@ -293,6 +293,7 @@
     <Compile Include="tests\test_guest_allowance_integration.py" />
     <Compile Include="tests\test_guest_channels_integration.py" />
     <Compile Include="tests\test_guidance_integration.py" />
+    <Compile Include="tests\test_hosting_tools.py" />
     <Compile Include="tests\test_import_validation.py" />
     <Compile Include="tests\test_import_workflow_integration.py" />
     <Compile Include="tests\test_live_study.py" />
@@ -494,6 +495,18 @@
     </Compile>
     <Compile Include="..\tools\make_vs_projects.py">
       <Link>tools\make_vs_projects.py</Link>
+    </Compile>
+    <Content Include="..\tools\Backup-OSRIP-Local.ps1">
+      <Link>tools\Backup-OSRIP-Local.ps1</Link>
+    </Content>
+    <Content Include="..\tools\Restore-OSRIP-Backup.ps1">
+      <Link>tools\Restore-OSRIP-Backup.ps1</Link>
+    </Content>
+    <Compile Include="..\tools\check_public_osrip.py">
+      <Link>tools\check_public_osrip.py</Link>
+    </Compile>
+    <Compile Include="..\tools\compare_restore_counts.py">
+      <Link>tools\compare_restore_counts.py</Link>
     </Compile>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />

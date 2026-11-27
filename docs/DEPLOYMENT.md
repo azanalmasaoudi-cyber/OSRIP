@@ -1,5 +1,12 @@
 # Deployment guide
 
+**Central hosting for the team (27 Nov 2026):** start with `docs/CENTRAL_HOSTING_EN.md` (Arabic:
+`docs/CENTRAL_HOSTING_AR.md`). It covers the verified backup (`tools/Backup-OSRIP-Local.ps1`),
+the restore into a new database with row-count comparison (`tools/Restore-OSRIP-Backup.ps1`,
+`tools/compare_restore_counts.py`), the server order of steps, and the public check
+(`tools/check_public_osrip.py`). Measured on 27 November: still interface only, with no API
+behind `osrip.vercel.app`.
+
 **Status (2026-11-24): still only the interface is public. The API and database are not deployed:
 no hosting account, server or DNS access was available, and nothing was created or paid for.**
 
@@ -157,7 +164,7 @@ Prepared on the development machine:
 | Deploy SSH key (ed25519, no passphrase, opens only this server) | `%USERPROFILE%\.ssh\osrip_deploy` (private, never copied), `osrip_deploy.pub` (goes on the server) |
 | Production settings with fresh secrets | `deploy/.env` (not in images, not in version control). The pre-publication check passes (22/22). E-mail, assistant and SMS are off until they are configured |
 | One-time server setup | `deploy/bootstrap_server.sh`: Docker and Compose from Ubuntu packages, a firewall allowing only 22/80/443, swap on small machines |
-| Deploy from Windows | `deploy/deploy_to_server.ps1` checks `.env`, checks that DNS points at the server, copies the source (no secrets or build output, about 2.3 MB), starts the stack, loads the synthetic data and probes the live site |
+| Deploy from Windows | `deploy/deploy_to_server.ps1` checks `.env`, checks that DNS points at the server, copies the source (no secrets or build output, about 2.3 MB), starts the stack and probes the live site. Since 27 Nov 2026 no demonstration data is loaded unless `OSRIP_LOAD_SYNTHETIC_DEMO_DATA=1` (a demonstration server only) |
 
 Steps for the domain owner (these need your accounts; nobody else can do them):
 
@@ -295,7 +302,8 @@ cp deploy/.env.example deploy/.env
 # and optionally VITE_MAPTILER_KEY (restricted to OSRIP_DOMAIN; docs/MAP.md)
 docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build
 
-# first run only: seed the synthetic fixtures and create accounts
+# first run only, and only on a demonstration server: the labelled synthetic fixtures
+# (a production server restores or publishes approved data instead: docs/CENTRAL_HOSTING_EN.md)
 docker compose -f deploy/docker-compose.yml --env-file deploy/.env run --rm api python -m app.cli seed-synthetic
 docker compose -f deploy/docker-compose.yml --env-file deploy/.env run --rm api \
     python -m app.cli create-user --email admin@example.org --name "Administrator" --role administrator

@@ -45,6 +45,11 @@ TOOLS_SCRIPTS = (
     "build_intro_images.py",
     "build_persona_portraits.py",
     "make_vs_projects.py",
+    # Central hosting: backup, restore and checks (docs/CENTRAL_HOSTING_EN.md).
+    "Backup-OSRIP-Local.ps1",
+    "Restore-OSRIP-Backup.ps1",
+    "check_public_osrip.py",
+    "compare_restore_counts.py",
 )
 ROOT_ITEMS = (
     "README.md", "start-osrip.cmd", ".editorconfig", ".vsconfig", ".env.example", ".gitignore",
@@ -91,10 +96,11 @@ def linked_tools() -> str:
     lines = ['    <Folder Include="tools\\" />']
     for name in TOOLS_SCRIPTS:
         if (ROOT / "tools" / name).exists():
+            kind = "Compile" if name.endswith(".py") else "Content"
             lines.append(
-                f'    <Compile Include="..\\tools\\{name}">\n'
+                f'    <{kind} Include="..\\tools\\{name}">\n'
                 f"      <Link>tools\\{name}</Link>\n"
-                "    </Compile>"
+                f"    </{kind}>"
             )
     return "\n".join(lines)
 
